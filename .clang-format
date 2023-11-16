@@ -1,0 +1,15 @@
+# Source: https://github.com/thedavidchu/merry_mem/blob/main/.clang-format
+BasedOnStyle: LLVM
+AlwaysBreakAfterReturnType: All
+IndentWidth: 4
+ColumnLimit: 100
+BreakBeforeBraces: WebKit
+AlignAfterOpenBracket: Align
+AccessModifierOffset: -4
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+PackConstructorInitializers: Never
+AlignConsecutiveMacros: AcrossEmptyLines

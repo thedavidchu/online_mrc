@@ -1,0 +1,18 @@
+Checks:
+  # Enable all options by default so any new checks added in the future will be
+  # automatically enabled.
+  *,
+  # Altera and LLVM checks seem to be intended for internal use. LLVM in
+  # particular wants to ensure everything is in the LLVM namespace.
+  -altera*,
+  -llvm*,
+  -fuchsia-default-arguments-*,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers,
+CheckOptions:
+  # This check applies to both classes and structs, which means POD types are
+  # flagged. POD types generally have all members public, so this option
+  # disables the check for them.
+  - { key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic, value: 1 }
