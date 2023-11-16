@@ -1,8 +1,11 @@
 # Source: https://github.com/marketplace/actions/c-c-linter
 name: cpp-linter
 
-# Documentation is here: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
-on: pull_request
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   cpp-linter:
