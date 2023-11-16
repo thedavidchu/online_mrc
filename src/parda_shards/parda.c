@@ -1,5 +1,11 @@
+#include <stdbool.h>  /* C99, for bool */
+#include <string.h> /* For strlen() */
+#include <stdint.h> /* C99, for uint32_t, UINT32_MAX */
+
 #include "parda.h"
 #include "narray.h"
+
+#include "../common/MurmurHash3.h"
 
 #include<omp.h>
 
@@ -240,6 +246,16 @@ void parda_input_with_filename(char* inFileName, program_data_t* pdt, long begin
   fclose(fp);
 }
 
+bool skip_input(const HKEY input, const int num_digits) {
+  const uint32_t seed = 0;
+  uint32_t out = 0;
+  /* HACK: this is because MurmurHash3 does not declare the length as const */
+  int len = num_digits;
+
+  MurmurHash3_x86_32((const void *)input, len, seed, &out);
+  return out > UINT32_MAX / 1000;
+}
+
 void parda_input_with_binaryfilepointer(FILE* fp, program_data_t* pdt, long begin,long end) {
   HKEY input;
   long t, i;
@@ -248,7 +264,10 @@ void parda_input_with_binaryfilepointer(FILE* fp, program_data_t* pdt, long begi
   for (t = begin; t <= end; t += count) {
     count = fread(buffer, sizeof(void*), buffersize, fp);
     for(i=0; i < count; i++) {
-      sprintf(input, "%p", buffer[i]);
+      int num_digits = sprintf(input, "%p", buffer[i]);
+      if (skip_input(input, num_digits)) {
+        continue;
+      }
       DEBUG(printf("%s %d\n",input,i+t);)
       process_one_access(input,pdt,i+t);
     }
@@ -259,7 +278,12 @@ void parda_input_with_textfilepointer(FILE* fp, program_data_t* pdt, long begin,
   HKEY input;
   long i;
   for(i = begin; i <= end; i++) {
+    int num_digits;
     assert(fscanf(fp, "%s", input) != EOF);
+    num_digits = strlen(input);
+    if (skip_input(input, num_digits)) {
+      continue;
+    }
     DEBUG(printf("%s %d\n", input, i);)
     process_one_access(input, pdt, i);
   }
