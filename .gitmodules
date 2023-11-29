@@ -1,0 +1,5 @@
+[submodule "third-party/libpqueue"]
+	path = third-party/libpqueue
+	# date_accessed = "2023 Nov 28"
+	# version = 09b72d509b72d55c482f8c9e4d8416d24978ee73ce4b420
+	url = https://github.com/vy/libpqueue.git
