@@ -2,6 +2,11 @@
            An implementation of top-down splaying with sizes
              D. Sleator <sleator@cs.cmu.edu>, January 1994.
 
+  Modified by David Chu on 2023 November 28
+    * Move the struct definition to the header
+    * Include the header
+    * Remove the main function
+
   This extends top-down-splay.c to maintain a size field in each node.
   This is the number of nodes in the subtree rooted there.  This makes
   it possible to efficiently compute the rank of a key.  (The rank is
@@ -48,12 +53,7 @@
 
 #include <stdio.h>
 
-typedef struct tree_node Tree;
-struct tree_node {
-    Tree * left, * right;
-    int key;
-    int size;   /* maintained to be the number of nodes rooted here */
-};
+#include "top-down-size-splay.h"
 
 #define compare(i,j) ((i)-(j))
 /* This is the comparison.                                       */
@@ -63,7 +63,7 @@ struct tree_node {
 /* This macro returns the size of a node.  Unlike "x->size",     */
 /* it works even if x=NULL.  The test could be avoided by using  */
 /* a special version of NULL which was a real node with size 0.  */
- 
+
 Tree * splay (int i, Tree *t) 
 /* Splay using the key i (which may or may not be in the tree.) */
 /* The starting root is t, and the tree used is defined by rat  */
@@ -222,38 +222,4 @@ void printtree(Tree * t, int d) {
     for (i=0; i<d; i++) printf("  ");
     printf("%d(%d)\n", t->key, t->size);
     printtree(t->left, d+1);
-}
-
-void main() {
-/* A sample use of these functions.  Start with the empty tree,         */
-/* insert some stuff into it, and then delete it                        */
-    Tree * root, *t;
-    int i;
-    root = NULL;              /* the empty tree */
-    for (i = 0; i < 100; i++) {
-	root = insert((541*i) & (1023), root);
-    }
-
-    printtree(root, 0);
-
-    for (i = -1; i<=100; i++) {
-	t = find_rank(i, root);
-	if (t == NULL) {
-	    printf("could not find a node of rank %d.\n", i);
-	} else {
-	    printf("%d is of rank %d\n", t->key, i);
-	}
-    }
-
-    printtree(root, 0);
-
-    for (i=0; i<1000; i=i+20) {
-	root = splay(i, root);
-	printf("There are %d elements to the left of %d in the set.\n",
-	       node_size(root->left), i);
-    }
-
-    for (i = 0; i < 100; i++) {
-	root = delete((541*i) & (1023), root);
-    }
 }
