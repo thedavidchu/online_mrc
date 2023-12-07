@@ -5,7 +5,7 @@
 #include "narray.h"
 #include "parda.h"
 
-#include "../common/MurmurHash3.h"
+#include "hash/MurmurHash3.h"
 
 #include <omp.h>
 
