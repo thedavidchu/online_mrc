@@ -22,3 +22,10 @@ tree_search(struct NaiveTree *me, KeyType key);
 
 bool
 tree_remove(struct NaiveTree *me, KeyType key);
+
+void
+tree_print(struct NaiveTree *me);
+
+/// @brief  Validate the correctness of the tree
+bool
+tree_validate(struct NaiveTree *me);
