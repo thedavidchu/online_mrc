@@ -52,6 +52,8 @@ traces.
 #define B_OVFL   nbuckets
 #define B_INF    nbuckets+1
 #define SLEN 20
+
+#define SHARDS_RATIO 1000
 /* Tunable parameters */
 extern int nbuckets;
 #ifdef ENABLE_PROFILING
@@ -153,12 +155,14 @@ static inline void process_one_access(char* input, program_data_t* pdt, const lo
 				}
 				*p_data = tim;
 				g_hash_table_insert(pdt->gh, data, p_data);  // Store pointer to list element
+				/* NOTE(dchu): I'm not convinced this is correct. Doesn't the
+				infinite stack distance need to be recorded? */
 		}
 		// Hit: We've seen this data before
 		else {
 				char *data = strdup(input);
 				pdt->root = insert((*lookup), pdt->root);
-				distance = node_size(pdt->root->right);
+				distance = node_size(pdt->root->right) * SHARDS_RATIO;
 				pdt->root = delete(*lookup, pdt->root);
 				pdt->root = insert(tim, pdt->root);
 				int *p_data;
