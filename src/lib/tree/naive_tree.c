@@ -58,7 +58,7 @@ tree_cardinality(struct Tree *me)
 }
 
 static bool
-subtree_insert(struct NaiveSubtree *me, KeyType key)
+subtree_naive_remove(struct NaiveSubtree *me, KeyType key)
 {
     struct NaiveSubtree **next_subtree;
     if (me == NULL) {
@@ -80,7 +80,7 @@ subtree_insert(struct NaiveSubtree *me, KeyType key)
         ++me->cardinality;
         return true;
     } else {
-        bool r = subtree_insert(*next_subtree, key);
+        bool r = subtree_naive_remove(*next_subtree, key);
         if (r) {
             ++me->cardinality;
         }
@@ -102,7 +102,7 @@ tree_naive_insert(struct Tree *me, KeyType key)
         ++me->cardinality;
         return true;
     }
-    bool r = subtree_insert(me->root, key);
+    bool r = subtree_naive_remove(me->root, key);
     if (r) {
         ++me->cardinality;
     }
@@ -197,12 +197,12 @@ subtree_pop_minimum(struct NaiveSubtree *me)
 }
 
 static struct RemoveStatus
-subtree_remove(struct NaiveSubtree *me, KeyType key)
+subtree_naive_remove(struct NaiveSubtree *me, KeyType key)
 {
     if (me == NULL) {
         return (struct RemoveStatus){.removed = false, .new_child = NULL};
     } else if (key < me->key) {
-        struct RemoveStatus r = subtree_remove(me->left_subtree, key);
+        struct RemoveStatus r = subtree_naive_remove(me->left_subtree, key);
         if (r.removed) {
             --me->cardinality;
         }
@@ -212,7 +212,7 @@ subtree_remove(struct NaiveSubtree *me, KeyType key)
         r.new_child = me;
         return r;
     } else if (me->key < key) {
-        struct RemoveStatus r = subtree_remove(me->right_subtree, key);
+        struct RemoveStatus r = subtree_naive_remove(me->right_subtree, key);
         if (r.removed) {
             --me->cardinality;
         }
@@ -252,7 +252,7 @@ tree_naive_remove(struct Tree *me, KeyType key)
     if (me == NULL) {
         return false;
     }
-    struct RemoveStatus r = subtree_remove(me->root, key);
+    struct RemoveStatus r = subtree_naive_remove(me->root, key);
     if (r.removed == NULL) {
         return false;
     }
