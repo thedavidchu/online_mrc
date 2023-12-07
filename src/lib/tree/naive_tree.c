@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,7 +13,7 @@ struct NaiveSubtree {
     struct NaiveSubtree *right_subtree;
 };
 
-struct NaiveTree {
+struct Tree {
     struct NaiveSubtree *root;
     size_t cardinality;
 };
@@ -37,10 +38,10 @@ subtree_new(KeyType key)
     return subtree;
 }
 
-struct NaiveTree *
+struct Tree *
 tree_new()
 {
-    struct NaiveTree *r = (struct NaiveTree *)malloc(sizeof(struct NaiveTree));
+    struct Tree *r = (struct Tree *)malloc(sizeof(struct Tree));
     if (r == NULL) {
         assert(0 && "OOM error!");
         return NULL;
@@ -51,7 +52,7 @@ tree_new()
 }
 
 size_t
-tree_cardinality(struct NaiveTree *me)
+tree_cardinality(struct Tree *me)
 {
     return me->cardinality;
 }
@@ -74,7 +75,7 @@ subtree_insert(struct NaiveSubtree *me, KeyType key)
     if (*next_subtree == NULL) {
         *next_subtree = subtree_new(key);
         if (*next_subtree == NULL) {
-            return false;   // OOM error!
+            return false; // OOM error!
         }
         ++me->cardinality;
         return true;
@@ -88,7 +89,7 @@ subtree_insert(struct NaiveSubtree *me, KeyType key)
 }
 
 bool
-tree_insert(struct NaiveTree *me, KeyType key)
+tree_naive_insert(struct Tree *me, KeyType key)
 {
     if (me == NULL) {
         return false;
@@ -101,7 +102,7 @@ tree_insert(struct NaiveTree *me, KeyType key)
         ++me->cardinality;
         return true;
     }
-    bool r = subtree_insert(me->root,key);
+    bool r = subtree_insert(me->root, key);
     if (r) {
         ++me->cardinality;
     }
@@ -123,12 +124,57 @@ subtree_search(struct NaiveSubtree *me, KeyType key)
 }
 
 bool
-tree_search(struct NaiveTree *me, KeyType key)
+tree_search(struct Tree *me, KeyType key)
 {
     if (me == NULL) {
         return false;
     }
     return subtree_search(me->root, key);
+}
+
+static size_t
+subtree_right_cardinality(struct NaiveSubtree *me)
+{
+    if (me == NULL) {
+        return 0;
+    } else if (me->right_subtree == NULL) {
+        return 0;
+    } else {
+        return me->right_subtree->cardinality;
+    }
+}
+
+size_t
+tree_reverse_rank(struct Tree *me, KeyType key)
+{
+    if (me == NULL) {
+        return SIZE_MAX;
+    } else if (me->root == NULL) {
+        return SIZE_MAX;
+    }
+
+    size_t rank = 0;
+    struct NaiveSubtree *subtree = me->root;
+    while (true) {
+        if (key < subtree->key) {
+            if (subtree->left_subtree == NULL) {
+                return SIZE_MAX;
+            }
+            size_t right_cardinality = subtree_right_cardinality(subtree);
+            rank += right_cardinality + 1;
+            subtree = subtree->left_subtree;
+        } else if (subtree->key < key) {
+            if (subtree->right_subtree == NULL) {
+                return SIZE_MAX;
+            }
+            // Rank remains the same when traversing right
+            subtree = subtree->right_subtree;
+        } else {
+            size_t right_cardinality = subtree_right_cardinality(subtree);
+            rank += right_cardinality;
+            return rank;
+        }
+    }
 }
 
 static struct RemoveStatus
@@ -137,13 +183,12 @@ subtree_pop_minimum(struct NaiveSubtree *me)
     if (me == NULL) {
         // NOTE This should only be called if this function is originally called
         //      with a NULL argument. No recursive call should pass NULL.
-        return (struct RemoveStatus) {.removed = NULL, .new_child = NULL};
+        return (struct RemoveStatus){.removed = NULL, .new_child = NULL};
     } else if (me->left_subtree == NULL) {
-        return (struct RemoveStatus) {.removed = me, .new_child = me->right_subtree};
+        return (struct RemoveStatus){.removed = me, .new_child = me->right_subtree};
     } else {
         struct RemoveStatus r = subtree_pop_minimum(me->left_subtree);
-        assert(r.removed != NULL &&
-                "should have popped an item from the non-empty subtree");
+        assert(r.removed != NULL && "should have popped an item from the non-empty subtree");
         --me->cardinality;
         me->left_subtree = r.new_child;
         r.new_child = me;
@@ -155,7 +200,7 @@ static struct RemoveStatus
 subtree_remove(struct NaiveSubtree *me, KeyType key)
 {
     if (me == NULL) {
-        return (struct RemoveStatus) {.removed = false, .new_child = NULL};
+        return (struct RemoveStatus){.removed = false, .new_child = NULL};
     } else if (key < me->key) {
         struct RemoveStatus r = subtree_remove(me->left_subtree, key);
         if (r.removed) {
@@ -179,15 +224,15 @@ subtree_remove(struct NaiveSubtree *me, KeyType key)
     } else {
         if (me->left_subtree == NULL && me->right_subtree == NULL) {
             // Is a leaf
-            return (struct RemoveStatus) {.removed = me, .new_child = NULL};
-        } else if (me->left_subtree != NULL) {
-            // Single child
-            struct NaiveSubtree *single_child = me->left_subtree;
-            return (struct RemoveStatus) {.removed = me, .new_child = single_child};
-        } else if (me->right_subtree != NULL) {
+            return (struct RemoveStatus){.removed = me, .new_child = NULL};
+        } else if (me->left_subtree == NULL) {
             // Single child
             struct NaiveSubtree *single_child = me->right_subtree;
-            return (struct RemoveStatus) {.removed = me, .new_child = single_child};
+            return (struct RemoveStatus){.removed = me, .new_child = single_child};
+        } else if (me->right_subtree == NULL) {
+            // Single child
+            struct NaiveSubtree *single_child = me->left_subtree;
+            return (struct RemoveStatus){.removed = me, .new_child = single_child};
         } else {
             // Double child => recursively replace with successor (arbitrarily
             // chose the successor rather than the predecessor).
@@ -196,13 +241,13 @@ subtree_remove(struct NaiveSubtree *me, KeyType key)
             replacement_node->cardinality = me->cardinality - 1;
             replacement_node->left_subtree = me->left_subtree;
             replacement_node->right_subtree = r.new_child;
-            return (struct RemoveStatus) {.removed = me, .new_child = replacement_node};
+            return (struct RemoveStatus){.removed = me, .new_child = replacement_node};
         }
     }
 }
 
 bool
-tree_remove(struct NaiveTree *me, KeyType key)
+tree_naive_remove(struct Tree *me, KeyType key)
 {
     if (me == NULL) {
         return false;
@@ -232,7 +277,7 @@ subtree_print(struct NaiveSubtree *me)
 }
 
 void
-tree_print(struct NaiveTree *me)
+tree_print(struct Tree *me)
 {
     if (me == NULL) {
         printf("{}\n");
@@ -244,27 +289,27 @@ tree_print(struct NaiveTree *me)
 }
 
 static bool
-subtree_validate(struct NaiveSubtree *me, const size_t cardinality,
-        const bool valid_lowerbound, const KeyType lowerbound,
-        const bool valid_upperbound, const KeyType upperbound)
+subtree_validate(struct NaiveSubtree *me,
+                 const size_t cardinality,
+                 const bool valid_lowerbound,
+                 const KeyType lowerbound,
+                 const bool valid_upperbound,
+                 const KeyType upperbound)
 {
     if (me == NULL) {
         bool r = (cardinality == 0);
         return r;
     } else if (me->cardinality != cardinality) {
-        subtree_print(me);
         printf("[ERROR] %s:%d\n", __FILE__, __LINE__);
         return false;
     }
 
     // Validate that the tree is sorted
     if (valid_lowerbound && me->key < lowerbound) {
-        subtree_print(me);
         printf("[ERROR] %s:%d\n", __FILE__, __LINE__);
         return false;
     }
     if (valid_upperbound && me->key > upperbound) {
-        subtree_print(me);
         printf("[ERROR] %s:%d\n", __FILE__, __LINE__);
         return false;
     }
@@ -273,19 +318,25 @@ subtree_validate(struct NaiveSubtree *me, const size_t cardinality,
     const size_t left_cardinality = (me->left_subtree ? me->left_subtree->cardinality : 0);
     const size_t right_cardinality = (me->right_subtree ? me->right_subtree->cardinality : 0);
     if (me->left_subtree != NULL) {
-        bool r = subtree_validate(me->left_subtree, cardinality - right_cardinality - 1,
-                valid_lowerbound, lowerbound, true, me->key);
+        bool r = subtree_validate(me->left_subtree,
+                                  cardinality - right_cardinality - 1,
+                                  valid_lowerbound,
+                                  lowerbound,
+                                  true,
+                                  me->key);
         if (!r) {
-            subtree_print(me);
             printf("[ERROR] %s:%d\n", __FILE__, __LINE__);
             return false;
         }
     }
     if (me->right_subtree != NULL) {
-        bool r = subtree_validate(me->right_subtree, cardinality - left_cardinality - 1,
-                true, me->key, valid_upperbound, upperbound);
+        bool r = subtree_validate(me->right_subtree,
+                                  cardinality - left_cardinality - 1,
+                                  true,
+                                  me->key,
+                                  valid_upperbound,
+                                  upperbound);
         if (!r) {
-            subtree_print(me);
             printf("[ERROR] %s:%d\n", __FILE__, __LINE__);
             return false;
         }
@@ -296,14 +347,12 @@ subtree_validate(struct NaiveSubtree *me, const size_t cardinality,
 }
 
 bool
-tree_validate(struct NaiveTree *me)
+tree_validate(struct Tree *me)
 {
     if (me == NULL) {
-        printf("[TRACE] %s:%d\n", __FILE__, __LINE__);
         return true;
     } else if (me->root == NULL) {
-        bool r = (me->cardinality == 0); 
-        printf("[TRACE] %s:%d\n", __FILE__, __LINE__);
+        bool r = (me->cardinality == 0);
         return r;
     } else {
         bool r = subtree_validate(me->root, me->cardinality, false, 0, false, 0);
