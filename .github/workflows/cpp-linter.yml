@@ -21,7 +21,7 @@ jobs:
           # An empty string means "use the .clang-tidy file"
           tidy-checks: ""
           lines-changed-only: false
-          files-changed-only: false
+          files-changed-only: true
 
       - name: Fail Fast?!
         if: steps.linter.outputs.checks-failed > 0
