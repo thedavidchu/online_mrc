@@ -18,5 +18,6 @@ extern long lines;
 extern int threads;
 extern int buffersize;
 
-int process_args(int argc,char **argv);
+int
+process_args(int argc, char **argv);
 #endif
