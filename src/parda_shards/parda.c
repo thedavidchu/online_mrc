@@ -253,7 +253,7 @@ bool skip_input(const HKEY input, const int num_digits) {
   int len = num_digits;
 
   MurmurHash3_x86_32((const void *)input, len, seed, &out);
-  return out > UINT32_MAX / 1000;
+  return out > UINT32_MAX / SHARDS_RATIO;
 }
 
 void parda_input_with_binaryfilepointer(FILE* fp, program_data_t* pdt, long begin,long end) {
