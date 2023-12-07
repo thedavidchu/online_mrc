@@ -13,11 +13,15 @@
 #include <unistd.h>
 
 #ifndef min
-	#define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-long get_file_lines(char filename[]);
-long seperate_textfile(char filename[], int processor_number, long lines);
-long seperate_binaryfile(char inputFileName[], int processor_number, long lines);
-long parda_seperate_file(char inputFileName[], int processor_number, long lines);
+long
+get_file_lines(char filename[]);
+long
+seperate_textfile(char filename[], int processor_number, long lines);
+long
+seperate_binaryfile(char inputFileName[], int processor_number, long lines);
+long
+parda_seperate_file(char inputFileName[], int processor_number, long lines);
 #endif
