@@ -1,1 +1,2 @@
+subdir('hash')
 subdir('tree')
