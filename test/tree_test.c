@@ -1,3 +1,5 @@
+/// Tests for the various tree implementations.
+/// NOTE I only free memory on the successful paths.
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -5,6 +7,7 @@
 #include <stdlib.h>
 
 #include "tree/naive_tree.h"
+#include "tree/sleator_tree.h"
 
 // NOTE There are 100 randomly shuffled keys in the range 0..=99. They were
 //      generated with the Python script:
@@ -34,15 +37,32 @@ const KeyType random_keys_3[100] = {
     76, 85, 99, 89, 73, 91, 15, 40, 69, 45, 83, 16, 27, 48, 74, 87, 96, 18, 42, 84,
     57, 54, 19, 25, 55, 12, 46, 4,  24, 63, 11, 23, 1,  97, 66, 3,  29, 33, 31, 64};
 
+#define ASSERT_TRUE_OR_RETURN_FALSE(r, msg, tree)                                                  \
+    do {                                                                                           \
+        if (!(r)) {                                                                                \
+            /* Clean up resources */                                                               \
+            tree_free((tree));                                                                     \
+            printf("[ERROR] %s:%d %s\n", __FILE__, __LINE__, (msg));                               \
+            /* NOTE This assertion is for debugging purposes so that we have a                     \
+            finer grain understanding of where the failure occurred. */                            \
+            assert((r) && (msg));                                                                  \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
+////////////////////////////////////////////////////////////////////////////////
+/// NAIVE TREE TESTS
+////////////////////////////////////////////////////////////////////////////////
+
 static bool
-manual_validation_test()
+manual_validation_test_for_naive()
 {
     struct Tree *tree = tree_new();
     if (tree == NULL) {
         return false;
     }
     for (KeyType i = 0; i < 10; ++i) {
-        bool r = tree_naive_insert(tree, i);
+        bool r = tree_insert(tree, i);
         printf("Inserted %zu: %d\n", i, r);
         tree_print(tree);
     }
@@ -51,15 +71,16 @@ manual_validation_test()
         printf("Found %zu: %d\n", i, r);
     }
     for (KeyType i = 0; i < 11; ++i) {
-        bool r = tree_naive_remove(tree, i);
+        bool r = tree_remove(tree, i);
         printf("Removed %zu: %d\n", i, r);
         tree_print(tree);
     }
+    tree_free(tree);
     return true;
 }
 
 static bool
-random_test()
+random_test_for_naive()
 {
     struct Tree *tree = tree_new();
     if (!tree) {
@@ -68,30 +89,15 @@ random_test()
 
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
-        bool r = tree_naive_insert(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "insert should succeed");
-            return false;
-        }
+        bool r = tree_insert(tree, key);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "insert should succeed", tree);
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following insert should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following insert should succeed", tree);
     }
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_search(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
         size_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
@@ -100,28 +106,19 @@ random_test()
                    key,
                    reverse_rank,
                    99 - key);
+            tree_free(tree);
             assert(0 && "reverse rank should be 99 - key for keys in range 0..=99");
             return false;
         }
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
     // NOTE We run the search a second time to ensure that it does not modify
     //      the tree.
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_search(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
         size_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
@@ -130,39 +127,26 @@ random_test()
                    key,
                    reverse_rank,
                    99 - key);
+            tree_free(tree);
             assert(0 && "reverse rank should be 99 - key for keys in range 0..=99");
             return false;
         }
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
-        bool r = tree_naive_remove(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "remove should succeed");
-            return false;
-        }
+        bool r = tree_remove(tree, key);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following remove should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following remove should succeed", tree);
     }
+    tree_free(tree);
     return true;
 }
 
 static bool
-random_test_with_different_traces()
+random_test_with_different_traces_for_naive()
 {
     struct Tree *tree = tree_new();
     if (!tree) {
@@ -171,30 +155,15 @@ random_test_with_different_traces()
 
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
-        bool r = tree_naive_insert(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "insert should succeed");
-            return false;
-        }
+        bool r = tree_insert(tree, key);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "insert should succeed", tree);
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following insert should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following insert should succeed", tree);
     }
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_1[i];
         bool r = tree_search(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
         size_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
@@ -207,24 +176,14 @@ random_test_with_different_traces()
             return false;
         }
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
     // NOTE We run the search a second time to ensure that it does not modify
     //      the tree.
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_2[i];
         bool r = tree_search(tree, key);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
         size_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
@@ -237,30 +196,81 @@ random_test_with_different_traces()
             return false;
         }
         r = tree_validate(tree);
-        if (!r) {
-            // NOTE This assertion is for debugging purposes so that we have a
-            //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following search should succeed");
-            return false;
-        }
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
     for (size_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_3[i];
-        bool r = tree_naive_remove(tree, key);
-        if (!r) {
+        bool r = tree_remove(tree, key);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);
+        r = tree_validate(tree);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following remove should succeed", tree);
+    }
+    tree_free(tree);
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// SLEATOR SPLAY TREE TESTS
+////////////////////////////////////////////////////////////////////////////////
+
+static bool
+random_test_with_different_traces_for_sleator()
+{
+    struct Tree *tree = tree_new();
+    bool r = false;
+    if (!tree) {
+        return false;
+    }
+
+    for (size_t i = 0; i < 100; ++i) {
+        KeyType key = random_keys_0[i];
+        r = sleator_insert(tree, key);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "insert should succeed", tree);
+        r = tree_validate(tree);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following insert should succeed", tree);
+    }
+    for (size_t i = 0; i < 100; ++i) {
+        KeyType key = random_keys_1[i];
+        size_t reverse_rank = tree_reverse_rank(tree, key);
+        if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            assert(r && "remove should succeed");
+            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+                   key,
+                   reverse_rank,
+                   99 - key);
+            assert(0 && "reverse rank should be 99 - key for keys in range 0..=99");
             return false;
         }
         r = tree_validate(tree);
-        if (!r) {
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
+    }
+    // NOTE We run the search a second time to ensure that it does not modify
+    //      the tree.
+    for (size_t i = 0; i < 100; ++i) {
+        KeyType key = random_keys_2[i];
+        size_t reverse_rank = tree_reverse_rank(tree, key);
+        if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            assert(r && "validation following remove should succeed");
+            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+                   key,
+                   reverse_rank,
+                   99 - key);
+            assert(0 && "reverse rank should be 99 - key for keys in range 0..=99");
             return false;
         }
+        r = tree_validate(tree);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
+    for (size_t i = 0; i < 100; ++i) {
+        KeyType key = random_keys_3[i];
+        bool r = sleator_remove(tree, key);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);
+        r = tree_validate(tree);
+        ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following remove should succeed", tree);
+    }
+    tree_free(tree);
     return true;
 }
 
@@ -271,26 +281,41 @@ main()
     bool manual_tests = false;
     if (manual_tests) {
         // These tests require manual inspection. Ugh!
-        r = manual_validation_test();
+        r = manual_validation_test_for_naive();
         if (!r) {
-            assert(0 && "manual_validation_test failed");
+            assert(0 && "manual_validation_test_for_naive failed");
             exit(EXIT_FAILURE);
         }
-        printf("[SUCCESS] %s:%d manual_validation_test() succeeded!\n", __FILE__, __LINE__);
+        printf("[SUCCESS] %s:%d manual_validation_test_for_naive() succeeded!\n",
+               __FILE__,
+               __LINE__);
     }
 
-    // These are automatic tests
-    r = random_test();
+    // These are automatic tests for the naive tree
+    r = random_test_for_naive();
     if (!r) {
-        assert(0 && "random_test failed");
+        assert(0 && "random_test_for_naive failed");
         exit(EXIT_FAILURE);
     }
-    printf("[SUCCESS] %s:%d random_test() succeeded!\n", __FILE__, __LINE__);
-    r = random_test_with_different_traces();
+    printf("[SUCCESS] %s:%d random_test_for_naive() succeeded!\n", __FILE__, __LINE__);
+    r = random_test_with_different_traces_for_naive();
     if (!r) {
-        assert(0 && "random_test failed");
+        assert(0 && "random_test_with_different_traces_for_naive failed");
         exit(EXIT_FAILURE);
     }
-    printf("[SUCCESS] %s:%d random_test_with_different_traces() succeeded!\n", __FILE__, __LINE__);
+    printf("[SUCCESS] %s:%d random_test_with_different_traces_for_naive() succeeded!\n",
+           __FILE__,
+           __LINE__);
+
+    // Automatic tests for Sleator's tree
+    r = random_test_with_different_traces_for_sleator();
+    if (!r) {
+        assert(0 && "random_test_with_different_traces_for_sleator failed");
+        exit(EXIT_FAILURE);
+    }
+    printf("[SUCCESS] %s:%d random_test_with_different_traces_for_sleator() succeeded!\n",
+           __FILE__,
+           __LINE__);
+
     return EXIT_SUCCESS;
 }

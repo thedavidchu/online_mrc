@@ -1,9 +1,12 @@
-naive_tree_inc = include_directories('include')
+# Directory-wide include
+tree_include = include_directories('include')
+
+# Naive Tree
 naive_tree_lib = library('naive_tree_lib',
     'naive_tree.c',
-    include_directories : naive_tree_inc)
-manual_tree_test_exe = executable('manual_tree_test_exe',
-    'manual_test_tree.c',
-    include_directories : naive_tree_inc,
-    link_with : naive_tree_lib)
-test('manual_test_naive_tree', manual_tree_test_exe)
+    include_directories : tree_include)
+
+# Sleator's Splay Tree
+sleator_tree_lib = library('sleator_tree_lib',
+    'sleator_tree.c',
+    include_directories : tree_include)

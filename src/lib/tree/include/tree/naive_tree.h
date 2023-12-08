@@ -10,6 +10,21 @@ typedef size_t KeyType;
 
 struct Tree;
 
+struct Subtree {
+    KeyType key;
+    size_t cardinality;
+    struct Subtree *left_subtree;
+    struct Subtree *right_subtree;
+};
+
+struct Tree {
+    struct Subtree *root;
+    size_t cardinality;
+};
+
+struct Subtree *
+subtree_new(KeyType key);
+
 struct Tree *
 tree_new();
 
@@ -18,7 +33,10 @@ size_t
 tree_cardinality(struct Tree *me);
 
 bool
-tree_naive_insert(struct Tree *me, KeyType key);
+subtree_insert(struct Subtree *me, KeyType key);
+
+bool
+tree_insert(struct Tree *me, KeyType key);
 
 bool
 tree_search(struct Tree *me, KeyType key);
@@ -32,11 +50,22 @@ size_t
 tree_reverse_rank(struct Tree *me, KeyType key);
 
 bool
-tree_naive_remove(struct Tree *me, KeyType key);
+tree_remove(struct Tree *me, KeyType key);
 
+/// @brief  Print as a JSON (for sticking in JSON graphical software).
 void
 tree_print(struct Tree *me);
+
+/// @brief  Pretty print semi-readably to the screen.
+void
+tree_prettyprint(struct Tree *me);
 
 /// @brief  Validate the correctness of the tree
 bool
 tree_validate(struct Tree *me);
+
+void
+subtree_free(struct Subtree *me);
+
+void
+tree_free(struct Tree *me);
