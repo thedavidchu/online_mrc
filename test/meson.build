@@ -13,5 +13,5 @@ reuse_stack_test_exe = executable('reuse_stack_test_exe',
     link_with : [reuse_stack_lib])
 
 # Run tests
-test('test_tree', tree_test_exe)
-test('test_reuse_stack', reuse_stack_test_exe)
+test('tree_test', tree_test_exe)
+test('reuse_stack_test', reuse_stack_test_exe)
