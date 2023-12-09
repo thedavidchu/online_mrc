@@ -48,21 +48,25 @@ reuse_stack_access_item(struct ReuseStack *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
-    gpointer *time_stamp_ptr = NULL;
+    TimeStampType time_stamp = 0;
 
     if (me == NULL) {
         return;
     }
 
-    found = g_hash_table_lookup_extended(me->hash_table, entry, NULL, time_stamp_ptr);
+    found = g_hash_table_lookup_extended(me->hash_table,
+                                         (gconstpointer)entry,
+                                         NULL,
+                                         (gpointer *)&time_stamp);
     if (found == TRUE) {
-        KeyType time_stamp = *(KeyType *)time_stamp_ptr;
         size_t distance = tree_reverse_rank(me->tree, time_stamp);
-        r = sleator_remove(me->tree, time_stamp);
+        r = sleator_remove(me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = sleator_insert(me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        g_hash_table_replace(me->hash_table, entry, me->current_time_stamp);
+        g_hash_table_replace(me->hash_table,
+                             (gconstpointer)entry,
+                             (gconstpointer)me->current_time_stamp);
 
         if (distance < MAX_HISTOGRAM_LENGTH) {
             ++me->histogram[distance];
@@ -72,8 +76,10 @@ reuse_stack_access_item(struct ReuseStack *me, EntryType entry)
         }
 
     } else {
-        g_hash_table_insert(me->hash_table, entry, me->current_time_stamp);
-        sleator_insert(me->tree, me->current_time_stamp);
+        g_hash_table_insert(me->hash_table,
+                            (gconstpointer)entry,
+                            (gconstpointer)me->current_time_stamp);
+        sleator_insert(me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
     }
 }

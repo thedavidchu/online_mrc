@@ -6,7 +6,8 @@ tree_test_exe = executable('tree_test_exe',
 
 reuse_stack_test_exe = executable('reuse_stack_test_exe',
     'reuse_stack_test.c',
-    include_directories : reuse_stack_include,
+    include_directories : [tree_include, reuse_stack_include],
+    dependencies : glib_dep,
     link_with : [reuse_stack_lib])
 
 # Run tests

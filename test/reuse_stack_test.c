@@ -14,13 +14,14 @@ access_same_key_five_times()
     reuse_stack_access_item(reuse_stack, 0);
     reuse_stack_access_item(reuse_stack, 0);
 
-    if (me->histogram[0] != 4 || me->infinite_distance != 1) {
+    if (reuse_stack->histogram[0] != 4 || reuse_stack->infinite_distance != 1) {
         assert(0 && "histogram should be {0: 4, inf: 1}");
         reuse_stack_free(reuse_stack);
         return false;
     }
 
     reuse_stack_free(reuse_stack);
+    return true;
 }
 
 int
