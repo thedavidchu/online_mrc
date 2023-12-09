@@ -27,4 +27,7 @@ void
 reuse_stack_access_item(struct ReuseStack *me, EntryType entry);
 
 void
+reuse_stack_print_sparse_histogram(struct ReuseStack *me);
+
+void
 reuse_stack_free(struct ReuseStack *me);

@@ -59,28 +59,23 @@ reuse_stack_access_item(struct ReuseStack *me, EntryType entry)
                                          NULL,
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
-        size_t distance = tree_reverse_rank(me->tree, time_stamp);
+        size_t distance = tree_reverse_rank(me->tree, (KeyType)time_stamp);
         r = sleator_remove(me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = sleator_insert(me->tree, (KeyType)me->current_time_stamp);
+        g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        g_hash_table_replace(me->hash_table,
-                             (gconstpointer)entry,
-                             (gconstpointer)me->current_time_stamp);
-
         if (distance < MAX_HISTOGRAM_LENGTH) {
             ++me->histogram[distance];
         } else {
             ++me->infinite_distance;
             // TODO(dchu): Record the infinite distances for Parda!
         }
-
     } else {
-        g_hash_table_insert(me->hash_table,
-                            (gconstpointer)entry,
-                            (gconstpointer)me->current_time_stamp);
+        g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         sleator_insert(me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
+        ++me->infinite_distance;
     }
 }
 
@@ -88,15 +83,17 @@ void
 reuse_stack_print_sparse_histogram(struct ReuseStack *me)
 {
     if (me == NULL || me->histogram == NULL) {
+        printf("{}\n");
         return;
     }
     printf("{");
     for (size_t i = 0; i < MAX_HISTOGRAM_LENGTH; ++i) {
         if (me->histogram[i]) {
-            printf("%zu: %zu", i, me->histogram[i]);
+            printf("\"%zu\": %zu, ", i, me->histogram[i]);
         }
     }
-    printf("}");
+    printf("\"inf\": %zu", me->infinite_distance);
+    printf("}\n");
 }
 
 void

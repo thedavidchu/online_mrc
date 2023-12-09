@@ -9,6 +9,8 @@
 #include "tree/naive_tree.h"
 #include "tree/sleator_tree.h"
 
+#include "test/mytester.h"
+
 // NOTE There are 100 randomly shuffled keys in the range 0..=99. They were
 //      generated with the Python script:
 //      import random; x = list(range(100)); random.shuffle(x); print(x)
@@ -277,45 +279,18 @@ random_test_with_different_traces_for_sleator()
 int
 main()
 {
-    bool r = false;
     bool manual_tests = false;
     if (manual_tests) {
         // These tests require manual inspection. Ugh!
-        r = manual_validation_test_for_naive();
-        if (!r) {
-            assert(0 && "manual_validation_test_for_naive failed");
-            exit(EXIT_FAILURE);
-        }
-        printf("[SUCCESS] %s:%d manual_validation_test_for_naive() succeeded!\n",
-               __FILE__,
-               __LINE__);
+        ASSERT_FUNCTION_RETURNS_TRUE(manual_validation_test_for_naive());
     }
 
     // These are automatic tests for the naive tree
-    r = random_test_for_naive();
-    if (!r) {
-        assert(0 && "random_test_for_naive failed");
-        exit(EXIT_FAILURE);
-    }
-    printf("[SUCCESS] %s:%d random_test_for_naive() succeeded!\n", __FILE__, __LINE__);
-    r = random_test_with_different_traces_for_naive();
-    if (!r) {
-        assert(0 && "random_test_with_different_traces_for_naive failed");
-        exit(EXIT_FAILURE);
-    }
-    printf("[SUCCESS] %s:%d random_test_with_different_traces_for_naive() succeeded!\n",
-           __FILE__,
-           __LINE__);
+    ASSERT_FUNCTION_RETURNS_TRUE(random_test_for_naive());
+    ASSERT_FUNCTION_RETURNS_TRUE(random_test_with_different_traces_for_naive());
 
     // Automatic tests for Sleator's tree
-    r = random_test_with_different_traces_for_sleator();
-    if (!r) {
-        assert(0 && "random_test_with_different_traces_for_sleator failed");
-        exit(EXIT_FAILURE);
-    }
-    printf("[SUCCESS] %s:%d random_test_with_different_traces_for_sleator() succeeded!\n",
-           __FILE__,
-           __LINE__);
+    ASSERT_FUNCTION_RETURNS_TRUE(random_test_with_different_traces_for_sleator());
 
     return EXIT_SUCCESS;
 }
