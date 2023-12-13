@@ -1,4 +1,8 @@
 #pragma once
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define ASSERT_FUNCTION_RETURNS_TRUE(func_call)                                                    \
     do {                                                                                           \

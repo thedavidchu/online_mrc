@@ -1,6 +1,12 @@
 mytester_include = include_directories('include')
 
 # Tests
+histogram_test_exe = executable('histogram_test_exe',
+    'histogram_test.c',
+    include_directories : [mytester_include, histogram_include],
+    dependencies : glib_dep,
+    link_with : [basic_histogram_lib])
+
 tree_test_exe = executable('tree_test_exe',
     'tree_test.c',
     include_directories : [mytester_include, tree_include],
@@ -13,5 +19,6 @@ reuse_stack_test_exe = executable('reuse_stack_test_exe',
     link_with : [reuse_stack_lib])
 
 # Run tests
+test('histogram_test', histogram_test_exe)
 test('tree_test', tree_test_exe)
 test('reuse_stack_test', reuse_stack_test_exe)
