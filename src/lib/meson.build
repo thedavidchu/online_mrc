@@ -1,4 +1,4 @@
-# subdir('hash')
+subdir('hash')
 subdir('histogram')
 subdir('tree')
 
