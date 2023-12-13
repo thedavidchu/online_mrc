@@ -1,6 +1,7 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h> // bool
-#include <stddef.h>  // size_t
+#include <stdint.h>  // uint64_t
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -34,7 +35,7 @@ olken_reuse_stack_new()
         olken_reuse_stack_free(olken_reuse_stack);
         return NULL;
     }
-    olken_reuse_stack->histogram = (size_t *)calloc(MAX_HISTOGRAM_LENGTH, sizeof(size_t));
+    olken_reuse_stack->histogram = (uint64_t *)calloc(MAX_HISTOGRAM_LENGTH, sizeof(uint64_t));
     if (olken_reuse_stack->histogram == NULL) {
         olken_reuse_stack_free(olken_reuse_stack);
         return NULL;
@@ -60,7 +61,7 @@ olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry)
                                          NULL,
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
-        size_t distance = tree_reverse_rank(me->tree, (KeyType)time_stamp);
+        uint64_t distance = tree_reverse_rank(me->tree, (KeyType)time_stamp);
         r = sleator_remove(me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = sleator_insert(me->tree, (KeyType)me->current_time_stamp);
@@ -88,12 +89,12 @@ olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me)
         return;
     }
     printf("{");
-    for (size_t i = 0; i < MAX_HISTOGRAM_LENGTH; ++i) {
+    for (uint64_t i = 0; i < MAX_HISTOGRAM_LENGTH; ++i) {
         if (me->histogram[i]) {
-            printf("\"%zu\": %zu, ", i, me->histogram[i]);
+            printf("\"" PRIu64 "\": " PRIu64 ", ", i, me->histogram[i]);
         }
     }
-    printf("\"inf\": %zu", me->infinite_distance);
+    printf("\"inf\": " PRIu64 "", me->infinite_distance);
     printf("}\n");
 }
 

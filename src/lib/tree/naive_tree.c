@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -39,7 +40,7 @@ tree_new()
     return r;
 }
 
-size_t
+uint64_t
 tree_cardinality(struct Tree *me)
 {
     return me->cardinality;
@@ -130,7 +131,7 @@ tree_search(struct Tree *me, KeyType key)
     assert(0 && "impossible!");
 }
 
-static size_t
+static uint64_t
 subtree_right_cardinality(struct Subtree *me)
 {
     if (me == NULL) {
@@ -142,7 +143,7 @@ subtree_right_cardinality(struct Subtree *me)
     }
 }
 
-size_t
+uint64_t
 tree_reverse_rank(struct Tree *me, KeyType key)
 {
     if (me == NULL) {
@@ -151,14 +152,14 @@ tree_reverse_rank(struct Tree *me, KeyType key)
         return SIZE_MAX;
     }
 
-    size_t rank = 0;
+    uint64_t rank = 0;
     struct Subtree *subtree = me->root;
     while (true) {
         if (key < subtree->key) {
             if (subtree->left_subtree == NULL) {
                 return SIZE_MAX;
             }
-            size_t right_cardinality = subtree_right_cardinality(subtree);
+            uint64_t right_cardinality = subtree_right_cardinality(subtree);
             rank += right_cardinality + 1;
             subtree = subtree->left_subtree;
         } else if (subtree->key < key) {
@@ -168,7 +169,7 @@ tree_reverse_rank(struct Tree *me, KeyType key)
             // Rank remains the same when traversing right
             subtree = subtree->right_subtree;
         } else {
-            size_t right_cardinality = subtree_right_cardinality(subtree);
+            uint64_t right_cardinality = subtree_right_cardinality(subtree);
             rank += right_cardinality;
             return rank;
         }
@@ -267,7 +268,9 @@ subtree_print(struct Subtree *me)
         printf("null");
         return;
     }
-    printf("{\"key\": %zu, \"cardinality\": %zu, \"left\": ", me->key, me->cardinality);
+    printf("{\"key\": " PRIu64 ", \"cardinality\": " PRIu64 ", \"left\": ",
+           me->key,
+           me->cardinality);
     subtree_print(me->left_subtree);
     printf(", \"right\": ");
     subtree_print(me->right_subtree);
@@ -281,22 +284,22 @@ tree_print(struct Tree *me)
         printf("{}\n");
         return;
     }
-    printf("{\"cardinality\": %zu, \"root\": ", me->cardinality);
+    printf("{\"cardinality\": " PRIu64 ", \"root\": ", me->cardinality);
     subtree_print(me->root);
     printf("}\n");
 }
 
 static void
-subtree_prettyprint(struct Subtree *me, size_t level)
+subtree_prettyprint(struct Subtree *me, uint64_t level)
 {
     if (me == NULL) {
         return;
     }
     subtree_prettyprint(me->right_subtree, level + 1);
-    for (size_t i = 0; i < level; ++i) {
+    for (uint64_t i = 0; i < level; ++i) {
         printf("  ");
     }
-    printf("Key: %zu, Size: %zu\n", me->key, me->cardinality);
+    printf("Key: " PRIu64 ", Size: " PRIu64 "\n", me->key, me->cardinality);
     subtree_prettyprint(me->left_subtree, level + 1);
 }
 
@@ -311,7 +314,7 @@ tree_prettyprint(struct Tree *me)
 
 static bool
 subtree_validate(struct Subtree *me,
-                 const size_t cardinality,
+                 const uint64_t cardinality,
                  const bool valid_lowerbound,
                  const KeyType lowerbound,
                  const bool valid_upperbound,
@@ -336,8 +339,8 @@ subtree_validate(struct Subtree *me,
     }
 
     // Get size of subtrees
-    const size_t left_cardinality = (me->left_subtree ? me->left_subtree->cardinality : 0);
-    const size_t right_cardinality = (me->right_subtree ? me->right_subtree->cardinality : 0);
+    const uint64_t left_cardinality = (me->left_subtree ? me->left_subtree->cardinality : 0);
+    const uint64_t right_cardinality = (me->right_subtree ? me->right_subtree->cardinality : 0);
     if (me->left_subtree != NULL) {
         bool r = subtree_validate(me->left_subtree,
                                   cardinality - right_cardinality - 1,

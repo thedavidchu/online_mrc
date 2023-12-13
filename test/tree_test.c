@@ -1,8 +1,9 @@
 /// Tests for the various tree implementations.
 /// NOTE I only free memory on the successful paths.
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -65,16 +66,16 @@ manual_validation_test_for_naive()
     }
     for (KeyType i = 0; i < 10; ++i) {
         bool r = tree_insert(tree, i);
-        printf("Inserted %zu: %d\n", i, r);
+        printf("Inserted " PRIu64 ": %d\n", (uint64_t)i, r);
         tree_print(tree);
     }
     for (KeyType i = 0; i < 11; ++i) {
         bool r = tree_search(tree, i);
-        printf("Found %zu: %d\n", i, r);
+        printf("Found " PRIu64 ": %d\n", (uint64_t)i, r);
     }
     for (KeyType i = 0; i < 11; ++i) {
         bool r = tree_remove(tree, i);
-        printf("Removed %zu: %d\n", i, r);
+        printf("Removed " PRIu64 ": %d\n", (uint64_t)i, r);
         tree_print(tree);
     }
     tree_free(tree);
@@ -89,22 +90,23 @@ random_test_for_naive()
         return false;
     }
 
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_insert(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "insert should succeed", tree);
         r = tree_validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following insert should succeed", tree);
     }
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_search(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
-        size_t reverse_rank = tree_reverse_rank(tree, key);
+        uint64_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
+                   ", Expected reverse rank: " PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -117,15 +119,16 @@ random_test_for_naive()
     }
     // NOTE We run the search a second time to ensure that it does not modify
     //      the tree.
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_search(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
-        size_t reverse_rank = tree_reverse_rank(tree, key);
+        uint64_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
+                   ", Expected reverse rank: " PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -136,7 +139,7 @@ random_test_for_naive()
         r = tree_validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_remove(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);
@@ -155,22 +158,23 @@ random_test_with_different_traces_for_naive()
         return false;
     }
 
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         bool r = tree_insert(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "insert should succeed", tree);
         r = tree_validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following insert should succeed", tree);
     }
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_1[i];
         bool r = tree_search(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
-        size_t reverse_rank = tree_reverse_rank(tree, key);
+        uint64_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
+                   ", Expected reverse rank: " PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -182,15 +186,16 @@ random_test_with_different_traces_for_naive()
     }
     // NOTE We run the search a second time to ensure that it does not modify
     //      the tree.
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_2[i];
         bool r = tree_search(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "search should succeed", tree);
-        size_t reverse_rank = tree_reverse_rank(tree, key);
+        uint64_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
+                   ", Expected reverse rank: " PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -200,7 +205,7 @@ random_test_with_different_traces_for_naive()
         r = tree_validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_3[i];
         bool r = tree_remove(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);
@@ -224,20 +229,21 @@ random_test_with_different_traces_for_sleator()
         return false;
     }
 
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_0[i];
         r = sleator_insert(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "insert should succeed", tree);
         r = tree_validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following insert should succeed", tree);
     }
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_1[i];
-        size_t reverse_rank = tree_reverse_rank(tree, key);
+        uint64_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
+                   ", Expected reverse rank: " PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -249,13 +255,14 @@ random_test_with_different_traces_for_sleator()
     }
     // NOTE We run the search a second time to ensure that it does not modify
     //      the tree.
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_2[i];
-        size_t reverse_rank = tree_reverse_rank(tree, key);
+        uint64_t reverse_rank = tree_reverse_rank(tree, key);
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: %zu, Got reverse rank: %zu, Expected reverse rank: %zu\n",
+            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
+                   ", Expected reverse rank: " PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -265,7 +272,7 @@ random_test_with_different_traces_for_sleator()
         r = tree_validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following search should succeed", tree);
     }
-    for (size_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_3[i];
         bool r = sleator_remove(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);

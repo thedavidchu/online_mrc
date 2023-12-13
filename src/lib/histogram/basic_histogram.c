@@ -1,16 +1,18 @@
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "histogram/basic_histogram.h"
 
 bool
-basic_histogram_init(struct BasicHistogram *me, const size_t length)
+basic_histogram_init(struct BasicHistogram *me, const uint64_t length)
 {
     if (me == NULL || length == 0) {
         return false;
     }
     // Assume it is either NULL or an uninitialized address!
-    me->histogram = (size_t *)calloc(length, sizeof(size_t));
+    me->histogram = (uint64_t *)calloc(length, sizeof(uint64_t));
     if (me->histogram == NULL) {
         return false;
     }
@@ -22,7 +24,7 @@ basic_histogram_init(struct BasicHistogram *me, const size_t length)
 }
 
 bool
-basic_histogram_insert_finite(struct BasicHistogram *me, const size_t index)
+basic_histogram_insert_finite(struct BasicHistogram *me, const uint64_t index)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -58,12 +60,12 @@ basic_histogram_print(struct BasicHistogram *me)
         return;
     }
     printf("{");
-    for (size_t i = 0; i < me->length; ++i) {
-        printf("\"%zu\": %zu, ", i, me->histogram[i]);
+    for (uint64_t i = 0; i < me->length; ++i) {
+        printf("\"" PRIu64 "\": " PRIu64 ", ", i, me->histogram[i]);
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%zu\": %zu, ", me->length, me->false_infinity);
-    printf("\"inf\": %zu", me->infinity);
+    printf("\"" PRIu64 "\": " PRIu64 ", ", me->length, me->false_infinity);
+    printf("\"inf\": " PRIu64 "", me->infinity);
     printf("}\n");
 }
 

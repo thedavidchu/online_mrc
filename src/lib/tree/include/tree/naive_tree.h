@@ -4,22 +4,22 @@
 #pragma once
 
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdint.h>
 
-typedef size_t KeyType;
+typedef uint64_t KeyType;
 
 struct Tree;
 
 struct Subtree {
     KeyType key;
-    size_t cardinality;
+    uint64_t cardinality;
     struct Subtree *left_subtree;
     struct Subtree *right_subtree;
 };
 
 struct Tree {
     struct Subtree *root;
-    size_t cardinality;
+    uint64_t cardinality;
 };
 
 struct Subtree *
@@ -29,7 +29,7 @@ struct Tree *
 tree_new();
 
 /// @brief  Get the number of elements in the tree.
-size_t
+uint64_t
 tree_cardinality(struct Tree *me);
 
 bool
@@ -46,7 +46,7 @@ tree_search(struct Tree *me, KeyType key);
 ///         The regular rank would be the (total_tree_size - reverse_rank - 1).
 ///
 /// @return If the element is not found, we return SIZE_MAX. Otherwise the reverse rank.
-size_t
+uint64_t
 tree_reverse_rank(struct Tree *me, KeyType key);
 
 bool

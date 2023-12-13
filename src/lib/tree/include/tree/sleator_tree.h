@@ -8,7 +8,7 @@ Just add a compute sum of size from search node to the right most node.
 Modified a bit by David Chu. Refactored some bits to make the code more useable.
 */
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdint.h>
 
 #include "tree/naive_tree.h"
 

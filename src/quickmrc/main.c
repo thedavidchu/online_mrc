@@ -8,16 +8,14 @@ struct QuickMrc {
     void *ghost_cache;
     GHashTable *key_lookup;
 
-    size_t cache_capacity;
-    size_t ghost_cache_capacity;
+    uint64_t cache_capacity;
+    uint64_t ghost_cache_capacity;
 }
 
-
-
-int main(void) {
+int
+main(void)
+{
     struct QuickMrc a = {0, 0, 0};
-
 
     return 0;
 }
-

@@ -56,7 +56,7 @@ compute sum of size from search node to the right most node.
 
 #include "tree/sleator_tree.h"
 
-#define compare(i, j) ((ptrdiff_t)(i) - (ptrdiff_t)(j))
+#define compare(i, j) ((int64_t)(i) - (int64_t)(j))
 /* This is the comparison.                                       */
 /* Returns <0 if i<j, =0 if i=j, and >0 if i>j                   */
 
@@ -75,8 +75,8 @@ sleator_splay(struct Subtree *t, KeyType i)
 /* size fields are maintained */
 {
     struct Subtree N, *l, *r, *y;
-    ptrdiff_t comp;
-    size_t l_size, r_size;
+    int64_t comp;
+    uint64_t l_size, r_size;
     if (t == NULL)
         return t;
     N.left_subtree = N.right_subtree = NULL;
@@ -198,7 +198,7 @@ sleator_remove(struct Tree *tree, KeyType i)
     /* Return a pointer to the resulting tree.              */
     struct Subtree *t;
     struct Subtree *x;
-    size_t tsize;
+    uint64_t tsize;
 
     if (tree == NULL) {
         return false;
@@ -243,7 +243,7 @@ sleator_find_rank(struct Subtree *t, unsigned r)
     /* Returns NULL if there is no such node.                          */
     /* Does not change the tree.  To guarantee logarithmic behavior,   */
     /* the node found here should be splayed to the root.              */
-    size_t lsize;
+    uint64_t lsize;
     if (r >= node_size(t))
         return NULL;
     for (;;) {

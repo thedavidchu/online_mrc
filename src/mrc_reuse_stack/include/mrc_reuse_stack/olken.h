@@ -1,23 +1,23 @@
 #pragma once
 
-#include <stddef.h>
+#include <stdint.h>
 
 #include <glib.h>
 
 #include "tree/naive_tree.h"
 #include "tree/sleator_tree.h"
 
-typedef size_t EntryType;
-typedef size_t TimeStampType;
+typedef uint64_t EntryType;
+typedef uint64_t TimeStampType;
 
-const size_t MAX_HISTOGRAM_LENGTH = 1 << 20;
+const uint64_t MAX_HISTOGRAM_LENGTH = 1 << 20;
 
 struct OlkenReuseStack {
     struct Tree *tree;
     GHashTable *hash_table;
-    size_t *histogram;
+    uint64_t *histogram;
     TimeStampType current_time_stamp;
-    size_t infinite_distance;
+    uint64_t infinite_distance;
 };
 
 struct OlkenReuseStack *
