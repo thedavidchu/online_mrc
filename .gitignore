@@ -3,6 +3,9 @@
 .vs/
 .vscode/
 
+# Clagd
+/.cache/
+
 # CMake
 /build/
 /cmake-build-*/
