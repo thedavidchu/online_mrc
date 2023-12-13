@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "reuse_stack/reuse_stack.h"
+#include "mrc_reuse_stack/olken.h"
 
 gboolean
 entry_compare(gconstpointer a, gconstpointer b)
@@ -12,39 +12,40 @@ entry_compare(gconstpointer a, gconstpointer b)
     return (a == b) ? TRUE : FALSE;
 }
 
-struct ReuseStack *
-reuse_stack_new()
+struct OlkenReuseStack *
+olken_reuse_stack_new()
 {
-    struct ReuseStack *reuse_stack = (struct ReuseStack *)malloc(sizeof(struct ReuseStack));
-    if (reuse_stack == NULL) {
+    struct OlkenReuseStack *olken_reuse_stack =
+        (struct OlkenReuseStack *)malloc(sizeof(struct OlkenReuseStack));
+    if (olken_reuse_stack == NULL) {
         return NULL;
     }
-    reuse_stack->tree = tree_new();
-    if (reuse_stack->tree == NULL) {
-        reuse_stack_free(reuse_stack);
+    olken_reuse_stack->tree = tree_new();
+    if (olken_reuse_stack->tree == NULL) {
+        olken_reuse_stack_free(olken_reuse_stack);
         return NULL;
     }
     // NOTE Using the g_direct_hash function means that we need to pass our
     //      entries as pointers to the hash table. It also means we cannot
     //      destroy the values at the pointers, because the pointers are our
     //      actual values!
-    reuse_stack->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
-    if (reuse_stack->hash_table == NULL) {
-        reuse_stack_free(reuse_stack);
+    olken_reuse_stack->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
+    if (olken_reuse_stack->hash_table == NULL) {
+        olken_reuse_stack_free(olken_reuse_stack);
         return NULL;
     }
-    reuse_stack->histogram = (size_t *)calloc(MAX_HISTOGRAM_LENGTH, sizeof(size_t));
-    if (reuse_stack->histogram == NULL) {
-        reuse_stack_free(reuse_stack);
+    olken_reuse_stack->histogram = (size_t *)calloc(MAX_HISTOGRAM_LENGTH, sizeof(size_t));
+    if (olken_reuse_stack->histogram == NULL) {
+        olken_reuse_stack_free(olken_reuse_stack);
         return NULL;
     }
-    reuse_stack->current_time_stamp = 0;
-    reuse_stack->infinite_distance = 0;
-    return reuse_stack;
+    olken_reuse_stack->current_time_stamp = 0;
+    olken_reuse_stack->infinite_distance = 0;
+    return olken_reuse_stack;
 }
 
 void
-reuse_stack_access_item(struct ReuseStack *me, EntryType entry)
+olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -80,7 +81,7 @@ reuse_stack_access_item(struct ReuseStack *me, EntryType entry)
 }
 
 void
-reuse_stack_print_sparse_histogram(struct ReuseStack *me)
+olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me)
 {
     if (me == NULL || me->histogram == NULL) {
         printf("{}\n");
@@ -97,7 +98,7 @@ reuse_stack_print_sparse_histogram(struct ReuseStack *me)
 }
 
 void
-reuse_stack_free(struct ReuseStack *me)
+olken_reuse_stack_free(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         return;

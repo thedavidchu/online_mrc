@@ -12,7 +12,7 @@ typedef size_t TimeStampType;
 
 const size_t MAX_HISTOGRAM_LENGTH = 1 << 20;
 
-struct ReuseStack {
+struct OlkenReuseStack {
     struct Tree *tree;
     GHashTable *hash_table;
     size_t *histogram;
@@ -20,14 +20,14 @@ struct ReuseStack {
     size_t infinite_distance;
 };
 
-struct ReuseStack *
-reuse_stack_new();
+struct OlkenReuseStack *
+olken_reuse_stack_new();
 
 void
-reuse_stack_access_item(struct ReuseStack *me, EntryType entry);
+olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry);
 
 void
-reuse_stack_print_sparse_histogram(struct ReuseStack *me);
+olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me);
 
 void
-reuse_stack_free(struct ReuseStack *me);
+olken_reuse_stack_free(struct OlkenReuseStack *me);

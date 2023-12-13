@@ -16,7 +16,7 @@ reuse_stack_test_exe = executable('reuse_stack_test_exe',
     'reuse_stack_test.c',
     include_directories : [mytester_include, tree_include, reuse_stack_include],
     dependencies : glib_dep,
-    link_with : [reuse_stack_lib])
+    link_with : [olken_reuse_stack_lib])
 
 # Run tests
 test('histogram_test', histogram_test_exe)
