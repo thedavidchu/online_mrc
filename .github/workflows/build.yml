@@ -16,6 +16,9 @@ jobs:
       - uses: BSFishy/meson-build@v1.0.3
         with:
           action: test
+          directory: build
+          options: --verbose
+          meson-version: 1.2.3
       - name: Meson Build
         run: |
           mkdir build
