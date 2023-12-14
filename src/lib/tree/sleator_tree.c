@@ -198,17 +198,12 @@ sleator_remove(struct Tree *tree, KeyType i)
     /* Return a pointer to the resulting tree.              */
     struct Subtree *t;
     struct Subtree *x;
-    uint64_t tsize;
 
-    if (tree == NULL) {
+    if (tree == NULL || tree->root == NULL) {
         return false;
     }
+    tree->root = sleator_splay(tree->root, i);
     t = tree->root;
-
-    if (t == NULL)
-        return false;
-    tsize = t->cardinality;
-    t = sleator_splay(t, i);
     if (compare(i, t->key) == 0) { /* found it */
         if (t->left_subtree == NULL) {
             x = t->right_subtree;
@@ -220,18 +215,12 @@ sleator_remove(struct Tree *tree, KeyType i)
         if (x == NULL) {
             tree->cardinality = 0;
         } else {
-            x->cardinality = tsize - 1;
+            x->cardinality = tree->cardinality - 1;
             tree->cardinality = x->cardinality;
         }
         tree->root = x;
         return true;
     } else {
-        if (t == NULL) {
-            tree->cardinality = 0;
-        } else {
-            tree->cardinality = t->cardinality;
-        }
-        tree->root = t;
         return false; /* It wasn't there */
     }
 }
