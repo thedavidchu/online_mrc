@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "histogram/basic_histogram.h"
 #include "mrc_reuse_stack/olken.h"
+#include "tree/naive_tree.h"
 
 static gboolean
 entry_compare(gconstpointer a, gconstpointer b)
@@ -13,36 +15,38 @@ entry_compare(gconstpointer a, gconstpointer b)
     return (a == b) ? TRUE : FALSE;
 }
 
-struct OlkenReuseStack *
-olken_reuse_stack_new()
+bool
+olken_reuse_stack_init(struct OlkenReuseStack *me)
 {
-    struct OlkenReuseStack *olken_reuse_stack =
-        (struct OlkenReuseStack *)malloc(sizeof(struct OlkenReuseStack));
-    if (olken_reuse_stack == NULL) {
-        return NULL;
+    if (me == NULL) {
+        return false;
     }
-    olken_reuse_stack->tree = tree_new();
-    if (olken_reuse_stack->tree == NULL) {
-        olken_reuse_stack_free(olken_reuse_stack);
-        return NULL;
+    bool r = tree_init(&me->tree);
+    if (!r) {
+        goto tree_error;
     }
     // NOTE Using the g_direct_hash function means that we need to pass our
     //      entries as pointers to the hash table. It also means we cannot
     //      destroy the values at the pointers, because the pointers are our
     //      actual values!
-    olken_reuse_stack->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
-    if (olken_reuse_stack->hash_table == NULL) {
-        olken_reuse_stack_free(olken_reuse_stack);
-        return NULL;
+    me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
+    if (me->hash_table == NULL) {
+        goto hash_table_error;
     }
-    olken_reuse_stack->histogram = (uint64_t *)calloc(MAX_HISTOGRAM_LENGTH, sizeof(uint64_t));
-    if (olken_reuse_stack->histogram == NULL) {
-        olken_reuse_stack_free(olken_reuse_stack);
-        return NULL;
+    r = basic_histogram_init(&me->histogram, MAX_HISTOGRAM_LENGTH);
+    if (!r) {
+        goto histogram_error;
     }
-    olken_reuse_stack->current_time_stamp = 0;
-    olken_reuse_stack->infinite_distance = 0;
-    return olken_reuse_stack;
+    me->current_time_stamp = 0;
+    return true;
+
+histogram_error:
+    g_hash_table_destroy(me->hash_table);
+    me->hash_table = NULL;
+hash_table_error:
+    tree_destroy(&me->tree);
+tree_error:
+    return false;
 }
 
 void
@@ -61,50 +65,41 @@ olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry)
                                          NULL,
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
-        uint64_t distance = tree_reverse_rank(me->tree, (KeyType)time_stamp);
-        r = sleator_remove(me->tree, (KeyType)time_stamp);
+        uint64_t distance = tree_reverse_rank(&me->tree, (KeyType)time_stamp);
+        r = sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
-        r = sleator_insert(me->tree, (KeyType)me->current_time_stamp);
+        r = sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        if (distance < MAX_HISTOGRAM_LENGTH) {
-            ++me->histogram[distance];
-        } else {
-            ++me->infinite_distance;
-            // TODO(dchu): Record the infinite distances for Parda!
-        }
+        // TODO(dchu): Maybe record the infinite distances for Parda!
+        basic_histogram_insert_finite(&me->histogram, distance);
     } else {
         g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
-        sleator_insert(me->tree, (KeyType)me->current_time_stamp);
+        sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        ++me->infinite_distance;
+        basic_histogram_insert_infinite(&me->histogram);
     }
 }
 
 void
 olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me)
 {
-    if (me == NULL || me->histogram == NULL) {
-        printf("{}\n");
+    if (me == NULL) {
+        // Just pass on the NULL value and let the histogram deal with it. Maybe
+        // this isn't very smart and will confuse future-me? Oh well!
+        basic_histogram_print_sparse(NULL);
         return;
     }
-    printf("{");
-    for (uint64_t i = 0; i < MAX_HISTOGRAM_LENGTH; ++i) {
-        if (me->histogram[i]) {
-            printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
-        }
-    }
-    printf("\"inf\": %" PRIu64 "", me->infinite_distance);
-    printf("}\n");
+    basic_histogram_print_sparse(&me->histogram);
 }
 
 void
-olken_reuse_stack_free(struct OlkenReuseStack *me)
+olken_reuse_stack_destroy(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         return;
     }
-    tree_free(me->tree);
+    tree_destroy(&me->tree);
     // I do not know how the g_hash_table_destroy function behaves when passed a
     // NULL pointer. It is not in the documentation below:
     // https://docs.gtk.org/glib/type_func.HashTable.destroy.html
@@ -112,6 +107,8 @@ olken_reuse_stack_free(struct OlkenReuseStack *me)
         // NOTE this doesn't destroy the key/values because they are just ints
         //      stored as pointers.
         g_hash_table_destroy(me->hash_table);
+        me->hash_table = NULL;
     }
-    free(me->histogram);
+    basic_histogram_destroy(&me->histogram);
+    me->current_time_stamp = 0;
 }

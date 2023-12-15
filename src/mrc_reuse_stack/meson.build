@@ -18,6 +18,7 @@ olken_reuse_stack_lib = library('olken_reuse_stack_lib',
     dependencies : glib_dep,
     link_with : [
         naive_tree_lib,
+        basic_histogram_lib,
         sleator_tree_lib,
     ])
 

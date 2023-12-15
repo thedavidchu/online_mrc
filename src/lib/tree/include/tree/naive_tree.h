@@ -26,7 +26,7 @@ struct Subtree *
 subtree_new(KeyType key);
 
 bool
-tree_init();
+tree_init(struct Tree *me);
 
 struct Tree *
 tree_new();

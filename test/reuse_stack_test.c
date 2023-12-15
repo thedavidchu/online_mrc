@@ -16,23 +16,26 @@
 bool
 olken_access_same_key_five_times()
 {
-    struct OlkenReuseStack *olken_reuse_stack = olken_reuse_stack_new();
+    struct OlkenReuseStack olken_reuse_stack = {0};
+    ASSERT_TRUE_OR_CLEANUP(olken_reuse_stack_init(&olken_reuse_stack),
+                           printf("No cleanup required\n"));
 
-    olken_reuse_stack_access_item(olken_reuse_stack, 0);
-    olken_reuse_stack_access_item(olken_reuse_stack, 0);
-    olken_reuse_stack_access_item(olken_reuse_stack, 0);
-    olken_reuse_stack_access_item(olken_reuse_stack, 0);
-    olken_reuse_stack_access_item(olken_reuse_stack, 0);
+    olken_reuse_stack_access_item(&olken_reuse_stack, 0);
+    olken_reuse_stack_access_item(&olken_reuse_stack, 0);
+    olken_reuse_stack_access_item(&olken_reuse_stack, 0);
+    olken_reuse_stack_access_item(&olken_reuse_stack, 0);
+    olken_reuse_stack_access_item(&olken_reuse_stack, 0);
 
-    if (olken_reuse_stack->histogram[0] != 4 || olken_reuse_stack->infinite_distance != 1) {
-        printf("%p %p\n", olken_reuse_stack, olken_reuse_stack->histogram);
-        olken_reuse_stack_print_sparse_histogram(olken_reuse_stack);
+    if (olken_reuse_stack.histogram.histogram[0] != 4 ||
+        olken_reuse_stack.histogram.infinity != 1) {
+        printf("%p %p\n", &olken_reuse_stack, &olken_reuse_stack.histogram);
+        olken_reuse_stack_print_sparse_histogram(&olken_reuse_stack);
         assert(0 && "histogram should be {0: 4, inf: 1}");
-        olken_reuse_stack_free(olken_reuse_stack);
+        olken_reuse_stack_destroy(&olken_reuse_stack);
         return false;
     }
 
-    olken_reuse_stack_free(olken_reuse_stack);
+    olken_reuse_stack_destroy(&olken_reuse_stack);
     return true;
 }
 
