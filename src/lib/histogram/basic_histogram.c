@@ -42,6 +42,27 @@ basic_histogram_insert_finite(struct BasicHistogram *me, const uint64_t index)
 }
 
 bool
+basic_histogram_insert_scaled_finite(struct BasicHistogram *me,
+                                     const uint64_t index,
+                                     const uint64_t scale)
+{
+    const uint64_t scaled_index = scale * index;
+    if (me == NULL || me->histogram == NULL) {
+        return false;
+    }
+    // NOTE I think it's clearer to have more code in the if-blocks than to
+    //      spread it around. The optimizing compiler should remove it.
+    if (scaled_index < me->length) {
+        me->histogram[scaled_index] += scale;
+        me->running_sum += scale;
+    } else {
+        me->false_infinity += scale;
+        me->running_sum += scale;
+    }
+    return true;
+}
+
+bool
 basic_histogram_insert_infinite(struct BasicHistogram *me)
 {
     if (me == NULL || me->histogram == NULL) {
