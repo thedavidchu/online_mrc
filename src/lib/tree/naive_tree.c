@@ -27,17 +27,31 @@ subtree_new(KeyType key)
     return subtree;
 }
 
+bool
+tree_init(struct Tree *me)
+{
+    if (me == NULL) {
+        return false;
+    }
+    me->cardinality = 0;
+    me->root = NULL;
+    return true;
+}
+
 struct Tree *
 tree_new()
 {
-    struct Tree *r = (struct Tree *)malloc(sizeof(struct Tree));
-    if (r == NULL) {
+    struct Tree *me = (struct Tree *)malloc(sizeof(struct Tree));
+    if (me == NULL) {
         assert(0 && "OOM error!");
         return NULL;
     }
-    r->cardinality = 0;
-    r->root = NULL;
-    return r;
+    bool success = tree_init(me);
+    if (!success) {
+        free(me);
+        return NULL;
+    }
+    return me;
 }
 
 uint64_t
@@ -396,11 +410,17 @@ subtree_free(struct Subtree *me)
 }
 
 void
-tree_free(struct Tree *me)
+tree_destroy(struct Tree *me)
 {
     if (me == NULL) {
         return;
     }
     subtree_free(me->root);
+}
+
+void
+tree_free(struct Tree *me)
+{
+    tree_destroy(me);
     free(me);
 }

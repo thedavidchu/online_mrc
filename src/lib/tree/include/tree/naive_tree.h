@@ -25,6 +25,9 @@ struct Tree {
 struct Subtree *
 subtree_new(KeyType key);
 
+bool
+tree_init();
+
 struct Tree *
 tree_new();
 
@@ -66,6 +69,11 @@ tree_validate(struct Tree *me);
 
 void
 subtree_free(struct Subtree *me);
+
+/// @brief  Free the structures within the tree without freeing the tree itself.
+///         Useful if we allocated the tree on the stack.
+void
+tree_destroy(struct Tree *me);
 
 void
 tree_free(struct Tree *me);
