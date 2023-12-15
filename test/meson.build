@@ -24,6 +24,8 @@ priority_queue_test_exe = executable('priority_queue_test_exe',
     dependencies : glib_dep,
     link_with : [splay_priority_queue_lib])
 
+subdir('unit_test')
+
 # Run tests
 test('histogram_test', histogram_test_exe)
 test('tree_test', tree_test_exe)
