@@ -1,3 +1,5 @@
+subdir('common_headers')
 subdir('hash')
 subdir('histogram')
+subdir('priority_queue')
 subdir('tree')

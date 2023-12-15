@@ -6,9 +6,8 @@
 
 #include "tree/naive_tree.h"
 #include "tree/sleator_tree.h"
-
-typedef uint64_t EntryType;
-typedef uint64_t TimeStampType;
+#include "types/entry_type.h"
+#include "types/time_stamp_type.h"
 
 const uint64_t MAX_HISTOGRAM_LENGTH = 1 << 20;
 

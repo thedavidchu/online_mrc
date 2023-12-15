@@ -18,7 +18,14 @@ reuse_stack_test_exe = executable('reuse_stack_test_exe',
     dependencies : glib_dep,
     link_with : [olken_reuse_stack_lib])
 
+priority_queue_test_exe = executable('priority_queue_test_exe',
+    'priority_queue_test.c',
+    include_directories : [mytester_include, priority_queue_include],
+    dependencies : glib_dep,
+    link_with : [splay_priority_queue_lib])
+
 # Run tests
 test('histogram_test', histogram_test_exe)
 test('tree_test', tree_test_exe)
 test('reuse_stack_test', reuse_stack_test_exe)
+test('priority_queue_test', priority_queue_test_exe)

@@ -7,7 +7,7 @@
 
 #include "mrc_reuse_stack/olken.h"
 
-gboolean
+static gboolean
 entry_compare(gconstpointer a, gconstpointer b)
 {
     return (a == b) ? TRUE : FALSE;
