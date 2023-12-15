@@ -91,10 +91,10 @@ olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me)
     printf("{");
     for (uint64_t i = 0; i < MAX_HISTOGRAM_LENGTH; ++i) {
         if (me->histogram[i]) {
-            printf("\"" PRIu64 "\": " PRIu64 ", ", i, me->histogram[i]);
+            printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
         }
     }
-    printf("\"inf\": " PRIu64 "", me->infinite_distance);
+    printf("\"inf\": %" PRIu64 "", me->infinite_distance);
     printf("}\n");
 }
 

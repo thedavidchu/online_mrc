@@ -66,16 +66,16 @@ manual_validation_test_for_naive()
     }
     for (KeyType i = 0; i < 10; ++i) {
         bool r = tree_insert(tree, i);
-        printf("Inserted " PRIu64 ": %d\n", (uint64_t)i, r);
+        printf("Inserted %" PRIu64 ": %d\n", (uint64_t)i, r);
         tree_print(tree);
     }
     for (KeyType i = 0; i < 11; ++i) {
         bool r = tree_search(tree, i);
-        printf("Found " PRIu64 ": %d\n", (uint64_t)i, r);
+        printf("Found %" PRIu64 ": %d\n", (uint64_t)i, r);
     }
     for (KeyType i = 0; i < 11; ++i) {
         bool r = tree_remove(tree, i);
-        printf("Removed " PRIu64 ": %d\n", (uint64_t)i, r);
+        printf("Removed %" PRIu64 ": %d\n", (uint64_t)i, r);
         tree_print(tree);
     }
     tree_free(tree);
@@ -105,8 +105,8 @@ random_test_for_naive()
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
-                   ", Expected reverse rank: " PRIu64 "\n",
+            printf("[ERROR] Key: %" PRIu64 ", Got reverse rank: %" PRIu64
+                   ", Expected reverse rank: %" PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -127,8 +127,8 @@ random_test_for_naive()
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
-                   ", Expected reverse rank: " PRIu64 "\n",
+            printf("[ERROR] Key: %" PRIu64 ", Got reverse rank: %" PRIu64
+                   ", Expected reverse rank: %" PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -173,8 +173,8 @@ random_test_with_different_traces_for_naive()
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
-                   ", Expected reverse rank: " PRIu64 "\n",
+            printf("[ERROR] Key: %" PRIu64 ", Got reverse rank: %" PRIu64
+                   ", Expected reverse rank: %" PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -194,8 +194,8 @@ random_test_with_different_traces_for_naive()
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
-                   ", Expected reverse rank: " PRIu64 "\n",
+            printf("[ERROR] Key: %" PRIu64 ", Got reverse rank: %" PRIu64
+                   ", Expected reverse rank: %" PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -242,8 +242,8 @@ random_test_with_different_traces_for_sleator()
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
-                   ", Expected reverse rank: " PRIu64 "\n",
+            printf("[ERROR] Key: %" PRIu64 ", Got reverse rank: %" PRIu64
+                   ", Expected reverse rank: %" PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);
@@ -261,8 +261,8 @@ random_test_with_different_traces_for_sleator()
         if (reverse_rank != 99 - key) {
             // NOTE This assertion is for debugging purposes so that we have a
             //      finer grain understanding of where the failure occurred.
-            printf("[ERROR] Key: " PRIu64 ", Got reverse rank: " PRIu64
-                   ", Expected reverse rank: " PRIu64 "\n",
+            printf("[ERROR] Key: %" PRIu64 ", Got reverse rank: %" PRIu64
+                   ", Expected reverse rank: %" PRIu64 "\n",
                    key,
                    reverse_rank,
                    99 - key);

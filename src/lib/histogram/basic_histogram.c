@@ -82,11 +82,11 @@ basic_histogram_print(struct BasicHistogram *me)
     }
     printf("{");
     for (uint64_t i = 0; i < me->length; ++i) {
-        printf("\"" PRIu64 "\": " PRIu64 ", ", i, me->histogram[i]);
+        printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"" PRIu64 "\": " PRIu64 ", ", me->length, me->false_infinity);
-    printf("\"inf\": " PRIu64 "", me->infinity);
+    printf("\"%" PRIu64 "\": %" PRIu64 ", ", me->length, me->false_infinity);
+    printf("\"inf\": %" PRIu64 "", me->infinity);
     printf("}\n");
 }
 

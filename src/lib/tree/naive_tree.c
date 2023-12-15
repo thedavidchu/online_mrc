@@ -282,7 +282,7 @@ subtree_print(struct Subtree *me)
         printf("null");
         return;
     }
-    printf("{\"key\": " PRIu64 ", \"cardinality\": " PRIu64 ", \"left\": ",
+    printf("{\"key\": %" PRIu64 ", \"cardinality\": %" PRIu64 ", \"left\": ",
            me->key,
            me->cardinality);
     subtree_print(me->left_subtree);
@@ -298,7 +298,7 @@ tree_print(struct Tree *me)
         printf("{}\n");
         return;
     }
-    printf("{\"cardinality\": " PRIu64 ", \"root\": ", me->cardinality);
+    printf("{\"cardinality\": %" PRIu64 ", \"root\": ", me->cardinality);
     subtree_print(me->root);
     printf("}\n");
 }
@@ -313,7 +313,7 @@ subtree_prettyprint(struct Subtree *me, uint64_t level)
     for (uint64_t i = 0; i < level; ++i) {
         printf("  ");
     }
-    printf("Key: " PRIu64 ", Size: " PRIu64 "\n", me->key, me->cardinality);
+    printf("Key: %" PRIu64 ", Size: %" PRIu64 "\n", me->key, me->cardinality);
     subtree_prettyprint(me->left_subtree, level + 1);
 }
 
