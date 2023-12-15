@@ -35,8 +35,11 @@ basic_histogram_insert_scaled_finite(struct BasicHistogram *me,
 bool
 basic_histogram_insert_infinite(struct BasicHistogram *me);
 
+bool
+basic_histogram_insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale);
+
 void
-basic_histogram_print(struct BasicHistogram *me);
+basic_histogram_print_sparse(struct BasicHistogram *me);
 
 void
 basic_histogram_destroy(struct BasicHistogram *me);

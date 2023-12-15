@@ -1,12 +1,19 @@
 #pragma once
-
 #include <glib.h>
+#include <stdint.h>
+
+// #include "hash/splitmix64.h" // Used for Hash64BitType
+#include "histogram/basic_histogram.h"
+#include "priority_queue/splay_priority_queue.h"
+#include "tree/naive_tree.h"
+#include "types/entry_type.h"
+#include "types/time_stamp_type.h"
 
 struct FixedSizeShardsReuseStack {
     struct Tree tree;
     GHashTable *hash_table;
-    BasicHistogram histogram;
-    SplayPriorityQueue pq;
+    struct BasicHistogram histogram;
+    struct SplayPriorityQueue pq;
     TimeStampType current_time_stamp;
     Hash64BitType threshold;
     uint64_t scale;
@@ -25,7 +32,7 @@ void
 fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType entry);
 
 void
-fixed_size_shards_print_sparse_histogram(struct OlkenReuseStack *me);
+fixed_size_shards_print_sparse_histogram(struct FixedSizeShardsReuseStack *me);
 
 void
-fixed_size_shards_destroy(struct OlkenReuseStack *me);
+fixed_size_shards_destroy(struct FixedSizeShardsReuseStack *me);

@@ -14,9 +14,18 @@ tree_test_exe = executable('tree_test_exe',
 
 reuse_stack_test_exe = executable('reuse_stack_test_exe',
     'reuse_stack_test.c',
-    include_directories : [mytester_include, tree_include, reuse_stack_include],
+    include_directories : [
+        mytester_include,
+        tree_include,
+        random_include,
+        reuse_stack_include,
+    ],
     dependencies : glib_dep,
-    link_with : [olken_reuse_stack_lib])
+    link_with : [
+        olken_reuse_stack_lib,
+        fixed_size_shards_lib,
+        zipfian_random_lib,
+    ])
 
 priority_queue_test_exe = executable('priority_queue_test_exe',
     'priority_queue_test.c',
