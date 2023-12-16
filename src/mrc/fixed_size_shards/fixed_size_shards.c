@@ -46,17 +46,17 @@ make_room(struct FixedSizeShardsReuseStack *me)
                                              NULL,
                                              (gpointer *)&time_stamp);
         assert(found == TRUE && "hash table should contain the entry");
-        r = sleator_remove(&me->tree, (KeyType)time_stamp);
+        r = tree_sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         g_hash_table_remove(me->hash_table, (gconstpointer)entry);
     }
 }
 
 bool
-fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
-                       const uint64_t starting_scale,
-                       const uint64_t max_size,
-                       const uint64_t max_num_unique_entries)
+fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
+                        const uint64_t starting_scale,
+                        const uint64_t max_size,
+                        const uint64_t max_num_unique_entries)
 {
     bool r = false;
     if (me == NULL || max_size == 0) {
@@ -95,7 +95,7 @@ fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
 }
 
 void
-fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType entry)
+fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -119,9 +119,9 @@ fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType en
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
         uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)time_stamp);
-        r = sleator_remove(&me->tree, (KeyType)time_stamp);
+        r = tree_sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
-        r = sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
+        r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
         basic_histogram__insert_scaled_finite(&me->histogram, distance, me->scale);
@@ -131,20 +131,20 @@ fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType en
         }
         splay_priority_queue__insert_if_room(&me->pq, splitmix64_hash((uint64_t)entry), entry);
         g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
-        sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
+        tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
         basic_histogram__insert_scaled_infinite(&me->histogram, me->scale);
     }
 }
 
 void
-fixed_size_shards_print_sparse_histogram(struct FixedSizeShardsReuseStack *me)
+fixed_size_shards__print_sparse_histogram(struct FixedSizeShardsReuseStack *me)
 {
     basic_histogram__print_sparse(&me->histogram);
 }
 
 void
-fixed_size_shards_destroy(struct FixedSizeShardsReuseStack *me)
+fixed_size_shards__destroy(struct FixedSizeShardsReuseStack *me)
 {
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);

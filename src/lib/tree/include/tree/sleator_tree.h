@@ -13,10 +13,10 @@ Modified a bit by David Chu. Refactored some bits to make the code more useable.
 #include "tree/naive_tree.h"
 
 bool
-sleator_insert(struct Tree *t, KeyType key);
+tree__sleator_insert(struct Tree *t, KeyType key);
 
 bool
-sleator_remove(struct Tree *t, KeyType key);
+tree_sleator_remove(struct Tree *t, KeyType key);
 
 struct Subtree *
 sleator_find_rank(struct Subtree *t, unsigned rank);

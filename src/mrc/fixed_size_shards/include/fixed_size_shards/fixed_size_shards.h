@@ -25,16 +25,16 @@ struct FixedSizeShardsReuseStack {
 /// @param  max_size    :   The maximum number of elements that we will track.
 ///                         Additional elements will be removed.
 bool
-fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
-                       const uint64_t starting_scale,
-                       const uint64_t max_size,
-                       const uint64_t max_num_unique_entries);
+fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
+                        const uint64_t starting_scale,
+                        const uint64_t max_size,
+                        const uint64_t max_num_unique_entries);
 
 void
-fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType entry);
+fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType entry);
 
 void
-fixed_size_shards_print_sparse_histogram(struct FixedSizeShardsReuseStack *me);
+fixed_size_shards__print_sparse_histogram(struct FixedSizeShardsReuseStack *me);
 
 void
-fixed_size_shards_destroy(struct FixedSizeShardsReuseStack *me);
+fixed_size_shards__destroy(struct FixedSizeShardsReuseStack *me);

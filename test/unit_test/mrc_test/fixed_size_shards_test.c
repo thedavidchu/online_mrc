@@ -16,32 +16,32 @@ static bool
 access_same_key_five_times()
 {
     struct FixedSizeShardsReuseStack me = {0};
-    ASSERT_FUNCTION_RETURNS_TRUE(fixed_size_shards_init(&me, 1000, 1, MAX_NUM_UNIQUE_ENTRIES));
+    ASSERT_FUNCTION_RETURNS_TRUE(fixed_size_shards__init(&me, 1000, 1, MAX_NUM_UNIQUE_ENTRIES));
 
-    fixed_size_shards_access_item(&me, 0);
-    fixed_size_shards_access_item(&me, 0);
-    fixed_size_shards_access_item(&me, 0);
-    fixed_size_shards_access_item(&me, 0);
-    fixed_size_shards_access_item(&me, 0);
+    fixed_size_shards__access_item(&me, 0);
+    fixed_size_shards__access_item(&me, 0);
+    fixed_size_shards__access_item(&me, 0);
+    fixed_size_shards__access_item(&me, 0);
+    fixed_size_shards__access_item(&me, 0);
 
     if (me.histogram.histogram[0] != 4000 || me.histogram.false_infinity != 0 ||
         me.histogram.infinity != 1000) {
-        fixed_size_shards_print_sparse_histogram(&me);
+        fixed_size_shards__print_sparse_histogram(&me);
         assert(0 && "histogram should be {0: 4000, inf: 1000}");
-        fixed_size_shards_destroy(&me);
+        fixed_size_shards__destroy(&me);
         return false;
     }
     // Skip 0 because we know it should be non-zero
     for (uint64_t i = 1; i < me.histogram.length; ++i) {
         if (me.histogram.histogram[i] != 0) {
-            fixed_size_shards_print_sparse_histogram(&me);
+            fixed_size_shards__print_sparse_histogram(&me);
             assert(0 && "histogram should be {0: 4000, inf: 1000}");
-            fixed_size_shards_destroy(&me);
+            fixed_size_shards__destroy(&me);
             return false;
         }
     }
 
-    fixed_size_shards_destroy(&me);
+    fixed_size_shards__destroy(&me);
     return true;
 }
 
@@ -55,18 +55,18 @@ trace_test()
     ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        fixed_size_shards_init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
+        fixed_size_shards__init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random__next(&zrng);
-        fixed_size_shards_access_item(&shards, key);
+        fixed_size_shards__access_item(&shards, key);
     }
 
     if (PRINT_HISTOGRAM) {
-        fixed_size_shards_print_sparse_histogram(&shards);
+        fixed_size_shards__print_sparse_histogram(&shards);
     }
 
-    fixed_size_shards_destroy(&shards);
+    fixed_size_shards__destroy(&shards);
     return true;
 }
 
