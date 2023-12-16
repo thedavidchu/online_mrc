@@ -226,7 +226,7 @@ tree_sleator_remove(struct Tree *tree, KeyType i)
 }
 
 struct Subtree *
-sleator_find_rank(struct Subtree *t, unsigned r)
+tree__sleator_find_rank(struct Subtree *t, unsigned r)
 {
     /* Returns a pointer to the node in the tree with the given rank.  */
     /* Returns NULL if there is no such node.                          */
