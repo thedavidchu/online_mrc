@@ -274,7 +274,7 @@ random_test_with_different_traces_for_sleator()
     }
     for (uint64_t i = 0; i < 100; ++i) {
         KeyType key = random_keys_3[i];
-        bool r = tree_sleator_remove(tree, key);
+        bool r = tree__sleator_remove(tree, key);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "remove should succeed", tree);
         r = tree__validate(tree);
         ASSERT_TRUE_OR_RETURN_FALSE(r, "validation following remove should succeed", tree);

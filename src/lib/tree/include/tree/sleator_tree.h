@@ -15,7 +15,7 @@ bool
 tree__sleator_insert(struct Tree *t, KeyType key);
 
 bool
-tree_sleator_remove(struct Tree *t, KeyType key);
+tree__sleator_remove(struct Tree *t, KeyType key);
 
 struct Subtree *
 tree__sleator_find_rank(struct Subtree *t, unsigned rank);

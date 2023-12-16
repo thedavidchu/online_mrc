@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <inttypes.h>
 #include <stdbool.h> // bool
 #include <stdint.h>  // uint64_t
 #include <stdio.h>
@@ -8,6 +7,8 @@
 #include "histogram/basic_histogram.h"
 #include "olken/olken.h"
 #include "tree/basic_tree.h"
+#include "tree/sleator_tree.h"
+#include "tree/types.h"
 
 static gboolean
 entry_compare(gconstpointer a, gconstpointer b)
@@ -66,7 +67,7 @@ olken___access_item(struct OlkenReuseStack *me, EntryType entry)
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
         uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)time_stamp);
-        r = tree_sleator_remove(&me->tree, (KeyType)time_stamp);
+        r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
