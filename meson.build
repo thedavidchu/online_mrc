@@ -4,7 +4,7 @@ project('online_mrc', 'c', 'cpp',
     # For C, it peaked in 1999.
     # For C++, the more modern, the better for me <3
     default_options : [
-        'c_st=c99',
+        'c_std=c99',
         'cpp_std=c++17',
         # This is equivalent to "-Wall -Werror -Wextra -Wpedantic" according to
         # this: https://mesonbuild.com/Builtin-options.html#details-for-warning_level
