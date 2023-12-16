@@ -21,9 +21,9 @@ olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
     if (me == NULL) {
         return false;
     }
-    bool r = tree_init(&me->tree);
+    bool r = tree__init(&me->tree);
     if (!r) {
-        goto tree_error;
+        goto tree__error;
     }
     // NOTE Using the g_direct_hash function means that we need to pass our
     //      entries as pointers to the hash table. It also means we cannot
@@ -44,8 +44,8 @@ histogram_error:
     g_hash_table_destroy(me->hash_table);
     me->hash_table = NULL;
 hash_table_error:
-    tree_destroy(&me->tree);
-tree_error:
+    tree__destroy(&me->tree);
+tree__error:
     return false;
 }
 
@@ -65,7 +65,7 @@ olken__access_item(struct OlkenReuseStack *me, EntryType entry)
                                          NULL,
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
-        uint64_t distance = tree_reverse_rank(&me->tree, (KeyType)time_stamp);
+        uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)time_stamp);
         r = sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
@@ -99,7 +99,7 @@ olken__destroy(struct OlkenReuseStack *me)
     if (me == NULL) {
         return;
     }
-    tree_destroy(&me->tree);
+    tree__destroy(&me->tree);
     // I do not know how the g_hash_table_destroy function behaves when passed a
     // NULL pointer. It is not in the documentation below:
     // https://docs.gtk.org/glib/type_func.HashTable.destroy.html

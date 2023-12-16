@@ -10,7 +10,7 @@
 #include "tree/naive_tree.h"
 
 bool
-tree_splayed_insert(struct Tree *me, KeyType key);
+tree__splayed_insert(struct Tree *me, KeyType key);
 
 bool
-tree_splayed_remove(struct Tree *me, KeyType key);
+tree__splayed_remove(struct Tree *me, KeyType key);

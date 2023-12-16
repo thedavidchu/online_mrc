@@ -98,13 +98,13 @@ sleator_splay(struct Subtree *t, KeyType i)
 }
 
 bool
-tree_splayed_insert(struct Tree *me, KeyType key)
+tree__splayed_insert(struct Tree *me, KeyType key)
 {
     if (me == NULL) {
         return false;
     }
     if (me->root == NULL) {
-        me->root = subtree_new(key);
+        me->root = subtree__new(key);
         if (me->root == NULL) {
             return false;
         }
@@ -121,14 +121,14 @@ tree_splayed_insert(struct Tree *me, KeyType key)
         me->root = new_root;
         return false;
     } else if (new_root->left_subtree == NULL) {
-        new_root->left_subtree = subtree_new(key);
+        new_root->left_subtree = subtree__new(key);
         if (new_root->left_subtree == NULL) {
             return false;
         }
         ++new_root->cardinality;
         me->root = new_root;
     } else if (new_root->right_subtree == NULL) {
-        new_root->right_subtree = subtree_new(key);
+        new_root->right_subtree = subtree__new(key);
         if (new_root->right_subtree == NULL) {
             return false;
         }
@@ -141,7 +141,7 @@ tree_splayed_insert(struct Tree *me, KeyType key)
 }
 
 static struct RemoveStatus
-subtree_pop_minimum(struct Subtree *me)
+subtree__pop_minimum(struct Subtree *me)
 {
     if (me == NULL) {
         // NOTE This should only be called if this function is originally called
@@ -150,7 +150,7 @@ subtree_pop_minimum(struct Subtree *me)
     } else if (me->left_subtree == NULL) {
         return (struct RemoveStatus){.removed = me, .new_child = me->right_subtree};
     } else {
-        struct RemoveStatus r = subtree_pop_minimum(me->left_subtree);
+        struct RemoveStatus r = subtree__pop_minimum(me->left_subtree);
         assert(r.removed != NULL && "should have popped an item from the non-empty subtree");
         --me->cardinality;
         me->left_subtree = r.new_child;
@@ -160,12 +160,12 @@ subtree_pop_minimum(struct Subtree *me)
 }
 
 static struct RemoveStatus
-subtree_splayed_remove(struct Subtree *me, KeyType key)
+subtree__splayed_remove(struct Subtree *me, KeyType key)
 {
     if (me == NULL) {
         return (struct RemoveStatus){.removed = false, .new_child = NULL};
     } else if (key < me->key) {
-        struct RemoveStatus r = subtree_splayed_remove(me->left_subtree, key);
+        struct RemoveStatus r = subtree__splayed_remove(me->left_subtree, key);
         if (r.removed) {
             --me->cardinality;
         }
@@ -175,7 +175,7 @@ subtree_splayed_remove(struct Subtree *me, KeyType key)
         r.new_child = me;
         return r;
     } else if (me->key < key) {
-        struct RemoveStatus r = subtree_splayed_remove(me->right_subtree, key);
+        struct RemoveStatus r = subtree__splayed_remove(me->right_subtree, key);
         if (r.removed) {
             --me->cardinality;
         }
@@ -199,7 +199,7 @@ subtree_splayed_remove(struct Subtree *me, KeyType key)
         } else {
             // Double child => recursively replace with successor (arbitrarily
             // chose the successor rather than the predecessor).
-            struct RemoveStatus r = subtree_pop_minimum(me->right_subtree);
+            struct RemoveStatus r = subtree__pop_minimum(me->right_subtree);
             struct Subtree *replacement_node = r.removed;
             replacement_node->cardinality = me->cardinality - 1;
             replacement_node->left_subtree = me->left_subtree;
@@ -210,12 +210,12 @@ subtree_splayed_remove(struct Subtree *me, KeyType key)
 }
 
 bool
-tree_remove(struct Tree *me, KeyType key)
+tree__remove(struct Tree *me, KeyType key)
 {
     if (me == NULL) {
         return false;
     }
-    struct RemoveStatus r = subtree_splayed_remove(me->root, key);
+    struct RemoveStatus r = subtree__splayed_remove(me->root, key);
     if (r.removed == NULL) {
         return false;
     }
