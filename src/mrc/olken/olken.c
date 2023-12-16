@@ -16,7 +16,7 @@ entry_compare(gconstpointer a, gconstpointer b)
 }
 
 bool
-olken_reuse_stack_init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
+olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
 {
     if (me == NULL) {
         return false;
@@ -50,7 +50,7 @@ tree_error:
 }
 
 void
-olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry)
+olken__access_item(struct OlkenReuseStack *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -82,7 +82,7 @@ olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry)
 }
 
 void
-olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me)
+olken__print_sparse_histogram(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -94,7 +94,7 @@ olken_reuse_stack_print_sparse_histogram(struct OlkenReuseStack *me)
 }
 
 void
-olken_reuse_stack_destroy(struct OlkenReuseStack *me)
+olken__destroy(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         return;
