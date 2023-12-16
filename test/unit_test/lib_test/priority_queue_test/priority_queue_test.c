@@ -3,8 +3,7 @@
 
 #include <glib.h>
 
-#include "hash/splitmix64.h"
-#include "test/mytester.h"
+#include "hash/types.h"
 #include "types/entry_type.h"
 
 #include "priority_queue/splay_priority_queue.h"

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "hash/splitmix64.h"
+#include "hash/types.h"
 #include "types/entry_type.h"
 
 struct SubtreeMultimap {

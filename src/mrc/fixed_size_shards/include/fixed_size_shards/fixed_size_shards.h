@@ -2,7 +2,7 @@
 #include <glib.h>
 #include <stdint.h>
 
-// #include "hash/splitmix64.h" // Used for Hash64BitType
+#include "hash/types.h"
 #include "histogram/basic_histogram.h"
 #include "priority_queue/splay_priority_queue.h"
 #include "tree/naive_tree.h"
