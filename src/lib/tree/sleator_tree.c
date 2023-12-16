@@ -148,7 +148,7 @@ sleator_splay(struct Subtree *t, KeyType i)
 }
 
 bool
-sleator_insert(struct Tree *tree, KeyType i)
+tree__sleator_insert(struct Tree *tree, KeyType i)
 {
     /* Insert key i into the tree t, if it is not already there. */
     /* Return a pointer to the resulting tree.                   */
@@ -192,7 +192,7 @@ sleator_insert(struct Tree *tree, KeyType i)
 }
 
 bool
-sleator_remove(struct Tree *tree, KeyType i)
+tree_sleator_remove(struct Tree *tree, KeyType i)
 {
     /* Deletes i from the tree if it's there.               */
     /* Return a pointer to the resulting tree.              */
@@ -226,7 +226,7 @@ sleator_remove(struct Tree *tree, KeyType i)
 }
 
 struct Subtree *
-sleator_find_rank(struct Subtree *t, unsigned r)
+tree__sleator_find_rank(struct Subtree *t, unsigned r)
 {
     /* Returns a pointer to the node in the tree with the given rank.  */
     /* Returns NULL if there is no such node.                          */

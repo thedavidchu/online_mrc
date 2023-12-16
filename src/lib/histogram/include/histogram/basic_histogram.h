@@ -19,27 +19,27 @@ struct BasicHistogram {
 const uint64_t DEFAULT_MAX_HISTOGRAM_LENGTH = 1 << 20;
 
 bool
-basic_histogram_init(struct BasicHistogram *me, const uint64_t length);
+basic_histogram__init(struct BasicHistogram *me, const uint64_t length);
 
 bool
-basic_histogram_insert_finite(struct BasicHistogram *me, const uint64_t index);
+basic_histogram__insert_finite(struct BasicHistogram *me, const uint64_t index);
 
 /// @brief  Insert a non-infinite, scaled index. By scaled, I mean that the
 ///         index represents multiple elements.
 /// @note   This is used for SHARDS.
 bool
-basic_histogram_insert_scaled_finite(struct BasicHistogram *me,
-                                     const uint64_t index,
-                                     const uint64_t scale);
+basic_histogram__insert_scaled_finite(struct BasicHistogram *me,
+                                      const uint64_t index,
+                                      const uint64_t scale);
 
 bool
-basic_histogram_insert_infinite(struct BasicHistogram *me);
+basic_histogram__insert_infinite(struct BasicHistogram *me);
 
 bool
-basic_histogram_insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale);
+basic_histogram__insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale);
 
 void
-basic_histogram_print_sparse(struct BasicHistogram *me);
+basic_histogram__print_sparse(struct BasicHistogram *me);
 
 void
-basic_histogram_destroy(struct BasicHistogram *me);
+basic_histogram__destroy(struct BasicHistogram *me);

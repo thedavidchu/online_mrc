@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "hash/splitmix64.h"
+#include "hash/types.h"
 #include "types/entry_type.h"
 
 struct SubtreeMultimap {
@@ -32,23 +32,23 @@ struct SplayPriorityQueue {
 };
 
 bool
-splay_priority_queue_init(struct SplayPriorityQueue *me, const uint64_t max_cardinality);
+splay_priority_queue__init(struct SplayPriorityQueue *me, const uint64_t max_cardinality);
 
 bool
-splay_priority_queue_is_full(struct SplayPriorityQueue *me);
+splay_priority_queue__is_full(struct SplayPriorityQueue *me);
 
 bool
-splay_priority_queue_insert_if_room(struct SplayPriorityQueue *me,
-                                    const Hash64BitType hash,
-                                    const EntryType entry);
+splay_priority_queue__insert_if_room(struct SplayPriorityQueue *me,
+                                     const Hash64BitType hash,
+                                     const EntryType entry);
 
 Hash64BitType
-splay_priority_queue_get_max_hash(struct SplayPriorityQueue *me);
+splay_priority_queue__get_max_hash(struct SplayPriorityQueue *me);
 
 bool
-splay_priority_queue_remove(struct SplayPriorityQueue *me,
-                            Hash64BitType largest_hash,
-                            EntryType *entry);
+splay_priority_queue__remove(struct SplayPriorityQueue *me,
+                             Hash64BitType largest_hash,
+                             EntryType *entry);
 
 void
-splay_priority_queue_destroy(struct SplayPriorityQueue *me);
+splay_priority_queue__destroy(struct SplayPriorityQueue *me);

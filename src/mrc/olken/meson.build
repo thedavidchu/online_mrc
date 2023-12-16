@@ -14,7 +14,7 @@ olken_lib = library('olken_lib',
     ],
     dependencies : glib_dep,
     link_with : [
-        naive_tree_lib,
+        basic_tree_lib,
         basic_histogram_lib,
         sleator_tree_lib,
     ])

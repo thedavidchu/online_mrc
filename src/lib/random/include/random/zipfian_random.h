@@ -43,7 +43,7 @@ struct ZipfianRandom {
 };
 
 bool
-zipfian_random_init(struct ZipfianRandom *me, uint64_t items, double theta, uint64_t urnd_seed);
+zipfian_random__init(struct ZipfianRandom *me, uint64_t items, double theta, uint64_t urnd_seed);
 
 uint64_t
-zipfian_random_next(struct ZipfianRandom *me);
+zipfian_random__next(struct ZipfianRandom *me);

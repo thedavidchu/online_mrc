@@ -6,7 +6,7 @@
 #include "histogram/basic_histogram.h"
 
 bool
-basic_histogram_init(struct BasicHistogram *me, const uint64_t length)
+basic_histogram__init(struct BasicHistogram *me, const uint64_t length)
 {
     if (me == NULL || length == 0) {
         return false;
@@ -24,7 +24,7 @@ basic_histogram_init(struct BasicHistogram *me, const uint64_t length)
 }
 
 bool
-basic_histogram_insert_finite(struct BasicHistogram *me, const uint64_t index)
+basic_histogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -42,9 +42,9 @@ basic_histogram_insert_finite(struct BasicHistogram *me, const uint64_t index)
 }
 
 bool
-basic_histogram_insert_scaled_finite(struct BasicHistogram *me,
-                                     const uint64_t index,
-                                     const uint64_t scale)
+basic_histogram__insert_scaled_finite(struct BasicHistogram *me,
+                                      const uint64_t index,
+                                      const uint64_t scale)
 {
     const uint64_t scaled_index = scale * index;
     if (me == NULL || me->histogram == NULL) {
@@ -63,7 +63,7 @@ basic_histogram_insert_scaled_finite(struct BasicHistogram *me,
 }
 
 bool
-basic_histogram_insert_infinite(struct BasicHistogram *me)
+basic_histogram__insert_infinite(struct BasicHistogram *me)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -74,7 +74,7 @@ basic_histogram_insert_infinite(struct BasicHistogram *me)
 }
 
 bool
-basic_histogram_insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale)
+basic_histogram__insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -85,7 +85,7 @@ basic_histogram_insert_scaled_infinite(struct BasicHistogram *me, const uint64_t
 }
 
 void
-basic_histogram_print_sparse(struct BasicHistogram *me)
+basic_histogram__print_sparse(struct BasicHistogram *me)
 {
     if (me == NULL || me->histogram == NULL) {
         printf("{}\n");
@@ -104,7 +104,7 @@ basic_histogram_print_sparse(struct BasicHistogram *me)
 }
 
 void
-basic_histogram_destroy(struct BasicHistogram *me)
+basic_histogram__destroy(struct BasicHistogram *me)
 {
     if (me == NULL) {
         return;
