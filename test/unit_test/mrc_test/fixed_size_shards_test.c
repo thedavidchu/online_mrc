@@ -52,13 +52,13 @@ trace_test()
     struct ZipfianRandom zrng = {0};
     struct FixedSizeShardsReuseStack shards = {0};
 
-    ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random_init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+    ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
         fixed_size_shards_init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t key = zipfian_random_next(&zrng);
+        uint64_t key = zipfian_random__next(&zrng);
         fixed_size_shards_access_item(&shards, key);
     }
 

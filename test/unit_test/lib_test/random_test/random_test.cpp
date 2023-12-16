@@ -84,10 +84,10 @@ test_zipfian_for_seed(const uint64_t items,
 {
     foedus::assorted::ZipfianRandom zrng_oracle(items, theta, seed);
     ZipfianRandom zrng;
-    zipfian_random_init(&zrng, items, theta, seed);
+    zipfian_random__init(&zrng, items, theta, seed);
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t zipf_output = zipfian_random_next(&zrng);
+        uint64_t zipf_output = zipfian_random__next(&zrng);
         uint64_t zipf_oracle = zrng_oracle.next();
         if (zipf_output != zipf_oracle) {
             printf("[ERROR] %s:%d - on iteration %" PRIu64 "got %" PRIu64 ", expected %" PRIu64
