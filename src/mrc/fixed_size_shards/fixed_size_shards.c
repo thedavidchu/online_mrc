@@ -30,12 +30,12 @@ make_room(struct FixedSizeShardsReuseStack *me)
     if (me == NULL || me->hash_table == NULL) {
         return;
     }
-    Hash64BitType max_hash = splay_priority_queue_get_max_hash(&me->pq);
+    Hash64BitType max_hash = splay_priority_queue__get_max_hash(&me->pq);
     while (true) {
-        r = splay_priority_queue_remove(&me->pq, max_hash, &entry);
+        r = splay_priority_queue__remove(&me->pq, max_hash, &entry);
         if (!r) { // No more elements with the old max_hash
             // Update the new threshold and scale
-            max_hash = splay_priority_queue_get_max_hash(&me->pq);
+            max_hash = splay_priority_queue__get_max_hash(&me->pq);
             me->threshold = max_hash;
             me->scale = UINT64_MAX / max_hash;
             break;
@@ -81,7 +81,7 @@ fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
         return false;
     }
 
-    r = splay_priority_queue_init(&me->pq, max_size);
+    r = splay_priority_queue__init(&me->pq, max_size);
     if (!r) {
         tree_destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
@@ -126,10 +126,10 @@ fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType en
         ++me->current_time_stamp;
         basic_histogram__insert_scaled_finite(&me->histogram, distance, me->scale);
     } else {
-        if (splay_priority_queue_is_full(&me->pq)) {
+        if (splay_priority_queue__is_full(&me->pq)) {
             make_room(me);
         }
-        splay_priority_queue_insert_if_room(&me->pq, splitmix64_hash((uint64_t)entry), entry);
+        splay_priority_queue__insert_if_room(&me->pq, splitmix64_hash((uint64_t)entry), entry);
         g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
@@ -149,7 +149,7 @@ fixed_size_shards_destroy(struct FixedSizeShardsReuseStack *me)
     tree_destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
     basic_histogram__destroy(&me->histogram);
-    splay_priority_queue_destroy(&me->pq);
+    splay_priority_queue__destroy(&me->pq);
     me->current_time_stamp = 0;
     me->threshold = 0;
     me->scale = 0;
