@@ -28,6 +28,7 @@ zipfian_random_init(struct ZipfianRandom *me, uint64_t items, double theta, uint
     me->alpha_ = 1.0 / (1.0 - me->theta_);
     me->eta_ = (1 - pow(2.0 / (double)items, 1 - me->theta_)) / (1 - zeta(me, 2) / me->zetan_);
     uniform_random_init(&me->urnd_, urnd_seed);
+    return true;
 }
 
 uint64_t

@@ -2,6 +2,7 @@ import json
 from typing import Dict, Union
 import matplotlib.pyplot as plt
 
+INFINITY = float("inf")
 
 def input_histogram() -> Dict[float, Union[int, float]]:
     while True:
@@ -12,7 +13,7 @@ def input_histogram() -> Dict[float, Union[int, float]]:
         if histogram.startswith(r"{"):
             break
     histogram = json.loads(histogram)
-    histogram = {float(key): value for key, value in histogram.items()}
+    histogram = {float(key): value for key, value in histogram.items() if value > 0 and key != INFINITY}
     return histogram
 
 def plot_histogram(histogram: Dict[float, Union[float, int]]):

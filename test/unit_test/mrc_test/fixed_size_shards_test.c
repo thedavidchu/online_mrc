@@ -16,7 +16,7 @@ static bool
 access_same_key_five_times()
 {
     struct FixedSizeShardsReuseStack me = {0};
-    ASSERT_FUNCTION_RETURNS_TRUE(fixed_size_shards_init(&me, 1000, 1000, MAX_NUM_UNIQUE_ENTRIES));
+    ASSERT_FUNCTION_RETURNS_TRUE(fixed_size_shards_init(&me, 1000, 1, MAX_NUM_UNIQUE_ENTRIES));
 
     fixed_size_shards_access_item(&me, 0);
     fixed_size_shards_access_item(&me, 0);
@@ -55,7 +55,7 @@ trace_test()
     ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random_init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        fixed_size_shards_init(&shards, 1000, 1000, MAX_NUM_UNIQUE_ENTRIES));
+        fixed_size_shards_init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random_next(&zrng);
