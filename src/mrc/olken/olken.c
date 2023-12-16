@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #include "histogram/basic_histogram.h"
-#include "mrc_reuse_stack/olken.h"
+#include "olken/olken.h"
 #include "tree/naive_tree.h"
 
 static gboolean
@@ -16,7 +16,7 @@ entry_compare(gconstpointer a, gconstpointer b)
 }
 
 bool
-olken_reuse_stack_init(struct OlkenReuseStack *me)
+olken_reuse_stack_init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
 {
     if (me == NULL) {
         return false;
@@ -33,7 +33,7 @@ olken_reuse_stack_init(struct OlkenReuseStack *me)
     if (me->hash_table == NULL) {
         goto hash_table_error;
     }
-    r = basic_histogram_init(&me->histogram, MAX_HISTOGRAM_LENGTH);
+    r = basic_histogram_init(&me->histogram, max_num_unique_entries);
     if (!r) {
         goto histogram_error;
     }

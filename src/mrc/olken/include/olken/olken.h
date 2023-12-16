@@ -10,8 +10,6 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-const uint64_t MAX_HISTOGRAM_LENGTH = 1 << 20;
-
 struct OlkenReuseStack {
     struct Tree tree;
     GHashTable *hash_table;
@@ -20,7 +18,7 @@ struct OlkenReuseStack {
 };
 
 bool
-olken_reuse_stack_init(struct OlkenReuseStack *me);
+olken_reuse_stack_init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries);
 
 void
 olken_reuse_stack_access_item(struct OlkenReuseStack *me, EntryType entry);

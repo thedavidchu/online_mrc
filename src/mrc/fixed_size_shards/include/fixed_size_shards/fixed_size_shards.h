@@ -22,11 +22,13 @@ struct FixedSizeShardsReuseStack {
 /// @brief  Initialize the fixed-size SHARDS data structure.
 /// @param  starting_scale: This is the factor by which we divide the maximum
 ///                         hash size. We use this when scaling the histogram.
+/// @param  max_size    :   The maximum number of elements that we will track.
+///                         Additional elements will be removed.
 bool
 fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
                        const uint64_t starting_scale,
                        const uint64_t max_size,
-                       const uint64_t histogram_length);
+                       const uint64_t max_num_unique_entries);
 
 void
 fixed_size_shards_access_item(struct FixedSizeShardsReuseStack *me, EntryType entry);

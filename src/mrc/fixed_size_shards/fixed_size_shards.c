@@ -11,7 +11,7 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-#include "mrc_reuse_stack/fixed_size_shards.h"
+#include "fixed_size_shards/fixed_size_shards.h"
 
 static gboolean
 entry_compare(gconstpointer a, gconstpointer b)
@@ -56,7 +56,7 @@ bool
 fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
                        const uint64_t starting_scale,
                        const uint64_t max_size,
-                       const uint64_t histogram_length)
+                       const uint64_t max_num_unique_entries)
 {
     bool r = false;
     if (me == NULL || max_size == 0) {
@@ -74,7 +74,7 @@ fixed_size_shards_init(struct FixedSizeShardsReuseStack *me,
         return false;
     }
 
-    r = basic_histogram_init(&me->histogram, histogram_length);
+    r = basic_histogram_init(&me->histogram, max_num_unique_entries);
     if (!r) {
         tree_destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
