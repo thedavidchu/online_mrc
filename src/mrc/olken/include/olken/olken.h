@@ -5,8 +5,7 @@
 #include <glib.h>
 
 #include "histogram/basic_histogram.h"
-#include "tree/basic_tree.h"
-#include "tree/sleator_tree.h"
+#include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
