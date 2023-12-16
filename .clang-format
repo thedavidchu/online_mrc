@@ -13,3 +13,4 @@ AllowAllParametersOfDeclarationOnNextLine: false
 AllowAllConstructorInitializersOnNextLine: false
 PackConstructorInitializers: Never
 AlignConsecutiveMacros: AcrossEmptyLines
+InsertNewlineAtEOF: true

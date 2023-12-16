@@ -10,12 +10,7 @@ project('online_mrc', 'c', 'cpp',
         # this: https://mesonbuild.com/Builtin-options.html#details-for-warning_level
         'warning_level=everything',
     ])
-# add_project_arguments('-Wall', '-Werror', '-Wextra', '-Wpedantic', language : 'c')
 glib_dep = dependency('glib-2.0')
 
 subdir('src')
 subdir('test')
-
-executable('demo', 'main.c',
-    dependencies : glib_dep)
-
