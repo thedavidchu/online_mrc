@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tree/naive_tree.h"
+#include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 
 #include "test/mytester.h"

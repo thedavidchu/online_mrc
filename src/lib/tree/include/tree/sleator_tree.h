@@ -10,7 +10,7 @@ Modified a bit by David Chu. Refactored some bits to make the code more useable.
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "tree/naive_tree.h"
+#include "tree/basic_tree.h"
 
 bool
 tree__sleator_insert(struct Tree *t, KeyType key);

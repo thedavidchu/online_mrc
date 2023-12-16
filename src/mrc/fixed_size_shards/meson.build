@@ -17,7 +17,7 @@ fixed_size_shards_lib = library('fixed_size_shards_lib',
     ],
     dependencies : glib_dep,
     link_with : [
-        naive_tree_lib,
+        basic_tree_lib,
         sleator_tree_lib,
         splitmix64_lib,
         splay_priority_queue_lib,

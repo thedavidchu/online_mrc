@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tree/naive_tree.h"
+#include "tree/basic_tree.h"
 
 struct RemoveStatus {
     struct Subtree *removed;

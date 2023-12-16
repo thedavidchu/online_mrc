@@ -5,7 +5,7 @@
 #include "hash/types.h"
 #include "histogram/basic_histogram.h"
 #include "priority_queue/splay_priority_queue.h"
-#include "tree/naive_tree.h"
+#include "tree/basic_tree.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 

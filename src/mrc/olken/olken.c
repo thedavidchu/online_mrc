@@ -7,7 +7,7 @@
 
 #include "histogram/basic_histogram.h"
 #include "olken/olken.h"
-#include "tree/naive_tree.h"
+#include "tree/basic_tree.h"
 
 static gboolean
 entry_compare(gconstpointer a, gconstpointer b)

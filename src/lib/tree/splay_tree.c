@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tree/naive_tree.h"
+#include "tree/basic_tree.h"
 #include "tree/splay_tree.h"
 
 /// NOTE    Copied from Sleator's original Splay tree implementation (modified by Parda guy)
