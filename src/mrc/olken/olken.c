@@ -33,7 +33,7 @@ olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
     if (me->hash_table == NULL) {
         goto hash_table_error;
     }
-    r = basic_histogram_init(&me->histogram, max_num_unique_entries);
+    r = basic_histogram__init(&me->histogram, max_num_unique_entries);
     if (!r) {
         goto histogram_error;
     }
@@ -72,12 +72,12 @@ olken__access_item(struct OlkenReuseStack *me, EntryType entry)
         g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
-        basic_histogram_insert_finite(&me->histogram, distance);
+        basic_histogram__insert_finite(&me->histogram, distance);
     } else {
         g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
         sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        basic_histogram_insert_infinite(&me->histogram);
+        basic_histogram__insert_infinite(&me->histogram);
     }
 }
 
@@ -87,10 +87,10 @@ olken__print_sparse_histogram(struct OlkenReuseStack *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        basic_histogram_print_sparse(NULL);
+        basic_histogram__print_sparse(NULL);
         return;
     }
-    basic_histogram_print_sparse(&me->histogram);
+    basic_histogram__print_sparse(&me->histogram);
 }
 
 void
@@ -109,6 +109,6 @@ olken__destroy(struct OlkenReuseStack *me)
         g_hash_table_destroy(me->hash_table);
         me->hash_table = NULL;
     }
-    basic_histogram_destroy(&me->histogram);
+    basic_histogram__destroy(&me->histogram);
     me->current_time_stamp = 0;
 }
