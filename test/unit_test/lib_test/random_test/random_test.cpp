@@ -2,7 +2,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
-#include <iostream>
 
 // HACK This is a complete hack just to get the C++ linker to work. AHHH!
 extern "C" {
@@ -12,10 +11,13 @@ extern "C" {
 #include "random/zipfian_random.h"
 }
 
+#include "arrays/array_size.h"
+#include "test/mytester.h"
+
+// TODO(dchu)   Test the Uniform Random function directly
+// I don't test the uniform random function directly... yet.
 #include "random_test/uniform_random.hpp"
 #include "random_test/zipfian_random.hpp"
-
-#include "test/mytester.h"
 
 // NOTE Generated with the following Python script:
 //      import random; [random.random() for _ in range(100)]
@@ -106,7 +108,7 @@ test_zipfian_for_seed(const uint64_t items,
 bool
 test_zipfian()
 {
-    for (uint64_t i = 0; i < 10; ++i) {
+    for (uint64_t i = 0; i < ARRAY_SIZE(randomly_generated_bounds); ++i) {
         // NOTE The maximum possible number of items means that we get the
         //      maximum amount of information from the random-number generator.
         //      However, it also leads to impossibly long run-times. For this
