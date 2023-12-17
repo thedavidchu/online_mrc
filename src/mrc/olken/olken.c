@@ -17,14 +17,14 @@ entry_compare(gconstpointer a, gconstpointer b)
 }
 
 bool
-olken___init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
+olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
 {
     if (me == NULL) {
         return false;
     }
     bool r = tree__init(&me->tree);
     if (!r) {
-        goto tree__error;
+        goto tree_error;
     }
     // NOTE Using the g_direct_hash function means that we need to pass our
     //      entries as pointers to the hash table. It also means we cannot
@@ -46,12 +46,12 @@ histogram_error:
     me->hash_table = NULL;
 hash_table_error:
     tree__destroy(&me->tree);
-tree__error:
+tree_error:
     return false;
 }
 
 void
-olken___access_item(struct OlkenReuseStack *me, EntryType entry)
+olken__access_item(struct OlkenReuseStack *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -70,12 +70,16 @@ olken___access_item(struct OlkenReuseStack *me, EntryType entry)
         r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
+        g_hash_table_replace(me->hash_table,
+                             (gpointer)entry,
+                             (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         basic_histogram__insert_finite(&me->histogram, distance);
     } else {
-        g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
+        g_hash_table_insert(me->hash_table,
+                            (gpointer)entry,
+                            (gpointer)me->current_time_stamp);
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
         basic_histogram__insert_infinite(&me->histogram);
@@ -83,7 +87,7 @@ olken___access_item(struct OlkenReuseStack *me, EntryType entry)
 }
 
 void
-olken___print_sparse_histogram(struct OlkenReuseStack *me)
+olken__print_sparse_histogram(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -95,7 +99,7 @@ olken___print_sparse_histogram(struct OlkenReuseStack *me)
 }
 
 void
-olken___destroy(struct OlkenReuseStack *me)
+olken__destroy(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         return;
