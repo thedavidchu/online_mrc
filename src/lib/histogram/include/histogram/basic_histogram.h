@@ -16,8 +16,6 @@ struct BasicHistogram {
     uint64_t running_sum;
 };
 
-const uint64_t DEFAULT_MAX_HISTOGRAM_LENGTH = 1 << 20;
-
 bool
 basic_histogram__init(struct BasicHistogram *me, const uint64_t length);
 
