@@ -2,7 +2,7 @@
 BasedOnStyle: LLVM
 AlwaysBreakAfterReturnType: All
 IndentWidth: 4
-ColumnLimit: 100
+ColumnLimit: 80
 BreakBeforeBraces: WebKit
 AlignAfterOpenBracket: Align
 AccessModifierOffset: -4
