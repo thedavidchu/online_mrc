@@ -7,7 +7,8 @@
 #include "histogram/fractional_histogram.h"
 
 bool
-fractional_histogram__init(struct FractionalHistogram *me, const uint64_t length)
+fractional_histogram__init(struct FractionalHistogram *me,
+                           const uint64_t length)
 {
     if (me == NULL || length == 0) {
         return false;
@@ -15,7 +16,8 @@ fractional_histogram__init(struct FractionalHistogram *me, const uint64_t length
     // Assume it is either NULL or an uninitialized address!
     // NOTE A double with all zeroed bits is the equivalent of zero.
     me->histogram = calloc(length, sizeof(*me->histogram));
-    assert(me->histogram[0] == 0.0 && "0x0000000000000000 should represent 0.0");
+    assert(me->histogram[0] == 0.0 &&
+           "0x0000000000000000 should represent 0.0");
     if (me->histogram == NULL) {
         return false;
     }
@@ -27,7 +29,7 @@ fractional_histogram__init(struct FractionalHistogram *me, const uint64_t length
 }
 
 /// @brief  Update the histogram over a fully-in-range section.
-static bool
+static void
 insert_full_range(struct FractionalHistogram *me,
                   const uint64_t scaled_start,
                   const uint64_t scaled_exclusive_end,
@@ -44,7 +46,7 @@ insert_full_range(struct FractionalHistogram *me,
 
 /// @brief  Update the histogram over a partially-in-range portion and then add
 ///         the remainder to the 'out-of-bounds' false infinity counter.
-static bool
+static void
 insert_partial_range(struct FractionalHistogram *me,
                      const uint64_t scaled_start,
                      const uint64_t scaled_exclusive_end,
@@ -60,7 +62,7 @@ insert_partial_range(struct FractionalHistogram *me,
     // NOTE I worked this out on paper. This is correct as far as I can tell. An
     //      illustrative example is me->length = 1 and scaled_exclusive_end = 5.
     //      Now, we have {1, 2, 3, 4} numbers to account for and 5-1 = 4. QED!
-    me->false_infinity += delta * (scaled_exclusive_end - me->length);
+    me->false_infinity += delta * (double)(scaled_exclusive_end - me->length);
 }
 
 bool
@@ -78,16 +80,21 @@ fractional_histogram__insert_scaled_finite(struct FractionalHistogram *me,
     if (scaled_exclusive_end <= me->length) {
         insert_full_range(me, scaled_start, scaled_exclusive_end, scale, range);
     } else if (scaled_start < me->length) {
-        insert_partial_range(me, scaled_start, scaled_exclusive_end, scale, range);
+        insert_partial_range(me,
+                             scaled_start,
+                             scaled_exclusive_end,
+                             scale,
+                             range);
     } else {
-        me->false_infinity += scale;
+        me->false_infinity += (double)scale;
     }
     me->running_sum += scale;
     return true;
 }
 
 bool
-fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me, const uint64_t scale)
+fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
+                                             const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL || scale < 1) {
         return false;
@@ -106,12 +113,12 @@ fractional_histogram__print_sparse(struct FractionalHistogram *me)
     }
     printf("{");
     for (uint64_t i = 0; i < me->length; ++i) {
-        if (me->histogram[i] != 0) {
+        if (me->histogram[i] != 0.0) {
             printf("\"%" PRIu64 "\": %lf, ", i, me->histogram[i]);
         }
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %" PRIu64 ", ", me->length, me->false_infinity);
+    printf("\"%" PRIu64 "\": %lf, ", me->length, me->false_infinity);
     printf("\"inf\": %" PRIu64 "", me->infinity);
     printf("}\n");
 }
