@@ -37,7 +37,7 @@ insert_full_range(struct FractionalHistogram *me,
                   const uint64_t range)
 {
     assert(me != NULL && me->histogram != NULL && scale >= 1 && range >= 1 &&
-           scaled_exclusive_end >= me->length);
+           scaled_exclusive_end <= me->length);
     double delta = (double)scale / (double)range;
     for (uint64_t i = scaled_start; i < scaled_exclusive_end; ++i) {
         me->histogram[i] += delta;
