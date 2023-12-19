@@ -17,8 +17,7 @@ static bool
 access_same_key_five_times()
 {
     struct OlkenReuseStack me = {0};
-    ASSERT_TRUE_OR_CLEANUP(olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
-                           printf("No cleanup required\n"));
+    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&me, MAX_NUM_UNIQUE_ENTRIES));
 
     olken__access_item(&me, 0);
     olken__access_item(&me, 0);

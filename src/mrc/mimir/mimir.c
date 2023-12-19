@@ -32,6 +32,7 @@ stacker_aging_policy(struct Mimir *me)
         mimir_buckets__get_average_bucket(&me->buckets);
     while (g_hash_table_iter_next(&iter, NULL, (gpointer *)bucket_index_ptr) ==
            TRUE) {
+        assert(bucket_index_ptr != NULL);
         uint64_t bucket_index = *bucket_index_ptr;
         if (bucket_index <= average_stack_distance_bucket) {
             // NOTE I am not convinced that this will not include the oldest
@@ -196,10 +197,45 @@ mimir__access_item(struct Mimir *me, EntryType entry)
     }
 }
 
+static void
+print_key_value(gpointer key, gpointer value, gpointer unused_user_data)
+{
+    EntryType entry = (EntryType)key;
+    uint64_t bucket_index = (uint64_t)value;
+    printf("\"%" PRIu64 "\": %" PRIu64 ", ", entry, bucket_index);
+}
+
+void
+mimir__print_hash_table(struct Mimir *me)
+{
+    printf("{");
+    g_hash_table_foreach(me->hash_table, print_key_value, NULL);
+    printf("}\n");
+}
+
 void
 mimir__print_sparse_histogram(struct Mimir *me)
 {
     fractional_histogram__print_sparse(&me->histogram);
+}
+
+bool
+mimir__validate(struct Mimir *me)
+{
+    bool r = false;
+    if (me == NULL) {
+        return true;
+    }
+    r = mimir_buckets__validate(&me->buckets);
+    if (!r) {
+        assert(0);
+        return false;
+    }
+    if (me->buckets.num_unique_entries != me->histogram.infinity) {
+        assert(0);
+        return false;
+    }
+    return true;
 }
 
 void

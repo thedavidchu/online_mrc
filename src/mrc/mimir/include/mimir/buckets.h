@@ -365,10 +365,12 @@ mimir_buckets__validate(struct MimirBuckets *me)
         actual_num_unique_entries += me->buckets[i];
     }
     if (actual_num_unique_entries != expected_max_num_unique_entries) {
+        assert(0);
         return false;
     }
     if (me->sum_of_bucket_indices !=
         mimir_buckets__count_sum_of_bucket_indices(me)) {
+        assert(0);
         return false;
     }
     return true;

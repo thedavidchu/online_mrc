@@ -37,7 +37,13 @@ void
 mimir__access_item(struct Mimir *me, EntryType entry);
 
 void
+mimir__print_hash_table(struct Mimir *me);
+
+void
 mimir__print_sparse_histogram(struct Mimir *me);
+
+bool
+mimir__validate(struct Mimir *me);
 
 void
 mimir__destroy(struct Mimir *me);
