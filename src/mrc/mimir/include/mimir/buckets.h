@@ -127,6 +127,25 @@ mimir_buckets__newest_bucket_size(struct MimirBuckets *me)
 }
 
 bool
+mimir_buckets__age_by_one_bucket(struct MimirBuckets *me,
+                                 const uint64_t bucket_index)
+{
+    uint64_t old_real_index = 0, new_real_index;
+    if (me == NULL || me->buckets == NULL) {
+        return false;
+    }
+
+    old_real_index = get_real_bucket_index(me, bucket_index);
+    // NOTE Pre-emptively add me->num_buckets so that it is guaranteed to be
+    //      positive.
+    new_real_index =
+        get_real_bucket_index(me, bucket_index + me->num_buckets - 1);
+    --me->buckets[old_real_index];
+    ++me->buckets[new_real_index];
+    return true;
+}
+
+bool
 mimir_buckets__rounder_aging_policy(struct MimirBuckets *me)
 {
     uint64_t old_oldest_real_index = 0, new_oldest_real_index = 0;
@@ -171,7 +190,8 @@ mimir_buckets__get_stack_distance(struct MimirBuckets *me,
 void
 mimir_buckets__print_buckets(struct MimirBuckets *me)
 {
-    bool debug = true;
+    bool debug = false;
+    bool values_only = true;
     if (me == NULL || me->buckets == NULL) {
         printf("(0, ?:?) []\n");
         return;
@@ -189,6 +209,10 @@ mimir_buckets__print_buckets(struct MimirBuckets *me)
                        i,
                        me->buckets[i % me->num_buckets]);
             }
+        }
+    } else if (values_only) {
+        for (uint64_t i = me->newest_bucket; i >= me->oldest_bucket; --i) {
+            printf("%" PRIu64 ", ", me->buckets[i % me->num_buckets]);
         }
     } else {
         for (uint64_t i = me->newest_bucket; i >= me->oldest_bucket; --i) {
