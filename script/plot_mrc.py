@@ -17,6 +17,14 @@ def input_histogram() -> Dict[float, Union[int, float]]:
     return histogram
 
 def plot_histogram(histogram: Dict[float, Union[float, int]]):
+    plt.figure()
+    plt.title("Histogram")
+    plt.xlabel("Reuse Stack Distance")
+    plt.ylabel("Frequency")
+    plt.plot(histogram.keys(), histogram.values())
+    plt.savefig("histogram.png")
+
+def plot_miss_rate_curve(histogram: Dict[float, Union[float, int]]):
     running_total = 0
     total = sum(histogram.values())
     mrc = {}
@@ -33,6 +41,7 @@ def plot_histogram(histogram: Dict[float, Union[float, int]]):
 def main():
     histogram = input_histogram()
     plot_histogram(histogram)
+    plot_miss_rate_curve(histogram)
 
 if __name__ == "__main__":
     main()
