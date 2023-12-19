@@ -25,9 +25,6 @@ struct Mimir {
     struct MimirBuckets buckets;
     struct FractionalHistogram histogram;
     enum MimirAgingPolicy aging_policy;
-    // This is the number of entries that are in the Mimir buckets. I maintain
-    // this field because I need to know when to perform the aging policy.
-    uint64_t num_unique_entries;
 };
 
 bool

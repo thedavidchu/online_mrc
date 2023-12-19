@@ -23,15 +23,15 @@ access_same_key_five_times()
                            printf("No cleanup required\n"));
 
     mimir__access_item(&me, 0);
-    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
+    mimir_buckets__validate(&me.buckets);
     mimir__access_item(&me, 0);
-    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
+    mimir_buckets__validate(&me.buckets);
     mimir__access_item(&me, 0);
-    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
+    mimir_buckets__validate(&me.buckets);
     mimir__access_item(&me, 0);
-    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
+    mimir_buckets__validate(&me.buckets);
     mimir__access_item(&me, 0);
-    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
+    mimir_buckets__validate(&me.buckets);
 
     if (me.histogram.histogram[0] != 4.0 ||
         me.histogram.false_infinity != 0.0 || me.histogram.infinity != 1) {

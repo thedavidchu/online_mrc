@@ -10,7 +10,6 @@
 
 #include "histogram/fractional_histogram.h"
 #include "logger/logger.h"
-#include "math/positive_ceiling_divide.h"
 #include "types/entry_type.h"
 
 #include "mimir/buckets.h"
@@ -22,13 +21,6 @@ entry_compare(gconstpointer a, gconstpointer b)
     return (a == b) ? TRUE : FALSE;
 }
 
-uint64_t
-get_average_stack_distance_bucket(struct Mimir *me)
-{
-    assert(0 && "TODO");
-    return 0;
-}
-
 static void
 stacker_aging_policy(struct Mimir *me)
 {
@@ -37,7 +29,7 @@ stacker_aging_policy(struct Mimir *me)
 
     uint64_t *restrict bucket_index_ptr = NULL;
     uint64_t average_stack_distance_bucket =
-        get_average_stack_distance_bucket(me);
+        mimir_buckets__get_average_bucket(&me->buckets);
     while (g_hash_table_iter_next(&iter, NULL, (gpointer *)bucket_index_ptr) ==
            TRUE) {
         uint64_t bucket_index = *bucket_index_ptr;
@@ -58,21 +50,6 @@ stacker_aging_policy(struct Mimir *me)
 static void
 age(struct Mimir *me)
 {
-    bool debug = false;
-    if (debug) {
-        LOGGER_DEBUG(
-            "Aging with %s. Newest bucket: %" PRIu64 ", oldest bucket: %" PRIu64
-            ", total unique elements: %" PRIu64 " among %" PRIu64 " buckets",
-            (me->aging_policy == MIMIR_STACKER
-                 ? "MIMIR_STACKER"
-                 : (me->aging_policy == MIMIR_ROUNDER ? "MIMIR_ROUNDER" : "?")),
-            me->buckets
-                .buckets[me->buckets.newest_bucket % me->buckets.num_buckets],
-            me->buckets
-                .buckets[me->buckets.oldest_bucket % me->buckets.num_buckets],
-            me->num_unique_entries,
-            me->buckets.num_buckets);
-    }
     assert(me != NULL);
     switch (me->aging_policy) {
     case MIMIR_STACKER:
@@ -87,35 +64,6 @@ age(struct Mimir *me)
         exit(EXIT_FAILURE);
     }
     return;
-}
-
-/// NOTE    This is a separate function because in the Mimir paper, it is
-///         unclear whether this should be a ceiling-divide. In some places it
-///         is; in others, it isn't. I use a ceiling-divide because it makes
-///         more sense to me.
-static bool
-new_bucket_has_more_than_fair_share(struct Mimir *me)
-{
-    uint64_t num_buckets = me->buckets.num_buckets;
-    uint64_t newest_bucket_size =
-        mimir_buckets__newest_bucket_size(&me->buckets);
-    // This ceiling divide will return zero for a bucket array for which each
-    // bucket is empty. If we find this to be problematic, we could either add 1
-    // to the numerator or take the max of the numerator and 1 or I could do the
-    // greater-than operator instead of the greater-than-or-equal. I did the
-    // third option.
-    bool debug = false;
-    if (debug) {
-        LOGGER_DEBUG(
-            "Newest bucket size: %" PRIu64 " vs average per bucket: %" PRIu64,
-            newest_bucket_size,
-            POSITIVE_CEILING_DIVIDE(me->num_unique_entries, num_buckets));
-    }
-    if (newest_bucket_size >
-        POSITIVE_CEILING_DIVIDE(me->num_unique_entries, num_buckets)) {
-        return true;
-    }
-    return false;
 }
 
 static void
@@ -156,7 +104,7 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
     // Update the buckets
     mimir_buckets__decrement_bucket(&me->buckets, bucket_index);
     mimir_buckets__increment_newest_bucket(&me->buckets);
-    if (new_bucket_has_more_than_fair_share(me)) {
+    if (mimir_buckets__newest_bucket_is_full(&me->buckets)) {
         age(me);
     }
 }
@@ -180,9 +128,9 @@ miss(struct Mimir *me, EntryType entry)
     fractional_histogram__insert_scaled_infinite(&me->histogram, 1);
 
     // Update the buckets
-    ++me->num_unique_entries;
     mimir_buckets__increment_newest_bucket(&me->buckets);
-    if (new_bucket_has_more_than_fair_share(me)) {
+    mimir_buckets__increment_num_unique_entries(&me->buckets);
+    if (mimir_buckets__newest_bucket_is_full(&me->buckets)) {
         age(me);
     }
 }
@@ -216,7 +164,6 @@ mimir__init(struct Mimir *me,
 
     // Initialize other things
     me->aging_policy = aging_policy;
-    me->num_unique_entries = 0;
     return true;
 
 // NOTE These are in reverse order so we perform the appropriate deconstruction
@@ -267,9 +214,4 @@ mimir__destroy(struct Mimir *me)
         g_hash_table_destroy(me->hash_table);
         me->hash_table = NULL;
     }
-    // I don't really have to do this, but I do so just to be safe. Actually, I
-    // don't have a consistent way of measuring whether a data structure has
-    // been initialized (or deinitialized) yet. Also, side note: should I change
-    // function names from *__destroy() to *__deinit()?
-    me->num_unique_entries = 0;
 }
