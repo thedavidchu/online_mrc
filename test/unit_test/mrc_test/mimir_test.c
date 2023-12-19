@@ -32,8 +32,6 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     mimir__access_item(&me, 0);
     mimir__validate(&me);
 
-    mimir__print_hash_table(&me);
-
     if (me.histogram.histogram[0] != 4.0 ||
         me.histogram.false_infinity != 0.0 || me.histogram.infinity != 1) {
         mimir__print_sparse_histogram(&me);
@@ -90,7 +88,7 @@ main(void)
 {
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
-    // ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));
+    ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_STACKER));
 
     return EXIT_SUCCESS;

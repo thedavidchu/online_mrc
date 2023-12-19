@@ -27,23 +27,24 @@ stacker_aging_policy(struct Mimir *me)
     GHashTableIter iter;
     g_hash_table_iter_init(&iter, me->hash_table);
 
-    uint64_t *restrict bucket_index_ptr = NULL;
+    uint64_t entry = 0, bucket_index = 0;
     uint64_t average_stack_distance_bucket =
         mimir_buckets__get_average_bucket(&me->buckets);
-    while (g_hash_table_iter_next(&iter, NULL, (gpointer *)bucket_index_ptr) ==
-           TRUE) {
-        assert(bucket_index_ptr != NULL);
-        uint64_t bucket_index = *bucket_index_ptr;
+    while (g_hash_table_iter_next(&iter,
+                                  (gpointer *)&entry,
+                                  (gpointer *)&bucket_index) == TRUE) {
         if (bucket_index <= average_stack_distance_bucket) {
             // NOTE I am not convinced that this will not include the oldest
-            //      bucket (i.e. bucket 0). Prove me wrong!
-            assert(*bucket_index_ptr != 0);
-            *bucket_index_ptr -= 1;
-            // NOTE To optimize this repeated function call away, we could age
-            //      the counts of each buckets (i.e. factor this function out of
-            //      the loop). This is a future task, since I want to get the
-            //      algorithm working as described.
-            mimir_buckets__age_by_one_bucket(&me->buckets, bucket_index);
+            //      bucket (i.e. bucket 0). Simply running the test validated my
+            //      doubts.
+            if (bucket_index != 0) {
+                g_hash_table_iter_replace(&iter, (gpointer)(bucket_index - 1));
+                // NOTE To optimize this repeated function call away, we could
+                //      age the counts of each buckets (i.e. factor this
+                //      function out of the loop). This is a future task, since
+                //      I want to get the algorithm working as described.
+                mimir_buckets__age_by_one_bucket(&me->buckets, bucket_index);
+            }
         }
     }
 }
