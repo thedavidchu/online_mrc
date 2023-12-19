@@ -58,6 +58,21 @@ stacker_aging_policy(struct Mimir *me)
 static void
 age(struct Mimir *me)
 {
+    bool debug = false;
+    if (debug) {
+        LOGGER_DEBUG(
+            "Aging with %s. Newest bucket: %" PRIu64 ", oldest bucket: %" PRIu64
+            ", total unique elements: %" PRIu64 " among %" PRIu64 " buckets",
+            (me->aging_policy == MIMIR_STACKER
+                 ? "MIMIR_STACKER"
+                 : (me->aging_policy == MIMIR_ROUNDER ? "MIMIR_ROUNDER" : "?")),
+            me->buckets
+                .buckets[me->buckets.newest_bucket % me->buckets.num_buckets],
+            me->buckets
+                .buckets[me->buckets.oldest_bucket % me->buckets.num_buckets],
+            me->num_unique_entries,
+            me->buckets.num_buckets);
+    }
     assert(me != NULL);
     switch (me->aging_policy) {
     case MIMIR_STACKER:
@@ -89,6 +104,13 @@ new_bucket_has_more_than_fair_share(struct Mimir *me)
     // to the numerator or take the max of the numerator and 1 or I could do the
     // greater-than operator instead of the greater-than-or-equal. I did the
     // third option.
+    bool debug = false;
+    if (debug) {
+        LOGGER_DEBUG(
+            "Newest bucket size: %" PRIu64 " vs average per bucket: %" PRIu64,
+            newest_bucket_size,
+            POSITIVE_CEILING_DIVIDE(me->num_unique_entries, num_buckets));
+    }
     if (newest_bucket_size >
         POSITIVE_CEILING_DIVIDE(me->num_unique_entries, num_buckets)) {
         return true;
