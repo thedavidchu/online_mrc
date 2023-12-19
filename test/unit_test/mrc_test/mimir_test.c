@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
+#include "mimir/buckets.h"
 #include "mimir/mimir.h"
 
 #include "random/zipfian_random.h"
@@ -18,27 +20,33 @@ access_same_key_five_times()
     struct Mimir me = {0};
     // TODO(dchu)   Change the ASSERT_FUNCTION_RETURNS_TRUE to
     // TEST_FUNCTION_RETURNS_TRUE
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        mimir__init(&me, 10, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER));
+    ASSERT_TRUE_OR_CLEANUP(
+        mimir__init(&me, 10, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
+        printf("No cleanup required\n"));
 
     mimir__access_item(&me, 0);
+    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
     mimir__access_item(&me, 0);
+    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
     mimir__access_item(&me, 0);
+    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
     mimir__access_item(&me, 0);
+    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
     mimir__access_item(&me, 0);
+    mimir_buckets__validate(&me.buckets, me.num_unique_entries);
 
-    if (me.histogram.histogram[0] != 4000 || me.histogram.false_infinity != 0 ||
-        me.histogram.infinity != 1000) {
+    if (me.histogram.histogram[0] != 4.0 ||
+        me.histogram.false_infinity != 0.0 || me.histogram.infinity != 1) {
         mimir__print_sparse_histogram(&me);
-        assert(0 && "histogram should be {0: 4000, inf: 1000}");
+        assert(0 && "histogram should be {0: 4, inf: 1}");
         mimir__destroy(&me);
         return false;
     }
     // Skip 0 because we know it should be non-zero
     for (uint64_t i = 1; i < me.histogram.length; ++i) {
-        if (me.histogram.histogram[i] != 0) {
+        if (me.histogram.histogram[i] != 0.0) {
             mimir__print_sparse_histogram(&me);
-            assert(0 && "histogram should be {0: 4000, inf: 1000}");
+            assert(0 && "histogram should be {0: 4, inf: 1}");
             mimir__destroy(&me);
             return false;
         }
@@ -59,7 +67,7 @@ trace_test()
         zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        mimir__init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
+        mimir__init(&shards, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random__next(&zrng);

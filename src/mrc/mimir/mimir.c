@@ -8,8 +8,9 @@
 #include <glib.h>
 #include <sys/types.h>
 
-#include "error/error.h"
 #include "histogram/fractional_histogram.h"
+#include "logger/logger.h"
+#include "math/positive_ceiling_divide.h"
 #include "types/entry_type.h"
 
 #include "mimir/buckets.h"
@@ -39,7 +40,7 @@ age(struct Mimir *me)
         mimir_buckets__rounder_aging_policy(&me->buckets);
         break;
     default:
-        LOG_ERROR("aging policy should be MIMIR_STACKER or MIMIR_ROUNDER");
+        LOGGER_ERROR("aging policy should be MIMIR_STACKER or MIMIR_ROUNDER");
         assert(0 && "aging policy should be MIMIR_STACKER or MIMIR_ROUNDER!");
         exit(EXIT_FAILURE);
     }
@@ -48,14 +49,21 @@ age(struct Mimir *me)
 
 /// NOTE    This is a separate function because in the Mimir paper, it is
 ///         unclear whether this should be a ceiling-divide. In some places it
-///         is; in others, it isn't.
+///         is; in others, it isn't. I use a ceiling-divide because it makes
+///         more sense to me.
 static bool
 new_bucket_has_more_than_fair_share(struct Mimir *me)
 {
     uint64_t num_buckets = me->buckets.num_buckets;
     uint64_t newest_bucket_size =
         mimir_buckets__newest_bucket_size(&me->buckets);
-    if (newest_bucket_size >= me->num_unique_entries / num_buckets) {
+    // This ceiling divide will return zero for a bucket array for which each
+    // bucket is empty. If we find this to be problematic, we could either add 1
+    // to the numerator or take the max of the numerator and 1 or I could do the
+    // greater-than operator instead of the greater-than-or-equal. I did the
+    // third option.
+    if (newest_bucket_size >
+        POSITIVE_CEILING_DIVIDE(me->num_unique_entries, num_buckets)) {
         return true;
     }
     return false;
@@ -71,17 +79,23 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
     }
 
     // Update hash table
-    g_hash_table_replace(
-        me->hash_table,
-        (gpointer)entry,
-        (gpointer)mimir_buckets__newest_bucket_size(&me->buckets));
+    uint64_t newest_bucket =
+        mimir_buckets__get_newest_bucket_index(&me->buckets);
+    if (newest_bucket == 0) {
+        LOGGER_FATAL("newest_bucket should be non-zero");
+        assert(0 && "newest_bucket should be non-zero");
+        exit(EXIT_FAILURE);
+    }
+    g_hash_table_replace(me->hash_table,
+                         (gpointer)entry,
+                         (gpointer)newest_bucket);
     // TODO(dchu): Maybe record the infinite distances for Parda!
 
     // Update histogram
     struct MimirBucketsStackDistanceStatus status =
         mimir_buckets__get_stack_distance(&me->buckets, bucket_index);
     if (status.success == false) {
-        LOG_ERROR("status should be successful!");
+        LOGGER_ERROR("status should be successful!");
         assert(0 && "impossible!");
         exit(0);
     }
@@ -102,10 +116,16 @@ static void
 miss(struct Mimir *me, EntryType entry)
 {
     // Update the hash table
-    g_hash_table_insert(
-        me->hash_table,
-        (gpointer)entry,
-        (gpointer)mimir_buckets__get_newest_bucket_index(&me->buckets));
+    uint64_t newest_bucket =
+        mimir_buckets__get_newest_bucket_index(&me->buckets);
+    if (newest_bucket == 0) {
+        LOGGER_FATAL("newest_bucket should be non-zero");
+        assert(0 && "newest_bucket should be non-zero");
+        exit(EXIT_FAILURE);
+    }
+    g_hash_table_insert(me->hash_table,
+                        (gpointer)entry,
+                        (gpointer)newest_bucket);
 
     // Update the histogram
     fractional_histogram__insert_scaled_infinite(&me->histogram, 1);

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "logger/logger.h"
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -107,10 +108,7 @@ mimir_buckets__decrement_bucket(struct MimirBuckets *me,
     }
 
     real_index = get_real_bucket_index(me, bucket_index);
-    printf("--- %lu\n", real_index);
-    mimir_buckets__print_buckets(me);
     --me->buckets[real_index];
-    mimir_buckets__print_buckets(me);
     return true;
 }
 
@@ -173,6 +171,7 @@ mimir_buckets__get_stack_distance(struct MimirBuckets *me,
 void
 mimir_buckets__print_buckets(struct MimirBuckets *me)
 {
+    bool debug = true;
     if (me == NULL || me->buckets == NULL) {
         printf("(0, ?:?) []\n");
         return;
@@ -181,12 +180,58 @@ mimir_buckets__print_buckets(struct MimirBuckets *me)
            me->num_buckets,
            me->newest_bucket,
            me->oldest_bucket);
-    for (uint64_t i = me->newest_bucket; i >= me->oldest_bucket; --i) {
-        printf("%" PRIu64 ": %" PRIu64 ", ",
-               i,
-               me->buckets[i % me->num_buckets]);
+    if (debug) {
+        for (uint64_t i = 0; i <= me->newest_bucket; ++i) {
+            if (i < me->oldest_bucket) {
+                printf("%" PRIu64 ": ?, ", i);
+            } else {
+                printf("%" PRIu64 ": %" PRIu64 ", ",
+                       i,
+                       me->buckets[i % me->num_buckets]);
+            }
+        }
+    } else {
+        for (uint64_t i = me->newest_bucket; i >= me->oldest_bucket; --i) {
+            printf("%" PRIu64 ": %" PRIu64 ", ",
+                   i,
+                   me->buckets[i % me->num_buckets]);
+        }
     }
     printf("]\n");
+}
+
+bool
+mimir_buckets__validate(struct MimirBuckets *me,
+                        const uint64_t expected_max_num_unique_entries)
+{
+    if (me == NULL) {
+        bool r = (expected_max_num_unique_entries == 0);
+        assert(r);
+        return r;
+    }
+    if (me->buckets == NULL) {
+        bool r = (expected_max_num_unique_entries == 0 && me->num_buckets == 0);
+        assert(r);
+        return r;
+    }
+    if (me->newest_bucket + 1 - me->num_buckets != me->oldest_bucket) {
+        assert(0);
+        return false;
+    }
+    uint64_t actual_num_unique_entries = 0;
+    for (uint64_t i = 0; i < me->num_buckets; ++i) {
+        uint64_t num = me->buckets[i];
+        if ((int64_t)num < 0) {
+            LOGGER_WARN("bucket with real number %" PRIu64
+                        " may be very large (%" PRIu64
+                        "), but it may have also underflowed (%" PRId64 ")",
+                        i,
+                        num,
+                        (int64_t)num);
+        }
+        actual_num_unique_entries += me->buckets[i];
+    }
+    return actual_num_unique_entries == expected_max_num_unique_entries;
 }
 
 /// NOTE    You must not destroy an uninitialized MimirBuckets object lest
