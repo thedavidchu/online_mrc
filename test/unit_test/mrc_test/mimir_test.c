@@ -60,7 +60,7 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
 static bool
 trace_test(enum MimirAgingPolicy aging_policy)
 {
-    const uint64_t trace_length = 1 << 20;
+    const uint64_t trace_length = 1 << 15;
     struct ZipfianRandom zrng = {0};
     struct Mimir me = {0};
 
@@ -92,11 +92,9 @@ main(int argc, char **argv)
 {
     UNUSED(argc);
     UNUSED(argv);
-    if (false) {
-        ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
-        ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
-        ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));
-    }
+    ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
+    ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
+    ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_STACKER));
     return EXIT_SUCCESS;
 }
