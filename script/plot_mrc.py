@@ -4,16 +4,20 @@ import matplotlib.pyplot as plt
 
 INFINITY = float("inf")
 
+def decode_json_histogram(histogram_text: str) -> Dict[float, Union[int, float]]:
+    histogram = json.loads(histogram_text)
+    histogram = {float(key): value for key, value in histogram.items() if value > 0 and key != INFINITY}
+    return histogram
+
 def input_histogram() -> Dict[float, Union[int, float]]:
     while True:
-        histogram = input()
+        histogram_text = input()
         # NOTE  We assume that there will only be a single JSON. This will be
         #       only line that starts with the character '{' and the entire
         #       JSON string will be on a single line.
-        if histogram.startswith(r"{"):
+        if histogram_text.startswith(r"{"):
             break
-    histogram = json.loads(histogram)
-    histogram = {float(key): value for key, value in histogram.items() if value > 0 and key != INFINITY}
+    histogram = decode_json_histogram(histogram_text)
     return histogram
 
 def plot_histogram(histogram: Dict[float, Union[float, int]]):
@@ -39,7 +43,12 @@ def plot_miss_rate_curve(histogram: Dict[float, Union[float, int]]):
     plt.savefig("mrc.png")
 
 def main():
-    histogram = input_histogram()
+    from_input = True
+    if from_input:
+        histogram = input_histogram()
+    else:
+        histogram_text = ""
+        histogram = decode_json_histogram(histogram_text)
     plot_histogram(histogram)
     plot_miss_rate_curve(histogram)
 
