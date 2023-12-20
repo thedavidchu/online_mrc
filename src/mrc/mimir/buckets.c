@@ -134,7 +134,7 @@ mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
     if (me == NULL || me->buckets == NULL) {
         return false;
     }
-    if (average_bucket_index == me->oldest_bucket) {
+    if (average_bucket_index <= me->oldest_bucket) {
         // This is only possible when me->num_unique_entries == 0 or when we are
         // aging at the improper time. Here is the "proof" (read: "spoof" lol):
         // 1. Assume we are aging at the proper time.
@@ -156,8 +156,13 @@ mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
         //  => if B > 1, then N simply has to be greater than 0.
         //
         // NOTE This would be more rigourous if I did all the integer rounding.
+        assert(me->num_unique_entries == 0 &&
+               "my 'proof'/'spoof' is incorrect!");
+        printf("David was correct. Yet again.\n");
         return false;
     }
+    assert(me->newest_bucket - average_bucket_index <= me->num_buckets - 1 &&
+           "should be less than or equal to B - 1 distance");
     for (uint64_t i = average_bucket_index; i <= me->newest_bucket; ++i) {
         uint64_t new_real_index = get_real_bucket_index(me, i - 1);
         uint64_t old_real_index = get_real_bucket_index(me, i);
@@ -262,17 +267,19 @@ mimir_buckets__print_buckets(struct MimirBuckets *me,
         break;
     case MIMIR_BUCKETS_PRINT_KEYS_AND_VALUES:
         // NOTE This prints newest first, then oldest
-        for (uint64_t i = me->newest_bucket; i >= me->oldest_bucket; --i) {
+        for (uint64_t i = 0; i < me->num_buckets; ++i) {
+            const uint64_t b_idx = me->newest_bucket - i;
             printf("%" PRIu64 ": %" PRIu64 ", ",
-                   i,
-                   me->buckets[i % me->num_buckets]);
+                   b_idx,
+                   me->buckets[b_idx % me->num_buckets]);
         }
         break;
     case MIMIR_BUCKETS_PRINT_VALUES_ONLY: /* Intentional fallthrough */
     default:
         // NOTE This prints newest first, then oldest
-        for (uint64_t i = me->newest_bucket; i >= me->oldest_bucket; --i) {
-            printf("%" PRIu64 ", ", me->buckets[i % me->num_buckets]);
+        for (uint64_t i = 0; i < me->num_buckets; ++i) {
+            const uint64_t b_idx = me->newest_bucket - i;
+            printf("%" PRIu64 ", ", me->buckets[b_idx % me->num_buckets]);
         }
         break;
     }

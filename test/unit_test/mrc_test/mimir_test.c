@@ -48,6 +48,16 @@ tester_refresh_buckets(struct MimirBuckets *me)
 }
 
 static bool
+tester_ensure_buckets_match(struct MimirBuckets *me,
+                            const uint64_t *oracle_buckets)
+{
+    for (uint64_t i = 0; i < me->num_buckets; ++i) {
+        ASSERT_TRUE_WITHOUT_CLEANUP(me->buckets[i] == oracle_buckets[i]);
+    }
+    return true;
+}
+
+static bool
 test_mimir_buckets(void)
 {
     struct MimirBuckets me = {0};
@@ -88,19 +98,19 @@ test_mimir_buckets(void)
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 550},
     };
     for (uint64_t i = 0; i < ARRAY_SIZE(oracle_buckets_rounder); ++i) {
-        for (uint64_t j = 0; j < ARRAY_SIZE(oracle_buckets_rounder[i]); ++j) {
-            ASSERT_TRUE_WITHOUT_CLEANUP(me.buckets[j] ==
-                                        oracle_buckets_rounder[i][j]);
-        }
+        ASSERT_TRUE_WITHOUT_CLEANUP(
+            tester_ensure_buckets_match(&me, oracle_buckets_rounder[i]));
         ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__rounder_aging_policy(&me));
     }
     ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
 
     // Test Stacker aging
     tester_refresh_buckets(&me);
-
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    mimir_buckets__stacker_aging_policy(&me, 5);
+    const uint64_t oracle_buckets_stacker[1][10] = {
+        {100, 10, 20, 30, 90, 60, 70, 80, 90, 0}};
+    ASSERT_TRUE_WITHOUT_CLEANUP(
+        tester_ensure_buckets_match(&me, oracle_buckets_stacker[0]));
     ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
 
     return true;
@@ -187,7 +197,7 @@ main(int argc, char **argv)
     UNUSED(argv);
     // Unit tests
     ASSERT_FUNCTION_RETURNS_TRUE(test_mimir_buckets());
-    // Integration tests
+    // // Integration tests
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));

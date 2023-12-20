@@ -82,6 +82,9 @@ uint64_t
 mimir_buckets__get_average_bucket_index(struct MimirBuckets *me);
 
 bool
+mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
+                                    const uint64_t average_bucket_index);
+bool
 mimir_buckets__age_by_one_bucket(struct MimirBuckets *me,
                                  const uint64_t bucket_index);
 

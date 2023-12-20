@@ -35,18 +35,16 @@ stacker_aging_policy(struct Mimir *me)
     while (g_hash_table_iter_next(&iter,
                                   (gpointer *)&entry,
                                   (gpointer *)&bucket_index) == TRUE) {
-        // NOTE I am not convinced that this will not include the oldest
-        //      bucket (i.e. bucket 0). Simply running the test validated my
-        //      doubts.
         if (bucket_index >= average_stack_distance_bucket) {
             g_hash_table_iter_replace(&iter, (gpointer)(bucket_index - 1));
-            // NOTE To optimize this repeated function call away, we could
-            //      age the counts of each buckets (i.e. factor this
-            //      function out of the loop). This is a future task, since
-            //      I want to get the algorithm working as described.
-            mimir_buckets__age_by_one_bucket(&me->buckets, bucket_index);
         }
     }
+    // NOTE To optimize this repeated function call away, we could
+    //      age the counts of each buckets (i.e. factor this
+    //      function out of the loop). This is a future task, since
+    //      I want to get the algorithm working as described.
+    mimir_buckets__stacker_aging_policy(&me->buckets,
+                                        average_stack_distance_bucket);
 }
 
 static void
