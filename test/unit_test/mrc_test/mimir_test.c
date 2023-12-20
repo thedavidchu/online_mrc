@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -9,13 +10,105 @@
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 
+#include "mimir/private_buckets.h"
 #include "random/zipfian_random.h"
 
+#include "arrays/array_size.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
 
 const bool PRINT_HISTOGRAM = true;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
+
+////////////////////////////////////////////////////////////////////////////////
+/// UNIT TESTS
+////////////////////////////////////////////////////////////////////////////////
+
+static void
+tester_refresh_buckets(struct MimirBuckets *me)
+{
+    const uint64_t original_weighted_sum_of_bucket_indices =
+        0 * 100 + 1 * 10 + 2 * 20 + 3 * 30 + 4 * 40 + 5 * 50 + 6 * 60 + 7 * 70 +
+        8 * 80 + 9 * 90;
+    const uint64_t original_buckets[10] =
+        {100, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+    const struct MimirBuckets reset_target = {
+        .buckets = me->buckets,
+        .num_buckets = 10,
+        .newest_bucket = 9,
+        .oldest_bucket = 0,
+        .num_unique_entries = 550,
+        .sum_of_bucket_indices = original_weighted_sum_of_bucket_indices};
+
+    // Do the reset
+    for (uint64_t i = 0; i < ARRAY_SIZE(original_buckets); ++i) {
+        reset_target.buckets[i] = original_buckets[i];
+    }
+    *me = reset_target;
+}
+
+static bool
+test_mimir_buckets(void)
+{
+    struct MimirBuckets me = {0};
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__init(&me, 10));
+    tester_refresh_buckets(&me);
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(9 ==
+                                mimir_buckets__get_newest_bucket_index(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(90 == get_newest_bucket_size(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(55 == get_average_num_entries_per_bucket(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(2850 ==
+                                count_weighted_sum_of_bucket_indices(&me));
+
+    // Test Rounder aging
+    ASSERT_TRUE_WITHOUT_CLEANUP(5 ==
+                                mimir_buckets__get_average_bucket_index(&me));
+    const uint64_t oracle_buckets_rounder[20][10] = {
+        {100, 10, 20, 30, 40, 50, 60, 70, 80, 90},
+        {0, 110, 20, 30, 40, 50, 60, 70, 80, 90},
+        {0, 0, 130, 30, 40, 50, 60, 70, 80, 90},
+        {0, 0, 0, 160, 40, 50, 60, 70, 80, 90},
+        {0, 0, 0, 0, 200, 50, 60, 70, 80, 90},
+        {0, 0, 0, 0, 0, 250, 60, 70, 80, 90},
+        {0, 0, 0, 0, 0, 0, 310, 70, 80, 90},
+        {0, 0, 0, 0, 0, 0, 0, 380, 80, 90},
+        {0, 0, 0, 0, 0, 0, 0, 0, 460, 90},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 550},
+        {550, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 550, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 550, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 550, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 550, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 550, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 550, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 550, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 550, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 550},
+    };
+    for (uint64_t i = 0; i < ARRAY_SIZE(oracle_buckets_rounder); ++i) {
+        for (uint64_t j = 0; j < ARRAY_SIZE(oracle_buckets_rounder[i]); ++j) {
+            ASSERT_TRUE_WITHOUT_CLEANUP(me.buckets[j] ==
+                                        oracle_buckets_rounder[i][j]);
+        }
+        ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__rounder_aging_policy(&me));
+    }
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+
+    // Test Stacker aging
+    tester_refresh_buckets(&me);
+
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// INTEGRATION TESTS
+////////////////////////////////////////////////////////////////////////////////
 
 static bool
 access_same_key_five_times(enum MimirAgingPolicy aging_policy)
@@ -92,6 +185,9 @@ main(int argc, char **argv)
 {
     UNUSED(argc);
     UNUSED(argv);
+    // Unit tests
+    ASSERT_FUNCTION_RETURNS_TRUE(test_mimir_buckets());
+    // Integration tests
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));

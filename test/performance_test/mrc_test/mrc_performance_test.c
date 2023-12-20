@@ -71,5 +71,12 @@ main(int argc, char **argv)
         mimir__access_item,
         mimir__destroy);
 
+    PERFORMANCE_TEST(
+        struct Mimir,
+        me,
+        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+        mimir__access_item,
+        mimir__destroy);
+
     return EXIT_SUCCESS;
 }

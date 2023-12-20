@@ -33,6 +33,7 @@ mimir_test_exe = executable('mimir_test_exe',
         tree_include,
         random_include,
         mimir_include,
+        private_mimir_include,
     ],
     dependencies : glib_dep,
     link_with : [

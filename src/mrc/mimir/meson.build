@@ -3,11 +3,17 @@ mimir_include = include_directories('include',
     '../../lib/histogram/include',
 )
 
+private_mimir_include = include_directories('private_include',
+    'include',
+    '../../lib/common_headers/include',
+)
+
 mimir_buckets_lib = library('mimir_buckets_lib',
     'buckets.c',
     include_directories : [
         common_headers_include,
         mimir_include,
+        private_mimir_include,
     ],
     dependencies : glib_dep,
 )
