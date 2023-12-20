@@ -14,7 +14,7 @@ const bool PRINT_HISTOGRAM = true;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 
 static bool
-access_same_key_five_times()
+access_same_key_five_times(void)
 {
     struct OlkenReuseStack me = {0};
     ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&me, MAX_NUM_UNIQUE_ENTRIES));
@@ -47,7 +47,7 @@ access_same_key_five_times()
 }
 
 static bool
-trace_test()
+trace_test(void)
 {
     const uint64_t trace_length = 1 << 20;
     struct ZipfianRandom zrng = {0};
