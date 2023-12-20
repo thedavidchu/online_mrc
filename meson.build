@@ -8,9 +8,24 @@ project('online_mrc', 'c', 'cpp',
         'cpp_std=c++17',
         # This is equivalent to "-Wall -Werror -Wextra -Wpedantic" according to
         # this: https://mesonbuild.com/Builtin-options.html#details-for-warning_level
-        'warning_level=everything',
+        'warning_level=3',
+        # I link the libraries statically (default is dynamic) because I want to
+        # see them when I use gprof.
+        'default_library=static',
     ])
-glib_dep = dependency('glib-2.0')
+glib_dep = dependency('glib-2.0',
+    default_options : [
+        # This isn't my code, so it's not like I can fix anything here! I turn
+        # the warnings down to 3 so that -Wpadded is not turned on here.
+        'warning_level=3',
+    ])
+
+use_gprof = true
+if use_gprof
+    add_project_arguments('-pg', '-no-pie', language : 'c')
+    # NOTE  I have no idea why this is
+    add_project_link_arguments('-pg', '-no-pie', language : 'c')
+endif
 
 subdir('src')
 subdir('test')

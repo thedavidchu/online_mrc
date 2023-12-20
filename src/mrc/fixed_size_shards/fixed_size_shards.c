@@ -46,7 +46,7 @@ make_room(struct FixedSizeShardsReuseStack *me)
                                              NULL,
                                              (gpointer *)&time_stamp);
         assert(found == TRUE && "hash table should contain the entry");
-        r = tree_sleator_remove(&me->tree, (KeyType)time_stamp);
+        r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         g_hash_table_remove(me->hash_table, (gconstpointer)entry);
     }
@@ -119,7 +119,7 @@ fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType e
                                          (gpointer *)&time_stamp);
     if (found == TRUE) {
         uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)time_stamp);
-        r = tree_sleator_remove(&me->tree, (KeyType)time_stamp);
+        r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);

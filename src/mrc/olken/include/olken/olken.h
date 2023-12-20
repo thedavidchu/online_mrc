@@ -17,13 +17,13 @@ struct OlkenReuseStack {
 };
 
 bool
-olken___init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries);
+olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries);
 
 void
-olken___access_item(struct OlkenReuseStack *me, EntryType entry);
+olken__access_item(struct OlkenReuseStack *me, EntryType entry);
 
 void
-olken___print_sparse_histogram(struct OlkenReuseStack *me);
+olken__print_sparse_histogram(struct OlkenReuseStack *me);
 
 void
-olken___destroy(struct OlkenReuseStack *me);
+olken__destroy(struct OlkenReuseStack *me);

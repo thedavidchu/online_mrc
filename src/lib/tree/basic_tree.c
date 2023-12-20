@@ -39,7 +39,7 @@ tree__init(struct Tree *me)
 }
 
 struct Tree *
-tree__new()
+tree__new(void)
 {
     struct Tree *me = (struct Tree *)malloc(sizeof(struct Tree));
     if (me == NULL) {
@@ -198,10 +198,12 @@ subtree__pop_minimum(struct Subtree *me)
         //      with a NULL argument. No recursive call should pass NULL.
         return (struct RemoveStatus){.removed = NULL, .new_child = NULL};
     } else if (me->left_subtree == NULL) {
-        return (struct RemoveStatus){.removed = me, .new_child = me->right_subtree};
+        return (struct RemoveStatus){.removed = me,
+                                     .new_child = me->right_subtree};
     } else {
         struct RemoveStatus r = subtree__pop_minimum(me->left_subtree);
-        assert(r.removed != NULL && "should have popped an item from the non-empty subtree");
+        assert(r.removed != NULL &&
+               "should have popped an item from the non-empty subtree");
         --me->cardinality;
         me->left_subtree = r.new_child;
         r.new_child = me;
@@ -241,11 +243,13 @@ subtree__remove(struct Subtree *me, KeyType key)
         } else if (me->left_subtree == NULL) {
             // Single child
             struct Subtree *single_child = me->right_subtree;
-            return (struct RemoveStatus){.removed = me, .new_child = single_child};
+            return (struct RemoveStatus){.removed = me,
+                                         .new_child = single_child};
         } else if (me->right_subtree == NULL) {
             // Single child
             struct Subtree *single_child = me->left_subtree;
-            return (struct RemoveStatus){.removed = me, .new_child = single_child};
+            return (struct RemoveStatus){.removed = me,
+                                         .new_child = single_child};
         } else {
             // Double child => recursively replace with successor (arbitrarily
             // chose the successor rather than the predecessor).
@@ -254,7 +258,8 @@ subtree__remove(struct Subtree *me, KeyType key)
             replacement_node->cardinality = me->cardinality - 1;
             replacement_node->left_subtree = me->left_subtree;
             replacement_node->right_subtree = r.new_child;
-            return (struct RemoveStatus){.removed = me, .new_child = replacement_node};
+            return (struct RemoveStatus){.removed = me,
+                                         .new_child = replacement_node};
         }
     }
 }
@@ -353,8 +358,10 @@ subtree__validate(struct Subtree *me,
     }
 
     // Get size of subtrees
-    const uint64_t left_cardinality = (me->left_subtree ? me->left_subtree->cardinality : 0);
-    const uint64_t right_cardinality = (me->right_subtree ? me->right_subtree->cardinality : 0);
+    const uint64_t left_cardinality =
+        (me->left_subtree ? me->left_subtree->cardinality : 0);
+    const uint64_t right_cardinality =
+        (me->right_subtree ? me->right_subtree->cardinality : 0);
     if (me->left_subtree != NULL) {
         bool r = subtree__validate(me->left_subtree,
                                    cardinality - right_cardinality - 1,
@@ -393,7 +400,8 @@ tree__validate(struct Tree *me)
         bool r = (me->cardinality == 0);
         return r;
     } else {
-        bool r = subtree__validate(me->root, me->cardinality, false, 0, false, 0);
+        bool r =
+            subtree__validate(me->root, me->cardinality, false, 0, false, 0);
         return r;
     }
 }

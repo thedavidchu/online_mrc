@@ -13,7 +13,7 @@ struct QuickMrc {
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
     struct QuickMrc a = {0, 0, 0};
 

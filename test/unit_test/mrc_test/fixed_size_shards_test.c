@@ -8,15 +8,17 @@
 #include "random/zipfian_random.h"
 
 #include "test/mytester.h"
+#include "unused/mark_unused.h"
 
 const bool PRINT_HISTOGRAM = true;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 
 static bool
-access_same_key_five_times()
+access_same_key_five_times(void)
 {
     struct FixedSizeShardsReuseStack me = {0};
-    ASSERT_FUNCTION_RETURNS_TRUE(fixed_size_shards__init(&me, 1000, 1, MAX_NUM_UNIQUE_ENTRIES));
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        fixed_size_shards__init(&me, 1000, 1, MAX_NUM_UNIQUE_ENTRIES));
 
     fixed_size_shards__access_item(&me, 0);
     fixed_size_shards__access_item(&me, 0);
@@ -46,13 +48,17 @@ access_same_key_five_times()
 }
 
 static bool
-trace_test()
+trace_test(void)
 {
     const uint64_t trace_length = 1 << 20;
+    const double ZIPFIAN_RANDOM_SKEW = 5.0e-1;
     struct ZipfianRandom zrng = {0};
     struct FixedSizeShardsReuseStack shards = {0};
 
-    ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+    ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random__init(&zrng,
+                                                      MAX_NUM_UNIQUE_ENTRIES,
+                                                      ZIPFIAN_RANDOM_SKEW,
+                                                      0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
         fixed_size_shards__init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
@@ -71,10 +77,11 @@ trace_test()
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+    UNUSED(argc);
+    UNUSED(argv);
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times());
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test());
-
     return EXIT_SUCCESS;
 }

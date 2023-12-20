@@ -192,7 +192,7 @@ tree__sleator_insert(struct Tree *tree, KeyType i)
 }
 
 bool
-tree_sleator_remove(struct Tree *tree, KeyType i)
+tree__sleator_remove(struct Tree *tree, KeyType i)
 {
     /* Deletes i from the tree if it's there.               */
     /* Return a pointer to the resulting tree.              */
