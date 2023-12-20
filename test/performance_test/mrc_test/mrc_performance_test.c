@@ -10,9 +10,10 @@
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
+#include "unused/mark_unused.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
-const double ZIPFIAN_RANDOM_SKEW = 0.5;
+const double ZIPFIAN_RANDOM_SKEW = 5.0e-1;
 const uint64_t RANDOM_SEED = 0;
 
 #define PERFORMANCE_TEST(MRCStructType,                                        \
@@ -39,15 +40,17 @@ const uint64_t RANDOM_SEED = 0;
         }                                                                      \
         clock_t end_time = clock();                                            \
         double elapsed_time =                                                  \
-            (end_time - start_time) / (double)CLOCKS_PER_SEC;                  \
+            (double)(end_time - start_time) / (double)CLOCKS_PER_SEC;          \
         printf("Elapsed time for '" #MRCStructType "' workload: %.4f.\n",      \
                elapsed_time);                                                  \
         ((destroy_func_name))(&((mrc_var_name)));                              \
     } while (0)
 
 int
-main()
+main(int argc, char **argv)
 {
+    UNUSED(argc);
+    UNUSED(argv);
     PERFORMANCE_TEST(struct OlkenReuseStack,
                      me,
                      olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),

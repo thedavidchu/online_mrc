@@ -1,15 +1,18 @@
 #include <assert.h>
+#include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "math/doubles_are_equal.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 
 #include "random/zipfian_random.h"
 
 #include "test/mytester.h"
+#include "unused/mark_unused.h"
 
 const bool PRINT_HISTOGRAM = true;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
@@ -32,8 +35,9 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     mimir__access_item(&me, 0);
     mimir__validate(&me);
 
-    if (me.histogram.histogram[0] != 4.0 ||
-        me.histogram.false_infinity != 0.0 || me.histogram.infinity != 1) {
+    if (!doubles_are_equal(me.histogram.histogram[0], 4.0) ||
+        !doubles_are_equal(me.histogram.false_infinity, 0.0) ||
+        me.histogram.infinity != 1) {
         mimir__print_sparse_histogram(&me);
         assert(0 && "histogram should be {0: 4, inf: 1}");
         mimir__destroy(&me);
@@ -41,7 +45,7 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     }
     // Skip 0 because we know it should be non-zero
     for (uint64_t i = 1; i < me.histogram.length; ++i) {
-        if (me.histogram.histogram[i] != 0.0) {
+        if (!doubles_are_equal(me.histogram.histogram[i], 0.0)) {
             mimir__print_sparse_histogram(&me);
             assert(0 && "histogram should be {0: 4, inf: 1}");
             mimir__destroy(&me);
@@ -84,14 +88,15 @@ trace_test(enum MimirAgingPolicy aging_policy)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+    UNUSED(argc);
+    UNUSED(argv);
     if (false) {
         ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
         ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
         ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));
     }
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_STACKER));
-
     return EXIT_SUCCESS;
 }

@@ -9,6 +9,7 @@
 #include "random/zipfian_random.h"
 
 #include "test/mytester.h"
+#include "unused/mark_unused.h"
 
 const bool PRINT_HISTOGRAM = true;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
@@ -72,10 +73,11 @@ trace_test(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+    UNUSED(argc);
+    UNUSED(argv);
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times());
     ASSERT_FUNCTION_RETURNS_TRUE(trace_test());
-
     return EXIT_SUCCESS;
 }

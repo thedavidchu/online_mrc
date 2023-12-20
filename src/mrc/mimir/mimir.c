@@ -14,6 +14,7 @@
 
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
+#include "unused/mark_unused.h"
 
 static gboolean
 entry_compare(gconstpointer a, gconstpointer b)
@@ -204,6 +205,7 @@ print_key_value(gpointer key, gpointer value, gpointer unused_user_data)
     EntryType entry = (EntryType)key;
     uint64_t bucket_index = (uint64_t)value;
     printf("\"%" PRIu64 "\": %" PRIu64 ", ", entry, bucket_index);
+    UNUSED(unused_user_data);
 }
 
 void

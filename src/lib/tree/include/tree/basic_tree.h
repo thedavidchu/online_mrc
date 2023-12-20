@@ -15,7 +15,7 @@ bool
 tree__init(struct Tree *me);
 
 struct Tree *
-tree__new();
+tree__new(void);
 
 /// @brief  Get the number of elements in the tree.
 uint64_t
@@ -34,7 +34,8 @@ tree__search(struct Tree *me, KeyType key);
 ///         statistic tree rank but measured from the right (i.e. from the max).
 ///         The regular rank would be the (total_tree__size - reverse_rank - 1).
 ///
-/// @return If the element is not found, we return SIZE_MAX. Otherwise the reverse rank.
+/// @return If the element is not found, we return SIZE_MAX. Otherwise the
+/// reverse rank.
 uint64_t
 tree__reverse_rank(struct Tree *me, KeyType key);
 

@@ -1,3 +1,4 @@
+#include "unused/mark_unused.h"
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
@@ -89,7 +90,7 @@ uint64_t randomly_generated_seeds[100] = {
 /// @param theta    : how skewed the distribution is
 /// @param seed     : the random seed
 /// @param trace_length : the number of random numbers to generate
-bool
+static bool
 test_zipfian_for_seed(const uint64_t items,
                       const double theta,
                       const uint64_t seed,
@@ -118,8 +119,8 @@ test_zipfian_for_seed(const uint64_t items,
     return true;
 }
 
-bool
-test_zipfian()
+static bool
+test_zipfian(void)
 {
     for (uint64_t i = 0; i < ARRAY_SIZE(randomly_generated_bounds); ++i) {
         // NOTE The maximum possible number of items means that we get the
@@ -138,8 +139,10 @@ test_zipfian()
 }
 
 int
-main()
+main(int argc, char **argv)
 {
+    UNUSED(argc);
+    UNUSED(argv);
     ASSERT_FUNCTION_RETURNS_TRUE(test_zipfian());
     return 0;
 }
