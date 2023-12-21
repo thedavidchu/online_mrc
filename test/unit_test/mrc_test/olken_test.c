@@ -4,10 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "miss_rate_curve/basic_miss_rate_curve.h"
 #include "olken/olken.h"
-
 #include "random/zipfian_random.h"
-
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
 

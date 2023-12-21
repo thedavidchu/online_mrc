@@ -4,9 +4,8 @@
 #include <stdlib.h>
 
 #include "fixed_size_shards/fixed_size_shards.h"
-
+#include "miss_rate_curve/basic_miss_rate_curve.h"
 #include "random/zipfian_random.h"
-
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
 
@@ -53,7 +52,7 @@ trace_test(void)
     const uint64_t trace_length = 1 << 20;
     const double ZIPFIAN_RANDOM_SKEW = 5.0e-1;
     struct ZipfianRandom zrng = {0};
-    struct FixedSizeShardsReuseStack shards = {0};
+    struct FixedSizeShardsReuseStack me = {0};
 
     ASSERT_FUNCTION_RETURNS_TRUE(zipfian_random__init(&zrng,
                                                       MAX_NUM_UNIQUE_ENTRIES,
@@ -61,18 +60,23 @@ trace_test(void)
                                                       0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        fixed_size_shards__init(&shards, 1000, 100, MAX_NUM_UNIQUE_ENTRIES));
+        fixed_size_shards__init(&me, 1, 50000, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random__next(&zrng);
-        fixed_size_shards__access_item(&shards, key);
+        fixed_size_shards__access_item(&me, key);
     }
 
     if (PRINT_HISTOGRAM) {
-        fixed_size_shards__print_histogram_as_json(&shards);
+        fixed_size_shards__print_histogram_as_json(&me);
     }
 
-    fixed_size_shards__destroy(&shards);
+    struct BasicMissRateCurve mrc = {0};
+    basic_miss_rate_curve__init_from_basic_histogram(&mrc, &me.histogram);
+    double mse = basic_miss_rate_curve__mean_squared_error(&mrc, &mrc);
+    assert(mse == 0.0);
+
+    fixed_size_shards__destroy(&me);
     return true;
 }
 
