@@ -1,4 +1,5 @@
 subdir('histogram_test')
+subdir('miss_rate_curve_test')
 subdir('priority_queue_test')
 subdir('random_test')
 subdir('tree_test')

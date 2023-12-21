@@ -28,7 +28,7 @@ access_same_key_five_times(void)
 
     if (me.histogram.histogram[0] != 4000 || me.histogram.false_infinity != 0 ||
         me.histogram.infinity != 1000) {
-        fixed_size_shards__print_sparse_histogram(&me);
+        fixed_size_shards__print_histogram_as_json(&me);
         assert(0 && "histogram should be {0: 4000, inf: 1000}");
         fixed_size_shards__destroy(&me);
         return false;
@@ -36,7 +36,7 @@ access_same_key_five_times(void)
     // Skip 0 because we know it should be non-zero
     for (uint64_t i = 1; i < me.histogram.length; ++i) {
         if (me.histogram.histogram[i] != 0) {
-            fixed_size_shards__print_sparse_histogram(&me);
+            fixed_size_shards__print_histogram_as_json(&me);
             assert(0 && "histogram should be {0: 4000, inf: 1000}");
             fixed_size_shards__destroy(&me);
             return false;
@@ -69,7 +69,7 @@ trace_test(void)
     }
 
     if (PRINT_HISTOGRAM) {
-        fixed_size_shards__print_sparse_histogram(&shards);
+        fixed_size_shards__print_histogram_as_json(&shards);
     }
 
     fixed_size_shards__destroy(&shards);

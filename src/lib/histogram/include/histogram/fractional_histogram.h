@@ -17,7 +17,8 @@ struct FractionalHistogram {
 };
 
 bool
-fractional_histogram__init(struct FractionalHistogram *me, const uint64_t length);
+fractional_histogram__init(struct FractionalHistogram *me,
+                           const uint64_t length);
 
 /// @brief  Insert a non-infinite, scaled index. By scaled, I mean that the
 ///         index represents multiple elements.
@@ -29,10 +30,11 @@ fractional_histogram__insert_scaled_finite(struct FractionalHistogram *me,
                                            const uint64_t scale);
 
 bool
-fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me, const uint64_t scale);
+fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
+                                             const uint64_t scale);
 
 void
-fractional_histogram__print_sparse(struct FractionalHistogram *me);
+fractional_histogram__print_as_json(struct FractionalHistogram *me);
 
 void
 fractional_histogram__destroy(struct FractionalHistogram *me);

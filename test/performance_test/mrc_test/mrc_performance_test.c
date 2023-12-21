@@ -51,6 +51,7 @@ main(int argc, char **argv)
 {
     UNUSED(argc);
     UNUSED(argv);
+
     PERFORMANCE_TEST(struct OlkenReuseStack,
                      me,
                      olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
@@ -71,12 +72,15 @@ main(int argc, char **argv)
         mimir__access_item,
         mimir__destroy);
 
-    PERFORMANCE_TEST(
-        struct Mimir,
-        me,
-        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
-        mimir__access_item,
-        mimir__destroy);
+    bool i_have_lots_of_spare_cpu_cycles = false;
+    if (i_have_lots_of_spare_cpu_cycles) {
+        PERFORMANCE_TEST(
+            struct Mimir,
+            me,
+            mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+            mimir__access_item,
+            mimir__destroy);
+    }
 
     return EXIT_SUCCESS;
 }

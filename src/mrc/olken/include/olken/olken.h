@@ -23,7 +23,7 @@ void
 olken__access_item(struct OlkenReuseStack *me, EntryType entry);
 
 void
-olken__print_sparse_histogram(struct OlkenReuseStack *me);
+olken__print_histogram_as_json(struct OlkenReuseStack *me);
 
 void
 olken__destroy(struct OlkenReuseStack *me);

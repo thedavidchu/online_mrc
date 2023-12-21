@@ -141,7 +141,7 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     if (!doubles_are_equal(me.histogram.histogram[0], 4.0) ||
         !doubles_are_equal(me.histogram.false_infinity, 0.0) ||
         me.histogram.infinity != 1) {
-        mimir__print_sparse_histogram(&me);
+        mimir__print_histogram_as_json(&me);
         assert(0 && "histogram should be {0: 4, inf: 1}");
         mimir__destroy(&me);
         return false;
@@ -149,7 +149,7 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     // Skip 0 because we know it should be non-zero
     for (uint64_t i = 1; i < me.histogram.length; ++i) {
         if (!doubles_are_equal(me.histogram.histogram[i], 0.0)) {
-            mimir__print_sparse_histogram(&me);
+            mimir__print_histogram_as_json(&me);
             assert(0 && "histogram should be {0: 4, inf: 1}");
             mimir__destroy(&me);
             return false;
@@ -173,7 +173,8 @@ trace_test(enum MimirAgingPolicy aging_policy)
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
     //      is kind of useless!
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir__init(&me, 1000, 1000, aging_policy));
+    ASSERT_TRUE_WITHOUT_CLEANUP(
+        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
     mimir__validate(&me);
 
     for (uint64_t i = 0; i < trace_length; ++i) {
@@ -183,7 +184,7 @@ trace_test(enum MimirAgingPolicy aging_policy)
     }
 
     if (PRINT_HISTOGRAM) {
-        mimir__print_sparse_histogram(&me);
+        mimir__print_histogram_as_json(&me);
     }
 
     mimir__destroy(&me);

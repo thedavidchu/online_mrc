@@ -31,10 +31,12 @@ fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
                         const uint64_t max_num_unique_entries);
 
 void
-fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType entry);
+fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me,
+                               EntryType entry);
 
 void
-fixed_size_shards__print_sparse_histogram(struct FixedSizeShardsReuseStack *me);
+fixed_size_shards__print_histogram_as_json(
+    struct FixedSizeShardsReuseStack *me);
 
 void
 fixed_size_shards__destroy(struct FixedSizeShardsReuseStack *me);

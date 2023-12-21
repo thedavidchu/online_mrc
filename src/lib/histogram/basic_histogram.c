@@ -74,7 +74,8 @@ basic_histogram__insert_infinite(struct BasicHistogram *me)
 }
 
 bool
-basic_histogram__insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale)
+basic_histogram__insert_scaled_infinite(struct BasicHistogram *me,
+                                        const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -85,22 +86,30 @@ basic_histogram__insert_scaled_infinite(struct BasicHistogram *me, const uint64_
 }
 
 void
-basic_histogram__print_sparse(struct BasicHistogram *me)
+basic_histogram__print_as_json(struct BasicHistogram *me)
 {
-    if (me == NULL || me->histogram == NULL) {
-        printf("{}\n");
+    if (me == NULL) {
+        printf("{\"type\": null}");
         return;
     }
-    printf("{");
+    if (me->histogram == NULL) {
+        printf("{\"type\": \"BasicHistogram\", \"histogram\": null}\n");
+        return;
+    }
+    printf("{\"type\": \"BasicHistogram\", \"length\": %" PRIu64
+           ", \"running_sum\": %" PRIu64 ", \"histogram\": {",
+           me->length,
+           me->running_sum);
     for (uint64_t i = 0; i < me->length; ++i) {
         if (me->histogram[i] != 0) {
             printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
         }
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %" PRIu64 ", ", me->length, me->false_infinity);
-    printf("\"inf\": %" PRIu64 "", me->infinity);
-    printf("}\n");
+    printf("\"%" PRIu64 "\": %" PRIu64 "}, \"infinity\": %" PRIu64 "}\n",
+           me->length,
+           me->false_infinity,
+           me->infinity);
 }
 
 void

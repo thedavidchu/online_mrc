@@ -208,15 +208,25 @@ print_key_value(gpointer key, gpointer value, gpointer unused_user_data)
 void
 mimir__print_hash_table(struct Mimir *me)
 {
+    if (me == NULL) {
+        printf("{\"type\": null}\n");
+        return;
+    }
     printf("{");
     g_hash_table_foreach(me->hash_table, print_key_value, NULL);
     printf("}\n");
 }
 
 void
-mimir__print_sparse_histogram(struct Mimir *me)
+mimir__print_histogram_as_json(struct Mimir *me)
 {
-    fractional_histogram__print_sparse(&me->histogram);
+    if (me == NULL) {
+        // Just pass on the NULL value and let the histogram deal with it. Maybe
+        // this isn't very smart and will confuse future-me? Oh well!
+        fractional_histogram__print_as_json(NULL);
+        return;
+    }
+    fractional_histogram__print_as_json(&me->histogram);
 }
 
 bool
