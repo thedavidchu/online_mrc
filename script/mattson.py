@@ -7,6 +7,7 @@ NOTE:   This is an intentionally unoptimized version of Mattson whose primary
 from typing import Dict, List, Set, Tuple
 
 SIMPLE_TRACE: List[int] = [1, 2, 3, 1]
+# This is the same set of random numbers used to unit test the histogram.
 TRACE_100: List[int] = [
     2, 3,  2, 5,  0, 1, 7, 9, 4, 2,  10, 3, 1,  10, 10, 5, 10, 6,  5, 0,
     6, 4,  2, 9,  7, 2, 2, 5, 3, 9,  6,  0, 1,  1,  6,  1, 6,  7,  5, 0,
