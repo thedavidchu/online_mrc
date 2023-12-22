@@ -32,6 +32,7 @@ def mattson(trace: List[int]) -> Tuple[Dict[int, int], int]:
             continue
         reuse_distance = list(reversed(trace[:i])).index(e) + 1
         histogram[reuse_distance] = histogram.get(reuse_distance, 0) + 1
+    # Sort the histogram dict so that it is easier to manually compare for equality
     histogram = sort_dict_by_key(histogram)
     return histogram, infinite_stack_distances
 
