@@ -11,6 +11,7 @@
 #include <glib.h> // for MIN()
 
 #include "histogram/fractional_histogram.h"
+#include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 #include "miss_rate_curve/basic_miss_rate_curve.h"
 
@@ -45,7 +46,15 @@ basic_miss_rate_curve__init_from_fractional_histogram(
     me->miss_rate[histogram->length] = tmp / total;
     tmp -= histogram->false_infinity;
     me->miss_rate[histogram->length + 1] = tmp / total;
-    assert(doubles_are_equal(tmp / total, (double)histogram->infinity / total));
+    // NOTE The values are farther than DBL_EPSILON away from each other, but
+    //      that is a very small value. I supplied my own value based on
+    //      printing the values for the mimir test and taking as many
+    //      significant digits as I could see.
+    if (!doubles_are_close(tmp / total,
+                           (double)histogram->infinity / total,
+                           0.00001)) {
+        LOGGER_ERROR("mismatch in infinities");
+    }
     return true;
 }
 

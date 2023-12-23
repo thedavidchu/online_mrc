@@ -1,24 +1,21 @@
-#include <assert.h>
-#include <bits/stdint-uintn.h>
-#include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 
-#include "math/doubles_are_equal.h"
+#include "arrays/array_size.h"
+#include "histogram/fractional_histogram.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
-
 #include "mimir/private_buckets.h"
+#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "olken/olken.h"
 #include "random/zipfian_random.h"
-
-#include "arrays/array_size.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
 
-const bool PRINT_HISTOGRAM = true;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
+const double ZIPFIAN_RANDOM_SKEW = 0.99;
+const uint64_t trace_length = 1 << 20;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// UNIT TESTS
@@ -123,70 +120,72 @@ test_mimir_buckets(void)
 static bool
 access_same_key_five_times(enum MimirAgingPolicy aging_policy)
 {
+    EntryType entries[5] = {0, 0, 0, 0, 0};
+    double hist_bkt_oracle[11] =
+        {4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    struct FractionalHistogram histogram_oracle = {
+        .histogram = hist_bkt_oracle,
+        .length = ARRAY_SIZE(hist_bkt_oracle),
+        .false_infinity = 0.0,
+        .infinity = 1,
+        .running_sum = ARRAY_SIZE(entries),
+    };
     struct Mimir me = {0};
     // NOTE I reduced the max_num_unique_entries to reduce the runtime.
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir__init(&me, 10, 1000, aging_policy));
-
-    mimir__access_item(&me, 0);
-    mimir__validate(&me);
-    mimir__access_item(&me, 0);
-    mimir__validate(&me);
-    mimir__access_item(&me, 0);
-    mimir__validate(&me);
-    mimir__access_item(&me, 0);
-    mimir__validate(&me);
-    mimir__access_item(&me, 0);
-    mimir__validate(&me);
-
-    if (!doubles_are_equal(me.histogram.histogram[0], 4.0) ||
-        !doubles_are_equal(me.histogram.false_infinity, 0.0) ||
-        me.histogram.infinity != 1) {
-        mimir__print_histogram_as_json(&me);
-        assert(0 && "histogram should be {0: 4, inf: 1}");
-        mimir__destroy(&me);
-        return false;
+    ASSERT_TRUE_WITHOUT_CLEANUP(
+        mimir__init(&me, 10, histogram_oracle.length, aging_policy));
+    for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
+        mimir__access_item(&me, 0);
+        mimir__validate(&me);
     }
-    // Skip 0 because we know it should be non-zero
-    for (uint64_t i = 1; i < me.histogram.length; ++i) {
-        if (!doubles_are_equal(me.histogram.histogram[i], 0.0)) {
-            mimir__print_histogram_as_json(&me);
-            assert(0 && "histogram should be {0: 4, inf: 1}");
-            mimir__destroy(&me);
-            return false;
-        }
-    }
-
+    ASSERT_TRUE_OR_CLEANUP(
+        fractional_histogram__exactly_equal(&me.histogram, &histogram_oracle),
+        mimir__destroy(&me));
     mimir__destroy(&me);
     return true;
 }
 
 static bool
-trace_test(enum MimirAgingPolicy aging_policy)
+long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
 {
-    const uint64_t trace_length = 1 << 15;
     struct ZipfianRandom zrng = {0};
+    struct OlkenReuseStack oracle = {0};
     struct Mimir me = {0};
-
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+    ASSERT_TRUE_WITHOUT_CLEANUP(zipfian_random__init(&zrng,
+                                                     MAX_NUM_UNIQUE_ENTRIES,
+                                                     ZIPFIAN_RANDOM_SKEW,
+                                                     0));
     // The maximum trace length is obviously the number of possible unique items
+    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    ASSERT_TRUE_OR_CLEANUP(
+        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy),
+        olken__destroy(&oracle));
+    mimir__validate(&me);
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
     //      is kind of useless!
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
-    mimir__validate(&me);
-
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t key = zipfian_random__next(&zrng);
-        mimir__access_item(&me, key);
+        uint64_t entry = zipfian_random__next(&zrng);
+        olken__access_item(&oracle, entry);
+        mimir__access_item(&me, entry);
         mimir__validate(&me);
     }
+    struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
+    basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
+                                                     &oracle.histogram);
+    basic_miss_rate_curve__init_from_fractional_histogram(&mrc, &me.histogram);
+    double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
+    LOGGER_INFO("Mean-Squared Error: %lf", mse);
+    // HACK Ahh, the comma operator. It allows me to do this wonderful little
+    //      macro hack that could have otherwise required no brackets around the
+    //      cleanup expression in the macro definition and for me to use a
+    //      semicolon. But instead, I rely on the fact that macros have to match
+    //      round parentheses. The more I code in C, the more I realize how much
+    //      a safer language with more intelligent macros/generics would be.
+    ASSERT_TRUE_OR_CLEANUP(mse <= 0.000383,
+                           (olken__destroy(&oracle), mimir__destroy(&me)));
 
-    if (PRINT_HISTOGRAM) {
-        mimir__print_histogram_as_json(&me);
-    }
-
+    olken__destroy(&oracle);
     mimir__destroy(&me);
     return true;
 }
@@ -201,7 +200,7 @@ main(int argc, char **argv)
     // // Integration tests
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
-    ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_ROUNDER));
-    ASSERT_FUNCTION_RETURNS_TRUE(trace_test(MIMIR_STACKER));
+    ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_ROUNDER));
+    ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_STACKER));
     return EXIT_SUCCESS;
 }
