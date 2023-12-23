@@ -6,7 +6,6 @@
 
 #include "arrays/array_size.h"
 #include "histogram/basic_histogram.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
