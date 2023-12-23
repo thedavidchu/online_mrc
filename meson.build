@@ -13,6 +13,12 @@ project('online_mrc', 'c', 'cpp',
         # see them when I use gprof.
         'default_library=static',
     ])
+
+# For some reason, the <math.h> library needs to be added to the compiler
+# separately in Linux. Source: https://mesonbuild.com/howtox.html#add-math-library-lm-portably
+cc = meson.get_compiler('c')
+math_dep = cc.find_library('m', required : false)
+
 glib_dep = dependency('glib-2.0',
     default_options : [
         # This isn't my code, so it's not like I can fix anything here! I turn

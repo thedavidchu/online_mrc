@@ -95,7 +95,8 @@ fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
 }
 
 void
-fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType entry)
+fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me,
+                               EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -122,15 +123,23 @@ fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType e
         r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        g_hash_table_replace(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
+        g_hash_table_replace(me->hash_table,
+                             (gpointer)entry,
+                             (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        basic_histogram__insert_scaled_finite(&me->histogram, distance, me->scale);
+        basic_histogram__insert_scaled_finite(&me->histogram,
+                                              distance,
+                                              me->scale);
     } else {
         if (splay_priority_queue__is_full(&me->pq)) {
             make_room(me);
         }
-        splay_priority_queue__insert_if_room(&me->pq, splitmix64_hash((uint64_t)entry), entry);
-        g_hash_table_insert(me->hash_table, (gpointer)entry, (gpointer)me->current_time_stamp);
+        splay_priority_queue__insert_if_room(&me->pq,
+                                             splitmix64_hash((uint64_t)entry),
+                                             entry);
+        g_hash_table_insert(me->hash_table,
+                            (gpointer)entry,
+                            (gpointer)me->current_time_stamp);
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
         basic_histogram__insert_scaled_infinite(&me->histogram, me->scale);
@@ -138,9 +147,15 @@ fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me, EntryType e
 }
 
 void
-fixed_size_shards__print_sparse_histogram(struct FixedSizeShardsReuseStack *me)
+fixed_size_shards__print_histogram_as_json(struct FixedSizeShardsReuseStack *me)
 {
-    basic_histogram__print_sparse(&me->histogram);
+    if (me == NULL) {
+        // Just pass on the NULL value and let the histogram deal with it. Maybe
+        // this isn't very smart and will confuse future-me? Oh well!
+        basic_histogram__print_as_json(NULL);
+        return;
+    }
+    basic_histogram__print_as_json(&me->histogram);
 }
 
 void

@@ -87,15 +87,15 @@ olken__access_item(struct OlkenReuseStack *me, EntryType entry)
 }
 
 void
-olken__print_sparse_histogram(struct OlkenReuseStack *me)
+olken__print_histogram_as_json(struct OlkenReuseStack *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        basic_histogram__print_sparse(NULL);
+        basic_histogram__print_as_json(NULL);
         return;
     }
-    basic_histogram__print_sparse(&me->histogram);
+    basic_histogram__print_as_json(&me->histogram);
 }
 
 void

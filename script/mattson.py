@@ -17,6 +17,30 @@ TRACE_100: List[int] = [
 ]
 
 
+def find_previous_occurrence(
+    trace: List[int], current_index: int, current_element: int,
+) -> int:
+    """
+    @brief  Find the index of the previous occurrence.
+    """
+    reversed_prev_index = list(reversed(trace[:current_index])).index(current_element)
+    return current_index - reversed_prev_index - 1
+
+
+def get_reuse_distance_for_seen_element(
+        trace: List[int], current_index: int, current_element: int,
+) -> int:
+    """
+    @brief  Get the reuse distance for an element that has been seen already.
+            Otherwise, it will throw an error!
+    """
+    previous_access = find_previous_occurrence(trace, current_index, current_element)
+    unique_elements = set(trace[previous_access:current_index])
+    # NOTE  By convention, if an element is accessed twice in a row, I could the
+    #       stack distance to be zero, not one. This doesn't actually make sense
+    #       but oh well. This is sort of an off-by-one bias.
+    return len(unique_elements) - 1
+
 def sort_dict_by_key(my_dict: Dict) -> Dict:
     return dict(sorted(my_dict.items()))
 
@@ -30,7 +54,7 @@ def mattson(trace: List[int]) -> Tuple[Dict[int, int], int]:
             seen_elements.add(e)
             infinite_stack_distances += 1
             continue
-        reuse_distance = list(reversed(trace[:i])).index(e) + 1
+        reuse_distance = get_reuse_distance_for_seen_element(trace, i, e)
         histogram[reuse_distance] = histogram.get(reuse_distance, 0) + 1
     # Sort the histogram dict so that it is easier to manually compare for equality
     histogram = sort_dict_by_key(histogram)
@@ -39,6 +63,7 @@ def mattson(trace: List[int]) -> Tuple[Dict[int, int], int]:
 
 def listify_histogram(histogram: Tuple[Dict[int, int], int]) -> Tuple[List[int], int]:
     sparse_histogram, _ = histogram
+    # We need to allocate an extra space because we index from 0 not 1
     dense_histogram = [0] * (max(sparse_histogram.keys()) + 1)
     for e, cnt in sparse_histogram.items():
         dense_histogram[e] = cnt

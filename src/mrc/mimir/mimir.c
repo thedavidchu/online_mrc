@@ -25,29 +25,26 @@ entry_compare(gconstpointer a, gconstpointer b)
 static void
 stacker_aging_policy(struct Mimir *me)
 {
+    assert(me != NULL && me->hash_table != NULL);
     GHashTableIter iter;
     g_hash_table_iter_init(&iter, me->hash_table);
 
     uint64_t entry = 0, bucket_index = 0;
     uint64_t average_stack_distance_bucket =
-        mimir_buckets__get_average_bucket(&me->buckets);
+        mimir_buckets__get_average_bucket_index(&me->buckets);
     while (g_hash_table_iter_next(&iter,
                                   (gpointer *)&entry,
                                   (gpointer *)&bucket_index) == TRUE) {
-        if (bucket_index <= average_stack_distance_bucket) {
-            // NOTE I am not convinced that this will not include the oldest
-            //      bucket (i.e. bucket 0). Simply running the test validated my
-            //      doubts.
-            if (bucket_index != 0) {
-                g_hash_table_iter_replace(&iter, (gpointer)(bucket_index - 1));
-                // NOTE To optimize this repeated function call away, we could
-                //      age the counts of each buckets (i.e. factor this
-                //      function out of the loop). This is a future task, since
-                //      I want to get the algorithm working as described.
-                mimir_buckets__age_by_one_bucket(&me->buckets, bucket_index);
-            }
+        if (bucket_index >= average_stack_distance_bucket) {
+            g_hash_table_iter_replace(&iter, (gpointer)(bucket_index - 1));
         }
     }
+    // NOTE To optimize this repeated function call away, we could
+    //      age the counts of each buckets (i.e. factor this
+    //      function out of the loop). This is a future task, since
+    //      I want to get the algorithm working as described.
+    mimir_buckets__stacker_aging_policy(&me->buckets,
+                                        average_stack_distance_bucket);
 }
 
 static void
@@ -211,15 +208,25 @@ print_key_value(gpointer key, gpointer value, gpointer unused_user_data)
 void
 mimir__print_hash_table(struct Mimir *me)
 {
+    if (me == NULL) {
+        printf("{\"type\": null}\n");
+        return;
+    }
     printf("{");
     g_hash_table_foreach(me->hash_table, print_key_value, NULL);
     printf("}\n");
 }
 
 void
-mimir__print_sparse_histogram(struct Mimir *me)
+mimir__print_histogram_as_json(struct Mimir *me)
 {
-    fractional_histogram__print_sparse(&me->histogram);
+    if (me == NULL) {
+        // Just pass on the NULL value and let the histogram deal with it. Maybe
+        // this isn't very smart and will confuse future-me? Oh well!
+        fractional_histogram__print_as_json(NULL);
+        return;
+    }
+    fractional_histogram__print_as_json(&me->histogram);
 }
 
 bool
@@ -235,6 +242,10 @@ mimir__validate(struct Mimir *me)
         return false;
     }
     if (me->buckets.num_unique_entries != me->histogram.infinity) {
+        assert(0);
+        return false;
+    }
+    if (me->buckets.num_unique_entries != g_hash_table_size(me->hash_table)) {
         assert(0);
         return false;
     }

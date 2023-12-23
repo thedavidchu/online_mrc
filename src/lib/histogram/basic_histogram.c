@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "histogram/basic_histogram.h"
 
@@ -74,7 +75,8 @@ basic_histogram__insert_infinite(struct BasicHistogram *me)
 }
 
 bool
-basic_histogram__insert_scaled_infinite(struct BasicHistogram *me, const uint64_t scale)
+basic_histogram__insert_scaled_infinite(struct BasicHistogram *me,
+                                        const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -85,22 +87,57 @@ basic_histogram__insert_scaled_infinite(struct BasicHistogram *me, const uint64_
 }
 
 void
-basic_histogram__print_sparse(struct BasicHistogram *me)
+basic_histogram__print_as_json(struct BasicHistogram *me)
 {
-    if (me == NULL || me->histogram == NULL) {
-        printf("{}\n");
+    if (me == NULL) {
+        printf("{\"type\": null}");
         return;
     }
-    printf("{");
+    if (me->histogram == NULL) {
+        printf("{\"type\": \"BasicHistogram\", \"histogram\": null}\n");
+        return;
+    }
+    printf("{\"type\": \"BasicHistogram\", \"length\": %" PRIu64
+           ", \"running_sum\": %" PRIu64 ", \"histogram\": {",
+           me->length,
+           me->running_sum);
     for (uint64_t i = 0; i < me->length; ++i) {
         if (me->histogram[i] != 0) {
             printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
         }
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %" PRIu64 ", ", me->length, me->false_infinity);
-    printf("\"inf\": %" PRIu64 "", me->infinity);
-    printf("}\n");
+    printf("\"%" PRIu64 "\": %" PRIu64 "}, \"infinity\": %" PRIu64 "}\n",
+           me->length,
+           me->false_infinity,
+           me->infinity);
+}
+
+bool
+basic_histogram__exactly_equal(struct BasicHistogram *me,
+                               struct BasicHistogram *other)
+{
+    if (me == other) {
+        return true;
+    }
+    if (me == NULL || other == NULL) {
+        return false;
+    }
+
+    if (me->length != other->length ||
+        me->false_infinity != other->false_infinity ||
+        me->infinity != other->infinity ||
+        me->running_sum != other->running_sum) {
+        return false;
+    }
+    // NOTE I do not account for overflow; I believe overflow is impossible
+    //      since the size of the address space * sizeof(uint64_t) < 2^64.
+    if (memcmp(me->histogram,
+               other->histogram,
+               sizeof(*me->histogram) * me->length) != 0) {
+        return false;
+    }
+    return true;
 }
 
 void

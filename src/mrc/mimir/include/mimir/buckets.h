@@ -65,9 +65,6 @@ mimir_buckets__decrement_bucket(struct MimirBuckets *me,
 /// GENERAL AGING POLICY
 ////////////////////////////////////////////////////////////////////////////////
 
-uint64_t
-mimir_buckets__newest_bucket_size(struct MimirBuckets *me);
-
 /// @brief  Return whether the newest bucket has more than its fair share of
 ///         elements (defined to be greater than the average).
 /// NOTE    This is a separate function because in the Mimir paper, it is
@@ -82,11 +79,11 @@ mimir_buckets__newest_bucket_is_full(struct MimirBuckets *me);
 ////////////////////////////////////////////////////////////////////////////////
 
 uint64_t
-mimir_buckets__count_sum_of_bucket_indices(struct MimirBuckets *me);
+mimir_buckets__get_average_bucket_index(struct MimirBuckets *me);
 
-uint64_t
-mimir_buckets__get_average_bucket(struct MimirBuckets *me);
-
+bool
+mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
+                                    const uint64_t average_bucket_index);
 bool
 mimir_buckets__age_by_one_bucket(struct MimirBuckets *me,
                                  const uint64_t bucket_index);
