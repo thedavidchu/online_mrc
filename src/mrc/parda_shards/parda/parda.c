@@ -1,11 +1,11 @@
 #include <stdbool.h> /* C99, for bool */
 #include <stdint.h>  /* C99, for uint32_t, UINT32_MAX */
-#include <string.h>  /* For strlen() */
+#include <string.h>  /* For strlen(), strdup() */
 
 #include "narray.h"
 #include "parda.h"
 
-#include "hash/MurmurHash3.h"
+#include "hash/splitmix64.h"
 
 #include <omp.h>
 
@@ -122,7 +122,9 @@ parda_get_processor_info(int pid, int psize, long sum)
 }
 
 void
-parda_get_abfront(program_data_t *pdt_a, const narray_t *gb, const processor_info_t *pit_a)
+parda_get_abfront(program_data_t *pdt_a,
+                  const narray_t *gb,
+                  const processor_info_t *pit_a)
 {
     // printf("enter abfront and before for loopheihei\n");
     T tim = pit_a->tend + 1;
@@ -192,7 +194,9 @@ parda_get_abend(program_data_t *pdt_b, const end_keytime_t *ekt_a)
 }
 
 program_data_t
-parda_merge(program_data_t *pdt_a, program_data_t *pdt_b, const processor_info_t *pit_b)
+parda_merge(program_data_t *pdt_a,
+            program_data_t *pdt_b,
+            const processor_info_t *pit_b)
 {
     program_data_t pdt;
     parda_get_abfront(pdt_a, pdt_b->ga, pit_b);
@@ -256,9 +260,15 @@ classical_tree_based_stackdist(char *inputFileName, long lines)
 }
 
 void
-parda_input_with_filename(char *inFileName, program_data_t *pdt, long begin, long end)
+parda_input_with_filename(char *inFileName,
+                          program_data_t *pdt,
+                          long begin,
+                          long end)
 {
-    DEBUG(printf("enter parda_input < %s from %ld to %ld\n", inFileName, begin, end);)
+    DEBUG(printf("enter parda_input < %s from %ld to %ld\n",
+                 inFileName,
+                 begin,
+                 end);)
     FILE *fp;
     if (!is_binary) {
         fp = fopen(inFileName, "r");
@@ -285,7 +295,10 @@ skip_input(const HKEY input, const int num_digits)
 }
 
 void
-parda_input_with_binaryfilepointer(FILE *fp, program_data_t *pdt, long begin, long end)
+parda_input_with_binaryfilepointer(FILE *fp,
+                                   program_data_t *pdt,
+                                   long begin,
+                                   long end)
 {
     HKEY input;
     long t, i;
@@ -305,7 +318,10 @@ parda_input_with_binaryfilepointer(FILE *fp, program_data_t *pdt, long begin, lo
 }
 
 void
-parda_input_with_textfilepointer(FILE *fp, program_data_t *pdt, long begin, long end)
+parda_input_with_textfilepointer(FILE *fp,
+                                 program_data_t *pdt,
+                                 long begin,
+                                 long end)
 {
     HKEY input;
     long i;
