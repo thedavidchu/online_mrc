@@ -11,12 +11,14 @@
 #include <math.h>
 #include <stdbool.h>
 
-#if false
-inline bool
+static inline bool
 doubles_are_equal(double x, double y)
 {
     return fabs(x - y) < DBL_EPSILON;
 }
-#else
-#define doubles_are_equal(x, y) (fabs(((x)) - ((y))) < DBL_EPSILON)
-#endif
+
+static inline bool
+doubles_are_close(double x, double y, double delta)
+{
+    return fabs(x - y) < delta;
+}
