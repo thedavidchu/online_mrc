@@ -36,5 +36,9 @@ fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
 void
 fractional_histogram__print_as_json(struct FractionalHistogram *me);
 
+bool
+fractional_histogram__exactly_equal(struct FractionalHistogram *me,
+                                    struct FractionalHistogram *other);
+
 void
 fractional_histogram__destroy(struct FractionalHistogram *me);

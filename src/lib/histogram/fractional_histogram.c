@@ -3,8 +3,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "histogram/fractional_histogram.h"
+#include "math/doubles_are_equal.h"
 
 bool
 fractional_histogram__init(struct FractionalHistogram *me,
@@ -129,6 +131,33 @@ fractional_histogram__print_as_json(struct FractionalHistogram *me)
            me->length,
            me->false_infinity,
            me->infinity);
+}
+
+bool
+fractional_histogram__exactly_equal(struct FractionalHistogram *me,
+                                    struct FractionalHistogram *other)
+{
+    if (me == other) {
+        return true;
+    }
+    if (me == NULL || other == NULL) {
+        return false;
+    }
+
+    if (me->length != other->length ||
+        !doubles_are_equal(me->false_infinity, other->false_infinity) ||
+        me->infinity != other->infinity ||
+        me->running_sum != other->running_sum) {
+        return false;
+    }
+    for (uint64_t i = 0; i < me->length; ++i) {
+        // We use this custom function to tolerate slight error in the histogram
+        // due to imprecise floating-point arithmetic.
+        if (!doubles_are_equal(me->histogram[i], other->histogram[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void
