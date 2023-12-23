@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "histogram/basic_histogram.h"
 
@@ -110,6 +111,33 @@ basic_histogram__print_as_json(struct BasicHistogram *me)
            me->length,
            me->false_infinity,
            me->infinity);
+}
+
+bool
+basic_histogram__exactly_equal(struct BasicHistogram *me,
+                               struct BasicHistogram *other)
+{
+    if (me == other) {
+        return true;
+    }
+    if (me == NULL || other == NULL) {
+        return false;
+    }
+
+    if (me->length != other->length ||
+        me->false_infinity != other->false_infinity ||
+        me->infinity != other->infinity ||
+        me->running_sum != other->running_sum) {
+        return false;
+    }
+    // NOTE I do not account for overflow; I believe overflow is impossible
+    //      since the size of the address space * sizeof(uint64_t) < 2^64.
+    if (memcmp(me->histogram,
+               other->histogram,
+               sizeof(*me->histogram) * me->length) != 0) {
+        return false;
+    }
+    return true;
 }
 
 void

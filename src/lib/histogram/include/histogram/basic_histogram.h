@@ -37,6 +37,10 @@ bool
 basic_histogram__insert_scaled_infinite(struct BasicHistogram *me,
                                         const uint64_t scale);
 
+bool
+basic_histogram__exactly_equal(struct BasicHistogram *me,
+                               struct BasicHistogram *other);
+
 void
 basic_histogram__print_as_json(struct BasicHistogram *me);
 
