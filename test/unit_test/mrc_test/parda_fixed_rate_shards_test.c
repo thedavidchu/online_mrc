@@ -96,7 +96,7 @@ long_accuracy_trace_test(void)
                                                      0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    ASSERT_TRUE_OR_CLEANUP(parda_fixed_rate_shards__init(&me, 1000),
+    ASSERT_TRUE_OR_CLEANUP(parda_fixed_rate_shards__init(&me, 1),
                            olken__destroy(&oracle));
 
     for (uint64_t i = 0; i < trace_length; ++i) {

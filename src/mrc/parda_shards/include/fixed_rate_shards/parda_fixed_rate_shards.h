@@ -19,7 +19,7 @@ struct FixedRateShards {
 
 bool
 parda_fixed_rate_shards__init(struct FixedRateShards *me,
-                              const Hash64BitType threshold);
+                              const uint64_t shards_scaling_factor);
 
 void
 parda_fixed_rate_shards__access_item(struct FixedRateShards *me,
