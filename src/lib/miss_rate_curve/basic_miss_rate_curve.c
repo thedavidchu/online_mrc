@@ -94,6 +94,41 @@ basic_miss_rate_curve__init_from_basic_histogram(
 }
 
 bool
+basic_miss_rate_curve__init_from_parda_histogram(struct BasicMissRateCurve *me,
+                                                 uint64_t histogram_length,
+                                                 unsigned int *histogram,
+                                                 uint64_t histogram_total,
+                                                 uint64_t false_infinities)
+{
+    if (me == NULL || histogram == NULL || histogram == NULL ||
+        histogram_length == 0) {
+        return false;
+    }
+    // NOTE We include 1 past the histogram length to record "infinities". The
+    //      "false infinity" is already recorded in the
+    const uint64_t length = histogram_length + 2;
+    me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
+    if (me->miss_rate == NULL) {
+        return false;
+    }
+    me->length = length;
+
+    // Generate the MRC
+    uint64_t tmp = histogram_total;
+    for (uint64_t i = 0; i < histogram_length; ++i) {
+        const uint64_t h = histogram[i];
+        me->miss_rate[i] = (double)tmp / (double)histogram_total;
+        assert(tmp >= h &&
+               "the subtraction should yield a non-negative result");
+        tmp -= h;
+    }
+    me->miss_rate[histogram_length] = (double)false_infinities;
+    tmp -= false_infinities;
+    me->miss_rate[histogram_length + 1] = (double)tmp / (double)histogram_total;
+    return true;
+}
+
+bool
 basic_miss_rate_curve__init_from_file(struct BasicMissRateCurve *me,
                                       char const *restrict const file_name,
                                       const uint64_t length)

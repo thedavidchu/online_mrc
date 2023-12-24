@@ -2,6 +2,7 @@ olken_include = include_directories('include',
     '../../lib/common_headers/include',
     '../../lib/hash/include',
     '../../lib/histogram/include',
+    '../../lib/tree/include',
     )
 
 olken_lib = library('olken_lib',

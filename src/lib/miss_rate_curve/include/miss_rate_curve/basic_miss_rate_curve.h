@@ -24,6 +24,14 @@ basic_miss_rate_curve__init_from_basic_histogram(
     struct BasicMissRateCurve *me,
     struct BasicHistogram *histogram);
 
+/// NOTE    The arguments are in a terrible order. Sorry.
+bool
+basic_miss_rate_curve__init_from_parda_histogram(struct BasicMissRateCurve *me,
+                                                 uint64_t histogram_length,
+                                                 unsigned int *histogram,
+                                                 uint64_t histogram_total,
+                                                 uint64_t false_infinities);
+
 bool
 basic_miss_rate_curve__init_from_file(struct BasicMissRateCurve *me,
                                       char const *restrict const file_name,
