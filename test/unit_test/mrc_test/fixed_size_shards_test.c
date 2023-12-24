@@ -35,8 +35,6 @@ access_same_key_five_times(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         fixed_size_shards__access_item(&me, entries[i]);
     }
-    basic_histogram__print_as_json(&me.histogram);
-    basic_histogram__print_as_json(&histogram_oracle);
     ASSERT_TRUE_OR_CLEANUP(
         basic_histogram__exactly_equal(&me.histogram, &histogram_oracle),
         fixed_size_shards__destroy(&me));

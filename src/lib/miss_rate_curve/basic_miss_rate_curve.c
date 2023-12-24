@@ -189,7 +189,6 @@ basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
     const uint64_t min_bound = MIN(lhs->length, rhs->length);
     const uint64_t max_bound = MAX(lhs->length, rhs->length);
     double mse = 0.0;
-
     for (uint64_t i = 0; i < min_bound; ++i) {
         const double diff = lhs->miss_rate[i] - rhs->miss_rate[i];
         mse += diff * diff;
@@ -198,8 +197,9 @@ basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
         // NOTE I'm assuming the compiler pulls this if-statement out of the
         //      loop. I think this arrangment is more idiomatic than having
         //      separate for-loops.
-        double diff =
-            (lhs->length > rhs->length) ? lhs->miss_rate[i] : rhs->miss_rate[i];
+        double diff = (lhs->length > rhs->length)
+                          ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
+                          : rhs->miss_rate[i] - lhs->miss_rate[min_bound - 1];
         mse += diff * diff;
     }
     return mse / (double)max_bound;
