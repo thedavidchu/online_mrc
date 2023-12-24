@@ -2,10 +2,13 @@
 #include <stdint.h>  /* C99, for uint32_t, UINT32_MAX */
 #include <string.h>  /* For strlen() */
 
+#include <glib.h>
+#include <sys/time.h> /* For struct timezone */
+
 #include "narray.h"
 #include "parda.h"
 
-#include "hash/MurmurHash3.h"
+#include "hash/splitmix64.h"
 
 #include <omp.h>
 
@@ -76,7 +79,7 @@ parda_process(char *input, T tim, program_data_t *pdt)
     T *lookup;
     lookup = g_hash_table_lookup(gh, input);
     if (lookup == NULL) {
-        char *data = strdup(input);
+        char *data = g_strdup(input);
         root = insert(tim, root);
         T *p_data;
 
@@ -97,7 +100,7 @@ parda_process(char *input, T tim, program_data_t *pdt)
         if (!(p_data = (int *)malloc(sizeof(int))))
             exit(1);
         *p_data = tim;
-        g_hash_table_replace(gh, strdup(input), p_data);
+        g_hash_table_replace(gh, g_strdup(input), p_data);
 
         // Is distance greater than the largest bucket
         if (distance > nbuckets)
@@ -122,7 +125,9 @@ parda_get_processor_info(int pid, int psize, long sum)
 }
 
 void
-parda_get_abfront(program_data_t *pdt_a, const narray_t *gb, const processor_info_t *pit_a)
+parda_get_abfront(program_data_t *pdt_a,
+                  const narray_t *gb,
+                  const processor_info_t *pit_a)
 {
     // printf("enter abfront and before for loopheihei\n");
     T tim = pit_a->tend + 1;
@@ -130,7 +135,7 @@ parda_get_abfront(program_data_t *pdt_a, const narray_t *gb, const processor_inf
     narray_t *ga = pdt_a->ga;
     Tree *root = pdt_a->root;
     unsigned *histogram = pdt_a->histogram;
-    int i;
+    unsigned int i;
     T *lookup;
     T distance;
     unsigned len = narray_get_len(gb);
@@ -177,7 +182,7 @@ parda_get_abend(program_data_t *pdt_b, const end_keytime_t *ekt_a)
         tim = ((T *)(gtimes->data))[i];
         lookup = g_hash_table_lookup(gh, key);
         if (lookup == NULL) {
-            char *data = strdup(key);
+            char *data = g_strdup(key);
             root = insert(tim, root);
             T *p_data;
             if (!(p_data = (T *)malloc(sizeof(T))))
@@ -192,7 +197,9 @@ parda_get_abend(program_data_t *pdt_b, const end_keytime_t *ekt_a)
 }
 
 program_data_t
-parda_merge(program_data_t *pdt_a, program_data_t *pdt_b, const processor_info_t *pit_b)
+parda_merge(program_data_t *pdt_a,
+            program_data_t *pdt_b,
+            const processor_info_t *pit_b)
 {
     program_data_t pdt;
     parda_get_abfront(pdt_a, pdt_b->ga, pit_b);
@@ -213,6 +220,7 @@ parda_merge(program_data_t *pdt_a, program_data_t *pdt_b, const processor_info_t
     return pdt;
 }
 
+#ifdef struct_timezone
 double
 rtclock()
 {
@@ -255,10 +263,17 @@ classical_tree_based_stackdist(char *inputFileName, long lines)
 #endif
 }
 
+#endif
 void
-parda_input_with_filename(char *inFileName, program_data_t *pdt, long begin, long end)
+parda_input_with_filename(char *inFileName,
+                          program_data_t *pdt,
+                          long begin,
+                          long end)
 {
-    DEBUG(printf("enter parda_input < %s from %ld to %ld\n", inFileName, begin, end);)
+    DEBUG(printf("enter parda_input < %s from %ld to %ld\n",
+                 inFileName,
+                 begin,
+                 end);)
     FILE *fp;
     if (!is_binary) {
         fp = fopen(inFileName, "r");
@@ -272,20 +287,11 @@ parda_input_with_filename(char *inFileName, program_data_t *pdt, long begin, lon
     fclose(fp);
 }
 
-bool
-skip_input(const HKEY input, const int num_digits)
-{
-    const uint32_t seed = 0;
-    uint32_t out = 0;
-    /* HACK: this is because MurmurHash3 does not declare the length as const */
-    int len = num_digits;
-
-    MurmurHash3_x86_32((const void *)input, len, seed, &out);
-    return out > UINT32_MAX / SHARDS_RATIO;
-}
-
 void
-parda_input_with_binaryfilepointer(FILE *fp, program_data_t *pdt, long begin, long end)
+parda_input_with_binaryfilepointer(FILE *fp,
+                                   program_data_t *pdt,
+                                   long begin,
+                                   long end)
 {
     HKEY input;
     long t, i;
@@ -294,30 +300,25 @@ parda_input_with_binaryfilepointer(FILE *fp, program_data_t *pdt, long begin, lo
     for (t = begin; t <= end; t += count) {
         count = fread(buffer, sizeof(void *), buffersize, fp);
         for (i = 0; i < count; i++) {
-            int num_digits = sprintf(input, "%p", buffer[i]);
-            if (skip_input(input, num_digits)) {
-                continue;
-            }
+            sprintf(input, "%p", buffer[i]);
             DEBUG(printf("%s %d\n", input, i + t);)
-            process_one_access(input, pdt, i + t);
+            process_one_access(input, pdt, i + t, 1);
         }
     }
 }
 
 void
-parda_input_with_textfilepointer(FILE *fp, program_data_t *pdt, long begin, long end)
+parda_input_with_textfilepointer(FILE *fp,
+                                 program_data_t *pdt,
+                                 long begin,
+                                 long end)
 {
     HKEY input;
     long i;
     for (i = begin; i <= end; i++) {
-        int num_digits;
         assert(fscanf(fp, "%s", input) != EOF);
-        num_digits = strlen(input);
-        if (skip_input(input, num_digits)) {
-            continue;
-        }
         DEBUG(printf("%s %d\n", input, i);)
-        process_one_access(input, pdt, i);
+        process_one_access(input, pdt, i, 1);
     }
 }
 

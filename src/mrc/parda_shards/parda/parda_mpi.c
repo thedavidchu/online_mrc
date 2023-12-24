@@ -21,8 +21,18 @@ parda_recv_array(int source, int *tag, unsigned element_size)
 void
 parda_send_array(narray_t *ga, int dest, int *tag)
 {
-    MPI_Send(&ga->len, 1, MPI_UNSIGNED, dest, (*tag)++, MPI_COMM_WORLD);
-    MPI_Send(ga->data, ga->len, MPI_CHAR, dest, (*tag)++, MPI_COMM_WORLD);
+    MPI_Send(&ga->len_in_bytes,
+             1,
+             MPI_UNSIGNED,
+             dest,
+             (*tag)++,
+             MPI_COMM_WORLD);
+    MPI_Send(ga->data,
+             ga->len_in_bytes,
+             MPI_CHAR,
+             dest,
+             (*tag)++,
+             MPI_COMM_WORLD);
 }
 
 unsigned *
@@ -32,7 +42,8 @@ parda_mpi_merge(program_data_t *pdt, processor_info_t *pit)
     int psize = pit->psize;
     int pid = pit->pid;
     int var, tag = 1;
-    for (var = pid, len = 1; var % 2 == 1; var = (var >> 1), len = (len << 1)) { // B
+    for (var = pid, len = 1; var % 2 == 1;
+         var = (var >> 1), len = (len << 1)) { // B
         end_keytime_t ekt_a;
         int dest = pid - len;
         parda_send_array(pdt->ga, dest, &tag);
@@ -56,20 +67,33 @@ parda_mpi_merge(program_data_t *pdt, processor_info_t *pit)
     } else if (pid == psize - 1) {
         pdt->histogram[B_INF] += narray_get_len(pdt->ga);
     }
-    unsigned *global_his = (unsigned *)malloc(sizeof(unsigned) * (nbuckets + 2));
+    unsigned *global_his =
+        (unsigned *)malloc(sizeof(unsigned) * (nbuckets + 2));
     // memset(global_his,0,(sizeof(unsigned) * (nbuckets+2)));
     for (i = 0; i < nbuckets + 2; i++) {
         global_his[i] = 0;
     }
-    MPI_Reduce(pdt->histogram, global_his, nbuckets + 2, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(pdt->histogram,
+               global_his,
+               nbuckets + 2,
+               MPI_UNSIGNED,
+               MPI_SUM,
+               0,
+               MPI_COMM_WORLD);
     return global_his;
 }
 int
-parda_MPI_IO_binary_input(program_data_t *pdt, char filename[], const processor_info_t *pit)
+parda_MPI_IO_binary_input(program_data_t *pdt,
+                          char filename[],
+                          const processor_info_t *pit)
 {
     MPI_File thefile;
     MPI_Status status;
-    MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &thefile);
+    MPI_File_open(MPI_COMM_WORLD,
+                  filename,
+                  MPI_MODE_RDONLY,
+                  MPI_INFO_NULL,
+                  &thefile);
     MPI_File_set_view(thefile,
                       pit->tstart * sizeof(void *),
                       MPI_LONG,
@@ -103,7 +127,7 @@ parda_MPI_IO_binary_input(program_data_t *pdt, char filename[], const processor_
             lookup = g_hash_table_lookup(gh, input);
             // Cold start: Not in the list yet
             if (lookup == NULL) {
-                char *data = strdup(input);
+                char *data = g_strdup(input);
                 root = insert(tim, root);
                 T *p_data;
 
@@ -111,7 +135,9 @@ parda_MPI_IO_binary_input(program_data_t *pdt, char filename[], const processor_
                 if (!(p_data = (T *)malloc(sizeof(T))))
                     return -1;
                 *p_data = tim;
-                g_hash_table_insert(gh, data, p_data); // Store pointer to list element
+                g_hash_table_insert(gh,
+                                    data,
+                                    p_data); // Store pointer to list element
             }
 
             // Hit: We've seen this data before
@@ -124,7 +150,7 @@ parda_MPI_IO_binary_input(program_data_t *pdt, char filename[], const processor_
                 if (!(p_data = (int *)malloc(sizeof(int))))
                     return -1;
                 *p_data = tim;
-                g_hash_table_replace(gh, strdup(input), p_data);
+                g_hash_table_replace(gh, g_strdup(input), p_data);
 
                 // Is distance greater than the largest bucket
                 if (distance > nbuckets)
@@ -139,14 +165,21 @@ parda_MPI_IO_binary_input(program_data_t *pdt, char filename[], const processor_
 #ifdef ENABLE_PROFILING
     t4 = MPI_Wtime();
     int pid = pit->pid;
-    fprintf(pid_fp, "parda input time with barrier = %.3lf sec for processor %d; \n", t4 - t3, pid);
+    fprintf(pid_fp,
+            "parda input time with barrier = %.3lf sec for processor %d; \n",
+            t4 - t3,
+            pid);
 #endif
     pdt->root = root;
     return 1;
 }
 
 void
-parda_mpi_stackdist(char *inputFileName, long lines, int processors, int argc, char **argv)
+parda_mpi_stackdist(char *inputFileName,
+                    long lines,
+                    int processors,
+                    int argc,
+                    char **argv)
 {
     int pid, psize;
     program_data_t pdt;
@@ -167,10 +200,11 @@ parda_mpi_stackdist(char *inputFileName, long lines, int processors, int argc, c
     PTIME(MPI_Barrier(MPI_COMM_WORLD);)
     PTIME(te = MPI_Wtime();)
     PTIME(t_init = te - ts;)
-    parda_input_with_filename(parda_generate_pfilename(inputFileName, pid, psize),
-                              &pdt,
-                              pit.tstart,
-                              pit.tend);
+    parda_input_with_filename(
+        parda_generate_pfilename(inputFileName, pid, psize),
+        &pdt,
+        pit.tstart,
+        pit.tend);
     unsigned *global_his = parda_mpi_merge(&pdt, &pit);
     PTIME(MPI_Barrier(MPI_COMM_WORLD);)
     PTIME(ts = MPI_Wtime();)
@@ -198,7 +232,11 @@ parda_mpi_stackdist(char *inputFileName, long lines, int processors, int argc, c
 
 #if defined(enable_omp) && defined(enable_mpi)
 void
-parda_hybrid_stackdist(char *inputFileName, long lines, int processors, int argc, char **argv)
+parda_hybrid_stackdist(char *inputFileName,
+                       long lines,
+                       int processors,
+                       int argc,
+                       char **argv)
 {
     int pid, psize;
     program_data_t pdt;
@@ -216,7 +254,8 @@ parda_hybrid_stackdist(char *inputFileName, long lines, int processors, int argc
     pit = parda_get_processor_info(pid, psize, psum);
     program_data_t *pdt_a = parda_omp_init(threads);
 
-    pdt = parda_omp_input(inputFileName, pdt_a, pit.tstart, pit.tend, pid, psize);
+    pdt =
+        parda_omp_input(inputFileName, pdt_a, pit.tstart, pit.tend, pid, psize);
     parda_omp_free(pdt_a, threads);
 
     unsigned *global_his = parda_mpi_merge(&pdt, &pit);

@@ -13,7 +13,7 @@
 
 typedef struct narray_s {
     void *data;
-    unsigned len, capacity, element_size;
+    unsigned len_in_bytes, capacity_in_bytes, element_size_in_bytes;
 } narray_t;
 
 narray_t *
@@ -30,7 +30,7 @@ narray_print(narray_t *na, void (*show_element)(void *, int, FILE *), FILE *fp);
 static inline unsigned
 narray_get_len(const narray_t *na)
 {
-    return na->len / na->element_size;
+    return na->len_in_bytes / na->element_size_in_bytes;
 }
 
 #endif

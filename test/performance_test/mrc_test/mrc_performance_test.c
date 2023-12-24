@@ -6,6 +6,7 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
+#include "fixed_rate_shards/parda_fixed_rate_shards.h"
 #include "fixed_size_shards/fixed_size_shards.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
@@ -81,6 +82,12 @@ main(int argc, char **argv)
             mimir__access_item,
             mimir__destroy);
     }
+
+    PERFORMANCE_TEST(struct FixedRateShards,
+                     me,
+                     parda_fixed_rate_shards__init(&me, 1000),
+                     parda_fixed_rate_shards__access_item,
+                     parda_fixed_rate_shards__destroy);
 
     return EXIT_SUCCESS;
 }
