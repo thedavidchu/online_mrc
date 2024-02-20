@@ -205,6 +205,42 @@ basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
     return mse / (double)max_bound;
 }
 
+double
+basic_miss_rate_curve__mean_absolute_error(struct BasicMissRateCurve *lhs,
+                                           struct BasicMissRateCurve *rhs)
+{
+    if (lhs == NULL && rhs == NULL) {
+        return 0.0;
+    } else if (lhs->miss_rate == NULL || lhs->length == 0) {
+        return rhs->length == 0;
+    } else if (rhs->miss_rate == NULL || rhs->length == 0) {
+        // Since we checked that this isn't true for the above
+        return false;
+    }
+
+    const uint64_t min_bound = MIN(lhs->length, rhs->length);
+    const uint64_t max_bound = MAX(lhs->length, rhs->length);
+    double mae = 0.0;
+    for (uint64_t i = 0; i < min_bound; ++i) {
+        // NOTE This is just a little (potential) optimization to have the ABS
+        //      act on `diff` alone because we do restrict pointer aliasing for
+        //      `miss_rate`, so the compiler may force it to do repeated memory
+        //      accesses. I'm not sure. Either way, I find this more readable.
+        const double diff = lhs->miss_rate[i] - rhs->miss_rate[i];
+        mae += ABS(diff);
+    }
+    for (uint64_t i = min_bound; i < max_bound; ++i) {
+        // NOTE I'm assuming the compiler pulls this if-statement out of the
+        //      loop. I think this arrangement is more idiomatic than having
+        //      separate for-loops.
+        double diff = (lhs->length > rhs->length)
+                          ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
+                          : rhs->miss_rate[i] - lhs->miss_rate[min_bound - 1];
+        mae += ABS(diff);
+    }
+    return mae / (double)max_bound;
+}
+
 void
 basic_miss_rate_curve__print_as_json(struct BasicMissRateCurve *me)
 {
