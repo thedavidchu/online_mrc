@@ -81,6 +81,8 @@ basic_miss_rate_curve__init_from_basic_histogram(
     uint64_t tmp = total;
     for (uint64_t i = 0; i < histogram->length; ++i) {
         const uint64_t h = histogram->histogram[i];
+        // TODO(dchu): Check for division by zero! How do we intelligently
+        //              resolve this?
         me->miss_rate[i] = (double)tmp / (double)total;
         assert(tmp >= h &&
                "the subtraction should yield a non-negative result");
