@@ -46,6 +46,10 @@ double
 basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
                                           struct BasicMissRateCurve *rhs);
 
+double
+basic_miss_rate_curve__mean_absolute_error(struct BasicMissRateCurve *lhs,
+                                           struct BasicMissRateCurve *rhs);
+
 void
 basic_miss_rate_curve__print_as_json(struct BasicMissRateCurve *me);
 
