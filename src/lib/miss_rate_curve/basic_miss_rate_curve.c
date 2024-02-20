@@ -195,7 +195,7 @@ basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
     }
     for (uint64_t i = min_bound; i < max_bound; ++i) {
         // NOTE I'm assuming the compiler pulls this if-statement out of the
-        //      loop. I think this arrangment is more idiomatic than having
+        //      loop. I think this arrangement is more idiomatic than having
         //      separate for-loops.
         double diff = (lhs->length > rhs->length)
                           ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
