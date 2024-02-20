@@ -42,9 +42,17 @@ basic_miss_rate_curve__write_binary_to_file(
     struct BasicMissRateCurve *me,
     char const *restrict const file_name);
 
+/// @return non-negative mean squared error, or a negative number (e.g. -1.0) on
+///         error.
 double
 basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
                                           struct BasicMissRateCurve *rhs);
+
+/// @return non-negative mean absolute error, or a negative number (e.g. -1.0)
+///         on error.
+double
+basic_miss_rate_curve__mean_absolute_error(struct BasicMissRateCurve *lhs,
+                                           struct BasicMissRateCurve *rhs);
 
 void
 basic_miss_rate_curve__print_as_json(struct BasicMissRateCurve *me);
