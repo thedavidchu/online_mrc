@@ -51,6 +51,22 @@ mimir_test_exe = executable('mimir_test_exe',
         zipfian_random_lib,
     ])
 
+quickmrc_test_exe = executable('quickmrc_test_exe',
+    'quickmrc_test.c',
+    include_directories : [
+        miss_rate_curve_include,
+        mytester_include,
+        quickmrc_include,
+        random_include,
+        tree_include,
+    ],
+    dependencies : glib_dep,
+    link_with : [
+        basic_miss_rate_curve_lib,
+        quickmrc_lib,
+        zipfian_random_lib,
+    ])
+
 parda_fixed_rate_shards_test_exe = executable('parda_fixed_rate_shards_test_exe',
     'parda_fixed_rate_shards_test.c',
     include_directories : [
@@ -72,3 +88,4 @@ test('olken_test', olken_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
 test('mimir_test', mimir_test_exe, timeout : 0)
 test('parda_fixed_rate_shards_test', parda_fixed_rate_shards_test_exe)
+test('quickmrc_test', quickmrc_test_exe)
