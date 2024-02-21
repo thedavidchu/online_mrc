@@ -1,5 +1,5 @@
 [![cpp-linter](https://github.com/cpp-linter/cpp-linter-action/actions/workflows/cpp-linter.yml/badge.svg)](https://github.com/cpp-linter/cpp-linter-action/actions/workflows/cpp-linter.yml)
-
+![Meson Test](https://github.com/thedavidchu/online_mrc/blob/main/.github/workflows/build.yml/badge.svg)
 # On-Line Miss-Rate Curves
 
 This repository analyzes the performance of on-line miss-rate curve (MRC)
