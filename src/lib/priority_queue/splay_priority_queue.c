@@ -142,9 +142,13 @@ splay_priority_queue__init(struct SplayPriorityQueue *me,
     me->all_subtrees =
         (struct SubtreeMultimap *)calloc(max_cardinality,
                                          sizeof(struct SubtreeMultimap));
+    if (me->all_subtrees == NULL) {
+        return false;
+    }
     me->free_subtrees = (struct SubtreeMultimap **)malloc(
         max_cardinality * sizeof(struct SubtreeMultimap *));
     if (me->free_subtrees == NULL) {
+        free(me->all_subtrees);
         return false;
     }
     for (uint64_t i = 0; i < max_cardinality; ++i) {

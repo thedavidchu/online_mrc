@@ -13,6 +13,7 @@ parda_recv_array(int source, int *tag, unsigned element_size)
     void *bdata;
     MPI_Recv(&blen, 1, MPI_UNSIGNED, source, (*tag)++, MPI_COMM_WORLD, &status);
     bdata = (char *)calloc(blen, 1);
+    assert(bdata != NULL);
     MPI_Recv(bdata, blen, MPI_CHAR, source, (*tag)++, MPI_COMM_WORLD, &status);
     ga = narray_heaparray_new(bdata, blen, element_size);
     return ga;
@@ -69,6 +70,7 @@ parda_mpi_merge(program_data_t *pdt, processor_info_t *pit)
     }
     unsigned *global_his =
         (unsigned *)malloc(sizeof(unsigned) * (nbuckets + 2));
+    assert(global_his != NULL);
     // memset(global_his,0,(sizeof(unsigned) * (nbuckets+2)));
     for (i = 0; i < nbuckets + 2; i++) {
         global_his[i] = 0;
@@ -110,6 +112,7 @@ parda_MPI_IO_binary_input(program_data_t *pdt,
     narray_t *ga = pdt->ga;
     int bufsize = 10000;
     void **buf = (void **)malloc(bufsize * sizeof(void *));
+    assert(buf != NULL);
     unsigned int *histogram = pdt->histogram;
     HKEY input;
     long tim, begin;
