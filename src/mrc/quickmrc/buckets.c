@@ -26,7 +26,6 @@ quickmrc_buckets__init(struct QuickMrcBuckets *me,
         .num_buckets = default_num_buckets,
         .default_num_buckets = default_num_buckets,
         .max_bucket_size = max_bucket_size,
-        .newest_bucket = me->default_num_buckets - 1,
         .num_unique_entries = 0,
         .timestamp = 0,
     };
@@ -38,7 +37,34 @@ static bool
 is_newest_bucket_full(struct QuickMrcBuckets *me)
 {
     assert(me != NULL && me->buckets != NULL);
-    return me->buckets[me->newest_bucket].count >= me->max_bucket_size;
+    return me->buckets[0].count >= me->max_bucket_size;
+}
+
+/// Get pair with minimum sum. We return the index of the __ of the pair.
+/// Given a tie, we will return the newer pair.
+static uint64_t
+get_min_bucket_pair(struct QuickMrcBuckets *me)
+{
+    assert(me != NULL && me->buckets != NULL);
+    uint64_t min_pair = 0;
+    uint64_t min_pair_sum = 0;
+    for (uint64_t i = 0; i < me->num_buckets - 1; ++i) {
+        // We bias toward newer pairs so that there is less copying required.
+        uint64_t current_pair_sum =
+            me->buckets[i].count + me->buckets[i + 1].count;
+        if (current_pair_sum < min_pair_sum) {
+            min_pair = i;
+            min_pair_sum = current_pair_sum;
+        }
+    }
+    return min_pair;
+}
+
+static uint64_t
+get_sum_of_pair(struct QuickMrcBuckets *me, uint64_t pair_idx)
+{
+    assert(me != NULL && me->buckets != NULL && pair_idx + 1 < me->num_buckets);
+    return me->buckets[pair_idx].count + me->buckets[pair_idx + 1].count;
 }
 
 /// Age the MRC buckets
@@ -49,38 +75,42 @@ is_newest_bucket_full(struct QuickMrcBuckets *me)
 static bool
 age(struct QuickMrcBuckets *me)
 {
-    assert(me != NULL && me->buckets != NULL);
-    // Get pair with minimum sum. We return the index of the __ of the pair.
-    // Given a tie, we will return the newer pair.
-    uint64_t min_pair = 0;
-    uint64_t min_pair_sum = 0;
-    for (uint64_t i = 0; i < me->num_buckets - 1; ++i) {
-        // We bias toward newer pairs so that there is less copying required.
-        if (me->buckets[i].count + me->buckets[i + 1].count <= min_pair_sum) {
-            min_pair = i;
-        }
-    }
-
+    uint64_t min_pair = get_min_bucket_pair(me);
     // Update range
-    me->buckets[min_pair].count = min_pair_sum;
-    me->buckets[min_pair].max_timestamp =
-        me->buckets[min_pair + 1].max_timestamp;
+    me->buckets[min_pair] = (struct TimestampRangeCount){
+        .count = get_sum_of_pair(me, min_pair),
+        .max_timestamp = me->buckets[min_pair + 1].max_timestamp};
 
     // Shift newer buckets to fill hole
     memmove(
-        &me->buckets[min_pair + 1],
+        &me->buckets[1],
         // NOTE This may be out of bounds... well I think C allows you to
         //      reference one past the last element, which would be this one.
         // TODO(dchu): Lookup whether C allows you to reference
         //      one-past-the-last element.
-        &me->buckets[min_pair + 2],
-        (me->num_buckets - min_pair - 2) * sizeof(*me->buckets));
+        &me->buckets[0],
+        (min_pair + 1) * sizeof(*me->buckets));
     // TODO(dchu):  reset the newest bucket to empty and make the timestamp
     //              larger by one. We also want to synchronize this with the
     //              timestamp that the hash table is using.
-    me->buckets[me->newest_bucket].count = 0;
     ++me->timestamp;
-    me->buckets[me->newest_bucket].max_timestamp = me->timestamp;
+    me->buckets[0] =
+        (struct TimestampRangeCount){.count = 0,
+                                     .max_timestamp = me->timestamp};
+    return true;
+}
+
+static bool
+increment_newest_bucket(struct QuickMrcBuckets *me)
+{
+    assert(me != NULL && me->buckets != NULL);
+    ++me->buckets[0].count;
+    if (is_newest_bucket_full(me)) {
+        bool r = age(me);
+        if (!r) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -88,33 +118,31 @@ age(struct QuickMrcBuckets *me)
 TimeStampType
 quickmrc_buckets__insert_new(struct QuickMrcBuckets *me)
 {
-    if (me == NULL) {
+    if (me == NULL || me->buckets == NULL) {
         return -1;
     }
-    if (is_newest_bucket_full(me)) {
-        bool r = age(me);
-        if (!r) {
-            return -1;
-        }
+    if (!increment_newest_bucket(me)) {
+        return -1;
     }
-    ++me->buckets[me->newest_bucket].count;
-    return me->newest_bucket;
+    return 0;
 }
 
+/// Get the stack distance of a timestamp and decrement that timestamp.
 static uint64_t
 get_stack_distance_and_decrement(struct QuickMrcBuckets *me,
                                  TimeStampType old_timestamp)
 {
     uint64_t stack_dist = 0;
+    assert(me != NULL && me->buckets != NULL);
     for (uint64_t i = 0; i < me->num_buckets; ++i) {
         uint64_t bucket_id = me->num_buckets - 1 - i;
         if (me->buckets[bucket_id].max_timestamp < old_timestamp) {
             --me->buckets[bucket_id].count;
-            return stack_dist;
+            assert(stack_dist > 0 && "stack_dist should be at least 1");
+            return stack_dist - 1;
         }
         stack_dist += me->buckets[bucket_id].count;
     }
-    --me->buckets[0].count;
     return stack_dist; /* Found in oldest bucket */
 }
 
@@ -129,9 +157,11 @@ quickmrc_buckets__reaccess_old(struct QuickMrcBuckets *me,
         return UINT64_MAX;
     }
 
+    if (!increment_newest_bucket(me)) {
+        return UINT64_MAX;
+    }
     uint64_t stack_dist = get_stack_distance_and_decrement(me, old_timestamp);
-    bool r = quickmrc_buckets__insert_new(me);
-    if (!r) {
+    if (!quickmrc_buckets__insert_new(me)) {
         return UINT64_MAX;
     }
     return stack_dist;
@@ -144,6 +174,6 @@ quickmrc_buckets__destroy(struct QuickMrcBuckets *me)
         return;
     }
     free(me->buckets);
-    me->buckets = NULL;
+    memset(me, 0, sizeof(*me));
     return;
 }

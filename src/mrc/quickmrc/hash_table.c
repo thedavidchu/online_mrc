@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "hash_table.h"
+#include "types/entry_type.h"
 
 bool
 HashTable__init(struct HashTable *me, size_t max_members)
@@ -21,7 +22,7 @@ HashTable__init(struct HashTable *me, size_t max_members)
 }
 
 static Hash64BitType
-hash_function(KeyType key)
+hash_function(EntryType key)
 {
 #ifdef QUICK_TEST
     return key;
@@ -32,7 +33,7 @@ hash_function(KeyType key)
 
 enum FlakyReturn
 HashTable__flaky_insert(struct HashTable *me,
-                        KeyType key,
+                        EntryType key,
                         TimeStampType timestamp)
 {
     if (me == NULL || me->data == NULL || me->length == 0) {

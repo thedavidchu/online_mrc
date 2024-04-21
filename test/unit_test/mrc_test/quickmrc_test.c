@@ -31,7 +31,7 @@ access_same_key_five_times(void)
     struct QuickMrc me = {0};
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_TRUE_WITHOUT_CLEANUP(
-        quickmrc__init(&me, 1000, 60, 100, basic_histogram_oracle.length));
+        quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         quickmrc__access_item(&me, entries[i]);
     }
@@ -67,7 +67,7 @@ small_exact_trace_test(void)
     struct QuickMrc me = {0};
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_TRUE_WITHOUT_CLEANUP(
-        quickmrc__init(&me, 1000, 60, 100, basic_histogram_oracle.length));
+        quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         quickmrc__access_item(&me, entries[i]);
     }
@@ -104,7 +104,7 @@ small_inexact_trace_test(void)
     struct QuickMrc me = {0};
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_TRUE_WITHOUT_CLEANUP(
-        quickmrc__init(&me, 1000, 60, 100, basic_histogram_oracle.length));
+        quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         quickmrc__access_item(&me, entries[i]);
     }
@@ -126,7 +126,7 @@ long_trace_test(void)
         zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        quickmrc__init(&me, 1000, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
+        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random__next(&zrng);

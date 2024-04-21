@@ -14,7 +14,6 @@ struct QuickMrc {
     GHashTable *hash_table;
     struct QuickMrcBuckets buckets;
     struct BasicHistogram histogram;
-    uint64_t shards_threshold;
 
     // Number of entries that we have seen, regardless of whether it is above or
     // below the SHARDS threshold.
@@ -28,7 +27,6 @@ struct QuickMrc {
 
 bool
 quickmrc__init(struct QuickMrc *me,
-               uint64_t shards_threshold,
                uint64_t default_num_buckets,
                uint64_t max_bucket_size,
                uint64_t histogram_length);

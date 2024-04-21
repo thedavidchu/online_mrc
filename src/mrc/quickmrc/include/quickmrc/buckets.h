@@ -22,7 +22,6 @@ struct QuickMrcBuckets {
     const uint64_t num_buckets;
     const uint64_t default_num_buckets;
     const uint64_t max_bucket_size;
-    const uint64_t newest_bucket;
     uint64_t num_unique_entries;
     TimeStampType timestamp;
 };

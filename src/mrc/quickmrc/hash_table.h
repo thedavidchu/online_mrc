@@ -2,13 +2,13 @@
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
-#include "tree/types.h"
+#include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
 struct HashNode {
     TimeStampType timestamp;
     Hash64BitType hash;
-    KeyType key;
+    EntryType key;
 };
 
 struct HashTable {
@@ -33,7 +33,7 @@ enum FlakyReturn {
  */
 enum FlakyReturn
 HashTable__flaky_insert(struct HashTable *me,
-                        KeyType key,
+                        EntryType key,
                         TimeStampType timestamp);
 
 void

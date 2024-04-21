@@ -12,6 +12,7 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
+#include "hash_table.h"
 #include "quickmrc/quickmrc.h"
 
 static gboolean
@@ -22,7 +23,6 @@ entry_compare(gconstpointer a, gconstpointer b)
 
 bool
 quickmrc__init(struct QuickMrc *me,
-               uint64_t shards_threshold,
                uint64_t default_num_buckets,
                uint64_t max_bucket_size,
                uint64_t histogram_length)
@@ -50,26 +50,19 @@ quickmrc__init(struct QuickMrc *me,
     }
     me->total_entries_seen = 0;
     me->total_entries_processed = 0;
-    me->shards_threshold = shards_threshold;
     return true;
 }
 
 bool
 quickmrc__access_item(struct QuickMrc *me, EntryType entry)
 {
-    Hash64BitType h = splitmix64_hash(entry);
     gboolean found = FALSE;
     TimeStampType timestamp = 0;
     if (me == NULL) {
         return false;
     }
 
-    // SHARDS Fixed-rate sampling
-    if (h > me->shards_threshold) {
-        ++me->total_entries_seen;
-        return true;
-    }
-    // This assumes there won't be any errors.
+    // This assumes there won't be any errors further on.
     ++me->total_entries_processed;
 
     found = g_hash_table_lookup_extended(me->hash_table,
@@ -88,7 +81,7 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
             return false;
         }
         TimeStampType new_timestamp =
-            me->buckets.buckets[me->buckets.newest_bucket].max_timestamp;
+            me->buckets.buckets[0].max_timestamp;
         g_hash_table_replace(me->hash_table,
                              (gpointer)entry,
                              (gpointer)new_timestamp);
@@ -115,7 +108,7 @@ quickmrc__destroy(struct QuickMrc *me)
         return;
     }
     g_hash_table_destroy(me->hash_table);
-    me->hash_table = NULL;
     quickmrc_buckets__destroy(&me->buckets);
     basic_histogram__destroy(&me->histogram);
+    memset(me, 0, sizeof(*me));
 }
