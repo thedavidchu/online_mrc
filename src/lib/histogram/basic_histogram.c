@@ -147,9 +147,6 @@ basic_histogram__destroy(struct BasicHistogram *me)
         return;
     }
     free(me->histogram);
-    me->length = 0;
-    me->false_infinity = 0;
-    me->infinity = 0;
-    me->running_sum = 0;
+    *me = (struct BasicHistogram){0};
     return;
 }

@@ -337,15 +337,5 @@ mimir_buckets__destroy(struct MimirBuckets *me)
         return;
     }
     free(me->buckets);
-    // Let's nullify freed pointers to avoid double frees!
-    me->buckets = NULL;
-    me->num_buckets = 0;
-    // I don't really have to do this, but I do so just to be safe. Actually, I
-    // don't have a consistent way of measuring whether a data structure has
-    // been initialized (or deinitialized) yet. Also, side note: should I change
-    // function names from *__destroy() to *__deinit()?
-    me->num_unique_entries = 0;
-    me->sum_of_bucket_indices = 0;
-    // NOTE All other values don't really matter if we reset them...
-    return;
+    *me = (struct MimirBuckets){0};
 }

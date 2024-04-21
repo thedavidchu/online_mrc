@@ -235,6 +235,5 @@ basic_miss_rate_curve__destroy(struct BasicMissRateCurve *me)
         return;
     }
     free(me->miss_rate);
-    me->miss_rate = NULL;
-    me->length = 0;
+    *me = (struct BasicMissRateCurve){0};
 }

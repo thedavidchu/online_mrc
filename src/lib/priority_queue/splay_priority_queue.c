@@ -44,7 +44,8 @@ sleator_splay(struct SubtreeMultimap *t, Hash64BitType i)
                 y = t->left_subtree; /* rotate right */
                 t->left_subtree = y->right_subtree;
                 y->right_subtree = t;
-                t->cardinality = node_size(t->left_subtree) + node_size(t->right_subtree) + 1;
+                t->cardinality = node_size(t->left_subtree) +
+                                 node_size(t->right_subtree) + 1;
                 t = y;
                 if (t->left_subtree == NULL)
                     break;
@@ -60,7 +61,8 @@ sleator_splay(struct SubtreeMultimap *t, Hash64BitType i)
                 y = t->right_subtree; /* rotate left */
                 t->right_subtree = y->left_subtree;
                 y->left_subtree = t;
-                t->cardinality = node_size(t->left_subtree) + node_size(t->right_subtree) + 1;
+                t->cardinality = node_size(t->left_subtree) +
+                                 node_size(t->right_subtree) + 1;
                 t = y;
                 if (t->right_subtree == NULL)
                     break;
@@ -73,8 +75,10 @@ sleator_splay(struct SubtreeMultimap *t, Hash64BitType i)
             break;
         }
     }
-    l_size += node_size(t->left_subtree);  /* Now l_size and r_size are the sizes of */
-    r_size += node_size(t->right_subtree); /* the left and right trees we just built.*/
+    l_size +=
+        node_size(t->left_subtree); /* Now l_size and r_size are the sizes of */
+    r_size += node_size(
+        t->right_subtree); /* the left and right trees we just built.*/
     t->cardinality = l_size + r_size + 1;
 
     l->right_subtree = r->left_subtree = NULL;
@@ -126,7 +130,8 @@ pop_subtree(struct SplayPriorityQueue *me)
 }
 
 bool
-splay_priority_queue__init(struct SplayPriorityQueue *me, const uint64_t max_cardinality)
+splay_priority_queue__init(struct SplayPriorityQueue *me,
+                           const uint64_t max_cardinality)
 {
     if (me == NULL || max_cardinality == 0) {
         return false;
@@ -135,9 +140,10 @@ splay_priority_queue__init(struct SplayPriorityQueue *me, const uint64_t max_car
     me->cardinality = 0;
 
     me->all_subtrees =
-        (struct SubtreeMultimap *)calloc(max_cardinality, sizeof(struct SubtreeMultimap));
-    me->free_subtrees =
-        (struct SubtreeMultimap **)malloc(max_cardinality * sizeof(struct SubtreeMultimap *));
+        (struct SubtreeMultimap *)calloc(max_cardinality,
+                                         sizeof(struct SubtreeMultimap));
+    me->free_subtrees = (struct SubtreeMultimap **)malloc(
+        max_cardinality * sizeof(struct SubtreeMultimap *));
     if (me->free_subtrees == NULL) {
         return false;
     }
@@ -191,8 +197,8 @@ splay_priority_queue__insert_if_room(struct SplayPriorityQueue *me,
     }
     new_subtree->key = hash;
     new_subtree->value = entry;
-    new_subtree->cardinality =
-        1 + node_size(new_subtree->left_subtree) + node_size(new_subtree->right_subtree);
+    new_subtree->cardinality = 1 + node_size(new_subtree->left_subtree) +
+                               node_size(new_subtree->right_subtree);
     // Update tree data structure
     me->root = new_subtree;
     me->cardinality = new_subtree->cardinality;
@@ -262,11 +268,8 @@ splay_priority_queue__destroy(struct SplayPriorityQueue *me)
     free(me->free_subtrees);
     free(me->all_subtrees);
 
-    me->root = NULL;
-    me->cardinality = 0;
-    me->all_subtrees = NULL;
-    me->free_subtrees = NULL;
-    me->num_free_subtrees = 0;
-    me->max_cardinality = 0;
+    /* TODO free me->root */
+
+    *me = (struct SplayPriorityQueue){0};
     return;
 }
