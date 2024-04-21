@@ -19,7 +19,9 @@ program_data_t *
 parda_omp_init(int nthreads)
 {
     g_thread_init(NULL);
-    program_data_t *pdt_a = (program_data_t *)malloc(nthreads * sizeof(program_data_t));
+    program_data_t *pdt_a =
+        (program_data_t *)malloc(nthreads * sizeof(program_data_t));
+    assert(pdt_a != NULL);
     int i;
     for (i = 0; i < nthreads; i++)
         pdt_a[i] = parda_init();
@@ -36,8 +38,9 @@ parda_omp_openfile(char inputFileName[],
 {
     int i;
     for (i = 0; i < nthreads; i++) {
-        char *pfilename =
-            parda_generate_pfilename(inputFileName, pid * nthreads + i, psize * nthreads);
+        char *pfilename = parda_generate_pfilename(inputFileName,
+                                                   pid * nthreads + i,
+                                                   psize * nthreads);
         fpa[i] = fopen(pfilename, "r");
     }
 }
@@ -54,7 +57,8 @@ parda_omp_input_with_filename(char inputFileName[],
     long lines = end + 1 - begin;
     FILE *fpa[8];
     parda_omp_openfile(inputFileName, pid, nthreads, psize, fpa);
-#pragma omp parallel default(none) firstprivate(begin, pid, psize, nthreads, lines, is_binary)     \
+#pragma omp parallel default(none)                                             \
+    firstprivate(begin, pid, psize, nthreads, lines, is_binary)                \
     shared(pdt_a, fpa)
     {
         int i = omp_get_thread_num();
@@ -64,7 +68,10 @@ parda_omp_input_with_filename(char inputFileName[],
         if (!is_binary) {
             parda_input_with_textfilepointer(fp, &pdt_c, pit.tstart, pit.tend);
         } else {
-            parda_input_with_binaryfilepointer(fp, &pdt_c, pit.tstart, pit.tend);
+            parda_input_with_binaryfilepointer(fp,
+                                               &pdt_c,
+                                               pit.tstart,
+                                               pit.tend);
         }
         pdt_a[i] = pdt_c;
         int tid = i;
@@ -99,7 +106,8 @@ parda_omp_input(char inputFileName[],
     int syn[8 << 6];
     memset(syn, 0, sizeof(syn));
     int i;
-#pragma omp parallel default(none) private(i) firstprivate(begin, pid, psize, nthreads, lines)     \
+#pragma omp parallel default(none) private(i)                                  \
+    firstprivate(begin, pid, psize, nthreads, lines)                           \
     shared(pdt_a, pit_a, syn, inputFileName)
     {
         DEBUG(printf("enter parallel for\n");)
@@ -109,7 +117,9 @@ parda_omp_input(char inputFileName[],
             printf("i=%d executed by thread=%d\n", i, omp_get_thread_num());
             pit_a[i] = parda_get_thread_info(lines, begin, i, nthreads);
             parda_input_with_filename(
-                parda_generate_pfilename(inputFileName, pid * nthreads + i, psize * nthreads),
+                parda_generate_pfilename(inputFileName,
+                                         pid * nthreads + i,
+                                         psize * nthreads),
                 &pdt_a[i],
                 pit_a[i].tstart,
                 pit_a[i].tend);
@@ -118,13 +128,18 @@ parda_omp_input(char inputFileName[],
 #endif
             int tid = i;
             int var, len;
-            for (var = tid, len = 1; var % 2 == 1; var = (var >> 1), len = (len << 1)) {
-                DEBUG(printf("before while in for %d and %d\n", tid - len, tid);)
+            for (var = tid, len = 1; var % 2 == 1;
+                 var = (var >> 1), len = (len << 1)) {
+                DEBUG(
+                    printf("before while in for %d and %d\n", tid - len, tid);)
                 while (syn[(tid - len) << 8] == 0) {
 #pragma omp flush(syn)
                 }
-                DEBUG(printf("after while in for and will merge %d and %d\n", tid - len, tid);)
-                pdt_a[tid] = parda_merge(&pdt_a[tid - len], &pdt_a[tid], &pit_a[tid]);
+                DEBUG(printf("after while in for and will merge %d and %d\n",
+                             tid - len,
+                             tid);)
+                pdt_a[tid] =
+                    parda_merge(&pdt_a[tid - len], &pdt_a[tid], &pit_a[tid]);
                 DEBUG(printf("after merged %d and %d\n", tid - len, tid);)
             }
             syn[tid << 8]++;
@@ -160,7 +175,8 @@ parda_omp_stackdist(char *inputFileName, long lines, int threads)
     PTIME(te = rtclock();)
     PTIME(t_init = te - ts;)
     DEBUG(printf("after omp init\n");)
-    program_data_t pdt_c = parda_omp_input_with_filename(inputFileName, pdt_a, 0, lines - 1, 0, 1);
+    program_data_t pdt_c =
+        parda_omp_input_with_filename(inputFileName, pdt_a, 0, lines - 1, 0, 1);
     // program_data_t pdt_c=parda_omp_input(inputFileName,pdt_a,0,lines-1,0,1);
     DEBUG(printf("after omp input\n");)
     program_data_t *pdt = &pdt_c;

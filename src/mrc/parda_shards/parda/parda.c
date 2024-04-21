@@ -49,6 +49,7 @@ parda_init()
     Tree *root;
     unsigned int *histogram;
     histogram = malloc(sizeof(unsigned int) * (nbuckets + 2));
+    assert(histogram != NULL);
     gh = g_hash_table_new_full(g_str_hash, compare_strings, free, free);
     root = NULL;
     memset(histogram, 0, (nbuckets + 2) * sizeof(unsigned int));
@@ -297,6 +298,7 @@ parda_input_with_binaryfilepointer(FILE *fp,
     long t, i;
     long count;
     void **buffer = (void **)malloc(buffersize * sizeof(void *));
+    assert(buffer != NULL && "buffer should not be NULL");
     for (t = begin; t <= end; t += count) {
         count = fread(buffer, sizeof(void *), buffersize, fp);
         for (i = 0; i < count; i++) {

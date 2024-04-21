@@ -167,9 +167,6 @@ fractional_histogram__destroy(struct FractionalHistogram *me)
         return;
     }
     free(me->histogram);
-    me->length = 0;
-    me->false_infinity = 0;
-    me->infinity = 0;
-    me->running_sum = 0;
+    *me = (struct FractionalHistogram){0};
     return;
 }

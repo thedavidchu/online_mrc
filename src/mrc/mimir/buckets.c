@@ -20,6 +20,7 @@ mimir_buckets__init(struct MimirBuckets *me, const uint64_t num_real_buckets)
     if (me == NULL || num_real_buckets == 0) {
         return false;
     }
+    // Use calloc to create buckets that are already initialized to zero!
     me->buckets = (uint64_t *)calloc(num_real_buckets, sizeof(*me->buckets));
     if (me->buckets == NULL) {
         return false;
@@ -163,6 +164,9 @@ mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
     }
     assert(me->newest_bucket - average_bucket_index <= me->num_buckets - 1 &&
            "should be less than or equal to B - 1 distance");
+    // NOTE We iterate this way so that we can update zero out the newer bucket
+    //      so that when we add the even newer bucket to this one, it is already
+    //      zeroed! This yields very clean semantics.
     for (uint64_t i = average_bucket_index; i <= me->newest_bucket; ++i) {
         uint64_t new_real_index = get_real_bucket_index(me, i - 1);
         uint64_t old_real_index = get_real_bucket_index(me, i);
@@ -333,13 +337,5 @@ mimir_buckets__destroy(struct MimirBuckets *me)
         return;
     }
     free(me->buckets);
-    me->num_buckets = 0;
-    // I don't really have to do this, but I do so just to be safe. Actually, I
-    // don't have a consistent way of measuring whether a data structure has
-    // been initialized (or deinitialized) yet. Also, side note: should I change
-    // function names from *__destroy() to *__deinit()?
-    me->num_unique_entries = 0;
-    me->sum_of_bucket_indices = 0;
-    // NOTE All other values don't really matter if we reset them...
-    return;
+    *me = (struct MimirBuckets){0};
 }

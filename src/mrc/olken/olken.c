@@ -112,8 +112,7 @@ olken__destroy(struct OlkenReuseStack *me)
         // NOTE this doesn't destroy the key/values because they are just ints
         //      stored as pointers.
         g_hash_table_destroy(me->hash_table);
-        me->hash_table = NULL;
     }
     basic_histogram__destroy(&me->histogram);
-    me->current_time_stamp = 0;
+    *me = (struct OlkenReuseStack){0};
 }

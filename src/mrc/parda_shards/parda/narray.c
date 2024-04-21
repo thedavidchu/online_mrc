@@ -1,13 +1,17 @@
+#include <assert.h>
+
 #include "narray.h"
 
 narray_t *
 narray_new(unsigned element_size, unsigned capacity)
 {
     narray_t *na = (narray_t *)malloc(sizeof(narray_t));
+    assert(na != NULL);
     na->element_size_in_bytes = element_size;
     na->len_in_bytes = 0;
     na->capacity_in_bytes = capacity * element_size;
     na->data = calloc(capacity, element_size);
+    assert(na->data != NULL);
     return na;
 }
 
@@ -18,6 +22,7 @@ narray_append_val(narray_t *na, const void *value)
         unsigned new_capacity = na->capacity_in_bytes + na->capacity_in_bytes +
                                 10 * na->element_size_in_bytes;
         void *ndata = calloc(new_capacity, 1);
+        assert(ndata != NULL);
         memcpy(ndata, na->data, na->len_in_bytes);
         free(na->data);
         na->data = ndata;
@@ -54,6 +59,7 @@ narray_heaparray_new(void *data,
                      const unsigned element_size)
 {
     narray_t *na = (narray_t *)malloc(sizeof(narray_t));
+    assert(na != NULL);
     na->data = data;
     na->len_in_bytes = len;
     na->capacity_in_bytes = len;

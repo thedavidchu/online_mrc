@@ -262,6 +262,6 @@ mimir__destroy(struct Mimir *me)
     mimir_buckets__destroy(&me->buckets);
     if (me->hash_table != NULL) {
         g_hash_table_destroy(me->hash_table);
-        me->hash_table = NULL;
     }
+    *me = (struct Mimir){0};
 }

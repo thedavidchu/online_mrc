@@ -424,6 +424,7 @@ tree__destroy(struct Tree *me)
         return;
     }
     subtree__free(me->root);
+    *me = (struct Tree){0};
 }
 
 void

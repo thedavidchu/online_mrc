@@ -165,7 +165,5 @@ fixed_size_shards__destroy(struct FixedSizeShardsReuseStack *me)
     g_hash_table_destroy(me->hash_table);
     basic_histogram__destroy(&me->histogram);
     splay_priority_queue__destroy(&me->pq);
-    me->current_time_stamp = 0;
-    me->threshold = 0;
-    me->scale = 0;
+    *me = (struct FixedSizeShardsReuseStack){0};
 }
