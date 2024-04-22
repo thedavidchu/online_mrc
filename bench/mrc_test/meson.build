@@ -5,7 +5,6 @@ mrc_performance_test_exe = executable(
         mytester_include,
         olken_include,
         fixed_rate_shards_include,
-        mimir_include,
     ],
     dependencies: [
         common_dep,
@@ -16,11 +15,11 @@ mrc_performance_test_exe = executable(
         fractional_histogram_dep,
         fixed_size_shards_dep,
         zipfian_random_dep,
+        mimir_dep,
     ],
     link_with: [
         olken_lib,
         parda_fixed_rate_shards_lib,
-        mimir_lib,
     ],
 )
 

@@ -41,10 +41,8 @@ mimir_test_exe = executable(
     'mimir_test_exe',
     'mimir_test.c',
     include_directories: [
-        mimir_include,
         mytester_include,
         olken_include,
-        private_mimir_include,
     ],
     dependencies: [
         glib_dep,
@@ -52,9 +50,10 @@ mimir_test_exe = executable(
         fractional_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
+        mimir_dep,
+        mimir_buckets_dep,
     ],
     link_with: [
-        mimir_lib,
         olken_lib,
     ],
 )
