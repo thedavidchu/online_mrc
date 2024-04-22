@@ -3,12 +3,12 @@ mrc_performance_test_exe = executable(
     'mrc_performance_test.c',
     include_directories: [
         mytester_include,
-        olken_include,
         fixed_rate_shards_include,
     ],
     dependencies: [
         common_dep,
         tree_dep,
+        olken_dep,
         glib_dep,
         splitmix64_dep,
         basic_histogram_dep,
@@ -18,7 +18,6 @@ mrc_performance_test_exe = executable(
         mimir_dep,
     ],
     link_with: [
-        olken_lib,
         parda_fixed_rate_shards_lib,
     ],
 )

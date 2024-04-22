@@ -3,7 +3,6 @@ olken_test_exe = executable(
     'olken_test.c',
     include_directories: [
         mytester_include,
-        olken_include,
     ],
     dependencies: [
         glib_dep,
@@ -11,9 +10,7 @@ olken_test_exe = executable(
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
-    ],
-    link_with: [
-        olken_lib,
+        olken_dep,
     ],
 )
 
@@ -22,7 +19,6 @@ fixed_size_shards_test_exe = executable(
     'fixed_size_shards_test.c',
     include_directories: [
         mytester_include,
-        olken_include,
     ],
     dependencies: [
         glib_dep,
@@ -31,9 +27,7 @@ fixed_size_shards_test_exe = executable(
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
-    ],
-    link_with: [
-        olken_lib,
+        olken_dep,
     ],
 )
 
@@ -42,19 +36,16 @@ mimir_test_exe = executable(
     'mimir_test.c',
     include_directories: [
         mytester_include,
-        olken_include,
     ],
     dependencies: [
         glib_dep,
+        olken_dep,
         splitmix64_dep,
         fractional_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
         mimir_dep,
         mimir_buckets_dep,
-    ],
-    link_with: [
-        olken_lib,
     ],
 )
 
@@ -83,7 +74,6 @@ parda_fixed_rate_shards_test_exe = executable(
     include_directories: [
         fixed_rate_shards_include,
         mytester_include,
-        olken_include,
     ],
     dependencies: [
         glib_dep,
@@ -92,10 +82,10 @@ parda_fixed_rate_shards_test_exe = executable(
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
+        olken_dep,
     ],
     link_with: [
         parda_fixed_rate_shards_lib,
-        olken_lib,
     ],
 )
 
