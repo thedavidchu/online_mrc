@@ -4,7 +4,6 @@ mrc_performance_test_exe = executable(
     include_directories: [
         mytester_include,
         tree_include,
-        random_include,
         olken_include,
         fixed_size_shards_include,
         fixed_rate_shards_include,
@@ -16,13 +15,13 @@ mrc_performance_test_exe = executable(
         splitmix64_dep,
         basic_histogram_dep,
         fractional_histogram_dep,
+        zipfian_random_dep,
     ],
     link_with: [
         olken_lib,
         fixed_size_shards_lib,
         parda_fixed_rate_shards_lib,
         mimir_lib,
-        zipfian_random_lib,
     ],
 )
 

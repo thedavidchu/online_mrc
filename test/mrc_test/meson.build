@@ -4,7 +4,6 @@ olken_test_exe = executable(
     include_directories: [
         mytester_include,
         olken_include,
-        random_include,
         tree_include,
     ],
     dependencies: [
@@ -12,10 +11,10 @@ olken_test_exe = executable(
         splitmix64_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
+        zipfian_random_dep,
     ],
     link_with: [
         olken_lib,
-        zipfian_random_lib,
     ],
 )
 
@@ -26,7 +25,6 @@ fixed_size_shards_test_exe = executable(
         fixed_size_shards_include,
         mytester_include,
         olken_include,
-        random_include,
         tree_include,
     ],
     dependencies: [
@@ -34,11 +32,11 @@ fixed_size_shards_test_exe = executable(
         splitmix64_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
+        zipfian_random_dep,
     ],
     link_with: [
         fixed_size_shards_lib,
         olken_lib,
-        zipfian_random_lib,
     ],
 )
 
@@ -50,7 +48,6 @@ mimir_test_exe = executable(
         mytester_include,
         olken_include,
         private_mimir_include,
-        random_include,
         tree_include,
     ],
     dependencies: [
@@ -58,11 +55,11 @@ mimir_test_exe = executable(
         splitmix64_dep,
         fractional_histogram_dep,
         basic_miss_rate_curve_dep,
+        zipfian_random_dep,
     ],
     link_with: [
         mimir_lib,
         olken_lib,
-        zipfian_random_lib,
     ],
 )
 
@@ -72,7 +69,6 @@ quickmrc_test_exe = executable(
     include_directories: [
         mytester_include,
         quickmrc_include,
-        random_include,
         tree_include,
     ],
     dependencies: [
@@ -80,10 +76,10 @@ quickmrc_test_exe = executable(
         splitmix64_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
+        zipfian_random_dep,
     ],
     link_with: [
         quickmrc_lib,
-        zipfian_random_lib,
     ],
 )
 
@@ -94,7 +90,6 @@ parda_fixed_rate_shards_test_exe = executable(
         fixed_rate_shards_include,
         mytester_include,
         olken_include,
-        random_include,
     ],
     dependencies: [
         glib_dep,
@@ -102,11 +97,11 @@ parda_fixed_rate_shards_test_exe = executable(
         splitmix64_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
+        zipfian_random_dep,
     ],
     link_with: [
         parda_fixed_rate_shards_lib,
         olken_lib,
-        zipfian_random_lib,
     ],
 )
 
