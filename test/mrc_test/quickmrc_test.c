@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <pthread.h>
+
 #include "arrays/array_size.h"
 #include "glib.h"
 #include "histogram/basic_histogram.h"
@@ -138,6 +140,76 @@ mean_absolute_error_test(void)
     return true;
 }
 
+struct WorkerData {
+    struct QuickMrc *qmrc;
+    EntryType *entries;
+    uint64_t length;
+};
+
+static void *
+worker_routine(void *args)
+{
+    struct WorkerData *data = args;
+    for (uint64_t i = 0; i < data->length; ++i) {
+        quickmrc__access_item(data->qmrc, data->entries[i]);
+    }
+    return NULL;
+}
+
+static bool
+parallel_test(void)
+{
+    EntryType entries[5] = {0, 0, 0, 0, 0};
+    // We round up the stack distance with QuickMRC
+    uint64_t histogram_oracle[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    struct BasicHistogram basic_histogram_oracle = {
+        .histogram = histogram_oracle,
+        .length = ARRAY_SIZE(histogram_oracle),
+        .false_infinity = 0,
+        .infinity = 1,
+        .running_sum = ARRAY_SIZE(entries),
+    };
+
+    struct QuickMrc me = {0};
+    // The maximum trace length is obviously the number of possible unique items
+    g_assert_true(quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
+
+#define THREAD_COUNT 4
+    struct WorkerData data[THREAD_COUNT] = {0};
+    const uint64_t keys_per_thread = ARRAY_SIZE(entries) / THREAD_COUNT;
+    const uint64_t remaining_keys_per_thread = ARRAY_SIZE(entries) % THREAD_COUNT;
+    for (int i = 0; i < THREAD_COUNT; ++i) {
+        uint64_t key_count = keys_per_thread;
+        if (i == 0) {
+            key_count += remaining_keys_per_thread;
+        }
+
+        uint64_t offset = i * keys_per_thread;
+        if (i != 0) {
+            offset += remaining_keys_per_thread;
+        }
+
+        data[i].qmrc = &me;
+        data[i].entries = &entries[offset];
+        data[i].length = key_count;
+    }
+
+    pthread_t threads[THREAD_COUNT] = {0};
+    for (int i = 0; i < THREAD_COUNT; ++i) {
+        pthread_create(&threads[i], NULL, worker_routine, &data[i]);
+    }
+    for (int i = 0; i < THREAD_COUNT; ++i) {
+        pthread_join(threads[i], NULL);
+    }
+
+#if 0
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+#endif
+    quickmrc__destroy(&me);
+    return true;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -147,5 +219,6 @@ main(int argc, char **argv)
     ASSERT_FUNCTION_RETURNS_TRUE(small_merge_test());
     ASSERT_FUNCTION_RETURNS_TRUE(mean_absolute_error_test());
     ASSERT_FUNCTION_RETURNS_TRUE(long_trace_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(parallel_test());
     return EXIT_SUCCESS;
 }

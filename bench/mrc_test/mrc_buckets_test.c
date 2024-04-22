@@ -18,10 +18,10 @@ const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 5.0e-1;
 const uint64_t RANDOM_SEED = 0;
 
-
 struct WorkerData {
     struct QuickMrc *qmrc;
     struct ZipfianRandom *zrng;
+    pthread_barrier_t *barrier;
     EntryType *entries;
     uint64_t length;
 };
@@ -30,9 +30,15 @@ static void *
 parallel_thread_routine(void *args)
 {
     struct WorkerData *data = args;
-    for (uint64_t i = 0; i < data->length; ++i) {
-        uint64_t key = zipfian_random__next(data->zrng);
-        quickmrc__access_item(data->qmrc, key);
+    const uint64_t insert_new_count = data->length * 20 / 100;
+    const uint64_t reaccess_old_count = data->length - insert_new_count;
+    for (uint64_t i = 0; i < insert_new_count; ++i) {
+        quickmrc_buckets__insert_new(&data->qmrc->buckets);
+    }
+    pthread_barrier_wait(data->barrier);
+    for (uint64_t i = 0; i < reaccess_old_count; ++i) {
+        const TimeStampType timestamp = (TimeStampType)rand();
+        quickmrc_buckets__reaccess_old(&data->qmrc->buckets, timestamp);
     }
     return NULL;
 }
@@ -84,6 +90,8 @@ parallel_thread_routine(void *args)
         /* The maximum trace length is the number of possible unique items */  \
                                                                                \
         g_assert_true(((init_expr)));                                          \
+        pthread_barrier_t barrier;                                             \
+        pthread_barrier_init(&barrier, NULL, (thread_count));                  \
         const uint64_t accesses_per_thread = trace_length / (thread_count);    \
         const uint64_t accesses_remaining = trace_length % (thread_count);     \
         struct WorkerData data[thread_count];                                  \
@@ -97,6 +105,7 @@ parallel_thread_routine(void *args)
             data[i].zrng = &zrng;                                              \
             data[i].entries = NULL;                                            \
             data[i].length = access_count;                                     \
+            data[i].barrier = &barrier;                                        \
         }                                                                      \
         pthread_t workers[(thread_count)] = {0};                               \
         clock_t start_time = clock();                                          \
@@ -115,6 +124,7 @@ parallel_thread_routine(void *args)
         printf("Elapsed time for '" #MRCStructType "' workload: %.4f.\n",      \
                elapsed_time);                                                  \
         ((destroy_func_name))(&((mrc_var_name)));                              \
+        pthread_barrier_destroy(&barrier);                                     \
     } while (0)
 
 int
@@ -128,36 +138,6 @@ main(int argc, char **argv)
                      olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
                      olken__access_item,
                      olken__destroy);
-
-    PERFORMANCE_TEST(
-        struct FixedSizeShardsReuseStack,
-        me,
-        fixed_size_shards__init(&me, 1000, 10000, MAX_NUM_UNIQUE_ENTRIES),
-        fixed_size_shards__access_item,
-        fixed_size_shards__destroy);
-
-    PERFORMANCE_TEST(
-        struct Mimir,
-        me,
-        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
-        mimir__access_item,
-        mimir__destroy);
-
-    bool i_have_lots_of_spare_cpu_cycles = false;
-    if (i_have_lots_of_spare_cpu_cycles) {
-        PERFORMANCE_TEST(
-            struct Mimir,
-            me,
-            mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
-            mimir__access_item,
-            mimir__destroy);
-    }
-
-    PERFORMANCE_TEST(struct FixedRateShards,
-                     me,
-                     parda_fixed_rate_shards__init(&me, 1000),
-                     parda_fixed_rate_shards__access_item,
-                     parda_fixed_rate_shards__destroy);
 
     PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
                               1,

@@ -21,7 +21,7 @@ quickmrc_buckets_dep = declare_dependency(
         'quickmrc_buckets_lib',
         'buckets.c',
         include_directories: include_directories('include'),
-        dependencies: [glib_dep, common_dep],
+        dependencies: [glib_dep, common_dep, dependency('threads')],
     ),
 )
 
@@ -37,7 +37,12 @@ quickmrc_dep = declare_dependency(
             splitmix64_dep,
             quickmrc_buckets_dep,
             hash_table_dep,
+            lookup_dep,
         ],
     ),
+    dependencies: [
+        glib_dep,
+        lookup_dep,
+    ],
     include_directories: include_directories('include'),
 )

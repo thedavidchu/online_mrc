@@ -9,12 +9,7 @@
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "tree/types.h"
-
-static gboolean
-entry_compare(gconstpointer a, gconstpointer b)
-{
-    return (a == b) ? TRUE : FALSE;
-}
+#include "lookup/parallel_hash_table.h"
 
 bool
 olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
@@ -30,8 +25,8 @@ olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
     //      entries as pointers to the hash table. It also means we cannot
     //      destroy the values at the pointers, because the pointers are our
     //      actual values!
-    me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
-    if (me->hash_table == NULL) {
+    r = ParallelHashTable__init(&me->hash_table, 1 << 20);
+    if (!r) {
         goto hash_table_error;
     }
     r = basic_histogram__init(&me->histogram, max_num_unique_entries);
@@ -42,8 +37,7 @@ olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
     return true;
 
 histogram_error:
-    g_hash_table_destroy(me->hash_table);
-    me->hash_table = NULL;
+    ParallelHashTable__destroy(&me->hash_table);
 hash_table_error:
     tree__destroy(&me->tree);
 tree_error:
@@ -54,32 +48,26 @@ void
 olken__access_item(struct OlkenReuseStack *me, EntryType entry)
 {
     bool r = false;
-    gboolean found = FALSE;
-    TimeStampType time_stamp = 0;
 
     if (me == NULL) {
         return;
     }
 
-    found = g_hash_table_lookup_extended(me->hash_table,
-                                         (gconstpointer)entry,
-                                         NULL,
-                                         (gpointer *)&time_stamp);
-    if (found == TRUE) {
-        uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)time_stamp);
-        r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
+    struct LookupReturn found = ParallelHashTable__lookup(&me->hash_table, entry);
+    if (found.success) {
+        uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)found.timestamp);
+        r = tree__sleator_remove(&me->tree, (KeyType)found.timestamp);
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        g_hash_table_replace(me->hash_table,
-                             (gpointer)entry,
-                             (gpointer)me->current_time_stamp);
+        assert(r && "insert should not fail");
+        r = ParallelHashTable__update(&me->hash_table, entry, me->current_time_stamp);
+        assert(r && "update should not fail");
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         basic_histogram__insert_finite(&me->histogram, distance);
     } else {
-        g_hash_table_insert(me->hash_table,
-                            (gpointer)entry,
-                            (gpointer)me->current_time_stamp);
+        r = ParallelHashTable__insert(&me->hash_table, entry, me->current_time_stamp);
+        assert(r && "insert should not fail");
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
         basic_histogram__insert_infinite(&me->histogram);
@@ -105,14 +93,7 @@ olken__destroy(struct OlkenReuseStack *me)
         return;
     }
     tree__destroy(&me->tree);
-    // I do not know how the g_hash_table_destroy function behaves when passed a
-    // NULL pointer. It is not in the documentation below:
-    // https://docs.gtk.org/glib/type_func.HashTable.destroy.html
-    if (me->hash_table != NULL) {
-        // NOTE this doesn't destroy the key/values because they are just ints
-        //      stored as pointers.
-        g_hash_table_destroy(me->hash_table);
-    }
+    ParallelHashTable__destroy(&me->hash_table);
     basic_histogram__destroy(&me->histogram);
     *me = (struct OlkenReuseStack){0};
 }

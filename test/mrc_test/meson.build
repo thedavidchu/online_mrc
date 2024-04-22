@@ -56,6 +56,7 @@ quickmrc_test_exe = executable(
         olken_dep,
         quickmrc_dep,
         zipfian_random_dep,
+        lookup_dep,
     ],
 )
 

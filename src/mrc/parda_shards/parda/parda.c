@@ -10,8 +10,6 @@
 
 #include "hash/splitmix64.h"
 
-#include <omp.h>
-
 /*
   An implementation of Parda, a fast parallel algorithm
 to compute accurate reuse distances by analysis of reference

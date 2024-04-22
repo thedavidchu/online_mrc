@@ -7,7 +7,7 @@ project(
     # For C, it peaked in 1999.
     # For C++, the more modern, the better for me <3
     default_options: [
-        'c_std=c99',
+        'c_std=gnu99',
         'cpp_std=c++17',
         # This is equivalent to "-Wall -Werror -Wextra -Wpedantic" according to
         # this: https://mesonbuild.com/Builtin-options.html#details-for-warning_level
@@ -33,6 +33,8 @@ glib_dep = dependency(
         'warning_level=3',
     ],
 )
+
+thread_dep = dependency('threads')
 
 use_gprof = true
 if use_gprof

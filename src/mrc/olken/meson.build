@@ -9,6 +9,7 @@ olken_dep = declare_dependency(
             basic_histogram_dep,
             glib_dep,
             splitmix64_dep,
+            lookup_dep,
         ],
     ),
     include_directories: include_directories('include'),
@@ -17,5 +18,6 @@ olken_dep = declare_dependency(
         basic_histogram_dep,
         glib_dep,
         tree_dep,
+        lookup_dep,
     ],
 )
