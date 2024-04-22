@@ -5,5 +5,5 @@ mytester_include = include_directories(
 
 # Calling the subdir after the include allows all of the test subdirectories to
 # use the mytester_include.
-subdir('performance_test')
-subdir('unit_test')
+subdir('lib_test')
+subdir('mrc_test')

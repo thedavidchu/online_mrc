@@ -43,3 +43,4 @@ endif
 
 subdir('src')
 subdir('test')
+subdir('bench')
