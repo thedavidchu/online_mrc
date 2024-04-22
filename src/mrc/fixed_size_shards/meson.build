@@ -7,7 +7,6 @@ fixed_size_shards_lib = library(
     'fixed_size_shards_lib',
     'fixed_size_shards.c',
     include_directories: [
-        hash_include,
         tree_include,
         fixed_size_shards_include,
     ],

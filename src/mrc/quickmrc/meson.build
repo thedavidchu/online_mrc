@@ -8,10 +8,9 @@ if QUICK_TEST
         'hash_table_test',
         'hash_table.c',
         include_directories: [
-            hash_include,
             tree_include,
         ],
-        dependencies: common_dep,
+        dependencies: [common_dep, splitmix64_dep],
     )
     test('hash_table_test', hash_table_test)
 else
@@ -19,10 +18,9 @@ else
         'hash_table_lib',
         'hash_table.c',
         include_directories: [
-            hash_include,
             tree_include,
         ],
-        dependencies: common_dep,
+        dependencies: [splitmix64_dep, common_dep],
     )
 endif
 
@@ -41,7 +39,6 @@ quickmrc_lib = library(
     'quickmrc.c',
     include_directories: [
         quickmrc_include,
-        hash_include,
     ],
     link_with: [
         quickmrc_buckets_lib,
