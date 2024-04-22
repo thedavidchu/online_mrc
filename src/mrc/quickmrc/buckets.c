@@ -9,6 +9,21 @@
 
 #include "quickmrc/buckets.h"
 
+#if 0
+#include <stdio.h>
+static void
+print_buckets(struct QuickMrcBuckets *me)
+{
+    printf("[");
+    for (size_t i = 0; i < me->num_buckets; ++i) {
+        printf("{%zu:%zu}, ",
+               me->buckets[i].max_timestamp,
+               me->buckets[i].count);
+    }
+    printf("]\n");
+}
+#endif
+
 bool
 quickmrc_buckets__init(struct QuickMrcBuckets *me,
                        uint64_t default_num_buckets,
@@ -45,12 +60,12 @@ get_min_bucket_pair(struct QuickMrcBuckets *me)
 {
     assert(me != NULL && me->buckets != NULL);
     uint64_t min_pair = 0;
-    uint64_t min_pair_sum = 0;
+    uint64_t min_pair_sum = INT64_MAX;
     for (uint64_t i = 0; i < me->num_buckets - 1; ++i) {
         // We bias toward newer pairs so that there is less copying required.
         uint64_t current_pair_sum =
             me->buckets[i].count + me->buckets[i + 1].count;
-        if (current_pair_sum < min_pair_sum) {
+        if (current_pair_sum <= min_pair_sum) {
             min_pair = i;
             min_pair_sum = current_pair_sum;
         }
@@ -119,19 +134,6 @@ quickmrc_buckets__insert_new(struct QuickMrcBuckets *me)
     if (!increment_newest_bucket(me))
         return false;
     return true;
-}
-
-#include <stdio.h>
-static void
-print_buckets(struct QuickMrcBuckets *me)
-{
-    printf("[");
-    for (size_t i = 0; i < me->num_buckets; ++i) {
-        printf("{%zu:%zu}, ",
-               me->buckets[i].max_timestamp,
-               me->buckets[i].count);
-    }
-    printf("]\n");
 }
 
 /// Get the stack distance of a timestamp and decrement that timestamp.

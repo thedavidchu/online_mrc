@@ -55,7 +55,6 @@ quickmrc__init(struct QuickMrc *me,
 bool
 quickmrc__access_item(struct QuickMrc *me, EntryType entry)
 {
-    printf("HELLO!\n");
     gboolean found = FALSE;
     TimeStampType timestamp = 0;
     if (me == NULL) {
