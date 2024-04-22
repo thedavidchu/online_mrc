@@ -94,6 +94,10 @@ age(struct QuickMrcBuckets *me)
         .count = get_sum_of_pair(me, min_pair),
         .max_timestamp = me->buckets[min_pair + 1].max_timestamp};
 
+    if (me->buckets[min_pair].count > me->max_bucket_size) {
+        me->max_bucket_size *= 2;
+    }
+
     // Shift newer buckets to fill hole
     memmove(
         &me->buckets[1],

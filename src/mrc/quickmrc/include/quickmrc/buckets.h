@@ -21,7 +21,7 @@ struct QuickMrcBuckets {
     struct TimestampRangeCount *buckets;
     const uint64_t num_buckets;
     const uint64_t default_num_buckets;
-    const uint64_t max_bucket_size;
+    uint64_t max_bucket_size;
     uint64_t num_unique_entries;
     TimeStampType timestamp;
 };

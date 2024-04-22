@@ -53,8 +53,9 @@ quickmrc_test_exe = executable(
         glib_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
-        zipfian_random_dep,
+        olken_dep,
         quickmrc_dep,
+        zipfian_random_dep,
     ],
 )
 
