@@ -129,11 +129,10 @@ test_zipfian(void)
         //      reason, we use a suitably (but not outrageously) large number.
         //      We should vary the theta; trace_length should be as long as
         //      reasonable.
-        ASSERT_TRUE_WITHOUT_CLEANUP(
-            test_zipfian_for_seed(randomly_generated_bounds[i],
-                                  randomly_generated_thetas[i],
-                                  randomly_generated_seeds[i],
-                                  1000));
+        assert(test_zipfian_for_seed(randomly_generated_bounds[i],
+                                     randomly_generated_thetas[i],
+                                     randomly_generated_seeds[i],
+                                     1000));
     }
     return true;
 }

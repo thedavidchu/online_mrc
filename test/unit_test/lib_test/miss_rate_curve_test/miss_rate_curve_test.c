@@ -60,20 +60,15 @@ test_miss_rate_curve_for_basic_histogram(void)
 
     struct BasicMissRateCurve mrc = {0};
     struct BasicMissRateCurve mrc_from_file = {0};
-    ASSERT_TRUE_WITHOUT_CLEANUP(
+    g_assert_true(
         basic_miss_rate_curve__init_from_basic_histogram(&mrc, &basic_hist));
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_miss_rate_curve__write_binary_to_file(&mrc, "mrc.bin"),
-        /*cleanup=*/basic_miss_rate_curve__destroy(&mrc));
-    ASSERT_TRUE_OR_CLEANUP(basic_miss_rate_curve__init_from_file(&mrc_from_file,
-                                                                 "mrc.bin",
-                                                                 mrc.length),
-                           /*cleanup=*/basic_miss_rate_curve__destroy(&mrc));
-    ASSERT_TRUE_OR_CLEANUP(exact_match(&mrc, &mrc_from_file),
-                           /*cleanup=*/basic_miss_rate_curve__destroy(&mrc));
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_miss_rate_curve__mean_squared_error(&mrc, &mrc_from_file) == 0.0,
-        /*cleanup=*/basic_miss_rate_curve__destroy(&mrc));
+    g_assert_true(basic_miss_rate_curve__write_binary_to_file(&mrc, "mrc.bin"));
+    g_assert_true(basic_miss_rate_curve__init_from_file(&mrc_from_file,
+                                                        "mrc.bin",
+                                                        mrc.length));
+    g_assert_true(exact_match(&mrc, &mrc_from_file));
+    g_assert_true(
+        basic_miss_rate_curve__mean_squared_error(&mrc, &mrc_from_file) == 0.0);
     basic_miss_rate_curve__destroy(&mrc);
     basic_miss_rate_curve__destroy(&mrc_from_file);
     return true;

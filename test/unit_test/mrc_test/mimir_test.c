@@ -49,7 +49,7 @@ tester_ensure_buckets_match(struct MimirBuckets *me,
                             const uint64_t *oracle_buckets)
 {
     for (uint64_t i = 0; i < me->num_buckets; ++i) {
-        ASSERT_TRUE_WITHOUT_CLEANUP(me->buckets[i] == oracle_buckets[i]);
+        g_assert_true(me->buckets[i] == oracle_buckets[i]);
     }
     return true;
 }
@@ -58,20 +58,17 @@ static bool
 test_mimir_buckets(void)
 {
     struct MimirBuckets me = {0};
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__init(&me, 10));
+    g_assert_true(mimir_buckets__init(&me, 10));
     tester_refresh_buckets(&me);
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
-    ASSERT_TRUE_WITHOUT_CLEANUP(9 ==
-                                mimir_buckets__get_newest_bucket_index(&me));
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
-    ASSERT_TRUE_WITHOUT_CLEANUP(90 == get_newest_bucket_size(&me));
-    ASSERT_TRUE_WITHOUT_CLEANUP(55 == get_average_num_entries_per_bucket(&me));
-    ASSERT_TRUE_WITHOUT_CLEANUP(2850 ==
-                                count_weighted_sum_of_bucket_indices(&me));
+    g_assert_true(mimir_buckets__validate(&me));
+    g_assert_true(9 == mimir_buckets__get_newest_bucket_index(&me));
+    g_assert_true(mimir_buckets__validate(&me));
+    g_assert_true(90 == get_newest_bucket_size(&me));
+    g_assert_true(55 == get_average_num_entries_per_bucket(&me));
+    g_assert_true(2850 == count_weighted_sum_of_bucket_indices(&me));
 
     // Test Rounder aging
-    ASSERT_TRUE_WITHOUT_CLEANUP(5 ==
-                                mimir_buckets__get_average_bucket_index(&me));
+    g_assert_true(5 == mimir_buckets__get_average_bucket_index(&me));
     const uint64_t oracle_buckets_rounder[20][10] = {
         {100, 10, 20, 30, 40, 50, 60, 70, 80, 90},
         {0, 110, 20, 30, 40, 50, 60, 70, 80, 90},
@@ -95,20 +92,19 @@ test_mimir_buckets(void)
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 550},
     };
     for (uint64_t i = 0; i < ARRAY_SIZE(oracle_buckets_rounder); ++i) {
-        ASSERT_TRUE_WITHOUT_CLEANUP(
+        g_assert_true(
             tester_ensure_buckets_match(&me, oracle_buckets_rounder[i]));
-        ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__rounder_aging_policy(&me));
+        g_assert_true(mimir_buckets__rounder_aging_policy(&me));
     }
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    g_assert_true(mimir_buckets__validate(&me));
 
     // Test Stacker aging
     tester_refresh_buckets(&me);
     mimir_buckets__stacker_aging_policy(&me, 5);
     const uint64_t oracle_buckets_stacker[1][10] = {
         {100, 10, 20, 30, 90, 60, 70, 80, 90, 0}};
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        tester_ensure_buckets_match(&me, oracle_buckets_stacker[0]));
-    ASSERT_TRUE_WITHOUT_CLEANUP(mimir_buckets__validate(&me));
+    g_assert_true(tester_ensure_buckets_match(&me, oracle_buckets_stacker[0]));
+    g_assert_true(mimir_buckets__validate(&me));
 
     return true;
 }
@@ -132,15 +128,13 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     };
     struct Mimir me = {0};
     // NOTE I reduced the max_num_unique_entries to reduce the runtime.
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        mimir__init(&me, 10, histogram_oracle.length, aging_policy));
+    g_assert_true(mimir__init(&me, 10, histogram_oracle.length, aging_policy));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         mimir__access_item(&me, 0);
         mimir__validate(&me);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        fractional_histogram__exactly_equal(&me.histogram, &histogram_oracle),
-        mimir__destroy(&me));
+    g_assert_true(
+        fractional_histogram__exactly_equal(&me.histogram, &histogram_oracle));
     mimir__destroy(&me);
     return true;
 }
@@ -151,15 +145,13 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     struct ZipfianRandom zrng = {0};
     struct OlkenReuseStack oracle = {0};
     struct Mimir me = {0};
-    ASSERT_TRUE_WITHOUT_CLEANUP(zipfian_random__init(&zrng,
-                                                     MAX_NUM_UNIQUE_ENTRIES,
-                                                     ZIPFIAN_RANDOM_SKEW,
-                                                     0));
+    g_assert_true(zipfian_random__init(&zrng,
+                                       MAX_NUM_UNIQUE_ENTRIES,
+                                       ZIPFIAN_RANDOM_SKEW,
+                                       0));
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    ASSERT_TRUE_OR_CLEANUP(
-        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy),
-        olken__destroy(&oracle));
+    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
     mimir__validate(&me);
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
@@ -182,8 +174,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     //      semicolon. But instead, I rely on the fact that macros have to match
     //      round parentheses. The more I code in C, the more I realize how much
     //      a safer language with more intelligent macros/generics would be.
-    ASSERT_TRUE_OR_CLEANUP(mse <= 0.000383,
-                           (olken__destroy(&oracle), mimir__destroy(&me)));
+    g_assert_true(mse <= 0.000383);
 
     olken__destroy(&oracle);
     mimir__destroy(&me);

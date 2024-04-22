@@ -27,13 +27,12 @@ const uint64_t RANDOM_SEED = 0;
         struct ZipfianRandom zrng = {0};                                       \
         MRCStructType mrc_var_name = {0};                                      \
                                                                                \
-        ASSERT_TRUE_WITHOUT_CLEANUP(                                           \
-            zipfian_random__init(&zrng,                                        \
-                                 MAX_NUM_UNIQUE_ENTRIES,                       \
-                                 ZIPFIAN_RANDOM_SKEW,                          \
-                                 RANDOM_SEED));                                \
+        g_assert_true(zipfian_random__init(&zrng,                              \
+                                           MAX_NUM_UNIQUE_ENTRIES,             \
+                                           ZIPFIAN_RANDOM_SKEW,                \
+                                           RANDOM_SEED));                      \
         /* The maximum trace length is the number of possible unique items */  \
-        ASSERT_TRUE_WITHOUT_CLEANUP(((init_expr)));                            \
+        g_assert_true(((init_expr)));                                          \
         clock_t start_time = clock();                                          \
         for (uint64_t i = 0; i < trace_length; ++i) {                          \
             uint64_t key = zipfian_random__next(&zrng);                        \

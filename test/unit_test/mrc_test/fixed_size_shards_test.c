@@ -30,14 +30,13 @@ access_same_key_five_times(void)
     };
 
     struct FixedSizeShardsReuseStack me = {0};
-    ASSERT_FUNCTION_RETURNS_TRUE(
+    g_assert_true(
         fixed_size_shards__init(&me, 1000, 1, histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         fixed_size_shards__access_item(&me, entries[i]);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &histogram_oracle),
-        fixed_size_shards__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &histogram_oracle));
     fixed_size_shards__destroy(&me);
     return true;
 }
@@ -66,17 +65,15 @@ small_exact_trace_test(void)
 
     struct FixedSizeShardsReuseStack me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        fixed_size_shards__init(&me,
-                                1,
-                                ARRAY_SIZE(entries),
-                                basic_histogram_oracle.length));
+    g_assert_true(fixed_size_shards__init(&me,
+                                          1,
+                                          ARRAY_SIZE(entries),
+                                          basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         fixed_size_shards__access_item(&me, entries[i]);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
-        fixed_size_shards__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     fixed_size_shards__destroy(&me);
     return true;
 }
@@ -88,15 +85,14 @@ long_accuracy_trace_test(void)
     struct OlkenReuseStack oracle = {0};
     struct FixedSizeShardsReuseStack me = {0};
 
-    ASSERT_TRUE_WITHOUT_CLEANUP(zipfian_random__init(&zrng,
-                                                     MAX_NUM_UNIQUE_ENTRIES,
-                                                     ZIPFIAN_RANDOM_SKEW,
-                                                     0));
+    g_assert_true(zipfian_random__init(&zrng,
+                                       MAX_NUM_UNIQUE_ENTRIES,
+                                       ZIPFIAN_RANDOM_SKEW,
+                                       0));
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    ASSERT_TRUE_OR_CLEANUP(
-        fixed_size_shards__init(&me, 1, 50000, MAX_NUM_UNIQUE_ENTRIES),
-        olken__destroy(&oracle));
+    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(
+        fixed_size_shards__init(&me, 1, 50000, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
@@ -115,9 +111,7 @@ long_accuracy_trace_test(void)
     //      semicolon. But instead, I rely on the fact that macros have to match
     //      round parentheses. The more I code in C, the more I realize how much
     //      a safer language with more intelligent macros/generics would be.
-    ASSERT_TRUE_OR_CLEANUP(
-        mse <= 0.000033,
-        (olken__destroy(&oracle), fixed_size_shards__destroy(&me)));
+    g_assert_true(mse <= 0.000033);
 
     olken__destroy(&oracle);
     fixed_size_shards__destroy(&me);

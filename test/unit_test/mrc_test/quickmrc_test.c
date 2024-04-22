@@ -31,14 +31,12 @@ access_same_key_five_times(void)
 
     struct QuickMrc me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        ASSERT_TRUE_WITHOUT_CLEANUP(quickmrc__access_item(&me, entries[i]));
+        g_assert_true(quickmrc__access_item(&me, entries[i]));
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
-        quickmrc__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     quickmrc__destroy(&me);
     return true;
 }
@@ -61,8 +59,7 @@ small_merge_test(void)
 
     struct QuickMrc me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < 1000; ++i) {
         quickmrc__access_item(&me, i);
     }
@@ -70,9 +67,8 @@ small_merge_test(void)
     if (PRINT_HISTOGRAM) {
         quickmrc__print_histogram_as_json(&me);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
-        quickmrc__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     quickmrc__destroy(&me);
     return true;
 }

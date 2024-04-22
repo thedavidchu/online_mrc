@@ -30,14 +30,12 @@ access_same_key_five_times(void)
 
     struct OlkenReuseStack me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(olken__init(&me, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         olken__access_item(&me, entries[i]);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
-        olken__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     olken__destroy(&me);
     return true;
 }
@@ -66,14 +64,12 @@ small_exact_trace_test(void)
 
     struct OlkenReuseStack me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(olken__init(&me, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         olken__access_item(&me, entries[i]);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
-        olken__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     olken__destroy(&me);
     return true;
 }
@@ -103,14 +99,12 @@ small_inexact_trace_test(void)
 
     struct OlkenReuseStack me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(
-        olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(olken__init(&me, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         olken__access_item(&me, entries[i]);
     }
-    ASSERT_TRUE_OR_CLEANUP(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
-        olken__destroy(&me));
+    g_assert_true(
+        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     olken__destroy(&me);
     return true;
 }

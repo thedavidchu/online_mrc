@@ -24,9 +24,8 @@ access_same_key_five_times(void)
     struct FixedRateShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    ASSERT_TRUE_OR_CLEANUP(parda_fixed_rate_shards__init(&me, 1),
-                           olken__destroy(&oracle));
+    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(parda_fixed_rate_shards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
@@ -44,15 +43,7 @@ access_same_key_five_times(void)
         me.program_data.histogram[B_OVFL]);
     double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    // HACK Ahh, the comma operator. It allows me to do this wonderful little
-    //      macro hack that could have otherwise required no brackets around the
-    //      cleanup expression in the macro definition and for me to use a
-    //      semicolon. But instead, I rely on the fact that macros have to match
-    //      round parentheses. The more I code in C, the more I realize how much
-    //      a safer language with more intelligent macros/generics would be.
-    ASSERT_TRUE_OR_CLEANUP(
-        mse <= 0.000001,
-        (olken__destroy(&oracle), parda_fixed_rate_shards__destroy(&me)));
+    g_assert_true(mse <= 0.000001);
 
     olken__destroy(&oracle);
     parda_fixed_rate_shards__destroy(&me);
@@ -76,9 +67,8 @@ small_exact_trace_test(void)
     struct FixedRateShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    ASSERT_TRUE_OR_CLEANUP(parda_fixed_rate_shards__init(&me, 1),
-                           olken__destroy(&oracle));
+    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(parda_fixed_rate_shards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
@@ -96,15 +86,7 @@ small_exact_trace_test(void)
         me.program_data.histogram[B_OVFL]);
     double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    // HACK Ahh, the comma operator. It allows me to do this wonderful little
-    //      macro hack that could have otherwise required no brackets around the
-    //      cleanup expression in the macro definition and for me to use a
-    //      semicolon. But instead, I rely on the fact that macros have to match
-    //      round parentheses. The more I code in C, the more I realize how much
-    //      a safer language with more intelligent macros/generics would be.
-    ASSERT_TRUE_OR_CLEANUP(
-        mse <= 0.000001,
-        (olken__destroy(&oracle), parda_fixed_rate_shards__destroy(&me)));
+    g_assert_true(mse <= 0.000001);
 
     olken__destroy(&oracle);
     parda_fixed_rate_shards__destroy(&me);
@@ -118,14 +100,13 @@ long_accuracy_trace_test(void)
     struct OlkenReuseStack oracle = {0};
     struct FixedRateShards me = {0};
 
-    ASSERT_TRUE_WITHOUT_CLEANUP(zipfian_random__init(&zrng,
-                                                     MAX_NUM_UNIQUE_ENTRIES,
-                                                     ZIPFIAN_RANDOM_SKEW,
-                                                     0));
+    g_assert_true(zipfian_random__init(&zrng,
+                                       MAX_NUM_UNIQUE_ENTRIES,
+                                       ZIPFIAN_RANDOM_SKEW,
+                                       0));
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_TRUE_WITHOUT_CLEANUP(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    ASSERT_TRUE_OR_CLEANUP(parda_fixed_rate_shards__init(&me, 1000),
-                           olken__destroy(&oracle));
+    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(parda_fixed_rate_shards__init(&me, 1000));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
@@ -143,15 +124,7 @@ long_accuracy_trace_test(void)
         me.program_data.histogram[B_OVFL]);
     double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    // HACK Ahh, the comma operator. It allows me to do this wonderful little
-    //      macro hack that could have otherwise required no brackets around the
-    //      cleanup expression in the macro definition and for me to use a
-    //      semicolon. But instead, I rely on the fact that macros have to match
-    //      round parentheses. The more I code in C, the more I realize how much
-    //      a safer language with more intelligent macros/generics would be.
-    ASSERT_TRUE_OR_CLEANUP(
-        mse <= 0.04,
-        (olken__destroy(&oracle), parda_fixed_rate_shards__destroy(&me)));
+    g_assert_true(mse <= 0.04);
 
     olken__destroy(&oracle);
     parda_fixed_rate_shards__destroy(&me);
