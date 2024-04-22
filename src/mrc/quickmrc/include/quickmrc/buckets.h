@@ -32,7 +32,7 @@ quickmrc_buckets__init(struct QuickMrcBuckets *me,
                        uint64_t max_bucket_size);
 
 /// Increment the newest bucket and return
-TimeStampType
+bool
 quickmrc_buckets__insert_new(struct QuickMrcBuckets *me);
 
 /// Decrement a bucket corresponding to the old timestamp. Get the stack

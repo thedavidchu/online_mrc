@@ -6,7 +6,6 @@
 
 #include <glib.h>
 
-#include "hash/splitmix64.h"
 #include "histogram/basic_histogram.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
@@ -56,6 +55,7 @@ quickmrc__init(struct QuickMrc *me,
 bool
 quickmrc__access_item(struct QuickMrc *me, EntryType entry)
 {
+    printf("HELLO!\n");
     gboolean found = FALSE;
     TimeStampType timestamp = 0;
     if (me == NULL) {
@@ -70,21 +70,24 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
                                          NULL,
                                          (gpointer *)&timestamp);
     if (found == TRUE) {
-        bool r = quickmrc_buckets__insert_new(&me->buckets);
-        if (!r) {
-            return false;
-        }
-    } else {
         uint64_t stack_dist =
             quickmrc_buckets__reaccess_old(&me->buckets, timestamp);
-        if (stack_dist == UINT64_MAX) {
+        if (stack_dist == UINT64_MAX)
             return false;
-        }
-        TimeStampType new_timestamp =
-            me->buckets.buckets[0].max_timestamp;
+        TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
         g_hash_table_replace(me->hash_table,
                              (gpointer)entry,
                              (gpointer)new_timestamp);
+        basic_histogram__insert_finite(&me->histogram, stack_dist);
+    } else {
+        if (!quickmrc_buckets__insert_new(&me->buckets))
+            return false;
+        if (!basic_histogram__insert_infinite(&me->histogram))
+            return false;
+        TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
+        g_hash_table_insert(me->hash_table,
+                            (gpointer)entry,
+                            (gpointer)new_timestamp);
     }
     return true;
 }

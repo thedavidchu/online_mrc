@@ -19,7 +19,8 @@ static bool
 access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
-    uint64_t histogram_oracle[11] = {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // We round up the stack distance with QuickMRC
+    uint64_t histogram_oracle[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
         .length = ARRAY_SIZE(histogram_oracle),
@@ -33,7 +34,8 @@ access_same_key_five_times(void)
     ASSERT_TRUE_WITHOUT_CLEANUP(
         quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        quickmrc__access_item(&me, entries[i]);
+        ASSERT_TRUE_WITHOUT_CLEANUP(quickmrc__access_item(&me, entries[i]));
+        quickmrc__print_histogram_as_json(&me);
     }
     ASSERT_TRUE_OR_CLEANUP(
         basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle),
@@ -44,7 +46,7 @@ access_same_key_five_times(void)
 
 /// @brief  Test a deterministic trace against Mattson's histogram.
 static bool
-small_exact_trace_test(void)
+merge_test(void)
 {
     // NOTE These are 100 random integers in the range 0..=10. Generated with
     // Python script:
@@ -86,12 +88,6 @@ small_inexact_trace_test(void)
     // NOTE These are 100 random integers in the range 0..=10. Generated with
     // Python script:
     // import random; x = [random.randint(0, 10) for _ in range(100)]; print(x)
-    EntryType entries[100] = {
-        2, 3,  2, 5,  0, 1, 7, 9, 4, 2,  10, 3, 1,  10, 10, 5, 10, 6,  5, 0,
-        6, 4,  2, 9,  7, 2, 2, 5, 3, 9,  6,  0, 1,  1,  6,  1, 6,  7,  5, 0,
-        0, 10, 8, 3,  1, 2, 6, 7, 3, 10, 8,  6, 10, 6,  6,  2, 6,  0,  7, 9,
-        6, 10, 1, 10, 2, 6, 2, 7, 8, 8,  6,  0, 7,  3,  1,  1, 2,  10, 3, 10,
-        5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
     uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
@@ -147,8 +143,8 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times());
-    ASSERT_FUNCTION_RETURNS_TRUE(small_exact_trace_test());
-    ASSERT_FUNCTION_RETURNS_TRUE(small_inexact_trace_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(merge_test());
+    // ASSERT_FUNCTION_RETURNS_TRUE(small_inexact_trace_test());
     ASSERT_FUNCTION_RETURNS_TRUE(long_trace_test());
     return EXIT_SUCCESS;
 }

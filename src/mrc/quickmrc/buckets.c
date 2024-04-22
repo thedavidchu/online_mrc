@@ -14,13 +14,11 @@ quickmrc_buckets__init(struct QuickMrcBuckets *me,
                        uint64_t default_num_buckets,
                        uint64_t max_bucket_size)
 {
-    if (me == NULL || default_num_buckets == 0) {
+    if (me == NULL || default_num_buckets == 0)
         return false;
-    }
     void *buf = calloc(default_num_buckets, sizeof(*me->buckets));
-    if (buf == NULL) {
+    if (buf == NULL)
         return false;
-    }
     const struct QuickMrcBuckets tmp = (struct QuickMrcBuckets){
         .buckets = (struct TimestampRangeCount *)buf,
         .num_buckets = default_num_buckets,
@@ -106,25 +104,34 @@ increment_newest_bucket(struct QuickMrcBuckets *me)
     assert(me != NULL && me->buckets != NULL);
     ++me->buckets[0].count;
     if (is_newest_bucket_full(me)) {
-        bool r = age(me);
-        if (!r) {
+        if (!age(me))
             return false;
-        }
     }
     return true;
 }
 
 /// Increment the newest bucket and return
-TimeStampType
+bool
 quickmrc_buckets__insert_new(struct QuickMrcBuckets *me)
 {
-    if (me == NULL || me->buckets == NULL) {
-        return -1;
+    if (me == NULL || me->buckets == NULL)
+        return false;
+    if (!increment_newest_bucket(me))
+        return false;
+    return true;
+}
+
+#include <stdio.h>
+static void
+print_buckets(struct QuickMrcBuckets *me)
+{
+    printf("[");
+    for (size_t i = 0; i < me->num_buckets; ++i) {
+        printf("{%zu:%zu}, ",
+               me->buckets[i].max_timestamp,
+               me->buckets[i].count);
     }
-    if (!increment_newest_bucket(me)) {
-        return -1;
-    }
-    return 0;
+    printf("]\n");
 }
 
 /// Get the stack distance of a timestamp and decrement that timestamp.
@@ -135,15 +142,17 @@ get_stack_distance_and_decrement(struct QuickMrcBuckets *me,
     uint64_t stack_dist = 0;
     assert(me != NULL && me->buckets != NULL);
     for (uint64_t i = 0; i < me->num_buckets; ++i) {
-        uint64_t bucket_id = me->num_buckets - 1 - i;
-        if (me->buckets[bucket_id].max_timestamp < old_timestamp) {
-            --me->buckets[bucket_id].count;
+        stack_dist += me->buckets[i].count;
+        if (me->buckets[i].max_timestamp == 0 ||
+            me->buckets[i].max_timestamp < old_timestamp) {
+            --me->buckets[i].count;
             assert(stack_dist > 0 && "stack_dist should be at least 1");
             return stack_dist - 1;
         }
-        stack_dist += me->buckets[bucket_id].count;
     }
-    return stack_dist; /* Found in oldest bucket */
+    --me->buckets[me->num_buckets - 1].count;
+    assert(stack_dist > 0 && "stack_dist should be at least 1");
+    return stack_dist - 1; /* Found in oldest bucket */
 }
 
 /// Decrement a bucket corresponding to the old timestamp. Get the stack
@@ -153,26 +162,19 @@ uint64_t
 quickmrc_buckets__reaccess_old(struct QuickMrcBuckets *me,
                                TimeStampType old_timestamp)
 {
-    if (me == NULL) {
+    if (me == NULL)
         return UINT64_MAX;
-    }
-
-    if (!increment_newest_bucket(me)) {
+    if (!increment_newest_bucket(me))
         return UINT64_MAX;
-    }
     uint64_t stack_dist = get_stack_distance_and_decrement(me, old_timestamp);
-    if (!quickmrc_buckets__insert_new(me)) {
-        return UINT64_MAX;
-    }
     return stack_dist;
 }
 
 void
 quickmrc_buckets__destroy(struct QuickMrcBuckets *me)
 {
-    if (me == NULL) {
+    if (me == NULL)
         return;
-    }
     free(me->buckets);
     memset(me, 0, sizeof(*me));
     return;

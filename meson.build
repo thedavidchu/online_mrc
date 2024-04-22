@@ -16,7 +16,7 @@ project(
         # see them when I use gprof.
         'default_library=static',
         # Build with -O2 -g
-        'buildtype=debugoptimized',
+        'buildtype=debug',
     ],
 )
 
