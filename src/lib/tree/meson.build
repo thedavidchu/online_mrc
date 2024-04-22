@@ -1,13 +1,27 @@
-# Directory-wide include
-tree_include = include_directories('include')
+# This is for targets that only need the data structures for the trees
+tree_dep = declare_dependency(
+    include_directories: include_directories('include'),
+)
 
 # Naive Tree
-basic_tree_lib = library('basic_tree_lib',
-    'basic_tree.c',
-    include_directories : tree_include)
+basic_tree_dep = declare_dependency(
+    link_with: library(
+        'basic_tree_lib',
+        'basic_tree.c',
+        dependencies: tree_dep,
+    ),
+    include_directories: include_directories('include'),
+)
 
 # Sleator's Splay Tree
-sleator_tree_lib = library('sleator_tree_lib',
-    'sleator_tree.c',
-    include_directories : tree_include,
-    link_with : basic_tree_lib)
+sleator_tree_dep = declare_dependency(
+    link_with: library(
+        'sleator_tree_lib',
+        'sleator_tree.c',
+        dependencies: [
+            tree_dep,
+            basic_tree_dep,
+        ],
+    ),
+    include_directories: include_directories('include'),
+)

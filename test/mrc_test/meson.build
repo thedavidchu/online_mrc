@@ -4,7 +4,6 @@ olken_test_exe = executable(
     include_directories: [
         mytester_include,
         olken_include,
-        tree_include,
     ],
     dependencies: [
         glib_dep,
@@ -25,7 +24,6 @@ fixed_size_shards_test_exe = executable(
         fixed_size_shards_include,
         mytester_include,
         olken_include,
-        tree_include,
     ],
     dependencies: [
         glib_dep,
@@ -48,7 +46,6 @@ mimir_test_exe = executable(
         mytester_include,
         olken_include,
         private_mimir_include,
-        tree_include,
     ],
     dependencies: [
         glib_dep,
@@ -69,7 +66,6 @@ quickmrc_test_exe = executable(
     include_directories: [
         mytester_include,
         quickmrc_include,
-        tree_include,
     ],
     dependencies: [
         glib_dep,

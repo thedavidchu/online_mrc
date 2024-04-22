@@ -7,7 +7,6 @@ fixed_size_shards_lib = library(
     'fixed_size_shards_lib',
     'fixed_size_shards.c',
     include_directories: [
-        tree_include,
         fixed_size_shards_include,
     ],
     dependencies: [
@@ -16,9 +15,7 @@ fixed_size_shards_lib = library(
         splitmix64_dep,
         basic_histogram_dep,
         splay_priority_queue_dep,
-    ],
-    link_with: [
-        basic_tree_lib,
-        sleator_tree_lib,
+        basic_tree_dep,
+        sleator_tree_dep,
     ],
 )

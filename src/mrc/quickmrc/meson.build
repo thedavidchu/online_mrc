@@ -7,9 +7,6 @@ if QUICK_TEST
     hash_table_test = executable(
         'hash_table_test',
         'hash_table.c',
-        include_directories: [
-            tree_include,
-        ],
         dependencies: [common_dep, splitmix64_dep],
     )
     test('hash_table_test', hash_table_test)
@@ -17,9 +14,6 @@ else
     hash_table_lib = library(
         'hash_table_lib',
         'hash_table.c',
-        include_directories: [
-            tree_include,
-        ],
         dependencies: [splitmix64_dep, common_dep],
     )
 endif
