@@ -48,16 +48,13 @@ quickmrc_test_exe = executable(
     'quickmrc_test.c',
     include_directories: [
         mytester_include,
-        quickmrc_include,
     ],
     dependencies: [
         glib_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
-    ],
-    link_with: [
-        quickmrc_lib,
+        quickmrc_dep,
     ],
 )
 
