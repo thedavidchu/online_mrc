@@ -21,19 +21,18 @@ fixed_size_shards_test_exe = executable(
     'fixed_size_shards_test_exe',
     'fixed_size_shards_test.c',
     include_directories: [
-        fixed_size_shards_include,
         mytester_include,
         olken_include,
     ],
     dependencies: [
         glib_dep,
         splitmix64_dep,
+        fixed_size_shards_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
     ],
     link_with: [
-        fixed_size_shards_lib,
         olken_lib,
     ],
 )
