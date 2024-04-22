@@ -1,11 +1,11 @@
 [![cpp-linter](https://github.com/cpp-linter/cpp-linter-action/actions/workflows/cpp-linter.yml/badge.svg)](https://github.com/cpp-linter/cpp-linter-action/actions/workflows/cpp-linter.yml)
 [![Meson Test](https://github.com/thedavidchu/online_mrc/workflows/meson-build/badge.svg)](https://github.com/thedavidchu/online_mrc/actions)
 
-# On-Line Miss-Rate Curves
+# Online Miss Rate Curve Generation
 
-This repository analyzes the performance of online miss-rate curve (MRC)
+This repository analyzes the performance of online miss rate curve (MRC)
 generation algorithms. For completeness, I also implement MRC algorithms that
-are traditionally considered off-line.
+are traditionally considered offline.
 
 ## Dependencies
 
