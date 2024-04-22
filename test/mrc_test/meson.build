@@ -65,7 +65,6 @@ parda_fixed_rate_shards_test_exe = executable(
     'parda_fixed_rate_shards_test_exe',
     'parda_fixed_rate_shards_test.c',
     include_directories: [
-        fixed_rate_shards_include,
         mytester_include,
     ],
     dependencies: [
@@ -76,9 +75,6 @@ parda_fixed_rate_shards_test_exe = executable(
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
         olken_dep,
-    ],
-    link_with: [
-        parda_fixed_rate_shards_lib,
     ],
 )
 
