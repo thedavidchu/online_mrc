@@ -8,7 +8,7 @@ olken_test_exe = executable(
         random_include,
         tree_include,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [glib_dep, splitmix64_dep, basic_histogram_dep],
     link_with: [
         basic_miss_rate_curve_lib,
         olken_lib,
@@ -27,7 +27,7 @@ fixed_size_shards_test_exe = executable(
         random_include,
         tree_include,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [glib_dep, splitmix64_dep, basic_histogram_dep],
     link_with: [
         basic_miss_rate_curve_lib,
         fixed_size_shards_lib,
@@ -48,7 +48,7 @@ mimir_test_exe = executable(
         random_include,
         tree_include,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [glib_dep, splitmix64_dep, fractional_histogram_dep],
     link_with: [
         basic_miss_rate_curve_lib,
         mimir_lib,
@@ -67,7 +67,7 @@ quickmrc_test_exe = executable(
         random_include,
         tree_include,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [glib_dep, splitmix64_dep, basic_histogram_dep],
     link_with: [
         basic_miss_rate_curve_lib,
         quickmrc_lib,
@@ -85,7 +85,12 @@ parda_fixed_rate_shards_test_exe = executable(
         olken_include,
         random_include,
     ],
-    dependencies: [glib_dep, parda_fixed_rate_shards_dep, splitmix64_dep],
+    dependencies: [
+        glib_dep,
+        parda_fixed_rate_shards_dep,
+        splitmix64_dep,
+        basic_histogram_dep,
+    ],
     link_with: [
         basic_miss_rate_curve_lib,
         parda_fixed_rate_shards_lib,

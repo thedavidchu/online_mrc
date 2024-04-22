@@ -10,7 +10,12 @@ mrc_performance_test_exe = executable(
         fixed_rate_shards_include,
         mimir_include,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [
+        glib_dep,
+        splitmix64_dep,
+        basic_histogram_dep,
+        fractional_histogram_dep,
+    ],
     link_with: [
         olken_lib,
         fixed_size_shards_lib,

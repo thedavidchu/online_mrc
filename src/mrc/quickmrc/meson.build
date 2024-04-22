@@ -1,7 +1,6 @@
 quickmrc_include = include_directories(
     'include',
     '../../lib/common_headers/include',
-    '../../lib/histogram/include',
 )
 
 QUICK_TEST = false
@@ -44,14 +43,12 @@ quickmrc_lib = library(
     'quickmrc.c',
     include_directories: [
         common_headers_include,
-        histogram_include,
         quickmrc_include,
         hash_include,
     ],
     link_with: [
-        basic_histogram_lib,
         quickmrc_buckets_lib,
         hash_table_lib,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [basic_histogram_dep, glib_dep, splitmix64_dep],
 )

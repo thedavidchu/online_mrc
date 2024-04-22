@@ -1,7 +1,6 @@
 olken_include = include_directories(
     'include',
     '../../lib/common_headers/include',
-    '../../lib/histogram/include',
     '../../lib/tree/include',
 )
 
@@ -10,13 +9,11 @@ olken_lib = library(
     'olken.c',
     include_directories: [
         common_headers_include,
-        histogram_include,
         tree_include,
         olken_include,
     ],
-    dependencies: [glib_dep, splitmix64_dep],
+    dependencies: [basic_histogram_dep, glib_dep, splitmix64_dep],
     link_with: [
-        basic_histogram_lib,
         basic_tree_lib,
         sleator_tree_lib,
     ],
