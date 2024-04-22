@@ -1,5 +1,3 @@
-# random_include = include_directories('include')
-
 uniform_random_dep = declare_dependency(
     link_with: library(
         'uniform_random_lib',

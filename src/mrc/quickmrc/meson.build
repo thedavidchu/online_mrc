@@ -1,7 +1,3 @@
-quickmrc_include = include_directories(
-    'include',
-)
-
 QUICK_TEST = false
 if QUICK_TEST
     hash_table_test = executable(
