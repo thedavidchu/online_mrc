@@ -48,11 +48,10 @@ quickmrc_lib = library(
         quickmrc_include,
         hash_include,
     ],
-    dependencies: glib_dep,
     link_with: [
         basic_histogram_lib,
-        splitmix64_lib,
         quickmrc_buckets_lib,
         hash_table_lib,
     ],
+    dependencies: [glib_dep, splitmix64_dep],
 )
