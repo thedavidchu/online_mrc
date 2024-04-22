@@ -27,8 +27,6 @@ mimir_lib = library('mimir_lib',
     ],
     dependencies : glib_dep,
     link_with : [
-        basic_tree_lib,
         fractional_histogram_lib,
-        sleator_tree_lib,
         mimir_buckets_lib,
     ])
