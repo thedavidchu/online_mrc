@@ -1,16 +1,16 @@
-miss_rate_curve_test_exe = executable('miss_rate_curve_test_exe',
+miss_rate_curve_test_exe = executable(
+    'miss_rate_curve_test_exe',
     'miss_rate_curve_test.c',
-    include_directories : [
-        common_headers_include,
+    include_directories: [
         mytester_include,
-        histogram_include,
-        miss_rate_curve_include,
     ],
-    dependencies : glib_dep,
-    link_with : [
-        basic_histogram_lib,
-        fractional_histogram_lib,
-        basic_miss_rate_curve_lib,
-    ])
+    dependencies: [
+        common_dep,
+        basic_histogram_dep,
+        fractional_histogram_dep,
+        glib_dep,
+        basic_miss_rate_curve_dep,
+    ],
+)
 
 test('miss_rate_curve_test', miss_rate_curve_test_exe)

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <glib.h>
+
 #include "arrays/array_size.h"
 #include "histogram/basic_histogram.h"
 #include "olken/olken.h"

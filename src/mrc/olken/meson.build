@@ -1,21 +1,21 @@
-olken_include = include_directories('include',
-    '../../lib/common_headers/include',
-    '../../lib/hash/include',
-    '../../lib/histogram/include',
-    '../../lib/tree/include',
-    )
-
-olken_lib = library('olken_lib',
-    'olken.c',
-    include_directories : [
-        common_headers_include,
-        histogram_include,
-        tree_include,
-        olken_include,
+olken_dep = declare_dependency(
+    link_with: library(
+        'olken_lib',
+        'olken.c',
+        include_directories: include_directories('include'),
+        dependencies: [
+            sleator_tree_dep,
+            common_dep,
+            basic_histogram_dep,
+            glib_dep,
+            splitmix64_dep,
+        ],
+    ),
+    include_directories: include_directories('include'),
+    dependencies: [
+        common_dep,
+        basic_histogram_dep,
+        glib_dep,
+        tree_dep,
     ],
-    dependencies : glib_dep,
-    link_with : [
-        basic_histogram_lib,
-        basic_tree_lib,
-        sleator_tree_lib,
-    ])
+)

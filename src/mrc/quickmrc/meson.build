@@ -1,58 +1,43 @@
-quickmrc_include = include_directories(
-    'include',
-    '../../lib/common_headers/include',
-    '../../lib/histogram/include',
-)
-
 QUICK_TEST = false
 if QUICK_TEST
     hash_table_test = executable(
         'hash_table_test',
         'hash_table.c',
-        include_directories: [
-            hash_include,
-            tree_include,
-            common_headers_include,
-        ],
+        dependencies: [common_dep, splitmix64_dep],
     )
     test('hash_table_test', hash_table_test)
-else
-    hash_table_lib = library(
-        'hash_table_lib',
-        'hash_table.c',
-        include_directories: [
-            hash_include,
-            tree_include,
-            common_headers_include,
-        ],
-    )
 endif
 
-
-quickmrc_buckets_lib = library(
-    'quickmrc_buckets_lib',
-    'buckets.c',
-    include_directories: [
-        common_headers_include,
-        quickmrc_include,
-    ],
-    dependencies: glib_dep,
+hash_table_dep = declare_dependency(
+    link_with: library(
+        'hash_table_lib',
+        'hash_table.c',
+        dependencies: [splitmix64_dep, common_dep],
+    ),
 )
 
-quickmrc_lib = library(
-    'quickmrc_lib',
-    'quickmrc.c',
-    include_directories: [
-        common_headers_include,
-        histogram_include,
-        quickmrc_include,
-        hash_include,
-    ],
-    dependencies: glib_dep,
-    link_with: [
-        basic_histogram_lib,
-        splitmix64_lib,
-        quickmrc_buckets_lib,
-        hash_table_lib,
-    ],
+quickmrc_buckets_dep = declare_dependency(
+    link_with: library(
+        'quickmrc_buckets_lib',
+        'buckets.c',
+        include_directories: include_directories('include'),
+        dependencies: [glib_dep, common_dep],
+    ),
+)
+
+quickmrc_dep = declare_dependency(
+    link_with: library(
+        'quickmrc_lib',
+        'quickmrc.c',
+        include_directories: include_directories('include'),
+        dependencies: [
+            common_dep,
+            basic_histogram_dep,
+            glib_dep,
+            splitmix64_dep,
+            quickmrc_buckets_dep,
+            hash_table_dep,
+        ],
+    ),
+    include_directories: include_directories('include'),
 )
