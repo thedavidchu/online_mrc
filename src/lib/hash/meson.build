@@ -10,13 +10,11 @@ if false
     )
 endif
 
-splitmix64_lib = library(
-    'splitmix64_lib',
-    'splitmix64.c',
-    include_directories: hash_include,
-)
-
 splitmix64_dep = declare_dependency(
-    link_with: [splitmix64_lib],
+    link_with: library(
+        'splitmix64_lib',
+        'splitmix64.c',
+        include_directories: hash_include,
+    ),
     include_directories: [hash_include],
 )
