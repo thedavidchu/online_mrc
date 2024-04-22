@@ -6,11 +6,8 @@ olken_test_exe = executable(
     ],
     dependencies: [
         glib_dep,
-        splitmix64_dep,
-        basic_histogram_dep,
-        basic_miss_rate_curve_dep,
-        zipfian_random_dep,
         olken_dep,
+        zipfian_random_dep,
     ],
 )
 
@@ -21,13 +18,12 @@ fixed_size_shards_test_exe = executable(
         mytester_include,
     ],
     dependencies: [
-        glib_dep,
         splitmix64_dep,
-        fixed_size_shards_dep,
-        basic_histogram_dep,
         basic_miss_rate_curve_dep,
-        zipfian_random_dep,
+        glib_dep,
+        fixed_size_shards_dep,
         olken_dep,
+        zipfian_random_dep,
     ],
 )
 
@@ -39,13 +35,11 @@ mimir_test_exe = executable(
     ],
     dependencies: [
         glib_dep,
-        olken_dep,
-        splitmix64_dep,
-        fractional_histogram_dep,
         basic_miss_rate_curve_dep,
-        zipfian_random_dep,
         mimir_dep,
         mimir_buckets_dep,
+        olken_dep,
+        zipfian_random_dep,
     ],
 )
 
@@ -58,7 +52,6 @@ quickmrc_test_exe = executable(
     ],
     dependencies: [
         glib_dep,
-        splitmix64_dep,
         basic_histogram_dep,
         basic_miss_rate_curve_dep,
         zipfian_random_dep,
