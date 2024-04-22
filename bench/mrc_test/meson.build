@@ -11,6 +11,7 @@ mrc_performance_test_exe = executable(
         mimir_include,
     ],
     dependencies: [
+        common_dep,
         glib_dep,
         splitmix64_dep,
         basic_histogram_dep,

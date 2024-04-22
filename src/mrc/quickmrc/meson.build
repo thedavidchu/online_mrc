@@ -1,6 +1,5 @@
 quickmrc_include = include_directories(
     'include',
-    '../../lib/common_headers/include',
 )
 
 QUICK_TEST = false
@@ -11,8 +10,8 @@ if QUICK_TEST
         include_directories: [
             hash_include,
             tree_include,
-            common_headers_include,
         ],
+        dependencies: common_dep,
     )
     test('hash_table_test', hash_table_test)
 else
@@ -22,8 +21,8 @@ else
         include_directories: [
             hash_include,
             tree_include,
-            common_headers_include,
         ],
+        dependencies: common_dep,
     )
 endif
 
@@ -32,17 +31,15 @@ quickmrc_buckets_lib = library(
     'quickmrc_buckets_lib',
     'buckets.c',
     include_directories: [
-        common_headers_include,
         quickmrc_include,
     ],
-    dependencies: glib_dep,
+    dependencies: [glib_dep, common_dep],
 )
 
 quickmrc_lib = library(
     'quickmrc_lib',
     'quickmrc.c',
     include_directories: [
-        common_headers_include,
         quickmrc_include,
         hash_include,
     ],
@@ -50,5 +47,5 @@ quickmrc_lib = library(
         quickmrc_buckets_lib,
         hash_table_lib,
     ],
-    dependencies: [basic_histogram_dep, glib_dep, splitmix64_dep],
+    dependencies: [common_dep, basic_histogram_dep, glib_dep, splitmix64_dep],
 )

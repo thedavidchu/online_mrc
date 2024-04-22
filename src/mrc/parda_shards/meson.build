@@ -13,11 +13,11 @@ parda_fixed_rate_shards_lib = library(
     'parda/splay.c',
     'parda/process_args.c',
     include_directories: [
-        common_headers_include,
         fixed_rate_shards_include,
         private_parda_include,
     ],
     dependencies: [
+        common_dep,
         glib_dep,
         splitmix64_dep,
     ],

@@ -12,9 +12,9 @@ fractional_histogram_dep = declare_dependency(
         'fractional_histogram_lib',
         'fractional_histogram.c',
         include_directories: [
-            common_headers_include,
             include_directories('include'),
         ],
+        dependencies: common_dep,
     ),
     include_directories: include_directories('include'),
 )
