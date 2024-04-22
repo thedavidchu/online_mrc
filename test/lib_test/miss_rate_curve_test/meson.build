@@ -3,7 +3,6 @@ miss_rate_curve_test_exe = executable(
     'miss_rate_curve_test.c',
     include_directories: [
         mytester_include,
-        miss_rate_curve_include,
     ],
     dependencies: [
         common_dep,

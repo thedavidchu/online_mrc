@@ -1,7 +1,3 @@
-miss_rate_curve_include = include_directories(
-    'include',
-)
-
 basic_miss_rate_curve_dep = declare_dependency(
     link_with: library(
         'basic_miss_rate_curve_lib',

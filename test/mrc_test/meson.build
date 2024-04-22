@@ -2,7 +2,6 @@ olken_test_exe = executable(
     'olken_test_exe',
     'olken_test.c',
     include_directories: [
-        miss_rate_curve_include,
         mytester_include,
         olken_include,
         random_include,
@@ -25,7 +24,6 @@ fixed_size_shards_test_exe = executable(
     'fixed_size_shards_test.c',
     include_directories: [
         fixed_size_shards_include,
-        miss_rate_curve_include,
         mytester_include,
         olken_include,
         random_include,
@@ -50,7 +48,6 @@ mimir_test_exe = executable(
     include_directories: [
         mimir_include,
         mytester_include,
-        miss_rate_curve_include,
         olken_include,
         private_mimir_include,
         random_include,
@@ -73,7 +70,6 @@ quickmrc_test_exe = executable(
     'quickmrc_test_exe',
     'quickmrc_test.c',
     include_directories: [
-        miss_rate_curve_include,
         mytester_include,
         quickmrc_include,
         random_include,
@@ -96,7 +92,6 @@ parda_fixed_rate_shards_test_exe = executable(
     'parda_fixed_rate_shards_test.c',
     include_directories: [
         fixed_rate_shards_include,
-        miss_rate_curve_include,
         mytester_include,
         olken_include,
         random_include,
