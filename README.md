@@ -1,13 +1,15 @@
 [![cpp-linter](https://github.com/cpp-linter/cpp-linter-action/actions/workflows/cpp-linter.yml/badge.svg)](https://github.com/cpp-linter/cpp-linter-action/actions/workflows/cpp-linter.yml)
 [![Meson Test](https://github.com/thedavidchu/online_mrc/workflows/meson-build/badge.svg)](https://github.com/thedavidchu/online_mrc/actions)
 
-# Online Miss Rate Curve Generation
+Online Miss Rate Curve Generation
+================================================================================
 
 This repository analyzes the performance of online miss rate curve (MRC)
 generation algorithms. For completeness, I also implement MRC algorithms that
 are traditionally considered offline.
 
-## Dependencies
+Dependencies
+--------------------------------------------------------------------------------
 
 This project depends on the following:
 - The Meson build system (which uses Ninja by default)
@@ -20,10 +22,9 @@ This project depends on the following:
 
 Note: I'm too lazy to write proper header guards; especially since they are so
 fragile if you make them match the path but then move a file around!
-## Historic Notes
 
-Originally, this was my project repository for my ECE1759
-(Advances in Operating Systems) Final Project.
+Historic Notes
+--------------------------------------------------------------------------------
 
-Originally, I was going to write it in Rust. Then, I realized I would be much
-too slow at writing Rust.
+This project started as my ECE1759 (Advances in Operating Systems) Final Project
+and became my ECE1755 (Parallel Computer Architecture) Final project.
