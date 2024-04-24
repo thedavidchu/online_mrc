@@ -24,6 +24,7 @@ project(
 # separately in Linux. Source: https://mesonbuild.com/howtox.html#add-math-library-lm-portably
 cc = meson.get_compiler('c')
 math_dep = cc.find_library('m', required: false)
+thread_dep = dependency('threads')
 
 glib_dep = dependency(
     'glib-2.0',
@@ -33,8 +34,6 @@ glib_dep = dependency(
         'warning_level=3',
     ],
 )
-
-thread_dep = dependency('threads')
 
 use_gprof = true
 if use_gprof
