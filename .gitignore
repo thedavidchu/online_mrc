@@ -1,7 +1,8 @@
 # General
-.idea/
-.vs/
-.vscode/
+/.idea/
+/.vs/
+/.vscode/
+/.venv/
 
 # Clangd
 /.cache/
