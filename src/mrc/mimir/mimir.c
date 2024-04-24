@@ -149,7 +149,9 @@ Mimir__init(struct Mimir *me,
     if (!r) {
         goto buckets_error;
     }
-    r = fractional_histogram__init(&me->histogram, max_num_unique_entries);
+    r = fractional_histogram__init(&me->histogram,
+                                   max_num_unique_entries,
+                                   max_num_unique_entries / num_buckets);
     if (!r) {
         goto histogram_error;
     }

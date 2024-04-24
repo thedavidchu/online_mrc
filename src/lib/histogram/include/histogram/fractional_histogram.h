@@ -7,6 +7,8 @@
 /// @note   I assume no overflow in any of these values!
 struct FractionalHistogram {
     double *histogram;
+    /// Each bin in the histogram represents this many values
+    uint64_t bin_size;
     /// Maximum allowable length of the histogram
     uint64_t length;
     /// We have seen this before, but we do not track stacks this large
@@ -18,7 +20,8 @@ struct FractionalHistogram {
 
 bool
 fractional_histogram__init(struct FractionalHistogram *me,
-                           const uint64_t length);
+                           const uint64_t length,
+                           const uint64_t bin_size);
 
 /// @brief  Insert a non-infinite, scaled index. By scaled, I mean that the
 ///         index represents multiple elements.

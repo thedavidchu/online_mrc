@@ -10,7 +10,8 @@
 
 bool
 fractional_histogram__init(struct FractionalHistogram *me,
-                           const uint64_t length)
+                           const uint64_t length,
+                           const uint64_t bin_size)
 {
     if (me == NULL || length == 0) {
         return false;
@@ -23,6 +24,7 @@ fractional_histogram__init(struct FractionalHistogram *me,
     if (me->histogram == NULL) {
         return false;
     }
+    me->bin_size = bin_size;
     me->length = length;
     me->infinity = 0;
     me->false_infinity = 0.0;
