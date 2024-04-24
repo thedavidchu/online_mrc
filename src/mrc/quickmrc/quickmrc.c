@@ -50,7 +50,6 @@ quickmrc__init(struct QuickMrc *me,
 bool
 quickmrc__access_item(struct QuickMrc *me, EntryType entry)
 {
-    TimeStampType timestamp = 0;
     if (me == NULL) {
         return false;
     }
