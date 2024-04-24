@@ -65,7 +65,7 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        ParallelHashTable__update(&me->hash_table, entry, new_timestamp);
+        ParallelHashTable__put_unique(&me->hash_table, entry, new_timestamp);
         basic_histogram__insert_finite(&me->histogram, stack_dist);
     } else {
         if (!quickmrc_buckets__insert_new(&me->buckets)) {
@@ -75,7 +75,7 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        ParallelHashTable__insert(&me->hash_table, entry, new_timestamp);
+        ParallelHashTable__put_unique(&me->hash_table, entry, new_timestamp);
     }
 
     return true;

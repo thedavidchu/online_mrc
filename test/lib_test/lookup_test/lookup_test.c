@@ -6,7 +6,6 @@
 
 #include "lookup/lookup.h"
 #include "lookup/parallel_hash_table.h"
-#include "lookup/parallel_list.h"
 #include "test/mytester.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -21,7 +20,7 @@ single_thread_test(void)
     g_assert_true(ParallelHashTable__init(&me, 8));
 
     for (size_t i = 0; i < N; ++i) {
-        g_assert_true(ParallelHashTable__insert(&me, i, i));
+        g_assert_true(ParallelHashTable__put_unique(&me, i, i));
     }
 
     for (size_t i = 0; i < N; ++i) {
@@ -30,7 +29,7 @@ single_thread_test(void)
     }
 
     for (size_t i = 0; i < N; ++i) {
-        g_assert_true(ParallelHashTable__update(&me, i, 1234567890));
+        g_assert_true(ParallelHashTable__put_unique(&me, i, 1234567890));
     }
 
     for (size_t i = 0; i < N; ++i) {
@@ -71,7 +70,8 @@ multithread_writer(void *args)
 
     for (size_t i = 0; i < N; ++i) {
         EntryType entry = N * worker_id + i;
-        g_assert_true(ParallelHashTable__insert(hash_table, entry, map(entry)));
+        g_assert_true(
+            ParallelHashTable__put_unique(hash_table, entry, map(entry)));
     }
     return NULL;
 }
@@ -86,7 +86,8 @@ multithread_updater(void *args)
 
     for (size_t i = 0; i < N; ++i) {
         EntryType entry = N * worker_id + i;
-        g_assert_true(ParallelHashTable__update(hash_table, entry, map(entry)));
+        g_assert_true(
+            ParallelHashTable__put_unique(hash_table, entry, map(entry)));
     }
     return NULL;
 }
@@ -167,7 +168,7 @@ multi_thread_test(void)
 int
 main(void)
 {
-    // ASSERT_FUNCTION_RETURNS_TRUE(single_thread_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(single_thread_test());
     ASSERT_FUNCTION_RETURNS_TRUE(multi_thread_test());
     return 0;
 }

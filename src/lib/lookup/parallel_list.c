@@ -53,11 +53,11 @@ ParallelList__pop_node(struct ParallelList *me, EntryType entry)
         return NULL;
     }
 
-    for (struct ParallelListNode *prev = NULL, *current = me->head;
+    for (struct ParallelListNode **pprev = &me->head, *current = me->head;
          current != NULL;
-         prev = current, current = current->next) {
+         pprev = &current->next, current = current->next) {
         if (current->entry == entry) {
-            prev->next = current->next;
+            (*pprev) = current->next;
             return current;
         }
     }
@@ -69,8 +69,8 @@ ParallelList__pop_node(struct ParallelList *me, EntryType entry)
  */
 bool
 ParallelList__put_unique(struct ParallelList *me,
-                  EntryType entry,
-                  TimeStampType timestamp)
+                         EntryType entry,
+                         TimeStampType timestamp)
 {
     if (me == NULL) {
         return false;
@@ -78,8 +78,7 @@ ParallelList__put_unique(struct ParallelList *me,
 
     pthread_rwlock_wrlock(&me->lock);
 
-    struct ParallelListNode *node = NULL;
-    node = ParallelList__pop_node(me, entry);
+    struct ParallelListNode *node = ParallelList__pop_node(me, entry);
     if (node == NULL) {
         node = ParallelListNode__create(entry, timestamp);
         if (node == NULL) {

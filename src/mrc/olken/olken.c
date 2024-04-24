@@ -60,13 +60,13 @@ olken__access_item(struct OlkenReuseStack *me, EntryType entry)
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         assert(r && "insert should not fail");
-        r = ParallelHashTable__update(&me->hash_table, entry, me->current_time_stamp);
+        r = ParallelHashTable__put_unique(&me->hash_table, entry, me->current_time_stamp);
         assert(r && "update should not fail");
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         basic_histogram__insert_finite(&me->histogram, distance);
     } else {
-        r = ParallelHashTable__insert(&me->hash_table, entry, me->current_time_stamp);
+        r = ParallelHashTable__put_unique(&me->hash_table, entry, me->current_time_stamp);
         assert(r && "insert should not fail");
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
