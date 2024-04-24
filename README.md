@@ -13,7 +13,11 @@ Dependencies
 
 This project depends on the following:
 - The Meson build system (which uses Ninja by default)
-- GLib 2.0 (for my hash tables)
+    - Requires Python 3.7+
+- GLib 2.0 (for my hash tables, etc.)
+    - This requires pkg-config
+    - Thre requires Python's `packaging` module
+    - Requires `apt install ninja-build`
 - A C99 compiler that supports:
     - `#pragma once` (see Note)
     - __sync_bool_compare_and_swap(...)
