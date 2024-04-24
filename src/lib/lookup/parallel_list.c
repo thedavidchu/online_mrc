@@ -21,30 +21,6 @@ ParallelListNode__create(EntryType entry, TimeStampType timestamp)
     return node;
 }
 
-bool
-ParallelList__insert(struct ParallelList *me,
-                     EntryType entry,
-                     TimeStampType timestamp)
-{
-    if (me == NULL) {
-        return false;
-    }
-
-    struct ParallelListNode *node = ParallelListNode__create(entry, timestamp);
-
-    if (node == NULL) {
-        return false;
-    }
-
-    pthread_rwlock_wrlock(&me->lock);
-    node->next = me->head;
-    me->head = node;
-    ++me->length;
-    pthread_rwlock_unlock(&me->lock);
-
-    return true;
-}
-
 /**
  * @note Not synchronised.
  */
@@ -67,6 +43,61 @@ ParallelList__find_node(struct ParallelList *me, EntryType entry)
     return NULL;
 }
 
+/**
+ * @note Not synchronised.
+ */
+static struct ParallelListNode *
+ParallelList__pop_node(struct ParallelList *me, EntryType entry)
+{
+    if (me == NULL) {
+        return NULL;
+    }
+
+    for (struct ParallelListNode *prev = NULL, *current = me->head;
+         current != NULL;
+         prev = current, current = current->next) {
+        if (current->entry == entry) {
+            prev->next = current->next;
+            return current;
+        }
+    }
+    return NULL;
+}
+
+/** @brief  Update if the key exists, otherwise insert.
+ *  @note   Splay the input.
+ */
+bool
+ParallelList__put_unique(struct ParallelList *me,
+                  EntryType entry,
+                  TimeStampType timestamp)
+{
+    if (me == NULL) {
+        return false;
+    }
+
+    pthread_rwlock_wrlock(&me->lock);
+
+    struct ParallelListNode *node = NULL;
+    node = ParallelList__pop_node(me, entry);
+    if (node == NULL) {
+        node = ParallelListNode__create(entry, timestamp);
+        if (node == NULL) {
+            pthread_rwlock_wrlock(&me->lock);
+            return false;
+        }
+    } else {
+        node->timestamp = timestamp;
+    }
+
+    node->next = me->head;
+    me->head = node;
+    ++me->length;
+    pthread_rwlock_unlock(&me->lock);
+
+    return true;
+}
+
 struct LookupReturn
 ParallelList__lookup(struct ParallelList *me, EntryType entry)
 {
@@ -85,23 +116,6 @@ ParallelList__lookup(struct ParallelList *me, EntryType entry)
         .success = true,
         .timestamp = node->timestamp,
     };
-}
-
-bool
-ParallelList__update(struct ParallelList *me,
-                     EntryType entry,
-                     TimeStampType timestamp)
-{
-    pthread_rwlock_rdlock(&me->lock);
-    struct ParallelListNode *node = ParallelList__find_node(me, entry);
-    pthread_rwlock_unlock(&me->lock);
-
-    if (node == NULL) {
-        return false;
-    }
-
-    node->timestamp = timestamp;
-    return true;
 }
 
 static void

@@ -29,7 +29,7 @@ ParallelHashTable__insert(struct ParallelHashTable *me,
     if (me == NULL || me->table == NULL || me->length == 0)
         return false;
     Hash64BitType hash = splitmix64_hash(entry);
-    return ParallelList__insert(&me->table[hash % me->length],
+    return ParallelList__put_unique(&me->table[hash % me->length],
                                 entry,
                                 timestamp);
 }
@@ -42,7 +42,7 @@ ParallelHashTable__update(struct ParallelHashTable *me,
     if (me == NULL || me->table == NULL || me->length == 0)
         return false;
     Hash64BitType hash = splitmix64_hash(entry);
-    return ParallelList__update(&me->table[hash % me->length],
+    return ParallelList__put_unique(&me->table[hash % me->length],
                                 entry,
                                 new_timestamp);
 }
