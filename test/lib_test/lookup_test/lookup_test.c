@@ -75,19 +75,6 @@ multithread_writer(void *args)
 }
 
 void *
-multithread_updater(void *args)
-{
-    struct WorkerArgs *w = args;
-    for (EntryType entry = w->start; entry < w->end; ++entry) {
-        g_assert_true(
-            ParallelHashTable__put_unique(w->hash_table,
-                                          entry,
-                                          w->entry_to_timestamp(entry)));
-    }
-    return NULL;
-}
-
-void *
 multithread_reader(void *args)
 {
     struct WorkerArgs *w = args;
@@ -99,6 +86,7 @@ multithread_reader(void *args)
     return NULL;
 }
 
+/// @brief  Test the multithread hash table with some overlaps.
 bool
 multi_thread_test(void)
 {
@@ -112,7 +100,7 @@ multi_thread_test(void)
     for (size_t i = 0; i < 16; ++i) {
         args[i] = (struct WorkerArgs){.worker_id = i,
                                       .start = i * N,
-                                      .end = (i + 1) * N,
+                                      .end = (i + 2) * N,
                                       .hash_table = &me,
                                       .entry_to_timestamp = identity};
         pthread_create(&threads[i], NULL, multithread_writer, &args[i]);
@@ -125,7 +113,7 @@ multi_thread_test(void)
     for (size_t i = 0; i < 16; ++i) {
         args[i] = (struct WorkerArgs){.worker_id = i,
                                       .start = i * N,
-                                      .end = (i + 1) * N,
+                                      .end = (i + 2) * N,
                                       .hash_table = &me,
                                       .entry_to_timestamp = identity};
         pthread_create(&threads[i], NULL, multithread_reader, &args[i]);
@@ -139,10 +127,10 @@ multi_thread_test(void)
         args[i] =
             (struct WorkerArgs){.worker_id = i,
                                 .start = i * N,
-                                .end = (i + 1) * N,
+                                .end = (i + 2) * N,
                                 .hash_table = &me,
                                 .entry_to_timestamp = constant_1234567890};
-        pthread_create(&threads[i], NULL, multithread_updater, &args[i]);
+        pthread_create(&threads[i], NULL, multithread_writer, &args[i]);
     }
     for (size_t i = 0; i < 16; ++i) {
         pthread_join(threads[i], NULL);
@@ -153,7 +141,7 @@ multi_thread_test(void)
         args[i] =
             (struct WorkerArgs){.worker_id = i,
                                 .start = i * N,
-                                .end = (i + 1) * N,
+                                .end = (i + 2) * N,
                                 .hash_table = &me,
                                 .entry_to_timestamp = constant_1234567890};
         pthread_create(&threads[i], NULL, multithread_reader, &args[i]);
