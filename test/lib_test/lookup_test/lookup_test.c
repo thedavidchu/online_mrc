@@ -45,6 +45,7 @@ struct WorkerArgs {
     int worker_id;
     struct ParallelHashTable *hash_table;
     TimeStampType (*entry_to_timestamp)(EntryType entry);
+    EntryType start, end;
 };
 
 static TimeStampType
@@ -63,15 +64,12 @@ constant_1234567890(EntryType entry)
 void *
 multithread_writer(void *args)
 {
-    struct WorkerArgs *worker_args = args;
-    int worker_id = worker_args->worker_id;
-    struct ParallelHashTable *hash_table = worker_args->hash_table;
-    TimeStampType (*map)(EntryType entry) = worker_args->entry_to_timestamp;
-
-    for (size_t i = 0; i < N; ++i) {
-        EntryType entry = N * worker_id + i;
+    struct WorkerArgs *w = args;
+    for (EntryType entry = w->start; entry < w->end; ++entry) {
         g_assert_true(
-            ParallelHashTable__put_unique(hash_table, entry, map(entry)));
+            ParallelHashTable__put_unique(w->hash_table,
+                                          entry,
+                                          w->entry_to_timestamp(entry)));
     }
     return NULL;
 }
@@ -79,15 +77,12 @@ multithread_writer(void *args)
 void *
 multithread_updater(void *args)
 {
-    struct WorkerArgs *worker_args = args;
-    int worker_id = worker_args->worker_id;
-    struct ParallelHashTable *hash_table = worker_args->hash_table;
-    TimeStampType (*map)(EntryType entry) = worker_args->entry_to_timestamp;
-
-    for (size_t i = 0; i < N; ++i) {
-        EntryType entry = N * worker_id + i;
+    struct WorkerArgs *w = args;
+    for (EntryType entry = w->start; entry < w->end; ++entry) {
         g_assert_true(
-            ParallelHashTable__put_unique(hash_table, entry, map(entry)));
+            ParallelHashTable__put_unique(w->hash_table,
+                                          entry,
+                                          w->entry_to_timestamp(entry)));
     }
     return NULL;
 }
@@ -95,16 +90,11 @@ multithread_updater(void *args)
 void *
 multithread_reader(void *args)
 {
-    struct WorkerArgs *worker_args = args;
-    int worker_id = worker_args->worker_id;
-    struct ParallelHashTable *hash_table = worker_args->hash_table;
-    TimeStampType (*map)(EntryType entry) = worker_args->entry_to_timestamp;
-
-    for (size_t i = 0; i < N; ++i) {
-        EntryType entry = N * worker_id + i;
-        struct LookupReturn r = ParallelHashTable__lookup(hash_table, entry);
+    struct WorkerArgs *w = args;
+    for (EntryType entry = w->start; entry < w->end; ++entry) {
+        struct LookupReturn r = ParallelHashTable__lookup(w->hash_table, entry);
         g_assert_true(r.success == true);
-        g_assert_true(r.timestamp == map(entry));
+        g_assert_true(r.timestamp == w->entry_to_timestamp(entry));
     }
     return NULL;
 }
@@ -120,9 +110,11 @@ multi_thread_test(void)
 
     // Write the values
     for (size_t i = 0; i < 16; ++i) {
-        args[i].worker_id = i;
-        args[i].hash_table = &me;
-        args[i].entry_to_timestamp = identity;
+        args[i] = (struct WorkerArgs){.worker_id = i,
+                                      .start = i * N,
+                                      .end = (i + 1) * N,
+                                      .hash_table = &me,
+                                      .entry_to_timestamp = identity};
         pthread_create(&threads[i], NULL, multithread_writer, &args[i]);
     }
     for (size_t i = 0; i < 16; ++i) {
@@ -131,9 +123,11 @@ multi_thread_test(void)
 
     // Read the values
     for (size_t i = 0; i < 16; ++i) {
-        args[i].worker_id = i;
-        args[i].hash_table = &me;
-        args[i].entry_to_timestamp = identity;
+        args[i] = (struct WorkerArgs){.worker_id = i,
+                                      .start = i * N,
+                                      .end = (i + 1) * N,
+                                      .hash_table = &me,
+                                      .entry_to_timestamp = identity};
         pthread_create(&threads[i], NULL, multithread_reader, &args[i]);
     }
     for (size_t i = 0; i < 16; ++i) {
@@ -142,9 +136,12 @@ multi_thread_test(void)
 
     // Write the values
     for (size_t i = 0; i < 16; ++i) {
-        args[i].worker_id = i;
-        args[i].hash_table = &me;
-        args[i].entry_to_timestamp = constant_1234567890;
+        args[i] =
+            (struct WorkerArgs){.worker_id = i,
+                                .start = i * N,
+                                .end = (i + 1) * N,
+                                .hash_table = &me,
+                                .entry_to_timestamp = constant_1234567890};
         pthread_create(&threads[i], NULL, multithread_updater, &args[i]);
     }
     for (size_t i = 0; i < 16; ++i) {
@@ -153,9 +150,12 @@ multi_thread_test(void)
 
     // Read the values
     for (size_t i = 0; i < 16; ++i) {
-        args[i].worker_id = i;
-        args[i].hash_table = &me;
-        args[i].entry_to_timestamp = constant_1234567890;
+        args[i] =
+            (struct WorkerArgs){.worker_id = i,
+                                .start = i * N,
+                                .end = (i + 1) * N,
+                                .hash_table = &me,
+                                .entry_to_timestamp = constant_1234567890};
         pthread_create(&threads[i], NULL, multithread_reader, &args[i]);
     }
     for (size_t i = 0; i < 16; ++i) {
