@@ -1,5 +1,6 @@
 subdir('common_headers')
 subdir('hash')
+subdir('lookup')
 subdir('histogram')
 subdir('priority_queue')
 subdir('random')

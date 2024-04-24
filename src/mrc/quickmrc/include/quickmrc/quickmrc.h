@@ -5,13 +5,15 @@
 #include <stdint.h>
 
 #include <glib.h>
+#include <pthread.h>
 
 #include "histogram/basic_histogram.h"
+#include "lookup/parallel_hash_table.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 
 struct QuickMrc {
-    GHashTable *hash_table;
+    struct ParallelHashTable hash_table;
     struct QuickMrcBuckets buckets;
     struct BasicHistogram histogram;
 
