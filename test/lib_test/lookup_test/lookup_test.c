@@ -128,8 +128,6 @@ multi_thread_test(void)
         pthread_join(threads[i], NULL);
     }
 
-    ParallelHashTable__print(&me);
-
     // Read the values
     for (size_t i = 0; i < 16; ++i) {
         args[i].worker_id = i;
@@ -151,8 +149,6 @@ multi_thread_test(void)
     for (size_t i = 0; i < 16; ++i) {
         pthread_join(threads[i], NULL);
     }
-
-    ParallelHashTable__print(&me);
 
     // Read the values
     for (size_t i = 0; i < 16; ++i) {
