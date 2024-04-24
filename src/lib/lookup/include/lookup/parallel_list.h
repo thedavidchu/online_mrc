@@ -23,21 +23,18 @@ struct ParallelListNode {
     struct ParallelListNode *next;
 };
 
+/** @brief  Update if the key exists, otherwise insert.
+ *  @note   Splay the input key to the front of the list.
+ */
 bool
-ParallelList__insert(struct ParallelList *me,
-                     EntryType entry,
-                     TimeStampType timestamp);
+ParallelList__put_unique(struct ParallelList *me,
+                  EntryType entry,
+                  TimeStampType timestamp);
 
 struct LookupReturn
 ParallelList__lookup(struct ParallelList *me, EntryType entry);
 
-bool
-ParallelList__update(struct ParallelList *me,
-                     EntryType entry,
-                     TimeStampType timestamp);
-
-/// Destroy the entire linked list pointed to by the head.
-/// This may accept a NULL pointer.
+/// @brief  Destroy the entire linked list pointed to by the head.
 void
 ParallelList__destroy(struct ParallelList *me);
 
