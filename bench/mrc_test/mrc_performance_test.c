@@ -155,9 +155,9 @@ main(int argc, char **argv)
 
     PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
-                     parda_fixed_rate_shards__init(&me, 1000),
-                     parda_fixed_rate_shards__access_item,
-                     parda_fixed_rate_shards__destroy);
+                     PardaFixedRateShards__init(&me, 1000),
+                     PardaFixedRateShards__access_item,
+                     PardaFixedRateShards__destroy);
 
     PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
                               1,

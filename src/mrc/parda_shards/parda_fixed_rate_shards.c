@@ -9,7 +9,7 @@
 #include "types/entry_type.h"
 
 bool
-parda_fixed_rate_shards__init(struct PardaFixedRateShards *me,
+PardaFixedRateShards__init(struct PardaFixedRateShards *me,
                               const uint64_t shards_scaling_factor)
 {
     if (me == NULL) {
@@ -23,7 +23,7 @@ parda_fixed_rate_shards__init(struct PardaFixedRateShards *me,
 }
 
 void
-parda_fixed_rate_shards__access_item(struct PardaFixedRateShards *me,
+PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
                                      EntryType entry)
 {
     char entry_str[21] = {0};
@@ -47,7 +47,7 @@ parda_fixed_rate_shards__access_item(struct PardaFixedRateShards *me,
 /// NOTE
 /// TODO Parda does not destroy the key-value pairs in the hash table.
 void
-parda_fixed_rate_shards__destroy(struct PardaFixedRateShards *me)
+PardaFixedRateShards__destroy(struct PardaFixedRateShards *me)
 {
     parda_free(&me->program_data);
     me->program_data.gh = NULL;

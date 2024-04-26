@@ -25,12 +25,12 @@ access_same_key_five_times(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(parda_fixed_rate_shards__init(&me, 1));
+    g_assert_true(PardaFixedRateShards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
-        parda_fixed_rate_shards__access_item(&me, entry);
+        PardaFixedRateShards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
     basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
@@ -46,7 +46,7 @@ access_same_key_five_times(void)
     g_assert_true(mse <= 0.000001);
 
     Olken__destroy(&oracle);
-    parda_fixed_rate_shards__destroy(&me);
+    PardaFixedRateShards__destroy(&me);
     return true;
 }
 
@@ -68,12 +68,12 @@ small_exact_trace_test(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(parda_fixed_rate_shards__init(&me, 1));
+    g_assert_true(PardaFixedRateShards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
-        parda_fixed_rate_shards__access_item(&me, entry);
+        PardaFixedRateShards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
     basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
@@ -89,7 +89,7 @@ small_exact_trace_test(void)
     g_assert_true(mse <= 0.000001);
 
     Olken__destroy(&oracle);
-    parda_fixed_rate_shards__destroy(&me);
+    PardaFixedRateShards__destroy(&me);
     return true;
 }
 
@@ -106,12 +106,12 @@ long_accuracy_trace_test(void)
                                        0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(parda_fixed_rate_shards__init(&me, 1000));
+    g_assert_true(PardaFixedRateShards__init(&me, 1000));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
         Olken__access_item(&oracle, entry);
-        parda_fixed_rate_shards__access_item(&me, entry);
+        PardaFixedRateShards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
     basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
@@ -127,7 +127,7 @@ long_accuracy_trace_test(void)
     g_assert_true(mse <= 0.04);
 
     Olken__destroy(&oracle);
-    parda_fixed_rate_shards__destroy(&me);
+    PardaFixedRateShards__destroy(&me);
     return true;
 }
 

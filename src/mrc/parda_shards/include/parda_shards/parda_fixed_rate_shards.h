@@ -18,12 +18,12 @@ struct PardaFixedRateShards {
 };
 
 bool
-parda_fixed_rate_shards__init(struct PardaFixedRateShards *me,
+PardaFixedRateShards__init(struct PardaFixedRateShards *me,
                               const uint64_t shards_scaling_factor);
 
 void
-parda_fixed_rate_shards__access_item(struct PardaFixedRateShards *me,
+PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
                                      EntryType entry);
 
 void
-parda_fixed_rate_shards__destroy(struct PardaFixedRateShards *me);
+PardaFixedRateShards__destroy(struct PardaFixedRateShards *me);
