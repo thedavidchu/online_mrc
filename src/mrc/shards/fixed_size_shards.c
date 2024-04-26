@@ -11,7 +11,7 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-#include "fixed_size_shards/fixed_size_shards.h"
+#include "shards/fixed_size_shards.h"
 
 static gboolean
 entry_compare(gconstpointer a, gconstpointer b)

@@ -1,4 +1,4 @@
-subdir('fixed_size_shards')
+subdir('shards')
 subdir('mimir')
 subdir('parda_shards')
 subdir('quickmrc')

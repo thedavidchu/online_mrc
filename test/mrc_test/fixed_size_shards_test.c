@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "fixed_size_shards/fixed_size_shards.h"
+#include "shards/fixed_size_shards.h"
 #include "histogram/basic_histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/basic_miss_rate_curve.h"

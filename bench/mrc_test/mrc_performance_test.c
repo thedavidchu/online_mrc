@@ -7,7 +7,7 @@
 #include "test/mytester.h"
 
 #include "fixed_rate_shards/parda_fixed_rate_shards.h"
-#include "fixed_size_shards/fixed_size_shards.h"
+#include "shards/fixed_size_shards.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
