@@ -32,6 +32,57 @@ fractional_histogram__init(struct FractionalHistogram *me,
     return true;
 }
 
+static uint64_t
+get_first_bin(const uint64_t scaled_start, const uint64_t bin_size)
+{
+    return scaled_start / bin_size;
+}
+
+/// @note   This is my "proof" that we require the subtraction by one:
+///
+///         Let the `|-...-|` represent the range of the request, where the
+///         first vertical bar is the start of the range and the second is one
+///         past the last element of the range.
+///         Then A and B are exclusively in Bin #0, while C stradles both
+///         Bin #0 and #1.
+///         A:              |-----|
+///         B:                  |--|
+///         C:                 |----|
+///         Histogram:  |__________|__________|
+///         Range:      0          10         30
+///         Bin #:      0          1          2
+static uint64_t
+get_last_bin(const uint64_t scaled_exclusive_end, const uint64_t bin_size)
+{
+    return (scaled_exclusive_end - 1) / bin_size;
+}
+
+/// @brief  How much to fill a given bin.
+static double
+bin_portion(uint64_t bin_id,
+            uint64_t bin_size,
+            uint64_t scaled_start,
+            uint64_t scaled_exclusive_end,
+            const uint64_t scale,
+            const uint64_t range)
+{
+    uint64_t first_bin = get_first_bin(scaled_start, bin_size);
+    uint64_t last_bin = get_last_bin(scaled_exclusive_end, bin_size);
+
+    if (bin_id < first_bin || last_bin < bin_id)
+        return 0.0;
+
+    uint64_t overlap = 0;
+    if (bin_id == first_bin) {
+        overlap = (bin_id + 1) * bin_size - scaled_start;
+    } else if (bin_id == last_bin) {
+        overlap = scaled_exclusive_end - bin_id * bin_size;
+    } else {
+        overlap = bin_size;
+    }
+    return overlap * (double)scale / (double)range;
+}
+
 /// @brief  Update the histogram over a fully-in-range section.
 static void
 insert_full_range(struct FractionalHistogram *me,
@@ -42,9 +93,16 @@ insert_full_range(struct FractionalHistogram *me,
 {
     assert(me != NULL && me->histogram != NULL && scale >= 1 && range >= 1 &&
            scaled_exclusive_end <= me->length);
-    double delta = (double)scale / (double)range;
-    for (uint64_t i = scaled_start; i < scaled_exclusive_end; ++i) {
-        me->histogram[i] += delta;
+    uint64_t first_bin = get_first_bin(scaled_start, me->bin_size);
+    uint64_t last_bin = get_last_bin(scaled_exclusive_end, me->bin_size);
+    assert(last_bin + 1 <= me->length);
+    for (uint64_t i = first_bin; i < last_bin + 1; ++i) {
+        me->histogram[i] += bin_portion(i,
+                                        me->bin_size,
+                                        scaled_start,
+                                        scaled_exclusive_end,
+                                        scale,
+                                        range);
     }
 }
 
@@ -59,14 +117,22 @@ insert_partial_range(struct FractionalHistogram *me,
 {
     assert(me != NULL && me->histogram != NULL && scale >= 1 && range >= 1 &&
            scaled_exclusive_end >= me->length);
-    double delta = (double)scale / (double)range;
-    for (uint64_t i = scaled_start; i < me->length; ++i) {
-        me->histogram[i] += delta;
+    uint64_t first_bin = get_first_bin(scaled_start, me->bin_size);
+    uint64_t last_bin = get_last_bin(scaled_exclusive_end, me->bin_size);
+    assert(last_bin + 1 >= me->length);
+    for (uint64_t i = first_bin; i < me->length; ++i) {
+        me->histogram[i] += bin_portion(i,
+                                        me->bin_size,
+                                        scaled_start,
+                                        scaled_exclusive_end,
+                                        scale,
+                                        range);
     }
     // NOTE I worked this out on paper. This is correct as far as I can tell. An
     //      illustrative example is me->length = 1 and scaled_exclusive_end = 5.
     //      Now, we have {1, 2, 3, 4} numbers to account for and 5-1 = 4. QED!
-    me->false_infinity += delta * (double)(scaled_exclusive_end - me->length);
+    me->false_infinity += (double)scale / (double)range *
+                          (double)(scaled_exclusive_end - me->length);
 }
 
 bool
