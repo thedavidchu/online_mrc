@@ -153,7 +153,7 @@ main(int argc, char **argv)
             mimir__destroy);
     }
 
-    PERFORMANCE_TEST(struct FixedRateShards,
+    PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
                      parda_fixed_rate_shards__init(&me, 1000),
                      parda_fixed_rate_shards__access_item,

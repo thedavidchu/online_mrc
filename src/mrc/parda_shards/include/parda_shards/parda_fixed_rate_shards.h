@@ -11,19 +11,19 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-struct FixedRateShards {
+struct PardaFixedRateShards {
     program_data_t program_data;
     Hash64BitType shards_scaling_factor;
     TimeStampType current_time_stamp;
 };
 
 bool
-parda_fixed_rate_shards__init(struct FixedRateShards *me,
+parda_fixed_rate_shards__init(struct PardaFixedRateShards *me,
                               const uint64_t shards_scaling_factor);
 
 void
-parda_fixed_rate_shards__access_item(struct FixedRateShards *me,
+parda_fixed_rate_shards__access_item(struct PardaFixedRateShards *me,
                                      EntryType entry);
 
 void
-parda_fixed_rate_shards__destroy(struct FixedRateShards *me);
+parda_fixed_rate_shards__destroy(struct PardaFixedRateShards *me);
