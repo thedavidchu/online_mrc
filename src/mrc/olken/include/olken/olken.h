@@ -10,7 +10,7 @@
 #include "types/time_stamp_type.h"
 #include "lookup/parallel_hash_table.h"
 
-struct OlkenReuseStack {
+struct Olken {
     struct Tree tree;
     struct ParallelHashTable hash_table;
     struct BasicHistogram histogram;
@@ -18,13 +18,13 @@ struct OlkenReuseStack {
 };
 
 bool
-olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries);
+Olken__init(struct Olken *me, const uint64_t max_num_unique_entries);
 
 void
-olken__access_item(struct OlkenReuseStack *me, EntryType entry);
+Olken__access_item(struct Olken *me, EntryType entry);
 
 void
-olken__print_histogram_as_json(struct OlkenReuseStack *me);
+Olken__print_histogram_as_json(struct Olken *me);
 
 void
-olken__destroy(struct OlkenReuseStack *me);
+Olken__destroy(struct Olken *me);

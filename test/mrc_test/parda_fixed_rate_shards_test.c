@@ -20,16 +20,16 @@ static bool
 access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
-    struct OlkenReuseStack oracle = {0};
+    struct Olken oracle = {0};
     struct FixedRateShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(parda_fixed_rate_shards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
-        olken__access_item(&oracle, entry);
+        Olken__access_item(&oracle, entry);
         parda_fixed_rate_shards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
@@ -45,7 +45,7 @@ access_same_key_five_times(void)
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000001);
 
-    olken__destroy(&oracle);
+    Olken__destroy(&oracle);
     parda_fixed_rate_shards__destroy(&me);
     return true;
 }
@@ -63,16 +63,16 @@ small_exact_trace_test(void)
         0, 10, 8, 3,  1, 2, 6, 7, 3, 10, 8,  6, 10, 6,  6,  2, 6,  0,  7, 9,
         6, 10, 1, 10, 2, 6, 2, 7, 8, 8,  6,  0, 7,  3,  1,  1, 2,  10, 3, 10,
         5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
-    struct OlkenReuseStack oracle = {0};
+    struct Olken oracle = {0};
     struct FixedRateShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(parda_fixed_rate_shards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
-        olken__access_item(&oracle, entry);
+        Olken__access_item(&oracle, entry);
         parda_fixed_rate_shards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
@@ -88,7 +88,7 @@ small_exact_trace_test(void)
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000001);
 
-    olken__destroy(&oracle);
+    Olken__destroy(&oracle);
     parda_fixed_rate_shards__destroy(&me);
     return true;
 }
@@ -97,7 +97,7 @@ static bool
 long_accuracy_trace_test(void)
 {
     struct ZipfianRandom zrng = {0};
-    struct OlkenReuseStack oracle = {0};
+    struct Olken oracle = {0};
     struct FixedRateShards me = {0};
 
     g_assert_true(zipfian_random__init(&zrng,
@@ -105,12 +105,12 @@ long_accuracy_trace_test(void)
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(parda_fixed_rate_shards__init(&me, 1000));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
-        olken__access_item(&oracle, entry);
+        Olken__access_item(&oracle, entry);
         parda_fixed_rate_shards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
@@ -126,7 +126,7 @@ long_accuracy_trace_test(void)
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.04);
 
-    olken__destroy(&oracle);
+    Olken__destroy(&oracle);
     parda_fixed_rate_shards__destroy(&me);
     return true;
 }

@@ -111,17 +111,17 @@ mean_absolute_error_test(void)
     const uint64_t trace_length = 1 << 20;
     struct ZipfianRandom zrng = {0};
     struct QuickMrc me = {0};
-    struct OlkenReuseStack olken = {0};
+    struct Olken olken = {0};
 
     g_assert_true(zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(olken__init(&olken, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&olken, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random__next(&zrng);
         quickmrc__access_item(&me, key);
-        olken__access_item(&olken, key);
+        Olken__access_item(&olken, key);
     }
 
     struct BasicMissRateCurve my_mrc = {0}, olken_mrc = {0};
@@ -136,7 +136,7 @@ mean_absolute_error_test(void)
     printf("Mean Absolute Error: %f\n", mae);
 
     quickmrc__destroy(&me);
-    olken__destroy(&olken);
+    Olken__destroy(&olken);
     return true;
 }
 

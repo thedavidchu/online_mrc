@@ -12,7 +12,7 @@
 #include "lookup/parallel_hash_table.h"
 
 bool
-olken__init(struct OlkenReuseStack *me, const uint64_t max_num_unique_entries)
+Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
 {
     if (me == NULL) {
         return false;
@@ -45,7 +45,7 @@ tree_error:
 }
 
 void
-olken__access_item(struct OlkenReuseStack *me, EntryType entry)
+Olken__access_item(struct Olken *me, EntryType entry)
 {
     bool r = false;
 
@@ -75,7 +75,7 @@ olken__access_item(struct OlkenReuseStack *me, EntryType entry)
 }
 
 void
-olken__print_histogram_as_json(struct OlkenReuseStack *me)
+Olken__print_histogram_as_json(struct Olken *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -87,7 +87,7 @@ olken__print_histogram_as_json(struct OlkenReuseStack *me)
 }
 
 void
-olken__destroy(struct OlkenReuseStack *me)
+Olken__destroy(struct Olken *me)
 {
     if (me == NULL) {
         return;
@@ -95,5 +95,5 @@ olken__destroy(struct OlkenReuseStack *me)
     tree__destroy(&me->tree);
     ParallelHashTable__destroy(&me->hash_table);
     basic_histogram__destroy(&me->histogram);
-    *me = (struct OlkenReuseStack){0};
+    *me = (struct Olken){0};
 }

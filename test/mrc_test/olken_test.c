@@ -30,15 +30,15 @@ access_same_key_five_times(void)
         .running_sum = ARRAY_SIZE(entries),
     };
 
-    struct OlkenReuseStack me = {0};
+    struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(Olken__init(&me, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        olken__access_item(&me, entries[i]);
+        Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
         basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
-    olken__destroy(&me);
+    Olken__destroy(&me);
     return true;
 }
 
@@ -64,15 +64,15 @@ small_exact_trace_test(void)
         .running_sum = ARRAY_SIZE(entries),
     };
 
-    struct OlkenReuseStack me = {0};
+    struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(Olken__init(&me, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        olken__access_item(&me, entries[i]);
+        Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
         basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
-    olken__destroy(&me);
+    Olken__destroy(&me);
     return true;
 }
 
@@ -99,15 +99,15 @@ small_inexact_trace_test(void)
         .running_sum = ARRAY_SIZE(entries),
     };
 
-    struct OlkenReuseStack me = {0};
+    struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(Olken__init(&me, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        olken__access_item(&me, entries[i]);
+        Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
         basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
-    olken__destroy(&me);
+    Olken__destroy(&me);
     return true;
 }
 
@@ -116,23 +116,23 @@ long_trace_test(void)
 {
     const uint64_t trace_length = 1 << 20;
     struct ZipfianRandom zrng = {0};
-    struct OlkenReuseStack me = {0};
+    struct Olken me = {0};
 
     ASSERT_FUNCTION_RETURNS_TRUE(
         zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
-    ASSERT_FUNCTION_RETURNS_TRUE(olken__init(&me, MAX_NUM_UNIQUE_ENTRIES));
+    ASSERT_FUNCTION_RETURNS_TRUE(Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = zipfian_random__next(&zrng);
-        olken__access_item(&me, key);
+        Olken__access_item(&me, key);
     }
 
     if (PRINT_HISTOGRAM) {
-        olken__print_histogram_as_json(&me);
+        Olken__print_histogram_as_json(&me);
     }
 
-    olken__destroy(&me);
+    Olken__destroy(&me);
     return true;
 }
 

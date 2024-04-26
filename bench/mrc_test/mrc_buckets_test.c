@@ -133,11 +133,11 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
 
-    PERFORMANCE_TEST(struct OlkenReuseStack,
+    PERFORMANCE_TEST(struct Olken,
                      me,
-                     olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
-                     olken__access_item,
-                     olken__destroy);
+                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
+                     Olken__access_item,
+                     Olken__destroy);
 
     PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
                               1,
