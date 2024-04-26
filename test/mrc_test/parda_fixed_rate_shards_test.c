@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "fixed_rate_shards/parda_fixed_rate_shards.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/basic_miss_rate_curve.h"
 #include "olken/olken.h"

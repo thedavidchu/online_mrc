@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "fixed_rate_shards/parda_fixed_rate_shards.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
 #include "hash/splitmix64.h"
 #include "parda.h"
 #include "types/entry_type.h"
