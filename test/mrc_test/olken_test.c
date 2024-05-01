@@ -37,7 +37,7 @@ access_same_key_five_times(void)
         Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     Olken__destroy(&me);
     return true;
 }
@@ -71,7 +71,7 @@ small_exact_trace_test(void)
         Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     Olken__destroy(&me);
     return true;
 }
@@ -106,7 +106,7 @@ small_inexact_trace_test(void)
         Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     Olken__destroy(&me);
     return true;
 }

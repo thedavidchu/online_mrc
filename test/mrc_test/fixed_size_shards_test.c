@@ -36,7 +36,7 @@ access_same_key_five_times(void)
         FixedSizeShards__access_item(&me, entries[i]);
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }
@@ -73,9 +73,9 @@ small_exact_trace_test(void)
         FixedSizeShards__access_item(&me, entries[i]);
     }
     FixedSizeShards__print_histogram_as_json(&me);
-    basic_histogram__print_as_json(&basic_histogram_oracle);
+    BasicHistogram__print_as_json(&basic_histogram_oracle);
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }

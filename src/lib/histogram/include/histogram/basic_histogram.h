@@ -17,32 +17,32 @@ struct BasicHistogram {
 };
 
 bool
-basic_histogram__init(struct BasicHistogram *me, const uint64_t length);
+BasicHistogram__init(struct BasicHistogram *me, const uint64_t length);
 
 bool
-basic_histogram__insert_finite(struct BasicHistogram *me, const uint64_t index);
+BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index);
 
 /// @brief  Insert a non-infinite, scaled index. By scaled, I mean that the
 ///         index represents multiple elements.
 /// @note   This is used for SHARDS.
 bool
-basic_histogram__insert_scaled_finite(struct BasicHistogram *me,
+BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
                                       const uint64_t index,
                                       const uint64_t scale);
 
 bool
-basic_histogram__insert_infinite(struct BasicHistogram *me);
+BasicHistogram__insert_infinite(struct BasicHistogram *me);
 
 bool
-basic_histogram__insert_scaled_infinite(struct BasicHistogram *me,
+BasicHistogram__insert_scaled_infinite(struct BasicHistogram *me,
                                         const uint64_t scale);
 
 bool
-basic_histogram__exactly_equal(struct BasicHistogram *me,
+BasicHistogram__exactly_equal(struct BasicHistogram *me,
                                struct BasicHistogram *other);
 
 void
-basic_histogram__print_as_json(struct BasicHistogram *me);
+BasicHistogram__print_as_json(struct BasicHistogram *me);
 
 void
-basic_histogram__destroy(struct BasicHistogram *me);
+BasicHistogram__destroy(struct BasicHistogram *me);

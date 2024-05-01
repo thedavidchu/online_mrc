@@ -42,7 +42,7 @@ access_same_key_five_times(void)
         g_assert_true(quickmrc__access_item(&me, entries[i]));
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     quickmrc__destroy(&me);
     return true;
 }
@@ -74,7 +74,7 @@ small_merge_test(void)
         quickmrc__print_histogram_as_json(&me);
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     quickmrc__destroy(&me);
     return true;
 }

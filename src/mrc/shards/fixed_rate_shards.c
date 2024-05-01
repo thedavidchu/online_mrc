@@ -59,7 +59,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                "update should replace value");
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
-        basic_histogram__insert_scaled_finite(&me->olken.histogram, distance, 1 / me->sampling_ratio);
+        BasicHistogram__insert_scaled_finite(&me->olken.histogram, distance, 1 / me->sampling_ratio);
     } else {
         enum PutUniqueStatus s =
             HashTable__put_unique(&me->olken.hash_table,
@@ -70,7 +70,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         tree__sleator_insert(&me->olken.tree,
                              (KeyType)me->olken.current_time_stamp);
         ++me->olken.current_time_stamp;
-        basic_histogram__insert_scaled_infinite(&me->olken.histogram, 1 / me->sampling_ratio);
+        BasicHistogram__insert_scaled_infinite(&me->olken.histogram, 1 / me->sampling_ratio);
     }
 }
 
