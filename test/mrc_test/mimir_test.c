@@ -58,17 +58,17 @@ static bool
 test_mimir_buckets(void)
 {
     struct MimirBuckets me = {0};
-    g_assert_true(mimir_buckets__init(&me, 10));
+    g_assert_true(MimirBuckets__init(&me, 10));
     tester_refresh_buckets(&me);
-    g_assert_true(mimir_buckets__validate(&me));
-    g_assert_true(9 == mimir_buckets__get_newest_bucket_index(&me));
-    g_assert_true(mimir_buckets__validate(&me));
+    g_assert_true(MimirBuckets__validate(&me));
+    g_assert_true(9 == MimirBuckets__get_newest_bucket_index(&me));
+    g_assert_true(MimirBuckets__validate(&me));
     g_assert_true(90 == get_newest_bucket_size(&me));
     g_assert_true(55 == get_average_num_entries_per_bucket(&me));
     g_assert_true(2850 == count_weighted_sum_of_bucket_indices(&me));
 
     // Test Rounder aging
-    g_assert_true(5 == mimir_buckets__get_average_bucket_index(&me));
+    g_assert_true(5 == MimirBuckets__get_average_bucket_index(&me));
     const uint64_t oracle_buckets_rounder[20][10] = {
         {100, 10, 20, 30, 40, 50, 60, 70, 80, 90},
         {0, 110, 20, 30, 40, 50, 60, 70, 80, 90},
@@ -94,17 +94,17 @@ test_mimir_buckets(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(oracle_buckets_rounder); ++i) {
         g_assert_true(
             tester_ensure_buckets_match(&me, oracle_buckets_rounder[i]));
-        g_assert_true(mimir_buckets__rounder_aging_policy(&me));
+        g_assert_true(MimirBuckets__rounder_aging_policy(&me));
     }
-    g_assert_true(mimir_buckets__validate(&me));
+    g_assert_true(MimirBuckets__validate(&me));
 
     // Test Stacker aging
     tester_refresh_buckets(&me);
-    mimir_buckets__stacker_aging_policy(&me, 5);
+    MimirBuckets__stacker_aging_policy(&me, 5);
     const uint64_t oracle_buckets_stacker[1][10] = {
         {100, 10, 20, 30, 90, 60, 70, 80, 90, 0}};
     g_assert_true(tester_ensure_buckets_match(&me, oracle_buckets_stacker[0]));
-    g_assert_true(mimir_buckets__validate(&me));
+    g_assert_true(MimirBuckets__validate(&me));
 
     return true;
 }

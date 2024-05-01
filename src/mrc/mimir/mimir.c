@@ -31,7 +31,7 @@ stacker_aging_policy(struct Mimir *me)
 
     uint64_t entry = 0, bucket_index = 0;
     uint64_t average_stack_distance_bucket =
-        mimir_buckets__get_average_bucket_index(&me->buckets);
+        MimirBuckets__get_average_bucket_index(&me->buckets);
     while (g_hash_table_iter_next(&iter,
                                   (gpointer *)&entry,
                                   (gpointer *)&bucket_index) == TRUE) {
@@ -43,7 +43,7 @@ stacker_aging_policy(struct Mimir *me)
     //      age the counts of each buckets (i.e. factor this
     //      function out of the loop). This is a future task, since
     //      I want to get the algorithm working as described.
-    mimir_buckets__stacker_aging_policy(&me->buckets,
+    MimirBuckets__stacker_aging_policy(&me->buckets,
                                         average_stack_distance_bucket);
 }
 
@@ -56,7 +56,7 @@ age(struct Mimir *me)
         stacker_aging_policy(me);
         break;
     case MIMIR_ROUNDER:
-        mimir_buckets__rounder_aging_policy(&me->buckets);
+        MimirBuckets__rounder_aging_policy(&me->buckets);
         break;
     default:
         LOGGER_ERROR("aging policy should be MIMIR_STACKER or MIMIR_ROUNDER");
@@ -77,7 +77,7 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
 
     // Update hash table
     uint64_t newest_bucket =
-        mimir_buckets__get_newest_bucket_index(&me->buckets);
+        MimirBuckets__get_newest_bucket_index(&me->buckets);
     if (newest_bucket == 0) {
         LOGGER_FATAL("newest_bucket should be non-zero");
         assert(0 && "newest_bucket should be non-zero");
@@ -90,7 +90,7 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
 
     // Update histogram
     struct MimirBucketsStackDistanceStatus status =
-        mimir_buckets__get_stack_distance(&me->buckets, bucket_index);
+        MimirBuckets__get_stack_distance(&me->buckets, bucket_index);
     if (status.success == false) {
         LOGGER_ERROR("status should be successful!");
         assert(0 && "impossible!");
@@ -102,9 +102,9 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
                                                1);
 
     // Update the buckets
-    mimir_buckets__decrement_bucket(&me->buckets, bucket_index);
-    mimir_buckets__increment_newest_bucket(&me->buckets);
-    if (mimir_buckets__newest_bucket_is_full(&me->buckets)) {
+    MimirBuckets__decrement_bucket(&me->buckets, bucket_index);
+    MimirBuckets__increment_newest_bucket(&me->buckets);
+    if (MimirBuckets__newest_bucket_is_full(&me->buckets)) {
         age(me);
     }
 }
@@ -114,7 +114,7 @@ miss(struct Mimir *me, EntryType entry)
 {
     // Update the hash table
     uint64_t newest_bucket =
-        mimir_buckets__get_newest_bucket_index(&me->buckets);
+        MimirBuckets__get_newest_bucket_index(&me->buckets);
     if (newest_bucket == 0) {
         LOGGER_FATAL("newest_bucket should be non-zero");
         assert(0 && "newest_bucket should be non-zero");
@@ -128,9 +128,9 @@ miss(struct Mimir *me, EntryType entry)
     fractional_histogram__insert_scaled_infinite(&me->histogram, 1);
 
     // Update the buckets
-    mimir_buckets__increment_newest_bucket(&me->buckets);
-    mimir_buckets__increment_num_unique_entries(&me->buckets);
-    if (mimir_buckets__newest_bucket_is_full(&me->buckets)) {
+    MimirBuckets__increment_newest_bucket(&me->buckets);
+    MimirBuckets__increment_num_unique_entries(&me->buckets);
+    if (MimirBuckets__newest_bucket_is_full(&me->buckets)) {
         age(me);
     }
 }
@@ -145,7 +145,7 @@ mimir__init(struct Mimir *me,
     if (me == NULL || num_buckets == 0) {
         return false;
     }
-    r = mimir_buckets__init(&me->buckets, num_buckets);
+    r = MimirBuckets__init(&me->buckets, num_buckets);
     if (!r) {
         goto buckets_error;
     }
@@ -171,7 +171,7 @@ mimir__init(struct Mimir *me,
 hash_table_error:
     fractional_histogram__destroy(&me->histogram);
 histogram_error:
-    mimir_buckets__destroy(&me->buckets);
+    MimirBuckets__destroy(&me->buckets);
 buckets_error:
     return false;
 }
@@ -236,7 +236,7 @@ mimir__validate(struct Mimir *me)
     if (me == NULL) {
         return true;
     }
-    r = mimir_buckets__validate(&me->buckets);
+    r = MimirBuckets__validate(&me->buckets);
     if (!r) {
         assert(0);
         return false;
@@ -259,7 +259,7 @@ mimir__destroy(struct Mimir *me)
         return;
     }
     fractional_histogram__destroy(&me->histogram);
-    mimir_buckets__destroy(&me->buckets);
+    MimirBuckets__destroy(&me->buckets);
     if (me->hash_table != NULL) {
         g_hash_table_destroy(me->hash_table);
     }

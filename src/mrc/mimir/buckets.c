@@ -15,7 +15,7 @@
 #include "mimir/private_buckets.h"
 
 bool
-mimir_buckets__init(struct MimirBuckets *me, const uint64_t num_real_buckets)
+MimirBuckets__init(struct MimirBuckets *me, const uint64_t num_real_buckets)
 {
     if (me == NULL || num_real_buckets == 0) {
         return false;
@@ -34,7 +34,7 @@ mimir_buckets__init(struct MimirBuckets *me, const uint64_t num_real_buckets)
 }
 
 uint64_t
-mimir_buckets__get_newest_bucket_index(struct MimirBuckets *me)
+MimirBuckets__get_newest_bucket_index(struct MimirBuckets *me)
 {
     if (me == NULL) {
         // Since we do not allow zero buckets, a value of zero would be an
@@ -45,7 +45,7 @@ mimir_buckets__get_newest_bucket_index(struct MimirBuckets *me)
 }
 
 bool
-mimir_buckets__increment_num_unique_entries(struct MimirBuckets *me)
+MimirBuckets__increment_num_unique_entries(struct MimirBuckets *me)
 {
     if (me == NULL) {
         return false;
@@ -55,7 +55,7 @@ mimir_buckets__increment_num_unique_entries(struct MimirBuckets *me)
 }
 
 bool
-mimir_buckets__increment_newest_bucket(struct MimirBuckets *me)
+MimirBuckets__increment_newest_bucket(struct MimirBuckets *me)
 {
     uint64_t real_index = 0;
     if (me == NULL || me->buckets == NULL) {
@@ -68,8 +68,8 @@ mimir_buckets__increment_newest_bucket(struct MimirBuckets *me)
 }
 
 bool
-mimir_buckets__decrement_bucket(struct MimirBuckets *me,
-                                const uint64_t bucket_index)
+MimirBuckets__decrement_bucket(struct MimirBuckets *me,
+                               const uint64_t bucket_index)
 {
     uint64_t real_index = 0;
     if (me == NULL || me->buckets == NULL || bucket_index > me->newest_bucket) {
@@ -87,7 +87,7 @@ mimir_buckets__decrement_bucket(struct MimirBuckets *me,
 ////////////////////////////////////////////////////////////////////////////////
 
 bool
-mimir_buckets__newest_bucket_is_full(struct MimirBuckets *me)
+MimirBuckets__newest_bucket_is_full(struct MimirBuckets *me)
 {
     if (me == NULL || me->num_buckets == 0) {
         return false;
@@ -117,7 +117,7 @@ mimir_buckets__newest_bucket_is_full(struct MimirBuckets *me)
 ////////////////////////////////////////////////////////////////////////////////
 
 uint64_t
-mimir_buckets__get_average_bucket_index(struct MimirBuckets *me)
+MimirBuckets__get_average_bucket_index(struct MimirBuckets *me)
 {
     if (me == NULL || me->num_unique_entries == 0) {
         return 0;
@@ -129,8 +129,8 @@ mimir_buckets__get_average_bucket_index(struct MimirBuckets *me)
 }
 
 bool
-mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
-                                    const uint64_t average_bucket_index)
+MimirBuckets__stacker_aging_policy(struct MimirBuckets *me,
+                                   const uint64_t average_bucket_index)
 {
     if (me == NULL || me->buckets == NULL) {
         return false;
@@ -178,8 +178,8 @@ mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
 }
 
 bool
-mimir_buckets__age_by_one_bucket(struct MimirBuckets *me,
-                                 const uint64_t bucket_index)
+MimirBuckets__age_by_one_bucket(struct MimirBuckets *me,
+                                const uint64_t bucket_index)
 {
     uint64_t old_real_index = 0, new_real_index;
     if (me == NULL || me->buckets == NULL) {
@@ -200,7 +200,7 @@ mimir_buckets__age_by_one_bucket(struct MimirBuckets *me,
 }
 
 bool
-mimir_buckets__rounder_aging_policy(struct MimirBuckets *me)
+MimirBuckets__rounder_aging_policy(struct MimirBuckets *me)
 {
     uint64_t old_oldest_real_index = 0, new_oldest_real_index = 0;
     if (me == NULL || me->buckets == NULL) {
@@ -221,8 +221,7 @@ mimir_buckets__rounder_aging_policy(struct MimirBuckets *me)
 }
 
 struct MimirBucketsStackDistanceStatus
-mimir_buckets__get_stack_distance(struct MimirBuckets *me,
-                                  uint64_t bucket_index)
+MimirBuckets__get_stack_distance(struct MimirBuckets *me, uint64_t bucket_index)
 {
     struct MimirBucketsStackDistanceStatus status = {.success = false};
     if (me == NULL || me->buckets == NULL || bucket_index > me->newest_bucket) {
@@ -245,8 +244,8 @@ mimir_buckets__get_stack_distance(struct MimirBuckets *me,
 }
 
 void
-mimir_buckets__print_buckets(struct MimirBuckets *me,
-                             enum MimirBucketsPrintMode mode)
+MimirBuckets__print_buckets(struct MimirBuckets *me,
+                            enum MimirBucketsPrintMode mode)
 {
     if (me == NULL || me->buckets == NULL) {
         printf("(0, ?:?) []\n");
@@ -291,7 +290,7 @@ mimir_buckets__print_buckets(struct MimirBuckets *me,
 }
 
 bool
-mimir_buckets__validate(struct MimirBuckets *me)
+MimirBuckets__validate(struct MimirBuckets *me)
 {
     if (me == NULL) {
         return true;
@@ -331,7 +330,7 @@ mimir_buckets__validate(struct MimirBuckets *me)
 }
 
 void
-mimir_buckets__destroy(struct MimirBuckets *me)
+MimirBuckets__destroy(struct MimirBuckets *me)
 {
     if (me == NULL) {
         return;
