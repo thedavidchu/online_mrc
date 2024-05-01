@@ -102,10 +102,10 @@ long_accuracy_trace_test(void)
         FixedSizeShards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
-    basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
+    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
                                                      &oracle.histogram);
-    basic_miss_rate_curve__init_from_basic_histogram(&mrc, &me.histogram);
-    double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
+    MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
+    double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000033);
 

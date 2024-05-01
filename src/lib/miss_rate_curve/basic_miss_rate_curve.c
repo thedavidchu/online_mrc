@@ -130,9 +130,9 @@ basic_miss_rate_curve__init_from_parda_histogram(struct BasicMissRateCurve *me,
 }
 
 bool
-basic_miss_rate_curve__init_from_file(struct BasicMissRateCurve *me,
-                                      char const *restrict const file_name,
-                                      const uint64_t length)
+MissRateCurve__init_from_file(struct BasicMissRateCurve *me,
+                              char const *restrict const file_name,
+                              const uint64_t length)
 {
     if (me == NULL) {
         return false;
@@ -155,9 +155,8 @@ basic_miss_rate_curve__init_from_file(struct BasicMissRateCurve *me,
 }
 
 bool
-basic_miss_rate_curve__write_binary_to_file(
-    struct BasicMissRateCurve *me,
-    char const *restrict const file_name)
+MissRateCurve__write_binary_to_file(struct BasicMissRateCurve *me,
+                                    char const *restrict const file_name)
 {
     if (me == NULL || me->miss_rate == NULL) {
         return false;
@@ -175,8 +174,8 @@ basic_miss_rate_curve__write_binary_to_file(
 }
 
 double
-basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
-                                          struct BasicMissRateCurve *rhs)
+MissRateCurve__mean_squared_error(struct BasicMissRateCurve *lhs,
+                                  struct BasicMissRateCurve *rhs)
 {
     if (lhs == NULL && rhs == NULL) {
         return 0.0;
@@ -209,8 +208,8 @@ basic_miss_rate_curve__mean_squared_error(struct BasicMissRateCurve *lhs,
 }
 
 double
-basic_miss_rate_curve__mean_absolute_error(struct BasicMissRateCurve *lhs,
-                                           struct BasicMissRateCurve *rhs)
+MissRateCurve__mean_absolute_error(struct BasicMissRateCurve *lhs,
+                                   struct BasicMissRateCurve *rhs)
 {
     if (lhs == NULL && rhs == NULL) {
         return 0.0;
@@ -247,7 +246,7 @@ basic_miss_rate_curve__mean_absolute_error(struct BasicMissRateCurve *lhs,
 }
 
 void
-basic_miss_rate_curve__print_as_json(struct BasicMissRateCurve *me)
+MissRateCurve__print_as_json(struct BasicMissRateCurve *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}\n");
@@ -270,7 +269,7 @@ basic_miss_rate_curve__print_as_json(struct BasicMissRateCurve *me)
 }
 
 void
-basic_miss_rate_curve__destroy(struct BasicMissRateCurve *me)
+MissRateCurve__destroy(struct BasicMissRateCurve *me)
 {
     if (me == NULL) {
         return;

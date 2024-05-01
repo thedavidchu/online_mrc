@@ -126,13 +126,13 @@ mean_absolute_error_test(void)
 
     struct BasicMissRateCurve my_mrc = {0}, olken_mrc = {0};
     g_assert_true(
-        basic_miss_rate_curve__init_from_basic_histogram(&my_mrc,
+        MissRateCurve__init_from_basic_histogram(&my_mrc,
                                                          &me.histogram));
     g_assert_true(
-        basic_miss_rate_curve__init_from_basic_histogram(&olken_mrc,
+        MissRateCurve__init_from_basic_histogram(&olken_mrc,
                                                          &olken.histogram));
     double mae =
-        basic_miss_rate_curve__mean_absolute_error(&my_mrc, &olken_mrc);
+        MissRateCurve__mean_absolute_error(&my_mrc, &olken_mrc);
     printf("Mean Absolute Error: %f\n", mae);
 
     quickmrc__destroy(&me);
