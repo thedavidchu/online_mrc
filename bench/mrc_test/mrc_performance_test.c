@@ -6,7 +6,6 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
-#include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
@@ -74,21 +73,27 @@ main(int argc, char **argv)
         Mimir__access_item,
         Mimir__destroy);
 
-    bool i_have_lots_of_spare_cpu_cycles = false;
-    if (i_have_lots_of_spare_cpu_cycles) {
-        PERFORMANCE_TEST(
-            struct Mimir,
-            me,
-            Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
-            Mimir__access_item,
-            Mimir__destroy);
-    }
+#if 0
+    PERFORMANCE_TEST(
+        struct Mimir,
+        me,
+        Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+        Mimir__access_item,
+        Mimir__destroy);
+#endif
 
     PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
                      PardaFixedRateShards__init(&me, 1e-3),
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
+
+    PERFORMANCE_TEST(
+        struct QuickMRC,
+        me,
+        QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES),
+        QuickMRC__access_item,
+        QuickMRC__destroy);
 
     return EXIT_SUCCESS;
 }
