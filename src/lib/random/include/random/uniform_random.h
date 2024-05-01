@@ -23,8 +23,8 @@
 #include <stdint.h>
 
 /**
- * @brief A very simple and deterministic random generator that is more aligned with standard
- * benchmark such as TPC-C.
+ * @brief A very simple and deterministic random generator that is more aligned
+ * with standard benchmark such as TPC-C.
  * @ingroup ASSORTED
  * @details
  * Actually this is exactly from TPC-C spec.
@@ -55,9 +55,9 @@ UniformRandom__within(struct UniformRandom *me, uint32_t from, uint32_t to);
  */
 uint32_t
 UniformRandom__within_except(struct UniformRandom *me,
-                              uint32_t from,
-                              uint32_t to,
-                              uint32_t except);
+                             uint32_t from,
+                             uint32_t to,
+                             uint32_t except);
 
 /**
  * @brief Non-Uniform random (NURand) in TPCC spec (see Sec 2.1.6).
@@ -67,6 +67,9 @@ UniformRandom__within_except(struct UniformRandom *me,
  */
 uint32_t
 UniformRandom__non_uniform_within(struct UniformRandom *me,
-                                   uint32_t A,
-                                   uint32_t from,
-                                   uint32_t to);
+                                  uint32_t A,
+                                  uint32_t from,
+                                  uint32_t to);
+
+void
+UniformRandom__destroy(struct UniformRandom *me);

@@ -38,7 +38,8 @@ UniformRandom__next_uint32(struct UniformRandom *me)
 uint64_t
 UniformRandomuniform_random__next_uint64(struct UniformRandom *me)
 {
-    return (((uint64_t)UniformRandom__next_uint32(me)) << 32) | UniformRandom__next_uint32(me);
+    return (((uint64_t)UniformRandom__next_uint32(me)) << 32) |
+           UniformRandom__next_uint32(me);
 }
 
 uint32_t
@@ -51,7 +52,10 @@ UniformRandom__within(struct UniformRandom *me, uint32_t from, uint32_t to)
 }
 
 uint32_t
-UniformRandom__within_except(struct UniformRandom *me, uint32_t from, uint32_t to, uint32_t except)
+UniformRandom__within_except(struct UniformRandom *me,
+                             uint32_t from,
+                             uint32_t to,
+                             uint32_t except)
 {
     while (true) {
         uint32_t val = UniformRandom__within(me, from, to);
@@ -62,10 +66,21 @@ UniformRandom__within_except(struct UniformRandom *me, uint32_t from, uint32_t t
 }
 
 uint32_t
-UniformRandom__non_uniform_within(struct UniformRandom *me, uint32_t A, uint32_t from, uint32_t to)
+UniformRandom__non_uniform_within(struct UniformRandom *me,
+                                  uint32_t A,
+                                  uint32_t from,
+                                  uint32_t to)
 {
     uint32_t C = get_c(A);
-    return (((UniformRandom__within(me, 0, A) | UniformRandom__within(me, from, to)) + C) %
+    return (((UniformRandom__within(me, 0, A) |
+              UniformRandom__within(me, from, to)) +
+             C) %
             (to - from + 1)) +
            from;
+}
+
+void
+UniformRandom__destroy(struct UniformRandom *me)
+{
+    *me = (struct UniformRandom){0};
 }

@@ -17,7 +17,10 @@ zeta(struct ZipfianRandom *me, uint64_t n)
 }
 
 bool
-ZipfianRandom__init(struct ZipfianRandom *me, uint64_t items, double theta, uint64_t urnd_seed)
+ZipfianRandom__init(struct ZipfianRandom *me,
+                    uint64_t items,
+                    double theta,
+                    uint64_t urnd_seed)
 {
     if (me == NULL) {
         return false;
@@ -26,7 +29,8 @@ ZipfianRandom__init(struct ZipfianRandom *me, uint64_t items, double theta, uint
     me->theta_ = theta;
     me->zetan_ = zeta(me, items);
     me->alpha_ = 1.0 / (1.0 - me->theta_);
-    me->eta_ = (1 - pow(2.0 / (double)items, 1 - me->theta_)) / (1 - zeta(me, 2) / me->zetan_);
+    me->eta_ = (1 - pow(2.0 / (double)items, 1 - me->theta_)) /
+               (1 - zeta(me, 2) / me->zetan_);
     UniformRandom__init(&me->urnd_, urnd_seed);
     return true;
 }
@@ -34,7 +38,8 @@ ZipfianRandom__init(struct ZipfianRandom *me, uint64_t items, double theta, uint
 uint64_t
 ZipfianRandom__next(struct ZipfianRandom *me)
 {
-    double u = UniformRandom__within(&me->urnd_, 0, (uint32_t)me->max_) / (double)me->max_;
+    double u = UniformRandom__within(&me->urnd_, 0, (uint32_t)me->max_) /
+               (double)me->max_;
     double uz = u * me->zetan_;
     if (uz < 1.0) {
         return 0;
@@ -44,12 +49,14 @@ ZipfianRandom__next(struct ZipfianRandom *me)
         return 1;
     }
 
-    uint64_t ret = (uint64_t)((double)me->max_ * pow(me->eta_ * u - me->eta_ + 1, me->alpha_));
+    uint64_t ret = (uint64_t)((double)me->max_ *
+                              pow(me->eta_ * u - me->eta_ + 1, me->alpha_));
     return ret;
 }
 
 void
 ZipfianRandom__destroy(struct ZipfianRandom *me)
 {
+    UniformRandom__destroy(&me->urnd_);
     *me = (struct ZipfianRandom){0};
 }
