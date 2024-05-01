@@ -12,11 +12,11 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-#include "lookup/parallel_hash_table.h"
+#include "lookup/hash_table.h"
 #include "quickmrc/quickmrc.h"
 
 bool
-quickmrc__init(struct QuickMrc *me,
+QuickMRC__init(struct QuickMRC *me,
                uint64_t default_num_buckets,
                uint64_t max_bucket_size,
                uint64_t histogram_length)
@@ -25,21 +25,21 @@ quickmrc__init(struct QuickMrc *me,
     if (me == NULL) {
         return false;
     }
-    r = ParallelHashTable__init(&me->hash_table, 1 << 20);
+    r = HashTable__init(&me->hash_table);
     if (!r) {
         return false;
     }
-    r = quickmrc_buckets__init(&me->buckets,
-                               default_num_buckets,
-                               max_bucket_size);
+    r = QuickMRCBuckets__init(&me->buckets,
+                              default_num_buckets,
+                              max_bucket_size);
     if (!r) {
-        ParallelHashTable__destroy(&me->hash_table);
+        HashTable__destroy(&me->hash_table);
         return false;
     }
     r = BasicHistogram__init(&me->histogram, histogram_length);
     if (!r) {
-        ParallelHashTable__destroy(&me->hash_table);
-        quickmrc_buckets__destroy(&me->buckets);
+        HashTable__destroy(&me->hash_table);
+        QuickMRCBuckets__destroy(&me->buckets);
         return false;
     }
     me->total_entries_seen = 0;
@@ -48,41 +48,41 @@ quickmrc__init(struct QuickMrc *me,
 }
 
 bool
-quickmrc__access_item(struct QuickMrc *me, EntryType entry)
+QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
 {
     if (me == NULL) {
         return false;
     }
 
     // This assumes there won't be any errors further on.
-    __atomic_fetch_add(&me->total_entries_processed, 1, __ATOMIC_SEQ_CST);
+    me->total_entries_processed += 1;
 
-    struct LookupReturn r = ParallelHashTable__lookup(&me->hash_table, entry);
+    struct LookupReturn r = HashTable__lookup(&me->hash_table, entry);
     if (r.success) {
         uint64_t stack_dist =
-            quickmrc_buckets__reaccess_old(&me->buckets, r.timestamp);
+            QuickMRCBuckets__reaccess_old(&me->buckets, r.timestamp);
         if (stack_dist == UINT64_MAX) {
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        ParallelHashTable__put_unique(&me->hash_table, entry, new_timestamp);
+        HashTable__put_unique(&me->hash_table, entry, new_timestamp);
         BasicHistogram__insert_finite(&me->histogram, stack_dist);
     } else {
-        if (!quickmrc_buckets__insert_new(&me->buckets)) {
+        if (!QuickMRCBuckets__insert_new(&me->buckets)) {
             return false;
         }
         if (!BasicHistogram__insert_infinite(&me->histogram)) {
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        ParallelHashTable__put_unique(&me->hash_table, entry, new_timestamp);
+        HashTable__put_unique(&me->hash_table, entry, new_timestamp);
     }
 
     return true;
 }
 
 void
-quickmrc__print_histogram_as_json(struct QuickMrc *me)
+QuickMRC__print_histogram_as_json(struct QuickMRC *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -94,13 +94,13 @@ quickmrc__print_histogram_as_json(struct QuickMrc *me)
 }
 
 void
-quickmrc__destroy(struct QuickMrc *me)
+QuickMRC__destroy(struct QuickMRC *me)
 {
     if (me == NULL) {
         return;
     }
-    ParallelHashTable__destroy(&me->hash_table);
-    quickmrc_buckets__destroy(&me->buckets);
+    HashTable__destroy(&me->hash_table);
+    QuickMRCBuckets__destroy(&me->buckets);
     BasicHistogram__destroy(&me->histogram);
     memset(me, 0, sizeof(*me));
 }

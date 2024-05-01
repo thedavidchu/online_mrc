@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "parda_shards/parda_fixed_rate_shards.h"
 #include "hash/splitmix64.h"
 #include "parda.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
 #include "types/entry_type.h"
 
 bool
 PardaFixedRateShards__init(struct PardaFixedRateShards *me,
-                              const double sampling_ratio)
+                           const double sampling_ratio)
 {
     if (me == NULL || sampling_ratio <= 0.0 || 1.0 < sampling_ratio)
         return false;
@@ -23,7 +23,7 @@ PardaFixedRateShards__init(struct PardaFixedRateShards *me,
 
 void
 PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
-                                     EntryType entry)
+                                  EntryType entry)
 {
     char entry_str[21] = {0};
     if (me == NULL) {

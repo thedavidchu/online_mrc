@@ -1,21 +1,3 @@
-QUICK_TEST = false
-if QUICK_TEST
-    hash_table_test = executable(
-        'hash_table_test',
-        'hash_table.c',
-        dependencies: [common_dep, splitmix64_dep],
-    )
-    test('hash_table_test', hash_table_test)
-endif
-
-hash_table_dep = declare_dependency(
-    link_with: library(
-        'hash_table_lib',
-        'hash_table.c',
-        dependencies: [splitmix64_dep, common_dep],
-    ),
-)
-
 quickmrc_buckets_dep = declare_dependency(
     link_with: library(
         'quickmrc_buckets_lib',
@@ -36,7 +18,6 @@ quickmrc_dep = declare_dependency(
             glib_dep,
             splitmix64_dep,
             quickmrc_buckets_dep,
-            hash_table_dep,
             lookup_dep,
         ],
     ),
