@@ -14,7 +14,7 @@
 
 struct QuickMrc {
     struct ParallelHashTable hash_table;
-    struct QuickMrcBuckets buckets;
+    struct QuickMRCBuckets buckets;
     struct BasicHistogram histogram;
 
     // Number of entries that we have seen, regardless of whether it is above or

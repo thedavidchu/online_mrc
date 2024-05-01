@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,32 +10,17 @@
 
 #include "quickmrc/buckets.h"
 
-#if 0
-#include <stdio.h>
-static void
-print_buckets(struct QuickMrcBuckets *me)
-{
-    printf("[");
-    for (size_t i = 0; i < me->num_buckets; ++i) {
-        printf("{%zu:%zu}, ",
-               me->buckets[i].max_timestamp,
-               me->buckets[i].count);
-    }
-    printf("]\n");
-}
-#endif
-
 bool
-quickmrc_buckets__init(struct QuickMrcBuckets *me,
-                       uint64_t default_num_buckets,
-                       uint64_t max_bucket_size)
+QuickMRCBuckets__init(struct QuickMRCBuckets *me,
+                      uint64_t default_num_buckets,
+                      uint64_t max_bucket_size)
 {
     if (me == NULL || default_num_buckets == 0)
         return false;
     void *buf = calloc(default_num_buckets, sizeof(*me->buckets));
     if (buf == NULL)
         return false;
-    const struct QuickMrcBuckets tmp = (struct QuickMrcBuckets){
+    const struct QuickMRCBuckets tmp = (struct QuickMRCBuckets){
         .buckets = (struct TimestampRangeCount *)buf,
         .num_buckets = default_num_buckets,
         .default_num_buckets = default_num_buckets,
@@ -47,7 +33,7 @@ quickmrc_buckets__init(struct QuickMrcBuckets *me,
 }
 
 static bool
-is_newest_bucket_full(struct QuickMrcBuckets *me)
+is_newest_bucket_full(struct QuickMRCBuckets *me)
 {
     assert(me != NULL && me->buckets != NULL);
     return me->buckets[0].count >= me->max_bucket_size;
@@ -56,7 +42,7 @@ is_newest_bucket_full(struct QuickMrcBuckets *me)
 /// Get pair with minimum sum. We return the index of the __ of the pair.
 /// Given a tie, we will return the newer pair.
 static uint64_t
-get_min_bucket_pair(struct QuickMrcBuckets *me)
+get_min_bucket_pair(struct QuickMRCBuckets *me)
 {
     assert(me != NULL && me->buckets != NULL);
     uint64_t min_pair = 0;
@@ -74,7 +60,7 @@ get_min_bucket_pair(struct QuickMrcBuckets *me)
 }
 
 static uint64_t
-get_sum_of_pair(struct QuickMrcBuckets *me, uint64_t pair_idx)
+get_sum_of_pair(struct QuickMRCBuckets *me, uint64_t pair_idx)
 {
     assert(me != NULL && me->buckets != NULL && pair_idx + 1 < me->num_buckets);
     return me->buckets[pair_idx].count + me->buckets[pair_idx + 1].count;
@@ -86,7 +72,7 @@ get_sum_of_pair(struct QuickMrcBuckets *me, uint64_t pair_idx)
 ///         some threshold. In this case, we could be slightly faster (if we're
 ///         searching from the right direction).
 static bool
-age(struct QuickMrcBuckets *me)
+age(struct QuickMRCBuckets *me)
 {
     uint64_t min_pair = get_min_bucket_pair(me);
     // Update range
@@ -118,7 +104,7 @@ age(struct QuickMrcBuckets *me)
 }
 
 static bool
-increment_newest_bucket(struct QuickMrcBuckets *me)
+increment_newest_bucket(struct QuickMRCBuckets *me)
 {
     assert(me != NULL && me->buckets != NULL);
     ++me->buckets[0].count;
@@ -131,7 +117,7 @@ increment_newest_bucket(struct QuickMrcBuckets *me)
 
 /// Increment the newest bucket and return
 bool
-quickmrc_buckets__insert_new(struct QuickMrcBuckets *me)
+QuickMRCBuckets__insert_new(struct QuickMRCBuckets *me)
 {
     if (me == NULL || me->buckets == NULL)
         return false;
@@ -142,7 +128,7 @@ quickmrc_buckets__insert_new(struct QuickMrcBuckets *me)
 
 /// Get the stack distance of a timestamp and decrement that timestamp.
 static uint64_t
-get_stack_distance_and_decrement(struct QuickMrcBuckets *me,
+get_stack_distance_and_decrement(struct QuickMRCBuckets *me,
                                  TimeStampType old_timestamp)
 {
     uint64_t stack_dist = 0;
@@ -165,8 +151,8 @@ get_stack_distance_and_decrement(struct QuickMrcBuckets *me,
 /// distance.
 /// @return Return stack distance or UINT64_MAX on error.
 uint64_t
-quickmrc_buckets__reaccess_old(struct QuickMrcBuckets *me,
-                               TimeStampType old_timestamp)
+QuickMRCBuckets__reaccess_old(struct QuickMRCBuckets *me,
+                              TimeStampType old_timestamp)
 {
     if (me == NULL)
         return UINT64_MAX;
@@ -177,7 +163,19 @@ quickmrc_buckets__reaccess_old(struct QuickMrcBuckets *me,
 }
 
 void
-quickmrc_buckets__destroy(struct QuickMrcBuckets *me)
+QuickMRCBuckets__print(struct QuickMRCBuckets *me)
+{
+    printf("[");
+    for (size_t i = 0; i < me->num_buckets; ++i) {
+        printf("{%zu:%zu}, ",
+               me->buckets[i].max_timestamp,
+               me->buckets[i].count);
+    }
+    printf("]\n");
+}
+
+void
+QuickMRCBuckets__destroy(struct QuickMRCBuckets *me)
 {
     if (me == NULL)
         return;

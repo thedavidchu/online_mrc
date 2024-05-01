@@ -17,7 +17,7 @@ struct TimestampRangeCount {
     uint64_t count;
 };
 
-struct QuickMrcBuckets {
+struct QuickMRCBuckets {
     struct TimestampRangeCount *buckets;
     const uint64_t num_buckets;
     const uint64_t default_num_buckets;
@@ -27,20 +27,23 @@ struct QuickMrcBuckets {
 };
 
 bool
-quickmrc_buckets__init(struct QuickMrcBuckets *me,
+QuickMRCBuckets__init(struct QuickMRCBuckets *me,
                        uint64_t default_num_buckets,
                        uint64_t max_bucket_size);
 
 /// Increment the newest bucket and return
 bool
-quickmrc_buckets__insert_new(struct QuickMrcBuckets *me);
+QuickMRCBuckets__insert_new(struct QuickMRCBuckets *me);
 
 /// Decrement a bucket corresponding to the old timestamp. Get the stack
 /// distance.
 /// @return Return stack distance or UINT64_MAX on error.
 uint64_t
-quickmrc_buckets__reaccess_old(struct QuickMrcBuckets *me,
+QuickMRCBuckets__reaccess_old(struct QuickMRCBuckets *me,
                                TimeStampType old_timestamp);
 
 void
-quickmrc_buckets__destroy(struct QuickMrcBuckets *me);
+QuickMRCBuckets__print(struct QuickMRCBuckets *me);
+
+void
+QuickMRCBuckets__destroy(struct QuickMRCBuckets *me);

@@ -29,7 +29,7 @@ quickmrc__init(struct QuickMrc *me,
     if (!r) {
         return false;
     }
-    r = quickmrc_buckets__init(&me->buckets,
+    r = QuickMRCBuckets__init(&me->buckets,
                                default_num_buckets,
                                max_bucket_size);
     if (!r) {
@@ -39,7 +39,7 @@ quickmrc__init(struct QuickMrc *me,
     r = BasicHistogram__init(&me->histogram, histogram_length);
     if (!r) {
         ParallelHashTable__destroy(&me->hash_table);
-        quickmrc_buckets__destroy(&me->buckets);
+        QuickMRCBuckets__destroy(&me->buckets);
         return false;
     }
     me->total_entries_seen = 0;
@@ -60,7 +60,7 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
     struct LookupReturn r = ParallelHashTable__lookup(&me->hash_table, entry);
     if (r.success) {
         uint64_t stack_dist =
-            quickmrc_buckets__reaccess_old(&me->buckets, r.timestamp);
+            QuickMRCBuckets__reaccess_old(&me->buckets, r.timestamp);
         if (stack_dist == UINT64_MAX) {
             return false;
         }
@@ -68,7 +68,7 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
         ParallelHashTable__put_unique(&me->hash_table, entry, new_timestamp);
         BasicHistogram__insert_finite(&me->histogram, stack_dist);
     } else {
-        if (!quickmrc_buckets__insert_new(&me->buckets)) {
+        if (!QuickMRCBuckets__insert_new(&me->buckets)) {
             return false;
         }
         if (!BasicHistogram__insert_infinite(&me->histogram)) {
@@ -100,7 +100,7 @@ quickmrc__destroy(struct QuickMrc *me)
         return;
     }
     ParallelHashTable__destroy(&me->hash_table);
-    quickmrc_buckets__destroy(&me->buckets);
+    QuickMRCBuckets__destroy(&me->buckets);
     BasicHistogram__destroy(&me->histogram);
     memset(me, 0, sizeof(*me));
 }
