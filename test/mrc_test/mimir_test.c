@@ -168,12 +168,6 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     basic_miss_rate_curve__init_from_fractional_histogram(&mrc, &me.histogram);
     double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    // HACK Ahh, the comma operator. It allows me to do this wonderful little
-    //      macro hack that could have otherwise required no brackets around the
-    //      cleanup expression in the macro definition and for me to use a
-    //      semicolon. But instead, I rely on the fact that macros have to match
-    //      round parentheses. The more I code in C, the more I realize how much
-    //      a safer language with more intelligent macros/generics would be.
     g_assert_true(mse <= 0.000383);
 
     Olken__destroy(&oracle);
