@@ -8,11 +8,11 @@
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
-#include "lookup/parallel_hash_table.h"
+#include "lookup/hash_table.h"
 
 struct Olken {
     struct Tree tree;
-    struct ParallelHashTable hash_table;
+    struct HashTable hash_table;
     struct BasicHistogram histogram;
     TimeStampType current_time_stamp;
 };

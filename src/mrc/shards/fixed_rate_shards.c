@@ -1,10 +1,14 @@
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
 #include "olken/olken.h"
+#include "lookup/hash_table.h"
 #include "shards/fixed_rate_shards.h"
+#include "tree/sleator_tree.h"
+#include "tree/basic_tree.h"
 #include "types/entry_type.h"
 
 bool
@@ -25,10 +29,42 @@ FixedRateShards__init(struct FixedRateShards *me,
 void
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
 {
+    bool r = false;
+
+    if (me == NULL) {
+        return;
+    }
+
     Hash64BitType hash = splitmix64_hash(entry);
     if (hash > me->threshold)
         return;
-    Olken__access_item(&me->olken, entry);
+
+    struct LookupReturn found =
+        HashTable__lookup(&me->olken.hash_table, entry);
+    if (found.success) {
+        uint64_t distance =
+            tree__reverse_rank(&me->olken.tree, (KeyType)found.timestamp);
+        r = tree__sleator_remove(&me->olken.tree, (KeyType)found.timestamp);
+        assert(r && "remove should not fail");
+        r = tree__sleator_insert(&me->olken.tree,
+                                 (KeyType)me->olken.current_time_stamp);
+        assert(r && "insert should not fail");
+        r = HashTable__put_unique(&me->olken.hash_table,
+                                          entry,
+                                          me->olken.current_time_stamp);
+        assert(r && "update should not fail");
+        ++me->olken.current_time_stamp;
+        // TODO(dchu): Maybe record the infinite distances for Parda!
+        basic_histogram__insert_finite(&me->olken.histogram, distance);
+    } else {
+        r = HashTable__put_unique(&me->olken.hash_table,
+                                          entry,
+                                          me->olken.current_time_stamp);
+        assert(r && "insert should not fail");
+        tree__sleator_insert(&me->olken.tree, (KeyType)me->olken.current_time_stamp);
+        ++me->olken.current_time_stamp;
+        basic_histogram__insert_infinite(&me->olken.histogram);
+    }
 }
 
 void

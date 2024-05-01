@@ -5,11 +5,12 @@
 #include <stdlib.h>
 
 #include "histogram/basic_histogram.h"
+#include "lookup/hash_table.h"
+#include "lookup/lookup.h"
 #include "olken/olken.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "tree/types.h"
-#include "lookup/parallel_hash_table.h"
 
 bool
 Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
@@ -21,11 +22,7 @@ Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
     if (!r) {
         goto tree_error;
     }
-    // NOTE Using the g_direct_hash function means that we need to pass our
-    //      entries as pointers to the hash table. It also means we cannot
-    //      destroy the values at the pointers, because the pointers are our
-    //      actual values!
-    r = ParallelHashTable__init(&me->hash_table, 1 << 20);
+    r = HashTable__init(&me->hash_table);
     if (!r) {
         goto hash_table_error;
     }
@@ -37,7 +34,7 @@ Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
     return true;
 
 histogram_error:
-    ParallelHashTable__destroy(&me->hash_table);
+    HashTable__destroy(&me->hash_table);
 hash_table_error:
     tree__destroy(&me->tree);
 tree_error:
@@ -53,20 +50,26 @@ Olken__access_item(struct Olken *me, EntryType entry)
         return;
     }
 
-    struct LookupReturn found = ParallelHashTable__lookup(&me->hash_table, entry);
+    struct LookupReturn found = HashTable__lookup(&me->hash_table, entry);
     if (found.success) {
-        uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)found.timestamp);
+        uint64_t distance =
+            tree__reverse_rank(&me->tree, (KeyType)found.timestamp);
         r = tree__sleator_remove(&me->tree, (KeyType)found.timestamp);
         assert(r && "remove should not fail");
         r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         assert(r && "insert should not fail");
-        r = ParallelHashTable__put_unique(&me->hash_table, entry, me->current_time_stamp);
-        assert(r && "update should not fail");
+        enum PutUniqueStatus s = HashTable__put_unique(&me->hash_table,
+                                                       entry,
+                                                       me->current_time_stamp);
+        assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
+               "update should return false");
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         basic_histogram__insert_finite(&me->histogram, distance);
     } else {
-        r = ParallelHashTable__put_unique(&me->hash_table, entry, me->current_time_stamp);
+        r = HashTable__put_unique(&me->hash_table,
+                                  entry,
+                                  me->current_time_stamp);
         assert(r && "insert should not fail");
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
@@ -93,7 +96,7 @@ Olken__destroy(struct Olken *me)
         return;
     }
     tree__destroy(&me->tree);
-    ParallelHashTable__destroy(&me->hash_table);
+    HashTable__destroy(&me->hash_table);
     basic_histogram__destroy(&me->histogram);
     *me = (struct Olken){0};
 }
