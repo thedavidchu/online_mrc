@@ -15,16 +15,17 @@
 bool
 FixedRateShards__init(struct FixedRateShards *me,
                       const uint64_t max_num_unique_entries,
-                      const uint64_t threshold)
+                      const double sampling_ratio)
 {
+    if (me == NULL || sampling_ratio <= 0.0 || 1.0 < sampling_ratio)
+        return false;
     // NOTE I am assuming that Olken does not have any structures that
     //      point to the containing structure (i.e. the 'shell' of the
     //      Olken structure is not referenced anywhere).
     bool r = Olken__init(&me->olken, max_num_unique_entries);
     if (!r)
         return false;
-    me->threshold = threshold;
-    me->shards_scaling_factor = UINT64_MAX / threshold;
+    me->sampling_ratio = sampling_ratio;
     return true;
 }
 
@@ -38,7 +39,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
     }
 
     Hash64BitType hash = splitmix64_hash(entry);
-    if (hash > me->threshold)
+    if (hash > UINT64_MAX * me->sampling_ratio)
         return;
 
     struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
@@ -58,7 +59,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                "update should replace value");
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
-        basic_histogram__insert_scaled_finite(&me->olken.histogram, distance, me->shards_scaling_factor);
+        basic_histogram__insert_scaled_finite(&me->olken.histogram, distance, 1 / me->sampling_ratio);
     } else {
         enum PutUniqueStatus s =
             HashTable__put_unique(&me->olken.hash_table,
@@ -69,7 +70,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         tree__sleator_insert(&me->olken.tree,
                              (KeyType)me->olken.current_time_stamp);
         ++me->olken.current_time_stamp;
-        basic_histogram__insert_scaled_infinite(&me->olken.histogram, me->shards_scaling_factor);
+        basic_histogram__insert_scaled_infinite(&me->olken.histogram, 1 / me->sampling_ratio);
     }
 }
 

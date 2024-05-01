@@ -155,7 +155,7 @@ main(int argc, char **argv)
 
     PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
-                     PardaFixedRateShards__init(&me, 1000),
+                     PardaFixedRateShards__init(&me, 1e-3),
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
 

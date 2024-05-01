@@ -106,7 +106,7 @@ long_accuracy_trace_test(void)
                                        0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(PardaFixedRateShards__init(&me, 1000));
+    g_assert_true(PardaFixedRateShards__init(&me, 1e-3));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);

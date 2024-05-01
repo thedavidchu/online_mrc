@@ -10,14 +10,13 @@
 
 bool
 PardaFixedRateShards__init(struct PardaFixedRateShards *me,
-                              const uint64_t shards_scaling_factor)
+                              const double sampling_ratio)
 {
-    if (me == NULL) {
+    if (me == NULL || sampling_ratio <= 0.0 || 1.0 < sampling_ratio)
         return false;
-    }
     // TODO: initialize program data
     me->program_data = parda_init();
-    me->shards_scaling_factor = shards_scaling_factor;
+    me->sampling_ratio = sampling_ratio;
     me->current_time_stamp = 0;
     return true;
 }
@@ -30,7 +29,7 @@ PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
     if (me == NULL) {
         return;
     }
-    if (splitmix64_hash(entry) > UINT64_MAX / me->shards_scaling_factor) {
+    if (splitmix64_hash(entry) > UINT64_MAX * me->sampling_ratio) {
         return;
     }
     // I need to convert it to a string because Parda will strdup(...) it.
@@ -40,7 +39,7 @@ PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
     process_one_access(entry_str,
                        &me->program_data,
                        me->current_time_stamp,
-                       me->shards_scaling_factor);
+                       me->sampling_ratio);
     ++me->current_time_stamp;
 }
 

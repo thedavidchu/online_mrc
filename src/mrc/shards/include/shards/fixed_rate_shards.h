@@ -16,22 +16,17 @@ struct FixedRateShards {
     // 'init' function if you're curious what I mean!
     // [1] StackOverflow answer:
     // https://stackoverflow.com/questions/9691404/how-to-initialize-const-in-a-struct-in-c-with-malloc
-    uint64_t threshold;
-    // This is defined entirely by the threshold (and is just for convenience)!
-    uint64_t shards_scaling_factor;
+    double sampling_ratio;
 };
 
 /// @brief  Initialize the structures needed for fixed-size SHARDS.
 /// @param  me:
 /// @param  max_num_unique_entries:
-/// @param  threshold:
-///             IMPORTANT NOTE: this threshold is different than the
-///             PARDA-SHARDS scaling factor.
-///             We have: threshold = UINT64_MAX / me->shards_scaling_factor
+/// @param  sampling_ratio: this is the ratio that SHARDS samples
 bool
 FixedRateShards__init(struct FixedRateShards *me,
                       const uint64_t max_num_unique_entries,
-                      const uint64_t threshold);
+                      const double sampling_ratio);
 
 void
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);

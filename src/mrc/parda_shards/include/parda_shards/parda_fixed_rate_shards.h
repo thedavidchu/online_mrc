@@ -13,13 +13,13 @@
 
 struct PardaFixedRateShards {
     program_data_t program_data;
-    Hash64BitType shards_scaling_factor;
+    double sampling_ratio;
     TimeStampType current_time_stamp;
 };
 
 bool
 PardaFixedRateShards__init(struct PardaFixedRateShards *me,
-                              const uint64_t shards_scaling_factor);
+                              const double sampling_ratio);
 
 void
 PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
