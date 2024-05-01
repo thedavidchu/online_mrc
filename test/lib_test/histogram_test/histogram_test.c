@@ -22,7 +22,7 @@ const uint64_t random_values_0_to_11[100] = {
     do {                                                                       \
         if (!(r)) {                                                            \
             /* Clean up resources */                                           \
-            basic_histogram__destroy((histogram_ptr));                         \
+            BasicHistogram__destroy((histogram_ptr));                         \
             printf("[ERROR] %s:%d %s\n", __FILE__, __LINE__, (msg));           \
             /* NOTE This assertion is for debugging purposes so that we have a \
             finer grain understanding of where the failure occurred. */        \

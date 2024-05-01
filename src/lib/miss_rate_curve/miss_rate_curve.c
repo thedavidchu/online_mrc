@@ -15,7 +15,7 @@
 #include "miss_rate_curve/miss_rate_curve.h"
 
 bool
-basic_miss_rate_curve__init_from_fractional_histogram(
+MissRateCurve__init_from_fractional_histogram(
     struct MissRateCurve *me,
     struct FractionalHistogram *histogram)
 {
@@ -58,9 +58,8 @@ basic_miss_rate_curve__init_from_fractional_histogram(
 }
 
 bool
-basic_miss_rate_curve__init_from_basic_histogram(
-    struct MissRateCurve *me,
-    struct BasicHistogram *histogram)
+MissRateCurve__init_from_basic_histogram(struct MissRateCurve *me,
+                                         struct BasicHistogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
         histogram->length == 0) {
@@ -95,11 +94,11 @@ basic_miss_rate_curve__init_from_basic_histogram(
 }
 
 bool
-basic_miss_rate_curve__init_from_parda_histogram(struct MissRateCurve *me,
-                                                 uint64_t histogram_length,
-                                                 unsigned int *histogram,
-                                                 uint64_t histogram_total,
-                                                 uint64_t false_infinities)
+MissRateCurve__init_from_parda_histogram(struct MissRateCurve *me,
+                                         uint64_t histogram_length,
+                                         unsigned int *histogram,
+                                         uint64_t histogram_total,
+                                         uint64_t false_infinities)
 {
     if (me == NULL || histogram == NULL || histogram == NULL ||
         histogram_length == 0) {
