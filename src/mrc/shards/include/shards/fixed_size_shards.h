@@ -24,18 +24,18 @@ struct FixedSizeShards {
 /// @param  max_size    :   The maximum number of elements that we will track.
 ///                         Additional elements will be removed.
 bool
-fixed_size_shards__init(struct FixedSizeShards *me,
+FixedSizeShards__init(struct FixedSizeShards *me,
                         const double starting_sampling_ratio,
                         const uint64_t max_size,
                         const uint64_t max_num_unique_entries);
 
 void
-fixed_size_shards__access_item(struct FixedSizeShards *me,
+FixedSizeShards__access_item(struct FixedSizeShards *me,
                                EntryType entry);
 
 void
-fixed_size_shards__print_histogram_as_json(
+FixedSizeShards__print_histogram_as_json(
     struct FixedSizeShards *me);
 
 void
-fixed_size_shards__destroy(struct FixedSizeShards *me);
+FixedSizeShards__destroy(struct FixedSizeShards *me);

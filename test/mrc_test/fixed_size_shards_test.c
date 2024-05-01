@@ -31,13 +31,13 @@ access_same_key_five_times(void)
 
     struct FixedSizeShards me = {0};
     g_assert_true(
-        fixed_size_shards__init(&me, 1e-3, 1, histogram_oracle.length));
+        FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        fixed_size_shards__access_item(&me, entries[i]);
+        FixedSizeShards__access_item(&me, entries[i]);
     }
     g_assert_true(
         basic_histogram__exactly_equal(&me.histogram, &histogram_oracle));
-    fixed_size_shards__destroy(&me);
+    FixedSizeShards__destroy(&me);
     return true;
 }
 
@@ -65,18 +65,18 @@ small_exact_trace_test(void)
 
     struct FixedSizeShards me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(fixed_size_shards__init(&me,
+    g_assert_true(FixedSizeShards__init(&me,
                                           1.0,
                                           ARRAY_SIZE(entries),
                                           basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        fixed_size_shards__access_item(&me, entries[i]);
+        FixedSizeShards__access_item(&me, entries[i]);
     }
-    fixed_size_shards__print_histogram_as_json(&me);
+    FixedSizeShards__print_histogram_as_json(&me);
     basic_histogram__print_as_json(&basic_histogram_oracle);
     g_assert_true(
         basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
-    fixed_size_shards__destroy(&me);
+    FixedSizeShards__destroy(&me);
     return true;
 }
 
@@ -94,12 +94,12 @@ long_accuracy_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(
-        fixed_size_shards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES));
+        FixedSizeShards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
         Olken__access_item(&oracle, entry);
-        fixed_size_shards__access_item(&me, entry);
+        FixedSizeShards__access_item(&me, entry);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
     basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
@@ -110,7 +110,7 @@ long_accuracy_trace_test(void)
     g_assert_true(mse <= 0.000033);
 
     Olken__destroy(&oracle);
-    fixed_size_shards__destroy(&me);
+    FixedSizeShards__destroy(&me);
     return true;
 }
 

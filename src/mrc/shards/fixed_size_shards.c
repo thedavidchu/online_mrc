@@ -53,10 +53,10 @@ make_room(struct FixedSizeShards *me)
 }
 
 bool
-fixed_size_shards__init(struct FixedSizeShards *me,
-                        const double starting_sampling_ratio,
-                        const uint64_t max_size,
-                        const uint64_t max_num_unique_entries)
+FixedSizeShards__init(struct FixedSizeShards *me,
+                      const double starting_sampling_ratio,
+                      const uint64_t max_size,
+                      const uint64_t max_num_unique_entries)
 {
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
@@ -103,7 +103,7 @@ fixed_size_shards__init(struct FixedSizeShards *me,
 }
 
 void
-fixed_size_shards__access_item(struct FixedSizeShards *me, EntryType entry)
+FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -154,7 +154,7 @@ fixed_size_shards__access_item(struct FixedSizeShards *me, EntryType entry)
 }
 
 void
-fixed_size_shards__print_histogram_as_json(struct FixedSizeShards *me)
+FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -166,7 +166,7 @@ fixed_size_shards__print_histogram_as_json(struct FixedSizeShards *me)
 }
 
 void
-fixed_size_shards__destroy(struct FixedSizeShards *me)
+FixedSizeShards__destroy(struct FixedSizeShards *me)
 {
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
