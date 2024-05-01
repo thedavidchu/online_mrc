@@ -87,7 +87,7 @@ long_accuracy_trace_test(void)
     struct Olken oracle = {0};
     struct FixedSizeShards me = {0};
 
-    g_assert_true(zipfian_random__init(&zrng,
+    g_assert_true(ZipfianRandom__init(&zrng,
                                        MAX_NUM_UNIQUE_ENTRIES,
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
@@ -97,7 +97,7 @@ long_accuracy_trace_test(void)
         FixedSizeShards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t entry = zipfian_random__next(&zrng);
+        uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         FixedSizeShards__access_item(&me, entry);
     }

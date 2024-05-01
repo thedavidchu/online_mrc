@@ -119,12 +119,12 @@ long_trace_test(void)
     struct Olken me = {0};
 
     ASSERT_FUNCTION_RETURNS_TRUE(
-        zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+        ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t key = zipfian_random__next(&zrng);
+        uint64_t key = ZipfianRandom__next(&zrng);
         Olken__access_item(&me, key);
     }
 

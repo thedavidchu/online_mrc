@@ -92,7 +92,7 @@ long_accuracy_trace_test(void)
     struct Olken oracle = {0};
     struct FixedRateShards me = {0};
 
-    g_assert_true(zipfian_random__init(&zrng,
+    g_assert_true(ZipfianRandom__init(&zrng,
                                        MAX_NUM_UNIQUE_ENTRIES,
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
@@ -102,7 +102,7 @@ long_accuracy_trace_test(void)
         FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t entry = zipfian_random__next(&zrng);
+        uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
     }
@@ -126,7 +126,7 @@ long_parda_matching_trace_test(void)
     struct PardaFixedRateShards oracle = {0};
     struct FixedRateShards me = {0};
 
-    g_assert_true(zipfian_random__init(&zrng,
+    g_assert_true(ZipfianRandom__init(&zrng,
                                        MAX_NUM_UNIQUE_ENTRIES,
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
@@ -142,7 +142,7 @@ long_parda_matching_trace_test(void)
     //      due to the random skew, it doesn't really make a difference.
     size_t my_trace_length = MIN((size_t)nbuckets, MAX_NUM_UNIQUE_ENTRIES);
     for (uint64_t i = 0; i < my_trace_length; ++i) {
-        uint64_t entry = zipfian_random__next(&zrng);
+        uint64_t entry = ZipfianRandom__next(&zrng);
         PardaFixedRateShards__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
     }

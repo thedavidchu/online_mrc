@@ -31,7 +31,7 @@ parallel_thread_routine(void *args)
 {
     struct WorkerData *data = args;
     for (uint64_t i = 0; i < data->length; ++i) {
-        uint64_t key = zipfian_random__next(data->zrng);
+        uint64_t key = ZipfianRandom__next(data->zrng);
         quickmrc__access_item(data->qmrc, key);
     }
     return NULL;

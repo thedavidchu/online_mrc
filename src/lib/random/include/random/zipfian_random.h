@@ -44,10 +44,13 @@ struct ZipfianRandom {
 
 /// NOTE    This function is O(N) where N=#items.
 bool
-zipfian_random__init(struct ZipfianRandom *me,
+ZipfianRandom__init(struct ZipfianRandom *me,
                      uint64_t items,
                      double theta,
                      uint64_t urnd_seed);
 
 uint64_t
-zipfian_random__next(struct ZipfianRandom *me);
+ZipfianRandom__next(struct ZipfianRandom *me);
+
+void
+ZipfianRandom__destroy(struct ZipfianRandom *me);

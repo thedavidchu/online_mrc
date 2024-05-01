@@ -145,7 +145,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     struct ZipfianRandom zrng = {0};
     struct Olken oracle = {0};
     struct Mimir me = {0};
-    g_assert_true(zipfian_random__init(&zrng,
+    g_assert_true(ZipfianRandom__init(&zrng,
                                        MAX_NUM_UNIQUE_ENTRIES,
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
@@ -157,7 +157,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     //      absolutely demolishes the accuracy as well. Oh well, now this test
     //      is kind of useless!
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t entry = zipfian_random__next(&zrng);
+        uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         Mimir__access_item(&me, entry);
         Mimir__validate(&me);
