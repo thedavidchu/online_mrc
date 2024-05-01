@@ -132,7 +132,7 @@ main(int argc, char **argv)
     PERFORMANCE_TEST(
         struct FixedSizeShards,
         me,
-        fixed_size_shards__init(&me, 1000, 10000, MAX_NUM_UNIQUE_ENTRIES),
+        fixed_size_shards__init(&me, 1e-3, 10000, MAX_NUM_UNIQUE_ENTRIES),
         fixed_size_shards__access_item,
         fixed_size_shards__destroy);
 

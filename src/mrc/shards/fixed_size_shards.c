@@ -54,12 +54,13 @@ make_room(struct FixedSizeShards *me)
 
 bool
 fixed_size_shards__init(struct FixedSizeShards *me,
-                        const uint64_t starting_scale,
+                        const double starting_sampling_ratio,
                         const uint64_t max_size,
                         const uint64_t max_num_unique_entries)
 {
     bool r = false;
-    if (me == NULL || max_size == 0) {
+    if (me == NULL || starting_sampling_ratio <= 0.0 ||
+        1.0 < starting_sampling_ratio || max_size == 0) {
         return false;
     }
 
@@ -89,14 +90,20 @@ fixed_size_shards__init(struct FixedSizeShards *me,
         return false;
     }
     me->current_time_stamp = 0;
-    me->scale = starting_scale;
-    me->threshold = UINT64_MAX / starting_scale;
+    me->scale = 1 / starting_sampling_ratio;
+    // HACK We cast this to a `long double` because otherwise, the
+    //      compiler does: ((double)UINT64_MAX), which rounds it up too
+    //      high. This then causes the value to wrap around when we try
+    //      to cast it back to a uint64_t.
+    //
+    // TODO(dchu)   Check other cases where we multiply UINT64_MAX by a
+    //              double to make sure there can't be overflow.
+    me->threshold = (long double)UINT64_MAX * starting_sampling_ratio;
     return true;
 }
 
 void
-fixed_size_shards__access_item(struct FixedSizeShards *me,
-                               EntryType entry)
+fixed_size_shards__access_item(struct FixedSizeShards *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
