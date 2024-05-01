@@ -12,7 +12,7 @@
 #include "histogram/fractional_histogram.h"
 #include "logger/logger.h"
 #include "math/doubles_are_equal.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 
 bool
 basic_miss_rate_curve__init_from_fractional_histogram(

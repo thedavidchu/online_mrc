@@ -10,7 +10,7 @@
 #include "arrays/array_size.h"
 #include "glib.h"
 #include "histogram/basic_histogram.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "quickmrc/quickmrc.h"
 #include "random/zipfian_random.h"

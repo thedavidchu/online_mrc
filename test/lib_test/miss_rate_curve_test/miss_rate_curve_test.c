@@ -6,7 +6,7 @@
 
 #include "histogram/basic_histogram.h"
 #include "logger/logger.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 
 #include "math/doubles_are_equal.h"
 #include "test/mytester.h"

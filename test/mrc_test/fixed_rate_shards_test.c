@@ -4,7 +4,7 @@
 
 #include "arrays/array_size.h"
 #include "logger/logger.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "parda.h"
 #include "parda_shards/parda_fixed_rate_shards.h"

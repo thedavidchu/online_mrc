@@ -6,7 +6,7 @@
 #include "shards/fixed_size_shards.h"
 #include "histogram/basic_histogram.h"
 #include "logger/logger.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
