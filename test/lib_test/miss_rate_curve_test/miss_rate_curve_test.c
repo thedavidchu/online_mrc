@@ -23,7 +23,7 @@ const uint64_t random_values_0_to_11[100] = {
     5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
 
 static bool
-exact_match(struct BasicMissRateCurve *lhs, struct BasicMissRateCurve *rhs)
+exact_match(struct MissRateCurve *lhs, struct MissRateCurve *rhs)
 {
     assert(lhs != NULL && rhs != NULL && lhs->miss_rate != NULL &&
            rhs->miss_rate != NULL);
@@ -58,8 +58,8 @@ test_miss_rate_curve_for_basic_histogram(void)
         .running_sum = 103,
     };
 
-    struct BasicMissRateCurve mrc = {0};
-    struct BasicMissRateCurve mrc_from_file = {0};
+    struct MissRateCurve mrc = {0};
+    struct MissRateCurve mrc_from_file = {0};
     g_assert_true(
         MissRateCurve__init_from_basic_histogram(&mrc, &basic_hist));
     g_assert_true(MissRateCurve__write_binary_to_file(&mrc, "mrc.bin"));

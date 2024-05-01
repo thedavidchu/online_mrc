@@ -101,7 +101,7 @@ long_accuracy_trace_test(void)
         Olken__access_item(&oracle, entry);
         FixedSizeShards__access_item(&me, entry);
     }
-    struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
+    struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_basic_histogram(&oracle_mrc,
                                                      &oracle.histogram);
     MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);

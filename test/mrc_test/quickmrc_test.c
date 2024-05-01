@@ -124,7 +124,7 @@ mean_absolute_error_test(void)
         Olken__access_item(&olken, key);
     }
 
-    struct BasicMissRateCurve my_mrc = {0}, olken_mrc = {0};
+    struct MissRateCurve my_mrc = {0}, olken_mrc = {0};
     g_assert_true(
         MissRateCurve__init_from_basic_histogram(&my_mrc,
                                                          &me.histogram));
