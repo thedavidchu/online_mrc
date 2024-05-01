@@ -4,11 +4,12 @@
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
-#include "olken/olken.h"
 #include "lookup/hash_table.h"
+#include "lookup/lookup.h"
+#include "olken/olken.h"
 #include "shards/fixed_rate_shards.h"
-#include "tree/sleator_tree.h"
 #include "tree/basic_tree.h"
+#include "tree/sleator_tree.h"
 #include "types/entry_type.h"
 
 bool
@@ -39,8 +40,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
     if (hash > me->threshold)
         return;
 
-    struct LookupReturn found =
-        HashTable__lookup(&me->olken.hash_table, entry);
+    struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
     if (found.success) {
         uint64_t distance =
             tree__reverse_rank(&me->olken.tree, (KeyType)found.timestamp);
@@ -49,19 +49,24 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         r = tree__sleator_insert(&me->olken.tree,
                                  (KeyType)me->olken.current_time_stamp);
         assert(r && "insert should not fail");
-        r = HashTable__put_unique(&me->olken.hash_table,
-                                          entry,
-                                          me->olken.current_time_stamp);
-        assert(r && "update should not fail");
+        enum PutUniqueStatus s =
+            HashTable__put_unique(&me->olken.hash_table,
+                                  entry,
+                                  me->olken.current_time_stamp);
+        assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
+               "update should replace value");
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         basic_histogram__insert_finite(&me->olken.histogram, distance);
     } else {
-        r = HashTable__put_unique(&me->olken.hash_table,
-                                          entry,
-                                          me->olken.current_time_stamp);
-        assert(r && "insert should not fail");
-        tree__sleator_insert(&me->olken.tree, (KeyType)me->olken.current_time_stamp);
+        enum PutUniqueStatus s =
+            HashTable__put_unique(&me->olken.hash_table,
+                                  entry,
+                                  me->olken.current_time_stamp);
+        assert(s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
+               "update should insert key/value");
+        tree__sleator_insert(&me->olken.tree,
+                             (KeyType)me->olken.current_time_stamp);
         ++me->olken.current_time_stamp;
         basic_histogram__insert_infinite(&me->olken.histogram);
     }
