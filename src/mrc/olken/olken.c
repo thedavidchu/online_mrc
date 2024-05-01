@@ -62,15 +62,17 @@ Olken__access_item(struct Olken *me, EntryType entry)
                                                        entry,
                                                        me->current_time_stamp);
         assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
-               "update should return false");
+               "update should replace value");
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         basic_histogram__insert_finite(&me->histogram, distance);
     } else {
-        r = HashTable__put_unique(&me->hash_table,
+        enum PutUniqueStatus s =
+            HashTable__put_unique(&me->hash_table,
                                   entry,
                                   me->current_time_stamp);
-        assert(r && "insert should not fail");
+        assert(s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
+               "update should insert key/value");
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
         basic_histogram__insert_infinite(&me->histogram);
