@@ -30,12 +30,12 @@ make_room(struct FixedSizeShards *me)
     if (me == NULL || me->hash_table == NULL) {
         return;
     }
-    Hash64BitType max_hash = splay_priority_queue__get_max_hash(&me->pq);
+    Hash64BitType max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
     while (true) {
-        r = splay_priority_queue__remove(&me->pq, max_hash, &entry);
+        r = SplayPriorityQueue__remove(&me->pq, max_hash, &entry);
         if (!r) { // No more elements with the old max_hash
             // Update the new threshold and scale
-            max_hash = splay_priority_queue__get_max_hash(&me->pq);
+            max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
             me->threshold = max_hash;
             me->scale = UINT64_MAX / max_hash;
             break;
@@ -82,7 +82,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    r = splay_priority_queue__init(&me->pq, max_size);
+    r = SplayPriorityQueue__init(&me->pq, max_size);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
@@ -138,10 +138,10 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
                                               distance,
                                               me->scale);
     } else {
-        if (splay_priority_queue__is_full(&me->pq)) {
+        if (SplayPriorityQueue__is_full(&me->pq)) {
             make_room(me);
         }
-        splay_priority_queue__insert_if_room(&me->pq,
+        SplayPriorityQueue__insert_if_room(&me->pq,
                                              splitmix64_hash((uint64_t)entry),
                                              entry);
         g_hash_table_insert(me->hash_table,
@@ -171,6 +171,6 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
     BasicHistogram__destroy(&me->histogram);
-    splay_priority_queue__destroy(&me->pq);
+    SplayPriorityQueue__destroy(&me->pq);
     *me = (struct FixedSizeShards){0};
 }
