@@ -4,6 +4,7 @@
 
 #include <pthread.h>
 
+#include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "lookup/parallel_hash_table.h"
 #include "test/mytester.h"
@@ -12,6 +13,54 @@
 #include "unused/mark_unused.h"
 
 #define N 1000
+
+static TimeStampType
+identity(EntryType entry)
+{
+    return entry;
+}
+
+static TimeStampType
+constant_1234567890(EntryType entry)
+{
+    UNUSED(entry);
+    return 1234567890;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// SERIAL HASH TABLE TEST
+////////////////////////////////////////////////////////////////////////////////
+bool
+hash_table_test(void)
+{
+    struct HashTable me = {0};
+    g_assert_true(HashTable__init(&me));
+
+    for (size_t i = 0; i < N; ++i) {
+        g_assert_true(HashTable__put_unique(&me, i, i));
+    }
+
+    for (size_t i = 0; i < N; ++i) {
+        struct LookupReturn r = HashTable__lookup(&me, i);
+        g_assert_true(r.success == true && r.timestamp == i);
+    }
+
+    for (size_t i = 0; i < N; ++i) {
+        g_assert_true(HashTable__put_unique(&me, i, 1234567890));
+    }
+
+    for (size_t i = 0; i < N; ++i) {
+        struct LookupReturn r = HashTable__lookup(&me, i);
+        g_assert_true(r.success == true && r.timestamp == 1234567890);
+    }
+
+    HashTable__destroy(&me);
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// PARALLEL HASH TABLE TEST
+////////////////////////////////////////////////////////////////////////////////
 
 bool
 single_thread_test(void)
@@ -47,19 +96,6 @@ struct WorkerArgs {
     TimeStampType (*entry_to_timestamp)(EntryType entry);
     EntryType start, end;
 };
-
-static TimeStampType
-identity(EntryType entry)
-{
-    return entry;
-}
-
-static TimeStampType
-constant_1234567890(EntryType entry)
-{
-    UNUSED(entry);
-    return 1234567890;
-}
 
 void *
 multithread_writer(void *args)
@@ -156,6 +192,7 @@ multi_thread_test(void)
 int
 main(void)
 {
+    ASSERT_FUNCTION_RETURNS_TRUE(hash_table_test());
     ASSERT_FUNCTION_RETURNS_TRUE(single_thread_test());
     ASSERT_FUNCTION_RETURNS_TRUE(multi_thread_test());
     return 0;

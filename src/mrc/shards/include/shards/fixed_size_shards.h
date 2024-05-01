@@ -9,7 +9,7 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-struct FixedSizeShardsReuseStack {
+struct FixedSizeShards {
     struct Tree tree;
     GHashTable *hash_table;
     struct BasicHistogram histogram;
@@ -20,23 +20,22 @@ struct FixedSizeShardsReuseStack {
 };
 
 /// @brief  Initialize the fixed-size SHARDS data structure.
-/// @param  starting_scale: This is the factor by which we divide the maximum
-///                         hash size. We use this when scaling the histogram.
+/// @param  starting_scale: This is the original ratio at which we sample.
 /// @param  max_size    :   The maximum number of elements that we will track.
 ///                         Additional elements will be removed.
 bool
-fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
-                        const uint64_t starting_scale,
+fixed_size_shards__init(struct FixedSizeShards *me,
+                        const double starting_sampling_ratio,
                         const uint64_t max_size,
                         const uint64_t max_num_unique_entries);
 
 void
-fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me,
+fixed_size_shards__access_item(struct FixedSizeShards *me,
                                EntryType entry);
 
 void
 fixed_size_shards__print_histogram_as_json(
-    struct FixedSizeShardsReuseStack *me);
+    struct FixedSizeShards *me);
 
 void
-fixed_size_shards__destroy(struct FixedSizeShardsReuseStack *me);
+fixed_size_shards__destroy(struct FixedSizeShards *me);

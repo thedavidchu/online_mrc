@@ -2,11 +2,13 @@ lookup_dep = declare_dependency(
     link_with: library(
         'lookup_lib',
         [
+            'hash_table.c',
             'parallel_hash_table.c',
             'parallel_list.c',
         ],
         dependencies: [
             common_dep,
+            glib_dep,
             thread_dep,
             splitmix64_dep,
         ],

@@ -6,8 +6,8 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
-#include "fixed_rate_shards/parda_fixed_rate_shards.h"
-#include "fixed_size_shards/fixed_size_shards.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
+#include "shards/fixed_size_shards.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
@@ -123,16 +123,16 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
 
-    PERFORMANCE_TEST(struct OlkenReuseStack,
+    PERFORMANCE_TEST(struct Olken,
                      me,
-                     olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
-                     olken__access_item,
-                     olken__destroy);
+                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
+                     Olken__access_item,
+                     Olken__destroy);
 
     PERFORMANCE_TEST(
-        struct FixedSizeShardsReuseStack,
+        struct FixedSizeShards,
         me,
-        fixed_size_shards__init(&me, 1000, 10000, MAX_NUM_UNIQUE_ENTRIES),
+        fixed_size_shards__init(&me, 1e-3, 10000, MAX_NUM_UNIQUE_ENTRIES),
         fixed_size_shards__access_item,
         fixed_size_shards__destroy);
 
@@ -153,11 +153,11 @@ main(int argc, char **argv)
             mimir__destroy);
     }
 
-    PERFORMANCE_TEST(struct FixedRateShards,
+    PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
-                     parda_fixed_rate_shards__init(&me, 1000),
-                     parda_fixed_rate_shards__access_item,
-                     parda_fixed_rate_shards__destroy);
+                     PardaFixedRateShards__init(&me, 1e-3),
+                     PardaFixedRateShards__access_item,
+                     PardaFixedRateShards__destroy);
 
     PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
                               1,

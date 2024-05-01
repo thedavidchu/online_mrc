@@ -6,8 +6,8 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
-#include "fixed_rate_shards/parda_fixed_rate_shards.h"
-#include "fixed_size_shards/fixed_size_shards.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
+#include "shards/fixed_size_shards.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
@@ -133,11 +133,11 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
 
-    PERFORMANCE_TEST(struct OlkenReuseStack,
+    PERFORMANCE_TEST(struct Olken,
                      me,
-                     olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
-                     olken__access_item,
-                     olken__destroy);
+                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
+                     Olken__access_item,
+                     Olken__destroy);
 
     PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
                               1,

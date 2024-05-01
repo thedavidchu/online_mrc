@@ -191,7 +191,7 @@ static inline void
 process_one_access(char *input,
                    program_data_t *pdt,
                    const long tim,
-                   const uint64_t scaling_factor)
+                   const double sampling_ratio)
 {
     int distance;
     int *lookup;
@@ -219,7 +219,7 @@ process_one_access(char *input,
     else {
         char *data = g_strdup(input);
         pdt->root = insert((*lookup), pdt->root);
-        distance = node_size(pdt->root->right) * scaling_factor;
+        distance = node_size(pdt->root->right) / sampling_ratio;
         pdt->root = delete (*lookup, pdt->root);
         pdt->root = insert(tim, pdt->root);
         int *p_data;
