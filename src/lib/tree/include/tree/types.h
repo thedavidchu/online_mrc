@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-typedef uint64_t KeyType;
+#include "types/key_type.h"
 
 struct Tree;
 struct Subtree;
