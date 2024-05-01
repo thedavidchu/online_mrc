@@ -5,7 +5,7 @@
 #include "arrays/array_size.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
 #include "logger/logger.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "parda.h"
 #include "random/zipfian_random.h"
@@ -32,16 +32,16 @@ access_same_key_five_times(void)
         Olken__access_item(&oracle, entry);
         PardaFixedRateShards__access_item(&me, entry);
     }
-    struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
-    basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
+    struct MissRateCurve oracle_mrc = {0}, mrc = {0};
+    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
                                                      &oracle.histogram);
-    basic_miss_rate_curve__init_from_parda_histogram(
+    MissRateCurve__init_from_parda_histogram(
         &mrc,
         nbuckets,
         me.program_data.histogram,
         me.current_time_stamp,
         me.program_data.histogram[B_OVFL]);
-    double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
+    double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000001);
 
@@ -75,16 +75,16 @@ small_exact_trace_test(void)
         Olken__access_item(&oracle, entry);
         PardaFixedRateShards__access_item(&me, entry);
     }
-    struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
-    basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
+    struct MissRateCurve oracle_mrc = {0}, mrc = {0};
+    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
                                                      &oracle.histogram);
-    basic_miss_rate_curve__init_from_parda_histogram(
+    MissRateCurve__init_from_parda_histogram(
         &mrc,
         nbuckets,
         me.program_data.histogram,
         me.current_time_stamp,
         me.program_data.histogram[B_OVFL]);
-    double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
+    double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000001);
 
@@ -100,7 +100,7 @@ long_accuracy_trace_test(void)
     struct Olken oracle = {0};
     struct PardaFixedRateShards me = {0};
 
-    g_assert_true(zipfian_random__init(&zrng,
+    g_assert_true(ZipfianRandom__init(&zrng,
                                        MAX_NUM_UNIQUE_ENTRIES,
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
@@ -109,23 +109,24 @@ long_accuracy_trace_test(void)
     g_assert_true(PardaFixedRateShards__init(&me, 1e-3));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t entry = zipfian_random__next(&zrng);
+        uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         PardaFixedRateShards__access_item(&me, entry);
     }
-    struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
-    basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
+    struct MissRateCurve oracle_mrc = {0}, mrc = {0};
+    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
                                                      &oracle.histogram);
-    basic_miss_rate_curve__init_from_parda_histogram(
+    MissRateCurve__init_from_parda_histogram(
         &mrc,
         nbuckets,
         me.program_data.histogram,
         me.current_time_stamp,
         me.program_data.histogram[B_OVFL]);
-    double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
+    double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.04);
 
+    ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
     PardaFixedRateShards__destroy(&me);
     return true;

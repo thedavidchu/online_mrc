@@ -22,7 +22,7 @@ const uint64_t random_values_0_to_11[100] = {
     do {                                                                       \
         if (!(r)) {                                                            \
             /* Clean up resources */                                           \
-            basic_histogram__destroy((histogram_ptr));                         \
+            BasicHistogram__destroy((histogram_ptr));                         \
             printf("[ERROR] %s:%d %s\n", __FILE__, __LINE__, (msg));           \
             /* NOTE This assertion is for debugging purposes so that we have a \
             finer grain understanding of where the failure occurred. */        \
@@ -36,19 +36,19 @@ test_basic_histogram(void)
 {
     struct BasicHistogram hist;
 
-    bool r = basic_histogram__init(&hist, 10);
+    bool r = BasicHistogram__init(&hist, 10);
     if (!r) {
         return false;
     }
 
     for (uint64_t i = 0; i < 100; ++i) {
-        r = basic_histogram__insert_finite(&hist, random_values_0_to_11[i]);
+        r = BasicHistogram__insert_finite(&hist, random_values_0_to_11[i]);
         if (!r) {
             return false;
         }
     }
     for (uint64_t i = 0; i < 3; ++i) {
-        r = basic_histogram__insert_infinite(&hist);
+        r = BasicHistogram__insert_infinite(&hist);
         if (!r) {
             return false;
         }

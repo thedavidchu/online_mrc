@@ -6,7 +6,7 @@
 
 #include "histogram/basic_histogram.h"
 #include "logger/logger.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 
 #include "math/doubles_are_equal.h"
 #include "test/mytester.h"
@@ -23,7 +23,7 @@ const uint64_t random_values_0_to_11[100] = {
     5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
 
 static bool
-exact_match(struct BasicMissRateCurve *lhs, struct BasicMissRateCurve *rhs)
+exact_match(struct MissRateCurve *lhs, struct MissRateCurve *rhs)
 {
     assert(lhs != NULL && rhs != NULL && lhs->miss_rate != NULL &&
            rhs->miss_rate != NULL);
@@ -58,19 +58,19 @@ test_miss_rate_curve_for_basic_histogram(void)
         .running_sum = 103,
     };
 
-    struct BasicMissRateCurve mrc = {0};
-    struct BasicMissRateCurve mrc_from_file = {0};
+    struct MissRateCurve mrc = {0};
+    struct MissRateCurve mrc_from_file = {0};
     g_assert_true(
-        basic_miss_rate_curve__init_from_basic_histogram(&mrc, &basic_hist));
-    g_assert_true(basic_miss_rate_curve__write_binary_to_file(&mrc, "mrc.bin"));
-    g_assert_true(basic_miss_rate_curve__init_from_file(&mrc_from_file,
+        MissRateCurve__init_from_basic_histogram(&mrc, &basic_hist));
+    g_assert_true(MissRateCurve__write_binary_to_file(&mrc, "mrc.bin"));
+    g_assert_true(MissRateCurve__init_from_file(&mrc_from_file,
                                                         "mrc.bin",
                                                         mrc.length));
     g_assert_true(exact_match(&mrc, &mrc_from_file));
     g_assert_true(
-        basic_miss_rate_curve__mean_squared_error(&mrc, &mrc_from_file) == 0.0);
-    basic_miss_rate_curve__destroy(&mrc);
-    basic_miss_rate_curve__destroy(&mrc_from_file);
+        MissRateCurve__mean_squared_error(&mrc, &mrc_from_file) == 0.0);
+    MissRateCurve__destroy(&mrc);
+    MissRateCurve__destroy(&mrc_from_file);
     return true;
 }
 

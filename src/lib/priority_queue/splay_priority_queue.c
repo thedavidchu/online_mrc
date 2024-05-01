@@ -8,6 +8,14 @@
 
 #include "priority_queue/splay_priority_queue.h"
 
+struct SubtreeMultimap {
+    Hash64BitType key;
+    EntryType value;
+    uint64_t cardinality;
+    struct SubtreeMultimap *left_subtree;
+    struct SubtreeMultimap *right_subtree;
+};
+
 #define compare(i, j) ((int64_t)(i) - (int64_t)(j))
 /* This is the comparison.                                       */
 /* Returns <0 if i<j, =0 if i=j, and >0 if i>j                   */
@@ -130,7 +138,7 @@ pop_subtree(struct SplayPriorityQueue *me)
 }
 
 bool
-splay_priority_queue__init(struct SplayPriorityQueue *me,
+SplayPriorityQueue__init(struct SplayPriorityQueue *me,
                            const uint64_t max_cardinality)
 {
     if (me == NULL || max_cardinality == 0) {
@@ -160,13 +168,13 @@ splay_priority_queue__init(struct SplayPriorityQueue *me,
 }
 
 bool
-splay_priority_queue__is_full(struct SplayPriorityQueue *me)
+SplayPriorityQueue__is_full(struct SplayPriorityQueue *me)
 {
     return me->cardinality == me->max_cardinality;
 }
 
 bool
-splay_priority_queue__insert_if_room(struct SplayPriorityQueue *me,
+SplayPriorityQueue__insert_if_room(struct SplayPriorityQueue *me,
                                      const Hash64BitType hash,
                                      const EntryType entry)
 {
@@ -210,7 +218,7 @@ splay_priority_queue__insert_if_room(struct SplayPriorityQueue *me,
 }
 
 Hash64BitType
-splay_priority_queue__get_max_hash(struct SplayPriorityQueue *me)
+SplayPriorityQueue__get_max_hash(struct SplayPriorityQueue *me)
 {
     if (me == NULL || me->root == NULL) {
         assert(me->cardinality == 0 && "cardinality should be zero!");
@@ -229,7 +237,7 @@ splay_priority_queue__get_max_hash(struct SplayPriorityQueue *me)
 }
 
 bool
-splay_priority_queue__remove(struct SplayPriorityQueue *me,
+SplayPriorityQueue__remove(struct SplayPriorityQueue *me,
                              Hash64BitType largest_hash,
                              EntryType *entry)
 {
@@ -264,7 +272,7 @@ splay_priority_queue__remove(struct SplayPriorityQueue *me,
 }
 
 void
-splay_priority_queue__destroy(struct SplayPriorityQueue *me)
+SplayPriorityQueue__destroy(struct SplayPriorityQueue *me)
 {
     if (me == NULL) {
         return;

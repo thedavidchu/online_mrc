@@ -10,7 +10,7 @@
 #include "arrays/array_size.h"
 #include "glib.h"
 #include "histogram/basic_histogram.h"
-#include "miss_rate_curve/basic_miss_rate_curve.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "quickmrc/quickmrc.h"
 #include "random/zipfian_random.h"
@@ -42,7 +42,7 @@ access_same_key_five_times(void)
         g_assert_true(quickmrc__access_item(&me, entries[i]));
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     quickmrc__destroy(&me);
     return true;
 }
@@ -74,7 +74,7 @@ small_merge_test(void)
         quickmrc__print_histogram_as_json(&me);
     }
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
     quickmrc__destroy(&me);
     return true;
 }
@@ -87,13 +87,13 @@ long_trace_test(void)
     struct QuickMrc me = {0};
 
     ASSERT_FUNCTION_RETURNS_TRUE(
-        zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+        ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
         quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t key = zipfian_random__next(&zrng);
+        uint64_t key = ZipfianRandom__next(&zrng);
         quickmrc__access_item(&me, key);
     }
 
@@ -101,6 +101,7 @@ long_trace_test(void)
         quickmrc__print_histogram_as_json(&me);
     }
 
+    ZipfianRandom__destroy(&zrng);
     quickmrc__destroy(&me);
     return true;
 }
@@ -113,28 +114,29 @@ mean_absolute_error_test(void)
     struct QuickMrc me = {0};
     struct Olken olken = {0};
 
-    g_assert_true(zipfian_random__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+    g_assert_true(ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(Olken__init(&olken, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
-        uint64_t key = zipfian_random__next(&zrng);
+        uint64_t key = ZipfianRandom__next(&zrng);
         quickmrc__access_item(&me, key);
         Olken__access_item(&olken, key);
     }
 
-    struct BasicMissRateCurve my_mrc = {0}, olken_mrc = {0};
+    struct MissRateCurve my_mrc = {0}, olken_mrc = {0};
     g_assert_true(
-        basic_miss_rate_curve__init_from_basic_histogram(&my_mrc,
+        MissRateCurve__init_from_basic_histogram(&my_mrc,
                                                          &me.histogram));
     g_assert_true(
-        basic_miss_rate_curve__init_from_basic_histogram(&olken_mrc,
+        MissRateCurve__init_from_basic_histogram(&olken_mrc,
                                                          &olken.histogram));
     double mae =
-        basic_miss_rate_curve__mean_absolute_error(&my_mrc, &olken_mrc);
+        MissRateCurve__mean_absolute_error(&my_mrc, &olken_mrc);
     printf("Mean Absolute Error: %f\n", mae);
 
+    ZipfianRandom__destroy(&zrng);
     quickmrc__destroy(&me);
     Olken__destroy(&olken);
     return true;

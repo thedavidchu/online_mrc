@@ -45,20 +45,20 @@ enum MimirBucketsPrintMode {
 };
 
 bool
-mimir_buckets__init(struct MimirBuckets *me, const uint64_t num_real_buckets);
+MimirBuckets__init(struct MimirBuckets *me, const uint64_t num_real_buckets);
 
 /// @return Return 0 on error; otherwise, non-zero.
 uint64_t
-mimir_buckets__get_newest_bucket_index(struct MimirBuckets *me);
+MimirBuckets__get_newest_bucket_index(struct MimirBuckets *me);
 
 bool
-mimir_buckets__increment_num_unique_entries(struct MimirBuckets *me);
+MimirBuckets__increment_num_unique_entries(struct MimirBuckets *me);
 
 bool
-mimir_buckets__increment_newest_bucket(struct MimirBuckets *me);
+MimirBuckets__increment_newest_bucket(struct MimirBuckets *me);
 
 bool
-mimir_buckets__decrement_bucket(struct MimirBuckets *me,
+MimirBuckets__decrement_bucket(struct MimirBuckets *me,
                                 const uint64_t bucket_index);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,38 +72,38 @@ mimir_buckets__decrement_bucket(struct MimirBuckets *me,
 ///         is; in others, it isn't. I use a ceiling-divide because it makes
 ///         more sense to me.
 bool
-mimir_buckets__newest_bucket_is_full(struct MimirBuckets *me);
+MimirBuckets__newest_bucket_is_full(struct MimirBuckets *me);
 
 ////////////////////////////////////////////////////////////////////////////////
 /// STACKER AGING POLICY
 ////////////////////////////////////////////////////////////////////////////////
 
 uint64_t
-mimir_buckets__get_average_bucket_index(struct MimirBuckets *me);
+MimirBuckets__get_average_bucket_index(struct MimirBuckets *me);
 
 bool
-mimir_buckets__stacker_aging_policy(struct MimirBuckets *me,
+MimirBuckets__stacker_aging_policy(struct MimirBuckets *me,
                                     const uint64_t average_bucket_index);
 bool
-mimir_buckets__age_by_one_bucket(struct MimirBuckets *me,
+MimirBuckets__age_by_one_bucket(struct MimirBuckets *me,
                                  const uint64_t bucket_index);
 
 bool
-mimir_buckets__rounder_aging_policy(struct MimirBuckets *me);
+MimirBuckets__rounder_aging_policy(struct MimirBuckets *me);
 
 struct MimirBucketsStackDistanceStatus
-mimir_buckets__get_stack_distance(struct MimirBuckets *me,
+MimirBuckets__get_stack_distance(struct MimirBuckets *me,
                                   uint64_t bucket_index);
 
 /// @brief  Print the buckets in a quasi-JSON format. It's not JSON, though!
 void
-mimir_buckets__print_buckets(struct MimirBuckets *me,
+MimirBuckets__print_buckets(struct MimirBuckets *me,
                              enum MimirBucketsPrintMode mode);
 
 bool
-mimir_buckets__validate(struct MimirBuckets *me);
+MimirBuckets__validate(struct MimirBuckets *me);
 
 /// NOTE    You must not destroy an uninitialized MimirBuckets object lest
 ///         you free an uninitialized pointer (i.e. potentially non-NULL).
 void
-mimir_buckets__destroy(struct MimirBuckets *me);
+MimirBuckets__destroy(struct MimirBuckets *me);

@@ -9,7 +9,7 @@ miss_rate_curve_test_exe = executable(
         basic_histogram_dep,
         fractional_histogram_dep,
         glib_dep,
-        basic_miss_rate_curve_dep,
+        miss_rate_curve_dep,
     ],
 )
 

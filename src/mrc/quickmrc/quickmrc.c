@@ -36,7 +36,7 @@ quickmrc__init(struct QuickMrc *me,
         ParallelHashTable__destroy(&me->hash_table);
         return false;
     }
-    r = basic_histogram__init(&me->histogram, histogram_length);
+    r = BasicHistogram__init(&me->histogram, histogram_length);
     if (!r) {
         ParallelHashTable__destroy(&me->hash_table);
         quickmrc_buckets__destroy(&me->buckets);
@@ -66,12 +66,12 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
         ParallelHashTable__put_unique(&me->hash_table, entry, new_timestamp);
-        basic_histogram__insert_finite(&me->histogram, stack_dist);
+        BasicHistogram__insert_finite(&me->histogram, stack_dist);
     } else {
         if (!quickmrc_buckets__insert_new(&me->buckets)) {
             return false;
         }
-        if (!basic_histogram__insert_infinite(&me->histogram)) {
+        if (!BasicHistogram__insert_infinite(&me->histogram)) {
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
@@ -87,10 +87,10 @@ quickmrc__print_histogram_as_json(struct QuickMrc *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        basic_histogram__print_as_json(NULL);
+        BasicHistogram__print_as_json(NULL);
         return;
     }
-    basic_histogram__print_as_json(&me->histogram);
+    BasicHistogram__print_as_json(&me->histogram);
 }
 
 void
@@ -101,6 +101,6 @@ quickmrc__destroy(struct QuickMrc *me)
     }
     ParallelHashTable__destroy(&me->hash_table);
     quickmrc_buckets__destroy(&me->buckets);
-    basic_histogram__destroy(&me->histogram);
+    BasicHistogram__destroy(&me->histogram);
     memset(me, 0, sizeof(*me));
 }

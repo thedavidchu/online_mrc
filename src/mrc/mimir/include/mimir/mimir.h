@@ -28,22 +28,22 @@ struct Mimir {
 };
 
 bool
-mimir__init(struct Mimir *me,
+Mimir__init(struct Mimir *me,
             const uint64_t num_buckets,
             const uint64_t max_num_unique_entries,
             const enum MimirAgingPolicy aging_policy);
 
 void
-mimir__access_item(struct Mimir *me, EntryType entry);
+Mimir__access_item(struct Mimir *me, EntryType entry);
 
 void
-mimir__print_hash_table(struct Mimir *me);
+Mimir__print_hash_table(struct Mimir *me);
 
 void
-mimir__print_histogram_as_json(struct Mimir *me);
+Mimir__print_histogram_as_json(struct Mimir *me);
 
 bool
-mimir__validate(struct Mimir *me);
+Mimir__validate(struct Mimir *me);
 
 void
-mimir__destroy(struct Mimir *me);
+Mimir__destroy(struct Mimir *me);

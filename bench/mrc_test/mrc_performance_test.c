@@ -6,18 +6,17 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
-#include "parda_shards/parda_fixed_rate_shards.h"
-#include "shards/fixed_size_shards.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
 #include "quickmrc/quickmrc.h"
+#include "shards/fixed_size_shards.h"
 #include "unused/mark_unused.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 5.0e-1;
 const uint64_t RANDOM_SEED = 0;
-
 
 struct WorkerData {
     struct QuickMrc *qmrc;
@@ -31,7 +30,7 @@ parallel_thread_routine(void *args)
 {
     struct WorkerData *data = args;
     for (uint64_t i = 0; i < data->length; ++i) {
-        uint64_t key = zipfian_random__next(data->zrng);
+        uint64_t key = ZipfianRandom__next(data->zrng);
         quickmrc__access_item(data->qmrc, key);
     }
     return NULL;
@@ -47,15 +46,15 @@ parallel_thread_routine(void *args)
         struct ZipfianRandom zrng = {0};                                       \
         MRCStructType mrc_var_name = {0};                                      \
                                                                                \
-        g_assert_true(zipfian_random__init(&zrng,                              \
-                                           MAX_NUM_UNIQUE_ENTRIES,             \
-                                           ZIPFIAN_RANDOM_SKEW,                \
-                                           RANDOM_SEED));                      \
+        g_assert_true(ZipfianRandom__init(&zrng,                               \
+                                          MAX_NUM_UNIQUE_ENTRIES,              \
+                                          ZIPFIAN_RANDOM_SKEW,                 \
+                                          RANDOM_SEED));                       \
         /* The maximum trace length is the number of possible unique items */  \
         g_assert_true(((init_expr)));                                          \
         clock_t start_time = clock();                                          \
         for (uint64_t i = 0; i < trace_length; ++i) {                          \
-            uint64_t key = zipfian_random__next(&zrng);                        \
+            uint64_t key = ZipfianRandom__next(&zrng);                         \
             ((access_item_func_name))(&((mrc_var_name)), key);                 \
         }                                                                      \
         clock_t end_time = clock();                                            \
@@ -63,6 +62,7 @@ parallel_thread_routine(void *args)
             (double)(end_time - start_time) / (double)CLOCKS_PER_SEC;          \
         printf("Elapsed time for '" #MRCStructType "' workload: %.4f.\n",      \
                elapsed_time);                                                  \
+        ZipfianRandom__destroy(&zrng);                                         \
         ((destroy_func_name))(&((mrc_var_name)));                              \
     } while (0)
 
@@ -77,10 +77,10 @@ parallel_thread_routine(void *args)
         struct ZipfianRandom zrng = {0};                                       \
         MRCStructType mrc_var_name = {0};                                      \
                                                                                \
-        g_assert_true(zipfian_random__init(&zrng,                              \
-                                           MAX_NUM_UNIQUE_ENTRIES,             \
-                                           ZIPFIAN_RANDOM_SKEW,                \
-                                           RANDOM_SEED));                      \
+        g_assert_true(ZipfianRandom__init(&zrng,                               \
+                                          MAX_NUM_UNIQUE_ENTRIES,              \
+                                          ZIPFIAN_RANDOM_SKEW,                 \
+                                          RANDOM_SEED));                       \
         /* The maximum trace length is the number of possible unique items */  \
                                                                                \
         g_assert_true(((init_expr)));                                          \
@@ -114,6 +114,7 @@ parallel_thread_routine(void *args)
             (double)(end_time - start_time) / (double)CLOCKS_PER_SEC;          \
         printf("Elapsed time for '" #MRCStructType "' workload: %.4f.\n",      \
                elapsed_time);                                                  \
+        ZipfianRandom__destroy(&zrng);                                         \
         ((destroy_func_name))(&((mrc_var_name)));                              \
     } while (0)
 
@@ -132,25 +133,25 @@ main(int argc, char **argv)
     PERFORMANCE_TEST(
         struct FixedSizeShards,
         me,
-        fixed_size_shards__init(&me, 1e-3, 10000, MAX_NUM_UNIQUE_ENTRIES),
-        fixed_size_shards__access_item,
-        fixed_size_shards__destroy);
+        FixedSizeShards__init(&me, 1e-3, 10000, MAX_NUM_UNIQUE_ENTRIES),
+        FixedSizeShards__access_item,
+        FixedSizeShards__destroy);
 
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
-        mimir__access_item,
-        mimir__destroy);
+        Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
+        Mimir__access_item,
+        Mimir__destroy);
 
     bool i_have_lots_of_spare_cpu_cycles = false;
     if (i_have_lots_of_spare_cpu_cycles) {
         PERFORMANCE_TEST(
             struct Mimir,
             me,
-            mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
-            mimir__access_item,
-            mimir__destroy);
+            Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+            Mimir__access_item,
+            Mimir__destroy);
     }
 
     PERFORMANCE_TEST(struct PardaFixedRateShards,
@@ -159,40 +160,45 @@ main(int argc, char **argv)
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
 
-    PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
-                              1,
-                              me,
-                              quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
-                              quickmrc__access_item,
-                              quickmrc__destroy);
+    PERFORMANCE_TEST_PARALLEL(
+        struct QuickMrc,
+        1,
+        me,
+        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
+        quickmrc__access_item,
+        quickmrc__destroy);
 
-    PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
-                              2,
-                              me,
-                              quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
-                              quickmrc__access_item,
-                              quickmrc__destroy);
+    PERFORMANCE_TEST_PARALLEL(
+        struct QuickMrc,
+        2,
+        me,
+        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
+        quickmrc__access_item,
+        quickmrc__destroy);
 
-    PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
-                              4,
-                              me,
-                              quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
-                              quickmrc__access_item,
-                              quickmrc__destroy);
+    PERFORMANCE_TEST_PARALLEL(
+        struct QuickMrc,
+        4,
+        me,
+        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
+        quickmrc__access_item,
+        quickmrc__destroy);
 
-    PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
-                              8,
-                              me,
-                              quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
-                              quickmrc__access_item,
-                              quickmrc__destroy);
+    PERFORMANCE_TEST_PARALLEL(
+        struct QuickMrc,
+        8,
+        me,
+        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
+        quickmrc__access_item,
+        quickmrc__destroy);
 
-    PERFORMANCE_TEST_PARALLEL(struct QuickMrc,
-                              16,
-                              me,
-                              quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
-                              quickmrc__access_item,
-                              quickmrc__destroy);
+    PERFORMANCE_TEST_PARALLEL(
+        struct QuickMrc,
+        16,
+        me,
+        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES),
+        quickmrc__access_item,
+        quickmrc__destroy);
 
     return EXIT_SUCCESS;
 }

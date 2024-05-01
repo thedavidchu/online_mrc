@@ -30,12 +30,12 @@ make_room(struct FixedSizeShards *me)
     if (me == NULL || me->hash_table == NULL) {
         return;
     }
-    Hash64BitType max_hash = splay_priority_queue__get_max_hash(&me->pq);
+    Hash64BitType max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
     while (true) {
-        r = splay_priority_queue__remove(&me->pq, max_hash, &entry);
+        r = SplayPriorityQueue__remove(&me->pq, max_hash, &entry);
         if (!r) { // No more elements with the old max_hash
             // Update the new threshold and scale
-            max_hash = splay_priority_queue__get_max_hash(&me->pq);
+            max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
             me->threshold = max_hash;
             me->scale = UINT64_MAX / max_hash;
             break;
@@ -53,10 +53,10 @@ make_room(struct FixedSizeShards *me)
 }
 
 bool
-fixed_size_shards__init(struct FixedSizeShards *me,
-                        const double starting_sampling_ratio,
-                        const uint64_t max_size,
-                        const uint64_t max_num_unique_entries)
+FixedSizeShards__init(struct FixedSizeShards *me,
+                      const double starting_sampling_ratio,
+                      const uint64_t max_size,
+                      const uint64_t max_num_unique_entries)
 {
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
@@ -75,18 +75,18 @@ fixed_size_shards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    r = basic_histogram__init(&me->histogram, max_num_unique_entries);
+    r = BasicHistogram__init(&me->histogram, max_num_unique_entries);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
         return false;
     }
 
-    r = splay_priority_queue__init(&me->pq, max_size);
+    r = SplayPriorityQueue__init(&me->pq, max_size);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
-        basic_histogram__destroy(&me->histogram);
+        BasicHistogram__destroy(&me->histogram);
         return false;
     }
     me->current_time_stamp = 0;
@@ -103,7 +103,7 @@ fixed_size_shards__init(struct FixedSizeShards *me,
 }
 
 void
-fixed_size_shards__access_item(struct FixedSizeShards *me, EntryType entry)
+FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -134,14 +134,14 @@ fixed_size_shards__access_item(struct FixedSizeShards *me, EntryType entry)
                              (gpointer)entry,
                              (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        basic_histogram__insert_scaled_finite(&me->histogram,
+        BasicHistogram__insert_scaled_finite(&me->histogram,
                                               distance,
                                               me->scale);
     } else {
-        if (splay_priority_queue__is_full(&me->pq)) {
+        if (SplayPriorityQueue__is_full(&me->pq)) {
             make_room(me);
         }
-        splay_priority_queue__insert_if_room(&me->pq,
+        SplayPriorityQueue__insert_if_room(&me->pq,
                                              splitmix64_hash((uint64_t)entry),
                                              entry);
         g_hash_table_insert(me->hash_table,
@@ -149,28 +149,28 @@ fixed_size_shards__access_item(struct FixedSizeShards *me, EntryType entry)
                             (gpointer)me->current_time_stamp);
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        basic_histogram__insert_scaled_infinite(&me->histogram, me->scale);
+        BasicHistogram__insert_scaled_infinite(&me->histogram, me->scale);
     }
 }
 
 void
-fixed_size_shards__print_histogram_as_json(struct FixedSizeShards *me)
+FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        basic_histogram__print_as_json(NULL);
+        BasicHistogram__print_as_json(NULL);
         return;
     }
-    basic_histogram__print_as_json(&me->histogram);
+    BasicHistogram__print_as_json(&me->histogram);
 }
 
 void
-fixed_size_shards__destroy(struct FixedSizeShards *me)
+FixedSizeShards__destroy(struct FixedSizeShards *me)
 {
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
-    basic_histogram__destroy(&me->histogram);
-    splay_priority_queue__destroy(&me->pq);
+    BasicHistogram__destroy(&me->histogram);
+    SplayPriorityQueue__destroy(&me->pq);
     *me = (struct FixedSizeShards){0};
 }

@@ -7,7 +7,7 @@
 #include "histogram/basic_histogram.h"
 
 bool
-basic_histogram__init(struct BasicHistogram *me, const uint64_t length)
+BasicHistogram__init(struct BasicHistogram *me, const uint64_t length)
 {
     if (me == NULL || length == 0) {
         return false;
@@ -25,7 +25,7 @@ basic_histogram__init(struct BasicHistogram *me, const uint64_t length)
 }
 
 bool
-basic_histogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
+BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -43,9 +43,9 @@ basic_histogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
 }
 
 bool
-basic_histogram__insert_scaled_finite(struct BasicHistogram *me,
-                                      const uint64_t index,
-                                      const uint64_t scale)
+BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
+                                     const uint64_t index,
+                                     const uint64_t scale)
 {
     const uint64_t scaled_index = scale * index;
     if (me == NULL || me->histogram == NULL) {
@@ -64,7 +64,7 @@ basic_histogram__insert_scaled_finite(struct BasicHistogram *me,
 }
 
 bool
-basic_histogram__insert_infinite(struct BasicHistogram *me)
+BasicHistogram__insert_infinite(struct BasicHistogram *me)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -75,8 +75,8 @@ basic_histogram__insert_infinite(struct BasicHistogram *me)
 }
 
 bool
-basic_histogram__insert_scaled_infinite(struct BasicHistogram *me,
-                                        const uint64_t scale)
+BasicHistogram__insert_scaled_infinite(struct BasicHistogram *me,
+                                       const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -87,7 +87,7 @@ basic_histogram__insert_scaled_infinite(struct BasicHistogram *me,
 }
 
 void
-basic_histogram__print_as_json(struct BasicHistogram *me)
+BasicHistogram__print_as_json(struct BasicHistogram *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}");
@@ -114,8 +114,8 @@ basic_histogram__print_as_json(struct BasicHistogram *me)
 }
 
 bool
-basic_histogram__exactly_equal(struct BasicHistogram *me,
-                               struct BasicHistogram *other)
+BasicHistogram__exactly_equal(struct BasicHistogram *me,
+                              struct BasicHistogram *other)
 {
     if (me == other) {
         return true;
@@ -141,7 +141,7 @@ basic_histogram__exactly_equal(struct BasicHistogram *me,
 }
 
 void
-basic_histogram__destroy(struct BasicHistogram *me)
+BasicHistogram__destroy(struct BasicHistogram *me)
 {
     if (me == NULL) {
         return;
