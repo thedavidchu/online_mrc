@@ -14,7 +14,7 @@
 #include "unused/mark_unused.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
-const double ZIPFIAN_RANDOM_SKEW = 5.0e-1;
+const double ZIPFIAN_RANDOM_SKEW = 0.5;
 const uint64_t RANDOM_SEED = 0;
 
 #define PERFORMANCE_TEST(MRCStructType,                                        \
