@@ -134,7 +134,7 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
         Mimir__validate(&me);
     }
     g_assert_true(
-        fractional_histogram__exactly_equal(&me.histogram, &histogram_oracle));
+        FractionalHistogram__exactly_equal(&me.histogram, &histogram_oracle));
     Mimir__destroy(&me);
     return true;
 }

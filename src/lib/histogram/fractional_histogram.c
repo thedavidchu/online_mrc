@@ -9,9 +9,9 @@
 #include "math/doubles_are_equal.h"
 
 bool
-fractional_histogram__init(struct FractionalHistogram *me,
-                           const uint64_t length,
-                           const uint64_t bin_size)
+FractionalHistogram__init(struct FractionalHistogram *me,
+                          const uint64_t length,
+                          const uint64_t bin_size)
 {
     if (me == NULL || length == 0) {
         return false;
@@ -136,10 +136,10 @@ insert_partial_range(struct FractionalHistogram *me,
 }
 
 bool
-fractional_histogram__insert_scaled_finite(struct FractionalHistogram *me,
-                                           const uint64_t start,
-                                           const uint64_t range,
-                                           const uint64_t scale)
+FractionalHistogram__insert_scaled_finite(struct FractionalHistogram *me,
+                                          const uint64_t start,
+                                          const uint64_t range,
+                                          const uint64_t scale)
 {
     const uint64_t scaled_start = scale * start;
     const uint64_t scaled_exclusive_end = scaled_start + scale * range;
@@ -163,8 +163,8 @@ fractional_histogram__insert_scaled_finite(struct FractionalHistogram *me,
 }
 
 bool
-fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
-                                             const uint64_t scale)
+FractionalHistogram__insert_scaled_infinite(struct FractionalHistogram *me,
+                                            const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL || scale < 1) {
         return false;
@@ -175,7 +175,7 @@ fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
 }
 
 void
-fractional_histogram__print_as_json(struct FractionalHistogram *me)
+FractionalHistogram__print_as_json(struct FractionalHistogram *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}");
@@ -202,8 +202,8 @@ fractional_histogram__print_as_json(struct FractionalHistogram *me)
 }
 
 bool
-fractional_histogram__exactly_equal(struct FractionalHistogram *me,
-                                    struct FractionalHistogram *other)
+FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
+                                   struct FractionalHistogram *other)
 {
     if (me == other) {
         return true;
@@ -229,7 +229,7 @@ fractional_histogram__exactly_equal(struct FractionalHistogram *me,
 }
 
 void
-fractional_histogram__destroy(struct FractionalHistogram *me)
+FractionalHistogram__destroy(struct FractionalHistogram *me)
 {
     if (me == NULL) {
         return;

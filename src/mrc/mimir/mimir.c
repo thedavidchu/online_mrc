@@ -96,7 +96,7 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
         assert(0 && "impossible!");
         exit(0);
     }
-    fractional_histogram__insert_scaled_finite(&me->histogram,
+    FractionalHistogram__insert_scaled_finite(&me->histogram,
                                                status.start,
                                                status.range,
                                                1);
@@ -125,7 +125,7 @@ miss(struct Mimir *me, EntryType entry)
                         (gpointer)newest_bucket);
 
     // Update the histogram
-    fractional_histogram__insert_scaled_infinite(&me->histogram, 1);
+    FractionalHistogram__insert_scaled_infinite(&me->histogram, 1);
 
     // Update the buckets
     MimirBuckets__increment_newest_bucket(&me->buckets);
@@ -149,7 +149,7 @@ Mimir__init(struct Mimir *me,
     if (!r) {
         goto buckets_error;
     }
-    r = fractional_histogram__init(&me->histogram,
+    r = FractionalHistogram__init(&me->histogram,
                                    max_num_unique_entries,
                                    max_num_unique_entries / num_buckets);
     if (!r) {
@@ -171,7 +171,7 @@ Mimir__init(struct Mimir *me,
 // NOTE These are in reverse order so we perform the appropriate deconstruction
 //      upon an error.
 hash_table_error:
-    fractional_histogram__destroy(&me->histogram);
+    FractionalHistogram__destroy(&me->histogram);
 histogram_error:
     MimirBuckets__destroy(&me->buckets);
 buckets_error:
@@ -225,10 +225,10 @@ Mimir__print_histogram_as_json(struct Mimir *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        fractional_histogram__print_as_json(NULL);
+        FractionalHistogram__print_as_json(NULL);
         return;
     }
-    fractional_histogram__print_as_json(&me->histogram);
+    FractionalHistogram__print_as_json(&me->histogram);
 }
 
 bool
@@ -260,7 +260,7 @@ Mimir__destroy(struct Mimir *me)
     if (me == NULL) {
         return;
     }
-    fractional_histogram__destroy(&me->histogram);
+    FractionalHistogram__destroy(&me->histogram);
     MimirBuckets__destroy(&me->buckets);
     if (me->hash_table != NULL) {
         g_hash_table_destroy(me->hash_table);

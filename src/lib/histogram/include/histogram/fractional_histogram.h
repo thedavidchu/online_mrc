@@ -19,7 +19,7 @@ struct FractionalHistogram {
 };
 
 bool
-fractional_histogram__init(struct FractionalHistogram *me,
+FractionalHistogram__init(struct FractionalHistogram *me,
                            const uint64_t length,
                            const uint64_t bin_size);
 
@@ -27,21 +27,21 @@ fractional_histogram__init(struct FractionalHistogram *me,
 ///         index represents multiple elements.
 /// @note   This is used for SHARDS.
 bool
-fractional_histogram__insert_scaled_finite(struct FractionalHistogram *me,
+FractionalHistogram__insert_scaled_finite(struct FractionalHistogram *me,
                                            const uint64_t start,
                                            const uint64_t inclusive_end,
                                            const uint64_t scale);
 
 bool
-fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
+FractionalHistogram__insert_scaled_infinite(struct FractionalHistogram *me,
                                              const uint64_t scale);
 
 void
-fractional_histogram__print_as_json(struct FractionalHistogram *me);
+FractionalHistogram__print_as_json(struct FractionalHistogram *me);
 
 bool
-fractional_histogram__exactly_equal(struct FractionalHistogram *me,
+FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
                                     struct FractionalHistogram *other);
 
 void
-fractional_histogram__destroy(struct FractionalHistogram *me);
+FractionalHistogram__destroy(struct FractionalHistogram *me);
