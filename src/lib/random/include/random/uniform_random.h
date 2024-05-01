@@ -34,27 +34,27 @@ struct UniformRandom {
 };
 
 bool
-uniform_random__init(struct UniformRandom *me, const uint64_t seed);
+UniformRandom__init(struct UniformRandom *me, const uint64_t seed);
 
 uint32_t
-uniform_random__next_uint32(struct UniformRandom *me);
+UniformRandom__next_uint32(struct UniformRandom *me);
 
 uint64_t
-uniform_random__next_uint64(struct UniformRandom *me);
+UniformRandom__next_uint64(struct UniformRandom *me);
 
 /**
  * In TPCC terminology, from=x, to=y.
  * NOTE both from and to are _inclusive_.
  */
 uint32_t
-uniform_random__within(struct UniformRandom *me, uint32_t from, uint32_t to);
+UniformRandom__within(struct UniformRandom *me, uint32_t from, uint32_t to);
 
 /**
  * Same as uniform_within() except it avoids the "except" value.
  * Make sure from!=to.
  */
 uint32_t
-uniform_random__within_except(struct UniformRandom *me,
+UniformRandom__within_except(struct UniformRandom *me,
                               uint32_t from,
                               uint32_t to,
                               uint32_t except);
@@ -66,7 +66,7 @@ uniform_random__within_except(struct UniformRandom *me,
  *  NURand(A, x, y) = (((random(0, A) | random(x, y)) + C) % (y - x + 1)) + x
  */
 uint32_t
-uniform_random__non_uniform_within(struct UniformRandom *me,
+UniformRandom__non_uniform_within(struct UniformRandom *me,
                                    uint32_t A,
                                    uint32_t from,
                                    uint32_t to);
