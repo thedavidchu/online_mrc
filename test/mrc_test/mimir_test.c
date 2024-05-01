@@ -128,14 +128,14 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
     };
     struct Mimir me = {0};
     // NOTE I reduced the max_num_unique_entries to reduce the runtime.
-    g_assert_true(mimir__init(&me, 10, histogram_oracle.length, aging_policy));
+    g_assert_true(Mimir__init(&me, 10, histogram_oracle.length, aging_policy));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        mimir__access_item(&me, 0);
-        mimir__validate(&me);
+        Mimir__access_item(&me, 0);
+        Mimir__validate(&me);
     }
     g_assert_true(
         fractional_histogram__exactly_equal(&me.histogram, &histogram_oracle));
-    mimir__destroy(&me);
+    Mimir__destroy(&me);
     return true;
 }
 
@@ -151,16 +151,16 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
                                        0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
-    mimir__validate(&me);
+    g_assert_true(Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
+    Mimir__validate(&me);
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
     //      is kind of useless!
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
         Olken__access_item(&oracle, entry);
-        mimir__access_item(&me, entry);
-        mimir__validate(&me);
+        Mimir__access_item(&me, entry);
+        Mimir__validate(&me);
     }
     struct BasicMissRateCurve oracle_mrc = {0}, mrc = {0};
     basic_miss_rate_curve__init_from_basic_histogram(&oracle_mrc,
@@ -171,7 +171,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     g_assert_true(mse <= 0.000383);
 
     Olken__destroy(&oracle);
-    mimir__destroy(&me);
+    Mimir__destroy(&me);
     return true;
 }
 

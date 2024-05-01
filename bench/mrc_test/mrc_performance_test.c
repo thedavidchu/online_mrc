@@ -139,18 +139,18 @@ main(int argc, char **argv)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
-        mimir__access_item,
-        mimir__destroy);
+        Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
+        Mimir__access_item,
+        Mimir__destroy);
 
     bool i_have_lots_of_spare_cpu_cycles = false;
     if (i_have_lots_of_spare_cpu_cycles) {
         PERFORMANCE_TEST(
             struct Mimir,
             me,
-            mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
-            mimir__access_item,
-            mimir__destroy);
+            Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+            Mimir__access_item,
+            Mimir__destroy);
     }
 
     PERFORMANCE_TEST(struct PardaFixedRateShards,

@@ -136,7 +136,7 @@ miss(struct Mimir *me, EntryType entry)
 }
 
 bool
-mimir__init(struct Mimir *me,
+Mimir__init(struct Mimir *me,
             const uint64_t num_buckets,
             const uint64_t max_num_unique_entries,
             const enum MimirAgingPolicy aging_policy)
@@ -177,7 +177,7 @@ buckets_error:
 }
 
 void
-mimir__access_item(struct Mimir *me, EntryType entry)
+Mimir__access_item(struct Mimir *me, EntryType entry)
 {
     gboolean found = FALSE;
     uint64_t bucket_index = 0;
@@ -206,7 +206,7 @@ print_key_value(gpointer key, gpointer value, gpointer unused_user_data)
 }
 
 void
-mimir__print_hash_table(struct Mimir *me)
+Mimir__print_hash_table(struct Mimir *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}\n");
@@ -218,7 +218,7 @@ mimir__print_hash_table(struct Mimir *me)
 }
 
 void
-mimir__print_histogram_as_json(struct Mimir *me)
+Mimir__print_histogram_as_json(struct Mimir *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -230,7 +230,7 @@ mimir__print_histogram_as_json(struct Mimir *me)
 }
 
 bool
-mimir__validate(struct Mimir *me)
+Mimir__validate(struct Mimir *me)
 {
     bool r = false;
     if (me == NULL) {
@@ -253,7 +253,7 @@ mimir__validate(struct Mimir *me)
 }
 
 void
-mimir__destroy(struct Mimir *me)
+Mimir__destroy(struct Mimir *me)
 {
     if (me == NULL) {
         return;
