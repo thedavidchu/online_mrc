@@ -47,7 +47,7 @@ parallel_thread_routine(void *args)
         struct ZipfianRandom zrng = {0};                                       \
         MRCStructType mrc_var_name = {0};                                      \
                                                                                \
-        g_assert_true(zipfian_random__init(&zrng,                              \
+        g_assert_true(ZipfianRandom__init(&zrng,                              \
                                            MAX_NUM_UNIQUE_ENTRIES,             \
                                            ZIPFIAN_RANDOM_SKEW,                \
                                            RANDOM_SEED));                      \
@@ -55,7 +55,7 @@ parallel_thread_routine(void *args)
         g_assert_true(((init_expr)));                                          \
         clock_t start_time = clock();                                          \
         for (uint64_t i = 0; i < trace_length; ++i) {                          \
-            uint64_t key = zipfian_random__next(&zrng);                        \
+            uint64_t key = ZipfianRandom__next(&zrng);                        \
             ((access_item_func_name))(&((mrc_var_name)), key);                 \
         }                                                                      \
         clock_t end_time = clock();                                            \
@@ -77,7 +77,7 @@ parallel_thread_routine(void *args)
         struct ZipfianRandom zrng = {0};                                       \
         MRCStructType mrc_var_name = {0};                                      \
                                                                                \
-        g_assert_true(zipfian_random__init(&zrng,                              \
+        g_assert_true(ZipfianRandom__init(&zrng,                              \
                                            MAX_NUM_UNIQUE_ENTRIES,             \
                                            ZIPFIAN_RANDOM_SKEW,                \
                                            RANDOM_SEED));                      \
