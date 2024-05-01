@@ -20,7 +20,7 @@ entry_compare(gconstpointer a, gconstpointer b)
 }
 
 static void
-make_room(struct FixedSizeShardsReuseStack *me)
+make_room(struct FixedSizeShards *me)
 {
     bool r = false;
     gboolean found = FALSE;
@@ -53,7 +53,7 @@ make_room(struct FixedSizeShardsReuseStack *me)
 }
 
 bool
-fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
+fixed_size_shards__init(struct FixedSizeShards *me,
                         const uint64_t starting_scale,
                         const uint64_t max_size,
                         const uint64_t max_num_unique_entries)
@@ -95,7 +95,7 @@ fixed_size_shards__init(struct FixedSizeShardsReuseStack *me,
 }
 
 void
-fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me,
+fixed_size_shards__access_item(struct FixedSizeShards *me,
                                EntryType entry)
 {
     bool r = false;
@@ -147,7 +147,7 @@ fixed_size_shards__access_item(struct FixedSizeShardsReuseStack *me,
 }
 
 void
-fixed_size_shards__print_histogram_as_json(struct FixedSizeShardsReuseStack *me)
+fixed_size_shards__print_histogram_as_json(struct FixedSizeShards *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -159,11 +159,11 @@ fixed_size_shards__print_histogram_as_json(struct FixedSizeShardsReuseStack *me)
 }
 
 void
-fixed_size_shards__destroy(struct FixedSizeShardsReuseStack *me)
+fixed_size_shards__destroy(struct FixedSizeShards *me)
 {
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
     basic_histogram__destroy(&me->histogram);
     splay_priority_queue__destroy(&me->pq);
-    *me = (struct FixedSizeShardsReuseStack){0};
+    *me = (struct FixedSizeShards){0};
 }

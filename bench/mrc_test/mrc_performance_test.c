@@ -130,7 +130,7 @@ main(int argc, char **argv)
                      Olken__destroy);
 
     PERFORMANCE_TEST(
-        struct FixedSizeShardsReuseStack,
+        struct FixedSizeShards,
         me,
         fixed_size_shards__init(&me, 1000, 10000, MAX_NUM_UNIQUE_ENTRIES),
         fixed_size_shards__access_item,
