@@ -35,15 +35,15 @@ access_same_key_five_times(void)
         .running_sum = ARRAY_SIZE(entries),
     };
 
-    struct QuickMrc me = {0};
+    struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        g_assert_true(quickmrc__access_item(&me, entries[i]));
+        g_assert_true(QuickMRC__access_item(&me, entries[i]));
     }
     g_assert_true(
         BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
-    quickmrc__destroy(&me);
+    QuickMRC__destroy(&me);
     return true;
 }
 
@@ -63,19 +63,19 @@ small_merge_test(void)
         .running_sum = 1000,
     };
 
-    struct QuickMrc me = {0};
+    struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.length));
     for (uint64_t i = 0; i < 1000; ++i) {
-        quickmrc__access_item(&me, i);
+        QuickMRC__access_item(&me, i);
     }
 
     if (PRINT_HISTOGRAM) {
-        quickmrc__print_histogram_as_json(&me);
+        QuickMRC__print_histogram_as_json(&me);
     }
     g_assert_true(
         BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
-    quickmrc__destroy(&me);
+    QuickMRC__destroy(&me);
     return true;
 }
 
@@ -84,25 +84,25 @@ long_trace_test(void)
 {
     const uint64_t trace_length = 1 << 20;
     struct ZipfianRandom zrng = {0};
-    struct QuickMrc me = {0};
+    struct QuickMRC me = {0};
 
     ASSERT_FUNCTION_RETURNS_TRUE(
         ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
+        QuickMRC__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = ZipfianRandom__next(&zrng);
-        quickmrc__access_item(&me, key);
+        QuickMRC__access_item(&me, key);
     }
 
     if (PRINT_HISTOGRAM) {
-        quickmrc__print_histogram_as_json(&me);
+        QuickMRC__print_histogram_as_json(&me);
     }
 
     ZipfianRandom__destroy(&zrng);
-    quickmrc__destroy(&me);
+    QuickMRC__destroy(&me);
     return true;
 }
 
@@ -111,17 +111,17 @@ mean_absolute_error_test(void)
 {
     const uint64_t trace_length = 1 << 20;
     struct ZipfianRandom zrng = {0};
-    struct QuickMrc me = {0};
+    struct QuickMRC me = {0};
     struct Olken olken = {0};
 
     g_assert_true(ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(quickmrc__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(QuickMRC__init(&me, 60, 100, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(Olken__init(&olken, MAX_NUM_UNIQUE_ENTRIES));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = ZipfianRandom__next(&zrng);
-        quickmrc__access_item(&me, key);
+        QuickMRC__access_item(&me, key);
         Olken__access_item(&olken, key);
     }
 
@@ -137,13 +137,13 @@ mean_absolute_error_test(void)
     printf("Mean Absolute Error: %f\n", mae);
 
     ZipfianRandom__destroy(&zrng);
-    quickmrc__destroy(&me);
+    QuickMRC__destroy(&me);
     Olken__destroy(&olken);
     return true;
 }
 
 struct WorkerData {
-    struct QuickMrc *qmrc;
+    struct QuickMRC *qmrc;
     EntryType *entries;
     uint64_t length;
 };
@@ -153,7 +153,7 @@ worker_routine(void *args)
 {
     struct WorkerData *data = args;
     for (uint64_t i = 0; i < data->length; ++i) {
-        quickmrc__access_item(data->qmrc, data->entries[i]);
+        QuickMRC__access_item(data->qmrc, data->entries[i]);
     }
     return NULL;
 }
@@ -172,9 +172,9 @@ parallel_test(void)
         .running_sum = ARRAY_SIZE(entries),
     };
 
-    struct QuickMrc me = {0};
+    struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(quickmrc__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.length));
 
 #define THREAD_COUNT 4
     struct WorkerData data[THREAD_COUNT] = {0};
@@ -208,7 +208,7 @@ parallel_test(void)
     g_assert_true(
         basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
 #endif
-    quickmrc__destroy(&me);
+    QuickMRC__destroy(&me);
     return true;
 }
 

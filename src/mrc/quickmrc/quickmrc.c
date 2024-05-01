@@ -16,7 +16,7 @@
 #include "quickmrc/quickmrc.h"
 
 bool
-quickmrc__init(struct QuickMrc *me,
+QuickMRC__init(struct QuickMRC *me,
                uint64_t default_num_buckets,
                uint64_t max_bucket_size,
                uint64_t histogram_length)
@@ -30,8 +30,8 @@ quickmrc__init(struct QuickMrc *me,
         return false;
     }
     r = QuickMRCBuckets__init(&me->buckets,
-                               default_num_buckets,
-                               max_bucket_size);
+                              default_num_buckets,
+                              max_bucket_size);
     if (!r) {
         ParallelHashTable__destroy(&me->hash_table);
         return false;
@@ -48,7 +48,7 @@ quickmrc__init(struct QuickMrc *me,
 }
 
 bool
-quickmrc__access_item(struct QuickMrc *me, EntryType entry)
+QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
 {
     if (me == NULL) {
         return false;
@@ -82,7 +82,7 @@ quickmrc__access_item(struct QuickMrc *me, EntryType entry)
 }
 
 void
-quickmrc__print_histogram_as_json(struct QuickMrc *me)
+QuickMRC__print_histogram_as_json(struct QuickMRC *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -94,7 +94,7 @@ quickmrc__print_histogram_as_json(struct QuickMrc *me)
 }
 
 void
-quickmrc__destroy(struct QuickMrc *me)
+QuickMRC__destroy(struct QuickMRC *me)
 {
     if (me == NULL) {
         return;

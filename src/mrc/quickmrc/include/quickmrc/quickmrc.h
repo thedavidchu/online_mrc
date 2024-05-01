@@ -11,7 +11,7 @@
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 
-struct QuickMrc {
+struct QuickMRC {
     struct ParallelHashTable hash_table;
     struct QuickMRCBuckets buckets;
     struct BasicHistogram histogram;
@@ -27,16 +27,16 @@ struct QuickMrc {
 };
 
 bool
-quickmrc__init(struct QuickMrc *me,
+QuickMRC__init(struct QuickMRC *me,
                uint64_t default_num_buckets,
                uint64_t max_bucket_size,
                uint64_t histogram_length);
 
 bool
-quickmrc__access_item(struct QuickMrc *me, EntryType entry);
+QuickMRC__access_item(struct QuickMRC *me, EntryType entry);
 
 void
-quickmrc__print_histogram_as_json(struct QuickMrc *me);
+QuickMRC__print_histogram_as_json(struct QuickMRC *me);
 
 void
-quickmrc__destroy(struct QuickMrc *me);
+QuickMRC__destroy(struct QuickMRC *me);
