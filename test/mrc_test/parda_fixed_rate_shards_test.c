@@ -126,6 +126,7 @@ long_accuracy_trace_test(void)
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.04);
 
+    ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
     PardaFixedRateShards__destroy(&me);
     return true;

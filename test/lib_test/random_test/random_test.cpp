@@ -115,6 +115,7 @@ test_zipfian_for_seed(const uint64_t items,
             return false;
         }
     }
+    ZipfianRandom__destroy(&zrng);
 
     return true;
 }

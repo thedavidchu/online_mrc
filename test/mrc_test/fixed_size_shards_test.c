@@ -3,12 +3,12 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "shards/fixed_size_shards.h"
 #include "histogram/basic_histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
+#include "shards/fixed_size_shards.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
 
@@ -30,8 +30,7 @@ access_same_key_five_times(void)
     };
 
     struct FixedSizeShards me = {0};
-    g_assert_true(
-        FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.length));
+    g_assert_true(FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
@@ -66,9 +65,9 @@ small_exact_trace_test(void)
     struct FixedSizeShards me = {0};
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(FixedSizeShards__init(&me,
-                                          1.0,
-                                          ARRAY_SIZE(entries),
-                                          basic_histogram_oracle.length));
+                                        1.0,
+                                        ARRAY_SIZE(entries),
+                                        basic_histogram_oracle.length));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
@@ -88,9 +87,9 @@ long_accuracy_trace_test(void)
     struct FixedSizeShards me = {0};
 
     g_assert_true(ZipfianRandom__init(&zrng,
-                                       MAX_NUM_UNIQUE_ENTRIES,
-                                       ZIPFIAN_RANDOM_SKEW,
-                                       0));
+                                      MAX_NUM_UNIQUE_ENTRIES,
+                                      ZIPFIAN_RANDOM_SKEW,
+                                      0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
     g_assert_true(
@@ -102,13 +101,13 @@ long_accuracy_trace_test(void)
         FixedSizeShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
-                                                     &oracle.histogram);
+    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000033);
 
+    ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
     FixedSizeShards__destroy(&me);
     return true;

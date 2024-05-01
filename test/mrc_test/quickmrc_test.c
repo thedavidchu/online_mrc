@@ -101,6 +101,7 @@ long_trace_test(void)
         quickmrc__print_histogram_as_json(&me);
     }
 
+    ZipfianRandom__destroy(&zrng);
     quickmrc__destroy(&me);
     return true;
 }
@@ -135,6 +136,7 @@ mean_absolute_error_test(void)
         MissRateCurve__mean_absolute_error(&my_mrc, &olken_mrc);
     printf("Mean Absolute Error: %f\n", mae);
 
+    ZipfianRandom__destroy(&zrng);
     quickmrc__destroy(&me);
     Olken__destroy(&olken);
     return true;

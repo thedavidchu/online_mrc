@@ -170,6 +170,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_true(mse <= 0.000383);
 
+    ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
     Mimir__destroy(&me);
     return true;

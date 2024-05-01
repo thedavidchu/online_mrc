@@ -132,6 +132,7 @@ long_trace_test(void)
         Olken__print_histogram_as_json(&me);
     }
 
+    ZipfianRandom__destroy(&zrng);
     Olken__destroy(&me);
     return true;
 }
