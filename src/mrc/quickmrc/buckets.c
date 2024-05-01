@@ -103,7 +103,7 @@ age(struct QuickMRCBuckets *me)
     return true;
 }
 
-static bool
+static inline bool
 increment_newest_bucket(struct QuickMRCBuckets *me)
 {
     assert(me != NULL && me->buckets != NULL);
