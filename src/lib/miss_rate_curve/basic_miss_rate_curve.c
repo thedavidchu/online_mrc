@@ -123,7 +123,7 @@ basic_miss_rate_curve__init_from_parda_histogram(struct BasicMissRateCurve *me,
                "the subtraction should yield a non-negative result");
         tmp -= h;
     }
-    me->miss_rate[histogram_length] = (double)false_infinities;
+    me->miss_rate[histogram_length] = (double)tmp / (double)histogram_total;
     tmp -= false_infinities;
     me->miss_rate[histogram_length + 1] = (double)tmp / (double)histogram_total;
     return true;

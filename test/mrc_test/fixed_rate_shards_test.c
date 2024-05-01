@@ -135,7 +135,13 @@ long_parda_matching_trace_test(void)
     g_assert_true(
         FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, UINT64_MAX / 1000));
 
-    for (uint64_t i = 0; i < trace_length; ++i) {
+    // NOTE We (theoretically) need to use a trace that cannot produce
+    //      more items than PARDA or my implementation can handle with
+    //      100% accuracy. In practice, PARDA can handle fewer (and it
+    //      is not a configurable limit, unfortunately). In practice,
+    //      due to the random skew, it doesn't really make a difference.
+    size_t my_trace_length = MIN((size_t)nbuckets, MAX_NUM_UNIQUE_ENTRIES);
+    for (uint64_t i = 0; i < my_trace_length; ++i) {
         uint64_t entry = zipfian_random__next(&zrng);
         PardaFixedRateShards__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
@@ -151,8 +157,7 @@ long_parda_matching_trace_test(void)
                                                      &me.olken.histogram);
     double mse = basic_miss_rate_curve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf\n", mse);
-    // TODO(dchu): Figure out why there is a mismatch here!
-    g_assert_true(mse <= 0.000002);
+    g_assert_true(mse == 0.000000);
 
     PardaFixedRateShards__destroy(&oracle);
     FixedRateShards__destroy(&me);

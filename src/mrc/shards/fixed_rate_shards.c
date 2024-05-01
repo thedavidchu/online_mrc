@@ -24,6 +24,7 @@ FixedRateShards__init(struct FixedRateShards *me,
     if (!r)
         return false;
     me->threshold = threshold;
+    me->shards_scaling_factor = UINT64_MAX / threshold;
     return true;
 }
 
@@ -57,7 +58,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                "update should replace value");
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
-        basic_histogram__insert_finite(&me->olken.histogram, distance);
+        basic_histogram__insert_scaled_finite(&me->olken.histogram, distance, me->shards_scaling_factor);
     } else {
         enum PutUniqueStatus s =
             HashTable__put_unique(&me->olken.hash_table,
@@ -68,7 +69,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         tree__sleator_insert(&me->olken.tree,
                              (KeyType)me->olken.current_time_stamp);
         ++me->olken.current_time_stamp;
-        basic_histogram__insert_infinite(&me->olken.histogram);
+        basic_histogram__insert_scaled_infinite(&me->olken.histogram, me->shards_scaling_factor);
     }
 }
 

@@ -17,6 +17,8 @@ struct FixedRateShards {
     // [1] StackOverflow answer:
     // https://stackoverflow.com/questions/9691404/how-to-initialize-const-in-a-struct-in-c-with-malloc
     uint64_t threshold;
+    // This is defined entirely by the threshold (and is just for convenience)!
+    uint64_t shards_scaling_factor;
 };
 
 /// @brief  Initialize the structures needed for fixed-size SHARDS.
