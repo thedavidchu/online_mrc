@@ -88,12 +88,11 @@ main(int argc, char **argv)
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
 
-    PERFORMANCE_TEST(
-        struct QuickMRC,
-        me,
-        QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES),
-        QuickMRC__access_item,
-        QuickMRC__destroy);
+    PERFORMANCE_TEST(struct QuickMRC,
+                     me,
+                     QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES),
+                     QuickMRC__access_item,
+                     QuickMRC__destroy);
 
     return EXIT_SUCCESS;
 }
