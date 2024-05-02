@@ -239,6 +239,27 @@ FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
     return true;
 }
 
+bool
+FractionalHistogram__validate(struct FractionalHistogram *me)
+{
+    if (me == NULL)
+        return true;
+
+    double expected_sum = me->running_sum;
+    double sum = 0.0;
+
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        sum += me->histogram[i];
+    }
+
+    sum += me->false_infinity;
+    sum += me->infinity;
+
+    // I choose 1e-6 because this will print to the same value by default
+    return doubles_are_close(expected_sum, sum, 1e-6);
+}
+
+
 void
 FractionalHistogram__destroy(struct FractionalHistogram *me)
 {

@@ -43,5 +43,8 @@ bool
 FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
                                    struct FractionalHistogram *other);
 
+bool
+FractionalHistogram__validate(struct FractionalHistogram *me);
+
 void
 FractionalHistogram__destroy(struct FractionalHistogram *me);

@@ -107,6 +107,10 @@ test_fractional_histogram(void)
     FractionalHistogram__insert_scaled_infinite(&me, 10);
     FractionalHistogram__print_as_json(&me);
 
+    g_assert_true(FractionalHistogram__validate(&me));
+    // This is the scaled number of inserts (1+1+1+1+1+10)
+    g_assert_true(me.running_sum == 16);
+
     FractionalHistogram__destroy(&me);
     return true;
 }
