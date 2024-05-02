@@ -4,6 +4,7 @@
 #include <glib.h>
 
 #include "histogram/basic_histogram.h"
+#include "histogram/fractional_histogram.h"
 
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
@@ -83,11 +84,24 @@ test_basic_histogram(void)
     return true;
 }
 
+static bool
+test_fractional_histogram(void)
+{
+    struct FractionalHistogram me = {0};
+    FractionalHistogram__init(&me, 100, 10);
+
+    FractionalHistogram__insert_scaled_finite(&me, 25, 35, 1);
+
+    FractionalHistogram__destroy(&me);
+    return true;
+}
+
 int
 main(int argc, char **argv)
 {
     UNUSED(argc);
     UNUSED(argv);
     ASSERT_FUNCTION_RETURNS_TRUE(test_basic_histogram());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_fractional_histogram());
     return 0;
 }
