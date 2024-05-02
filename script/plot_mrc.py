@@ -18,7 +18,7 @@ def decode_json_as_histogram(
         raise ValueError("expected 'type' field in histogram")
     
     if histogram["type"] in {"BasicHistogram", "FractionalHistogram"}:
-        histogram = histogram["histogram"]
+        histogram = histogram[".histogram"]
     histogram = {float(key): value for key, value in histogram.items() if value > 0 and key != INFINITY}
     return histogram
 
@@ -80,17 +80,12 @@ def main():
     parser.add_argument(
         "--input",
         type=str,
-        default="stdin",
+        default=None,
         help=r"Possibilities: {stdin,file,hardcode}"
-    )
-    parser.add_argument(
-        "--file-name",
-        required=False,
-        help="File name for the '--input file' option"
     )
     args = parser.parse_args()
 
-    if args.input == "hardcode":
+    if args.input is None:
         histogram = {k: v for k, v in enumerate([1.000000, 0.912621, 0.825243, 0.708738, 0.621359, 0.582524, 0.504854, 0.359223, 0.271845, 0.213592, 0.135922, 0.029126])}
         histogram = decode_json_as_histogram(histogram)
         plot_histogram(histogram)
@@ -101,10 +96,13 @@ def main():
         plot_histogram(histogram)
         mrc = convert_histogram_to_miss_rate_curve(histogram)
         plot_miss_rate_curve(mrc)
-    elif args.input == "file":
-        read_and_plot_mrc(args.file_name)
+    elif args.input.startswith(r"{"):
+        histogram = args.input
+        plot_histogram(histogram)
+        mrc = convert_histogram_to_miss_rate_curve(histogram)
+        plot_miss_rate_curve(mrc)
     else:
-        print("Invalid args.input")
+        read_and_plot_mrc(args.input)
 
 
 if __name__ == "__main__":
