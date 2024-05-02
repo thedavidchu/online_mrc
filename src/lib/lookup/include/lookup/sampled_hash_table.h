@@ -38,4 +38,7 @@ enum SampledStatus
 SampledHashTable__put_unique(struct SampledHashTable *me, KeyType key, ValueType value);
 
 void
+SampledHashTable__print_as_json(struct SampledHashTable *me);
+
+void
 SampledHashTable__destroy(struct SampledHashTable *me);

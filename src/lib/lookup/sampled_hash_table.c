@@ -1,6 +1,8 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
@@ -20,7 +22,8 @@ SampledHashTable__init(struct SampledHashTable *me, const size_t length)
     if (me == NULL)
         return false;
 
-    me->data = calloc(length, sizeof(*me->data));
+    me->data = malloc(length * sizeof(*me->data));
+    memset(me->data, 0xFF, length * sizeof(*me->data));
     me->length = length;
     return true;
 }
@@ -71,7 +74,11 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
 static void
 print_SampledHashTableNode(struct SampledHashTableNode *me)
 {
-    printf("[%" PRIu64 ", %" PRIu64", %" PRIu64 "]", me->key, me->hash, me->value);
+    if (me->hash == UINT64_MAX) {
+        printf("null");
+    } else {
+        printf("[%" PRIu64 ", %" PRIu64", %" PRIu64 "]", me->key, me->hash, me->value);
+    }
 }
 
 void
