@@ -20,12 +20,12 @@ MissRateCurve__init_from_fractional_histogram(
     struct FractionalHistogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
-        histogram->length == 0) {
+        histogram->num_bins == 0) {
         return false;
     }
     // NOTE We include 1 past the histogram length to record "false infinities",
     //      i.e. elements past the maximum length of the histogram.
-    const uint64_t length = histogram->length + 2;
+    const uint64_t length = histogram->num_bins + 2;
     me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
         return false;
@@ -35,16 +35,16 @@ MissRateCurve__init_from_fractional_histogram(
     // Generate the MRC
     const double total = (double)histogram->running_sum;
     double tmp = (double)total;
-    for (uint64_t i = 0; i < histogram->length; ++i) {
+    for (uint64_t i = 0; i < histogram->num_bins; ++i) {
         const double h = histogram->histogram[i];
         me->miss_rate[i] = tmp / total;
         assert(tmp + DBL_EPSILON >= h &&
                "the subtraction should yield a non-negative result");
         tmp -= h;
     }
-    me->miss_rate[histogram->length] = tmp / total;
+    me->miss_rate[histogram->num_bins] = tmp / total;
     tmp -= histogram->false_infinity;
-    me->miss_rate[histogram->length + 1] = tmp / total;
+    me->miss_rate[histogram->num_bins + 1] = tmp / total;
     // NOTE The values are farther than DBL_EPSILON away from each other, but
     //      that is a very small value. I supplied my own value based on
     //      printing the values for the mimir test and taking as many

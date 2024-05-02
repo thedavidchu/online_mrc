@@ -69,7 +69,7 @@ main(int argc, char **argv)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
+        Mimir__init(&me, 1000, 100, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
         Mimir__access_item,
         Mimir__destroy);
 
@@ -77,7 +77,7 @@ main(int argc, char **argv)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+        Mimir__init(&me, 1000, 100, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
         Mimir__access_item,
         Mimir__destroy);
 #endif

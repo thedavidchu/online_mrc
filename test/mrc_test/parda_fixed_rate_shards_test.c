@@ -43,7 +43,7 @@ access_same_key_five_times(void)
         me.program_data.histogram[B_OVFL]);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_true(mse <= 0.000001);
+    g_assert_cmpfloat(mse, <=, 0.000001);
 
     Olken__destroy(&oracle);
     PardaFixedRateShards__destroy(&me);
@@ -86,7 +86,7 @@ small_exact_trace_test(void)
         me.program_data.histogram[B_OVFL]);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_true(mse <= 0.000001);
+    g_assert_cmpfloat(mse, <=, 0.000001);
 
     Olken__destroy(&oracle);
     PardaFixedRateShards__destroy(&me);
@@ -124,7 +124,7 @@ long_accuracy_trace_test(void)
         me.program_data.histogram[B_OVFL]);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_true(mse <= 0.04);
+    g_assert_cmpfloat(mse, <=, 0.04);
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);

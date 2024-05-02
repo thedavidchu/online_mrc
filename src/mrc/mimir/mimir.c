@@ -10,6 +10,7 @@
 
 #include "histogram/fractional_histogram.h"
 #include "logger/logger.h"
+#include "math/positive_ceiling_divide.h"
 #include "types/entry_type.h"
 
 #include "mimir/buckets.h"
@@ -44,7 +45,7 @@ stacker_aging_policy(struct Mimir *me)
     //      function out of the loop). This is a future task, since
     //      I want to get the algorithm working as described.
     MimirBuckets__stacker_aging_policy(&me->buckets,
-                                        average_stack_distance_bucket);
+                                       average_stack_distance_bucket);
 }
 
 static void
@@ -96,10 +97,10 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
         assert(0 && "impossible!");
         exit(0);
     }
-    fractional_histogram__insert_scaled_finite(&me->histogram,
-                                               status.start,
-                                               status.range,
-                                               1);
+    FractionalHistogram__insert_scaled_finite(&me->histogram,
+                                              status.start,
+                                              status.range,
+                                              1);
 
     // Update the buckets
     MimirBuckets__decrement_bucket(&me->buckets, bucket_index);
@@ -125,7 +126,7 @@ miss(struct Mimir *me, EntryType entry)
                         (gpointer)newest_bucket);
 
     // Update the histogram
-    fractional_histogram__insert_scaled_infinite(&me->histogram, 1);
+    FractionalHistogram__insert_scaled_infinite(&me->histogram, 1);
 
     // Update the buckets
     MimirBuckets__increment_newest_bucket(&me->buckets);
@@ -138,6 +139,7 @@ miss(struct Mimir *me, EntryType entry)
 bool
 Mimir__init(struct Mimir *me,
             const uint64_t num_buckets,
+            const uint64_t bin_size,
             const uint64_t max_num_unique_entries,
             const enum MimirAgingPolicy aging_policy)
 {
@@ -149,7 +151,10 @@ Mimir__init(struct Mimir *me,
     if (!r) {
         goto buckets_error;
     }
-    r = fractional_histogram__init(&me->histogram, max_num_unique_entries);
+    r = FractionalHistogram__init(
+        &me->histogram,
+        POSITIVE_CEILING_DIVIDE(max_num_unique_entries, bin_size),
+        bin_size);
     if (!r) {
         goto histogram_error;
     }
@@ -169,7 +174,7 @@ Mimir__init(struct Mimir *me,
 // NOTE These are in reverse order so we perform the appropriate deconstruction
 //      upon an error.
 hash_table_error:
-    fractional_histogram__destroy(&me->histogram);
+    FractionalHistogram__destroy(&me->histogram);
 histogram_error:
     MimirBuckets__destroy(&me->buckets);
 buckets_error:
@@ -189,7 +194,7 @@ Mimir__access_item(struct Mimir *me, EntryType entry)
                                          (gconstpointer)entry,
                                          NULL,
                                          (gpointer *)&bucket_index);
-    if (found == TRUE) {
+    if (found) {
         hit(me, entry, bucket_index);
     } else {
         miss(me, entry);
@@ -223,10 +228,10 @@ Mimir__print_histogram_as_json(struct Mimir *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        fractional_histogram__print_as_json(NULL);
+        FractionalHistogram__print_as_json(NULL);
         return;
     }
-    fractional_histogram__print_as_json(&me->histogram);
+    FractionalHistogram__print_as_json(&me->histogram);
 }
 
 bool
@@ -249,6 +254,11 @@ Mimir__validate(struct Mimir *me)
         assert(0);
         return false;
     }
+    r = FractionalHistogram__validate(&me->histogram);
+    if (!r) {
+        assert(0);
+        return false;
+    }
     return true;
 }
 
@@ -258,7 +268,7 @@ Mimir__destroy(struct Mimir *me)
     if (me == NULL) {
         return;
     }
-    fractional_histogram__destroy(&me->histogram);
+    FractionalHistogram__destroy(&me->histogram);
     MimirBuckets__destroy(&me->buckets);
     if (me->hash_table != NULL) {
         g_hash_table_destroy(me->hash_table);

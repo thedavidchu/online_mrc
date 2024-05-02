@@ -7,8 +7,10 @@
 /// @note   I assume no overflow in any of these values!
 struct FractionalHistogram {
     double *histogram;
-    /// Maximum allowable length of the histogram
-    uint64_t length;
+    /// Each bin in the histogram represents this many values
+    uint64_t bin_size;
+    /// Number of bins in the histogram
+    uint64_t num_bins;
     /// We have seen this before, but we do not track stacks this large
     double false_infinity;
     /// We have not seen this before
@@ -17,28 +19,32 @@ struct FractionalHistogram {
 };
 
 bool
-fractional_histogram__init(struct FractionalHistogram *me,
-                           const uint64_t length);
+FractionalHistogram__init(struct FractionalHistogram *me,
+                          const uint64_t num_bins,
+                          const uint64_t bin_size);
 
 /// @brief  Insert a non-infinite, scaled index. By scaled, I mean that the
 ///         index represents multiple elements.
 /// @note   This is used for SHARDS.
 bool
-fractional_histogram__insert_scaled_finite(struct FractionalHistogram *me,
-                                           const uint64_t start,
-                                           const uint64_t inclusive_end,
-                                           const uint64_t scale);
+FractionalHistogram__insert_scaled_finite(struct FractionalHistogram *me,
+                                          const uint64_t start,
+                                          const uint64_t range,
+                                          const uint64_t scale);
 
 bool
-fractional_histogram__insert_scaled_infinite(struct FractionalHistogram *me,
-                                             const uint64_t scale);
+FractionalHistogram__insert_scaled_infinite(struct FractionalHistogram *me,
+                                            const uint64_t scale);
 
 void
-fractional_histogram__print_as_json(struct FractionalHistogram *me);
+FractionalHistogram__print_as_json(struct FractionalHistogram *me);
 
 bool
-fractional_histogram__exactly_equal(struct FractionalHistogram *me,
-                                    struct FractionalHistogram *other);
+FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
+                                   struct FractionalHistogram *other);
+
+bool
+FractionalHistogram__validate(struct FractionalHistogram *me);
 
 void
-fractional_histogram__destroy(struct FractionalHistogram *me);
+FractionalHistogram__destroy(struct FractionalHistogram *me);
