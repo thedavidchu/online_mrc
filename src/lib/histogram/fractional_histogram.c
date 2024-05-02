@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,18 +70,20 @@ bin_portion(uint64_t bin_id,
     uint64_t first_bin = get_first_bin(scaled_start, bin_size);
     uint64_t last_bin = get_last_bin(scaled_exclusive_end, bin_size);
 
-    if (bin_id < first_bin || last_bin < bin_id)
+    if (bin_id < first_bin || bin_id > last_bin)
         return 0.0;
 
     uint64_t overlap = 0;
-    if (bin_id == first_bin) {
+    if (bin_id == first_bin && bin_id == last_bin) {
+        overlap = range;
+    } else if (bin_id == first_bin) {
         overlap = (bin_id + 1) * bin_size - scaled_start;
     } else if (bin_id == last_bin) {
         overlap = scaled_exclusive_end - bin_id * bin_size;
     } else {
         overlap = bin_size;
     }
-    return overlap * (double)scale / (double)range;
+    return (double)scale * (double) overlap / (double)range;
 }
 
 /// @brief  Update the histogram over a fully-in-range section.
@@ -239,11 +242,10 @@ FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
     return true;
 }
 
-bool
-FractionalHistogram__validate(struct FractionalHistogram *me)
+static bool
+debug(struct FractionalHistogram *me, bool print)
 {
-    if (me == NULL)
-        return true;
+    assert(me != NULL);
 
     double expected_sum = me->running_sum;
     double sum = 0.0;
@@ -255,10 +257,23 @@ FractionalHistogram__validate(struct FractionalHistogram *me)
     sum += me->false_infinity;
     sum += me->infinity;
 
+    if (print)
+        fprintf(stderr, "Expected sum: %g. Got sum: %g. Difference: %g\n",
+               expected_sum,
+               sum,
+               expected_sum - sum);
     // I choose 1e-6 because this will print to the same value by default
     return doubles_are_close(expected_sum, sum, 1e-6);
 }
 
+bool
+FractionalHistogram__validate(struct FractionalHistogram *me)
+{
+    if (me == NULL)
+        return true;
+
+    return debug(me, false);
+}
 
 void
 FractionalHistogram__destroy(struct FractionalHistogram *me)

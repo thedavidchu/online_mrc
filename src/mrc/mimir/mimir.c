@@ -194,7 +194,7 @@ Mimir__access_item(struct Mimir *me, EntryType entry)
                                          (gconstpointer)entry,
                                          NULL,
                                          (gpointer *)&bucket_index);
-    if (found == TRUE) {
+    if (found) {
         hit(me, entry, bucket_index);
     } else {
         miss(me, entry);
@@ -251,6 +251,11 @@ Mimir__validate(struct Mimir *me)
         return false;
     }
     if (me->buckets.num_unique_entries != g_hash_table_size(me->hash_table)) {
+        assert(0);
+        return false;
+    }
+    r = FractionalHistogram__validate(&me->histogram);
+    if (!r) {
         assert(0);
         return false;
     }
