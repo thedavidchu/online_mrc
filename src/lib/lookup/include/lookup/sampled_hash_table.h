@@ -4,15 +4,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "lookup/lookup.h"
-#include "types/entry_type.h"
+#include "types/value_type.h"
+#include "types/key_type.h"
 #include "types/time_stamp_type.h"
 
 struct SampledHashTableNode;
 
 struct SampledHashTable {
     struct SampledHashTableNode *data;
-    Hash64BitType hash;
     size_t length;
 };
 
@@ -21,7 +20,7 @@ enum SampledStatus {
     SAMPLED_NOTTRACKED,
     SAMPLED_FOUND,
     SAMPLED_REPLACED,
-    SAMPLED_INSERTED,
+    SAMPLED_UPDATED,
 };
 
 struct SampledLookupReturn {
@@ -30,13 +29,13 @@ struct SampledLookupReturn {
 };
 
 bool
-SampledHashTable__init(struct SampledHashTable *me, const uint64_t length);
+SampledHashTable__init(struct SampledHashTable *me, const size_t length);
 
 struct SampledLookupReturn
-SampledHashTable__lookup(struct SampledHashTable *me, EntryType key);
+SampledHashTable__lookup(struct SampledHashTable *me, KeyType key);
 
 enum SampledStatus
-SampledHashTable__put_unique(struct SampledHashTable *me, EntryType key, TimeStampType value);
+SampledHashTable__put_unique(struct SampledHashTable *me, KeyType key, ValueType value);
 
 void
 SampledHashTable__destroy(struct SampledHashTable *me);
