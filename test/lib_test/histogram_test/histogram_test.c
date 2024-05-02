@@ -23,7 +23,7 @@ const uint64_t random_values_0_to_11[100] = {
     do {                                                                       \
         if (!(r)) {                                                            \
             /* Clean up resources */                                           \
-            BasicHistogram__destroy((histogram_ptr));                         \
+            BasicHistogram__destroy((histogram_ptr));                          \
             printf("[ERROR] %s:%d %s\n", __FILE__, __LINE__, (msg));           \
             /* NOTE This assertion is for debugging purposes so that we have a \
             finer grain understanding of where the failure occurred. */        \
@@ -35,7 +35,7 @@ const uint64_t random_values_0_to_11[100] = {
 static bool
 test_basic_histogram(void)
 {
-    struct BasicHistogram hist;
+    struct BasicHistogram hist = {0};
 
     bool r = BasicHistogram__init(&hist, 10);
     if (!r) {
@@ -58,6 +58,9 @@ test_basic_histogram(void)
     //      above and running:
     //      y = [x.count(i) for i in range(10)]; print(y); z = x.count(10);
     //      print(z)
+    // NOTE This makes no sense in the context of MRC generation since
+    //      the number of infinities must equal the the number of unique
+    //      elements used. However, this is not an MRC test, so it's OK!
     const uint64_t histogram_oracle[] = {9, 9, 12, 9, 4, 8, 15, 9, 6, 8};
     const uint64_t length_oracle = 10;
     const uint64_t false_infinity_oracle = 11;
@@ -90,7 +93,19 @@ test_fractional_histogram(void)
     struct FractionalHistogram me = {0};
     FractionalHistogram__init(&me, 100, 10);
 
-    FractionalHistogram__insert_scaled_finite(&me, 25, 35, 1);
+    FractionalHistogram__insert_scaled_finite(&me, 25, 10, 1);
+    FractionalHistogram__print_as_json(&me);
+    FractionalHistogram__insert_scaled_finite(&me, 45, 10, 1);
+    FractionalHistogram__print_as_json(&me);
+    FractionalHistogram__insert_scaled_finite(&me, 55, 20, 1);
+    FractionalHistogram__print_as_json(&me);
+    FractionalHistogram__insert_scaled_finite(&me, 65, 10, 1);
+    FractionalHistogram__print_as_json(&me);
+    FractionalHistogram__insert_scaled_finite(&me, 75, 10, 1);
+    FractionalHistogram__print_as_json(&me);
+    FractionalHistogram__insert_scaled_finite(&me, 90, 100, 1);
+    FractionalHistogram__insert_scaled_infinite(&me, 10);
+    FractionalHistogram__print_as_json(&me);
 
     FractionalHistogram__destroy(&me);
     return true;

@@ -10,22 +10,22 @@
 
 bool
 FractionalHistogram__init(struct FractionalHistogram *me,
-                          const uint64_t length,
+                          const uint64_t num_bins,
                           const uint64_t bin_size)
 {
-    if (me == NULL || length == 0) {
+    if (me == NULL || num_bins == 0) {
         return false;
     }
     // Assume it is either NULL or an uninitialized address!
     // NOTE A double with all zeroed bits is the equivalent of zero.
-    me->histogram = calloc(length, sizeof(*me->histogram));
+    me->histogram = calloc(num_bins, sizeof(*me->histogram));
     assert(me->histogram[0] == 0.0 &&
            "0x0000000000000000 should represent 0.0");
     if (me->histogram == NULL) {
         return false;
     }
     me->bin_size = bin_size;
-    me->length = length;
+    me->num_bins = num_bins;
     me->infinity = 0;
     me->false_infinity = 0.0;
     me->running_sum = 0;
@@ -92,10 +92,10 @@ insert_full_range(struct FractionalHistogram *me,
                   const uint64_t range)
 {
     assert(me != NULL && me->histogram != NULL && scale >= 1 && range >= 1 &&
-           scaled_exclusive_end <= me->length);
+           scaled_exclusive_end <= me->num_bins * me->bin_size);
     uint64_t first_bin = get_first_bin(scaled_start, me->bin_size);
     uint64_t last_bin = get_last_bin(scaled_exclusive_end, me->bin_size);
-    assert(last_bin + 1 <= me->length);
+    assert(last_bin + 1 <= me->num_bins);
     for (uint64_t i = first_bin; i < last_bin + 1; ++i) {
         me->histogram[i] += bin_portion(i,
                                         me->bin_size,
@@ -116,11 +116,11 @@ insert_partial_range(struct FractionalHistogram *me,
                      const uint64_t range)
 {
     assert(me != NULL && me->histogram != NULL && scale >= 1 && range >= 1 &&
-           scaled_exclusive_end >= me->length);
+           scaled_exclusive_end >= me->num_bins * me->bin_size);
     uint64_t first_bin = get_first_bin(scaled_start, me->bin_size);
     uint64_t last_bin = get_last_bin(scaled_exclusive_end, me->bin_size);
-    assert(last_bin + 1 >= me->length);
-    for (uint64_t i = first_bin; i < me->length; ++i) {
+    assert(last_bin + 1 >= me->num_bins);
+    for (uint64_t i = first_bin; i < me->num_bins; ++i) {
         me->histogram[i] += bin_portion(i,
                                         me->bin_size,
                                         scaled_start,
@@ -131,8 +131,9 @@ insert_partial_range(struct FractionalHistogram *me,
     // NOTE I worked this out on paper. This is correct as far as I can tell. An
     //      illustrative example is me->length = 1 and scaled_exclusive_end = 5.
     //      Now, we have {1, 2, 3, 4} numbers to account for and 5-1 = 4. QED!
-    me->false_infinity += (double)scale / (double)range *
-                          (double)(scaled_exclusive_end - me->length);
+    me->false_infinity +=
+        (double)scale / (double)range *
+        (double)(scaled_exclusive_end - me->num_bins * me->bin_size);
 }
 
 bool
@@ -147,9 +148,9 @@ FractionalHistogram__insert_scaled_finite(struct FractionalHistogram *me,
         return false;
     }
 
-    if (scaled_exclusive_end <= me->length) {
+    if (scaled_exclusive_end <= me->num_bins * me->bin_size) {
         insert_full_range(me, scaled_start, scaled_exclusive_end, scale, range);
-    } else if (scaled_start < me->length) {
+    } else if (scaled_start < me->num_bins * me->bin_size) {
         insert_partial_range(me,
                              scaled_start,
                              scaled_exclusive_end,
@@ -174,6 +175,7 @@ FractionalHistogram__insert_scaled_infinite(struct FractionalHistogram *me,
     return true;
 }
 
+/// @brief  Print the histogram sparsely.
 void
 FractionalHistogram__print_as_json(struct FractionalHistogram *me)
 {
@@ -182,21 +184,30 @@ FractionalHistogram__print_as_json(struct FractionalHistogram *me)
         return;
     }
     if (me->histogram == NULL) {
-        printf("{\"type\": \"FractionalHistogram\", \"histogram\": null}\n");
+        printf("{\"type\": \"FractionalHistogram\", \".histogram\": null}\n");
         return;
     }
-    printf("{\"type\": \"FractionalHistogram\", \"length\": %" PRIu64
-           ", \"running_sum\": %" PRIu64 ", \"histogram\": {",
-           me->length,
-           me->running_sum);
-    for (uint64_t i = 0; i < me->length; ++i) {
+    printf("{\"type\": \"FractionalHistogram\", \".length\": %" PRIu64
+           ", \".running_sum\": %" PRIu64 ", \".bin_size\": %" PRIu64
+           ", \".histogram\": {",
+           me->num_bins,
+           me->running_sum,
+           me->bin_size);
+    for (uint64_t i = 0; i < me->num_bins; ++i) {
         if (me->histogram[i] != 0.0) {
-            printf("\"%" PRIu64 "\": %lf, ", i, me->histogram[i]);
+            printf("\"%" PRIu64 "\": %lf, ",
+                   i * me->bin_size,
+                   me->histogram[i]);
         }
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %lf}, \"infinity\": %" PRIu64 "}\n",
-           me->length,
+    // NOTE I print the "false infinity" as the end of the list because
+    //      it simplifies printing the JSON since I don't have to think
+    //      about the trailing comma.
+    printf("\"%" PRIu64
+           "\": %lf}, \".false_infinity\": %lf, \".infinity\": %" PRIu64 "}\n",
+           me->num_bins * me->bin_size,
+           me->false_infinity,
            me->false_infinity,
            me->infinity);
 }
@@ -212,13 +223,13 @@ FractionalHistogram__exactly_equal(struct FractionalHistogram *me,
         return false;
     }
 
-    if (me->length != other->length ||
+    if (me->num_bins != other->num_bins || me->bin_size != other->bin_size ||
         !doubles_are_equal(me->false_infinity, other->false_infinity) ||
         me->infinity != other->infinity ||
         me->running_sum != other->running_sum) {
         return false;
     }
-    for (uint64_t i = 0; i < me->length; ++i) {
+    for (uint64_t i = 0; i < me->num_bins; ++i) {
         // We use this custom function to tolerate slight error in the histogram
         // due to imprecise floating-point arithmetic.
         if (!doubles_are_equal(me->histogram[i], other->histogram[i])) {

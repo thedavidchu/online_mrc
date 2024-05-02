@@ -94,11 +94,11 @@ BasicHistogram__print_as_json(struct BasicHistogram *me)
         return;
     }
     if (me->histogram == NULL) {
-        printf("{\"type\": \"BasicHistogram\", \"histogram\": null}\n");
+        printf("{\"type\": \"BasicHistogram\", \".histogram\": null}\n");
         return;
     }
-    printf("{\"type\": \"BasicHistogram\", \"length\": %" PRIu64
-           ", \"running_sum\": %" PRIu64 ", \"histogram\": {",
+    printf("{\"type\": \"BasicHistogram\", \".length\": %" PRIu64
+           ", \".running_sum\": %" PRIu64 ", \".histogram\": {",
            me->length,
            me->running_sum);
     for (uint64_t i = 0; i < me->length; ++i) {
@@ -107,8 +107,10 @@ BasicHistogram__print_as_json(struct BasicHistogram *me)
         }
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %" PRIu64 "}, \"infinity\": %" PRIu64 "}\n",
+    printf("\"%" PRIu64 "\": %" PRIu64 "}, \".false_infinity\": %" PRIu64
+           ", \".infinity\": %" PRIu64 "}\n",
            me->length,
+           me->false_infinity,
            me->false_infinity,
            me->infinity);
 }

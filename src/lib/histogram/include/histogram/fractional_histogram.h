@@ -9,8 +9,8 @@ struct FractionalHistogram {
     double *histogram;
     /// Each bin in the histogram represents this many values
     uint64_t bin_size;
-    /// Maximum allowable length of the histogram
-    uint64_t length;
+    /// Number of bins in the histogram
+    uint64_t num_bins;
     /// We have seen this before, but we do not track stacks this large
     double false_infinity;
     /// We have not seen this before
@@ -20,7 +20,7 @@ struct FractionalHistogram {
 
 bool
 FractionalHistogram__init(struct FractionalHistogram *me,
-                          const uint64_t length,
+                          const uint64_t num_bins,
                           const uint64_t bin_size);
 
 /// @brief  Insert a non-infinite, scaled index. By scaled, I mean that the

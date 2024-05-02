@@ -4,6 +4,7 @@
 
 #include "arrays/array_size.h"
 #include "histogram/fractional_histogram.h"
+#include "math/positive_ceiling_divide.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "mimir/private_buckets.h"
@@ -121,18 +122,22 @@ access_same_key_five_times(enum MimirAgingPolicy aging_policy)
         {4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     struct FractionalHistogram histogram_oracle = {
         .histogram = hist_bkt_oracle,
-        .length = ARRAY_SIZE(hist_bkt_oracle),
+        .num_bins = ARRAY_SIZE(hist_bkt_oracle),
+        .bin_size = 1,
         .false_infinity = 0.0,
         .infinity = 1,
         .running_sum = ARRAY_SIZE(entries),
     };
     struct Mimir me = {0};
     // NOTE I reduced the max_num_unique_entries to reduce the runtime.
-    g_assert_true(Mimir__init(&me, 10, histogram_oracle.length, aging_policy));
+    g_assert_true(
+        Mimir__init(&me, 10, 1, histogram_oracle.num_bins, aging_policy));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Mimir__access_item(&me, 0);
         Mimir__validate(&me);
     }
+    FractionalHistogram__print_as_json(&me.histogram);
+    FractionalHistogram__print_as_json(&histogram_oracle);
     g_assert_true(
         FractionalHistogram__exactly_equal(&me.histogram, &histogram_oracle));
     Mimir__destroy(&me);
@@ -146,12 +151,13 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     struct Olken oracle = {0};
     struct Mimir me = {0};
     g_assert_true(ZipfianRandom__init(&zrng,
-                                       MAX_NUM_UNIQUE_ENTRIES,
-                                       ZIPFIAN_RANDOM_SKEW,
-                                       0));
+                                      MAX_NUM_UNIQUE_ENTRIES,
+                                      ZIPFIAN_RANDOM_SKEW,
+                                      0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(Mimir__init(&me, 1000, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
+    g_assert_true(
+        Mimir__init(&me, 1000, 100, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
     Mimir__validate(&me);
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
@@ -163,8 +169,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
         Mimir__validate(&me);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
-                                                     &oracle.histogram);
+    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_fractional_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);

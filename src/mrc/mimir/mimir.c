@@ -10,6 +10,7 @@
 
 #include "histogram/fractional_histogram.h"
 #include "logger/logger.h"
+#include "math/positive_ceiling_divide.h"
 #include "types/entry_type.h"
 
 #include "mimir/buckets.h"
@@ -44,7 +45,7 @@ stacker_aging_policy(struct Mimir *me)
     //      function out of the loop). This is a future task, since
     //      I want to get the algorithm working as described.
     MimirBuckets__stacker_aging_policy(&me->buckets,
-                                        average_stack_distance_bucket);
+                                       average_stack_distance_bucket);
 }
 
 static void
@@ -97,9 +98,9 @@ hit(struct Mimir *me, EntryType entry, uint64_t bucket_index)
         exit(0);
     }
     FractionalHistogram__insert_scaled_finite(&me->histogram,
-                                               status.start,
-                                               status.range,
-                                               1);
+                                              status.start,
+                                              status.range,
+                                              1);
 
     // Update the buckets
     MimirBuckets__decrement_bucket(&me->buckets, bucket_index);
@@ -138,6 +139,7 @@ miss(struct Mimir *me, EntryType entry)
 bool
 Mimir__init(struct Mimir *me,
             const uint64_t num_buckets,
+            const uint64_t bin_size,
             const uint64_t max_num_unique_entries,
             const enum MimirAgingPolicy aging_policy)
 {
@@ -149,9 +151,10 @@ Mimir__init(struct Mimir *me,
     if (!r) {
         goto buckets_error;
     }
-    r = FractionalHistogram__init(&me->histogram,
-                                   max_num_unique_entries,
-                                   max_num_unique_entries / num_buckets);
+    r = FractionalHistogram__init(
+        &me->histogram,
+        POSITIVE_CEILING_DIVIDE(max_num_unique_entries, bin_size),
+        bin_size);
     if (!r) {
         goto histogram_error;
     }
