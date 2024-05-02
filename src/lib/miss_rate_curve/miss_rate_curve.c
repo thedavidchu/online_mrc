@@ -38,6 +38,7 @@ MissRateCurve__init_from_fractional_histogram(
     for (uint64_t i = 0; i < histogram->length; ++i) {
         const double h = histogram->histogram[i];
         me->miss_rate[i] = tmp / total;
+        fprintf(stderr, "%zu: %f >= %f\n", i, tmp, h);
         assert(tmp + DBL_EPSILON >= h &&
                "the subtraction should yield a non-negative result");
         tmp -= h;
