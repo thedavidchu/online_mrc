@@ -26,6 +26,9 @@ void
 BucketedShards__access_item(struct BucketedShards *me, EntryType entry);
 
 void
+BucketedShards__refresh_threshold(struct BucketedShards *me);
+
+void
 BucketedShards__print_histogram_as_json(struct BucketedShards *me);
 
 void

@@ -122,6 +122,14 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
 }
 
 void
+BucketedShards__refresh_threshold(struct BucketedShards *me)
+{
+    if (me == NULL)
+        return;
+    SampledHashTable__refresh_threshold(&me->hash_table);
+}
+
+void
 BucketedShards__print_histogram_as_json(struct BucketedShards *me)
 {
     if (me == NULL) {

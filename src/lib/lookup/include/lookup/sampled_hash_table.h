@@ -14,6 +14,7 @@ struct SampledHashTableNode;
 struct SampledHashTable {
     struct SampledHashTableNode *data;
     size_t length;
+    Hash64BitType threshold;
 };
 
 enum SampledStatus {
@@ -38,6 +39,14 @@ SampledHashTable__lookup(struct SampledHashTable *me, KeyType key);
 
 enum SampledStatus
 SampledHashTable__put_unique(struct SampledHashTable *me, KeyType key, ValueType value);
+
+/// @note   If we know the globally maximum threshold, then we can
+///         immediately discard any element that is greater than this.
+/// @note   This is an optimization to try to match SHARDS's performance.
+///         Without this, we slightly underperform SHARDS. I don't know
+///         how the Splay Tree priority queue is so fast...
+void
+SampledHashTable__refresh_threshold(struct SampledHashTable *me);
 
 void
 SampledHashTable__print_as_json(struct SampledHashTable *me);

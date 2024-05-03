@@ -5,9 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <glib.h>
+
 #include "hash/splitmix64.h"
 #include "hash/types.h"
 #include "lookup/sampled_hash_table.h"
+#include "math/ratio.h"
 #include "types/key_type.h"
 #include "types/value_type.h"
 
@@ -22,23 +25,25 @@ SampledHashTable__init(struct SampledHashTable *me,
                        const size_t length,
                        const double init_sampling_ratio)
 {
+    const uint64_t threshold = ratio_uint64(init_sampling_ratio);
     if (me == NULL || length == 0 || init_sampling_ratio <= 0.0 ||
         init_sampling_ratio > 1.0)
         return false;
 
-    me->data = malloc(length * sizeof(*me->data));
+    struct SampledHashTableNode *data = malloc(length * sizeof(*me->data));
+    if (data == NULL)
+        return false;
     // HACK Set the threshold to some low number to begin (otherwise, we
     //      end up with teething performance issues)
     for (size_t i = 0; i < length; ++i) {
-        uint64_t r = init_sampling_ratio * UINT64_MAX;
-        // NOTE If init_sampling_ratio == 1.0, then it causes the
-        //      UINT64_MAX to overflow and become zero. This is a way of
-        //      preventing this... I think.
-        if (r < init_sampling_ratio)
-            r = UINT64_MAX;
-        me->data[i].hash = r;
+        data[i].hash = threshold;
     }
-    me->length = length;
+
+    *me = (struct SampledHashTable){
+        .data = data,
+        .length = length,
+        .threshold = threshold,
+    };
     return true;
 }
 
@@ -84,6 +89,18 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
     } else {
         return SAMPLED_NOTTRACKED;
     }
+}
+
+void
+SampledHashTable__refresh_threshold(struct SampledHashTable *me)
+{
+    Hash64BitType max_hash = 0;
+    for (size_t i = 0; i < me->length; ++i) {
+        Hash64BitType hash = me->data[i].hash;
+        if (hash > max_hash)
+            max_hash = hash;
+    }
+    me->threshold = max_hash;
 }
 
 static void
