@@ -203,10 +203,6 @@ sampled_insert(struct SampledHashTable *me,
                enum SampledStatus expected_put_status)
 {
     assert(me != NULL);
-    fprintf(stderr, "%lu: %lu\n", key, value);
-    SampledHashTable__print_as_json(me);
-    printf("\n");
-    fflush(stdout);
 
     // Insert with an expected status
     g_assert_cmpint(SampledHashTable__put_unique(me, key, value),
