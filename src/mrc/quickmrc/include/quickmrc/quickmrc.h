@@ -6,7 +6,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "lookup/hash_table.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
@@ -14,7 +14,7 @@
 struct QuickMRC {
     struct HashTable hash_table;
     struct QuickMRCBuckets buckets;
-    struct BasicHistogram histogram;
+    struct Histogram histogram;
 
     // Number of entries that we have seen, regardless of whether it is above or
     // below the SHARDS threshold.

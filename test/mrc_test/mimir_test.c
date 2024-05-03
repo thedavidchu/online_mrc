@@ -167,7 +167,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
         Mimir__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_fractional_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);

@@ -31,8 +31,8 @@ access_same_key_five_times(void)
         BucketedShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000001);
@@ -69,8 +69,8 @@ small_exact_trace_test(void)
         BucketedShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000002);
@@ -101,8 +101,8 @@ long_accuracy_trace_test(void)
         BucketedShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.005);

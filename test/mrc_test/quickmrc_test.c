@@ -9,7 +9,7 @@
 
 #include "arrays/array_size.h"
 #include "glib.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "quickmrc/quickmrc.h"
@@ -26,10 +26,10 @@ access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
     // We round up the stack distance with QuickMRC
-    uint64_t histogram_oracle[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle),
+    uint64_t histogram_oracle_array[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array),
         .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1,
@@ -38,12 +38,12 @@ access_same_key_five_times(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.num_bins));
+    g_assert_true(QuickMRC__init(&me, 60, 100, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         g_assert_true(QuickMRC__access_item(&me, entries[i]));
     }
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     QuickMRC__destroy(&me);
     return true;
 }
@@ -55,10 +55,10 @@ small_merge_test(void)
     // NOTE These are 100 random integers in the range 0..=10. Generated with
     // Python script:
     // import random; x = [random.randint(0, 10) for _ in range(100)]; print(x)
-    uint64_t histogram_oracle[11] = {0};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle),
+    uint64_t histogram_oracle_array[11] = {0};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array),
         .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1000,
@@ -67,7 +67,7 @@ small_merge_test(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.num_bins));
+    g_assert_true(QuickMRC__init(&me, 60, 100, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < 1000; ++i) {
         QuickMRC__access_item(&me, i);
     }
@@ -76,7 +76,7 @@ small_merge_test(void)
         QuickMRC__print_histogram_as_json(&me);
     }
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     QuickMRC__destroy(&me);
     return true;
 }
@@ -129,10 +129,10 @@ mean_absolute_error_test(void)
 
     struct MissRateCurve my_mrc = {0}, olken_mrc = {0};
     g_assert_true(
-        MissRateCurve__init_from_basic_histogram(&my_mrc,
+        MissRateCurve__init_from_histogram(&my_mrc,
                                                          &me.histogram));
     g_assert_true(
-        MissRateCurve__init_from_basic_histogram(&olken_mrc,
+        MissRateCurve__init_from_histogram(&olken_mrc,
                                                          &olken.histogram));
     double mae =
         MissRateCurve__mean_absolute_error(&my_mrc, &olken_mrc);
@@ -165,10 +165,10 @@ parallel_test(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
     // We round up the stack distance with QuickMRC
-    uint64_t histogram_oracle[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle),
+    uint64_t histogram_oracle_array[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array),
         .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1,
@@ -177,7 +177,7 @@ parallel_test(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.num_bins));
+    g_assert_true(QuickMRC__init(&me, 60, 100, histogram_oracle.num_bins));
 
 #define THREAD_COUNT 4
     struct WorkerData data[THREAD_COUNT] = {0};
@@ -209,7 +209,7 @@ parallel_test(void)
 
 #if 0
     g_assert_true(
-        basic_histogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        histogram__exactly_equal(&me.histogram, &histogram_oracle));
 #endif
     QuickMRC__destroy(&me);
     return true;

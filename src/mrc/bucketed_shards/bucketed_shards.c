@@ -6,7 +6,7 @@
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "lookup/sampled_hash_table.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
@@ -28,7 +28,7 @@ BucketedShards__init(struct BucketedShards *me,
     r = SampledHashTable__init(&me->hash_table, num_hash_buckets, init_sampling_ratio);
     if (!r)
         goto hash_table_error;
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries, 1);
+    r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
     if (!r)
         goto histogram_error;
     me->current_time_stamp = 0;
@@ -60,7 +60,7 @@ handle_found(struct BucketedShards *me,
     assert(s == SAMPLED_UPDATED && "update should replace value");
     ++me->current_time_stamp;
     // TODO(dchu): Maybe record the infinite distances for Parda!
-    BasicHistogram__insert_scaled_finite(
+    Histogram__insert_scaled_finite(
         &me->histogram,
         distance,
         1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
@@ -78,7 +78,7 @@ handle_not_found(struct BucketedShards *me, EntryType entry)
     ++me->current_time_stamp;
 
     Hash64BitType hash = splitmix64_hash(entry);
-    BasicHistogram__insert_scaled_infinite(
+    Histogram__insert_scaled_infinite(
         &me->histogram,
         1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
@@ -120,10 +120,10 @@ BucketedShards__print_histogram_as_json(struct BucketedShards *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        BasicHistogram__print_as_json(NULL);
+        Histogram__print_as_json(NULL);
         return;
     }
-    BasicHistogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->histogram);
 }
 
 void
@@ -134,6 +134,6 @@ BucketedShards__destroy(struct BucketedShards *me)
     }
     tree__destroy(&me->tree);
     SampledHashTable__destroy(&me->hash_table);
-    BasicHistogram__destroy(&me->histogram);
+    Histogram__destroy(&me->histogram);
     *me = (struct BucketedShards){0};
 }

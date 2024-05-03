@@ -58,8 +58,8 @@ MissRateCurve__init_from_fractional_histogram(
 }
 
 bool
-MissRateCurve__init_from_basic_histogram(struct MissRateCurve *me,
-                                         struct BasicHistogram *histogram)
+MissRateCurve__init_from_histogram(struct MissRateCurve *me,
+                                         struct Histogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
         histogram->num_bins == 0) {

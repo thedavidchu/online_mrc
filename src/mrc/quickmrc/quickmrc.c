@@ -7,7 +7,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -36,7 +36,7 @@ QuickMRC__init(struct QuickMRC *me,
         HashTable__destroy(&me->hash_table);
         return false;
     }
-    r = BasicHistogram__init(&me->histogram, histogram_length, 1);
+    r = Histogram__init(&me->histogram, histogram_length, 1);
     if (!r) {
         HashTable__destroy(&me->hash_table);
         QuickMRCBuckets__destroy(&me->buckets);
@@ -66,12 +66,12 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
         HashTable__put_unique(&me->hash_table, entry, new_timestamp);
-        BasicHistogram__insert_finite(&me->histogram, stack_dist);
+        Histogram__insert_finite(&me->histogram, stack_dist);
     } else {
         if (!QuickMRCBuckets__insert_new(&me->buckets)) {
             return false;
         }
-        if (!BasicHistogram__insert_infinite(&me->histogram)) {
+        if (!Histogram__insert_infinite(&me->histogram)) {
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
@@ -87,10 +87,10 @@ QuickMRC__print_histogram_as_json(struct QuickMRC *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        BasicHistogram__print_as_json(NULL);
+        Histogram__print_as_json(NULL);
         return;
     }
-    BasicHistogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->histogram);
 }
 
 void
@@ -101,6 +101,6 @@ QuickMRC__destroy(struct QuickMRC *me)
     }
     HashTable__destroy(&me->hash_table);
     QuickMRCBuckets__destroy(&me->buckets);
-    BasicHistogram__destroy(&me->histogram);
+    Histogram__destroy(&me->histogram);
     memset(me, 0, sizeof(*me));
 }

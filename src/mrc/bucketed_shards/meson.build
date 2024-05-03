@@ -6,7 +6,7 @@ bucketed_shards_dep = declare_dependency(
         dependencies: [
             sleator_tree_dep,
             common_dep,
-            basic_histogram_dep,
+            histogram_dep,
             glib_dep,
             splitmix64_dep,
             lookup_dep,
@@ -15,7 +15,7 @@ bucketed_shards_dep = declare_dependency(
     include_directories: include_directories('include'),
     dependencies: [
         common_dep,
-        basic_histogram_dep,
+        histogram_dep,
         glib_dep,
         tree_dep,
         lookup_dep,

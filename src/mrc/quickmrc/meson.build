@@ -14,7 +14,7 @@ quickmrc_dep = declare_dependency(
         include_directories: include_directories('include'),
         dependencies: [
             common_dep,
-            basic_histogram_dep,
+            histogram_dep,
             glib_dep,
             splitmix64_dep,
             quickmrc_buckets_dep,

@@ -1,7 +1,7 @@
-basic_histogram_dep = declare_dependency(
+histogram_dep = declare_dependency(
     link_with: library(
-        'basic_histogram_lib',
-        'basic_histogram.c',
+        'histogram_lib',
+        'histogram.c',
         include_directories: include_directories('include'),
     ),
     include_directories: include_directories('include'),

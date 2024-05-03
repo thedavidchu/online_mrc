@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "hash/types.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -12,7 +12,7 @@
 struct BucketedShards {
     struct Tree tree;
     struct SampledHashTable hash_table;
-    struct BasicHistogram histogram;
+    struct Histogram histogram;
     TimeStampType current_time_stamp;
 };
 

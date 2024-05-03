@@ -7,7 +7,7 @@
 #include <glib.h>
 
 #include "arrays/array_size.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
@@ -21,10 +21,10 @@ static bool
 access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
-    uint64_t histogram_oracle[11] = {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle),
+    uint64_t histogram_oracle_array[11] = {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array),
         .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1,
@@ -33,12 +33,12 @@ access_same_key_five_times(void)
 
     struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&me, basic_histogram_oracle.num_bins));
+    g_assert_true(Olken__init(&me, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     Olken__destroy(&me);
     return true;
 }
@@ -56,10 +56,10 @@ small_exact_trace_test(void)
         0, 10, 8, 3,  1, 2, 6, 7, 3, 10, 8,  6, 10, 6,  6,  2, 6,  0,  7, 9,
         6, 10, 1, 10, 2, 6, 2, 7, 8, 8,  6,  0, 7,  3,  1,  1, 2,  10, 3, 10,
         5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
-    uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle),
+    uint64_t histogram_oracle_array[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array),
         .bin_size = 1,
         .false_infinity = 0,
         .infinity = 11,
@@ -68,12 +68,12 @@ small_exact_trace_test(void)
 
     struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&me, basic_histogram_oracle.num_bins));
+    g_assert_true(Olken__init(&me, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     Olken__destroy(&me);
     return true;
 }
@@ -92,24 +92,24 @@ small_inexact_trace_test(void)
         0, 10, 8, 3,  1, 2, 6, 7, 3, 10, 8,  6, 10, 6,  6,  2, 6,  0,  7, 9,
         6, 10, 1, 10, 2, 6, 2, 7, 8, 8,  6,  0, 7,  3,  1,  1, 2,  10, 3, 10,
         5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
-    uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle) - 2,
+    uint64_t histogram_oracle_array[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array) - 2,
         .bin_size = 1,
-        .false_infinity = histogram_oracle[9] + histogram_oracle[10],
+        .false_infinity = histogram_oracle_array[9] + histogram_oracle_array[10],
         .infinity = 11,
         .running_sum = ARRAY_SIZE(entries),
     };
 
     struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&me, basic_histogram_oracle.num_bins));
+    g_assert_true(Olken__init(&me, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     Olken__destroy(&me);
     return true;
 }

@@ -33,7 +33,7 @@ access_same_key_five_times(void)
         PardaFixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
+    MissRateCurve__init_from_histogram(&oracle_mrc,
                                                      &oracle.histogram);
     MissRateCurve__init_from_parda_histogram(
         &mrc,
@@ -76,7 +76,7 @@ small_exact_trace_test(void)
         PardaFixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
+    MissRateCurve__init_from_histogram(&oracle_mrc,
                                                      &oracle.histogram);
     MissRateCurve__init_from_parda_histogram(
         &mrc,
@@ -114,7 +114,7 @@ long_accuracy_trace_test(void)
         PardaFixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc,
+    MissRateCurve__init_from_histogram(&oracle_mrc,
                                                      &oracle.histogram);
     MissRateCurve__init_from_parda_histogram(
         &mrc,

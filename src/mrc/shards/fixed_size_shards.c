@@ -5,7 +5,7 @@
 #include <glib.h>
 
 #include "hash/splitmix64.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -75,7 +75,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries, 1);
+    r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
@@ -86,7 +86,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
-        BasicHistogram__destroy(&me->histogram);
+        Histogram__destroy(&me->histogram);
         return false;
     }
     me->current_time_stamp = 0;
@@ -134,7 +134,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
                              (gpointer)entry,
                              (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        BasicHistogram__insert_scaled_finite(&me->histogram,
+        Histogram__insert_scaled_finite(&me->histogram,
                                               distance,
                                               me->scale);
     } else {
@@ -149,7 +149,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
                             (gpointer)me->current_time_stamp);
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        BasicHistogram__insert_scaled_infinite(&me->histogram, me->scale);
+        Histogram__insert_scaled_infinite(&me->histogram, me->scale);
     }
 }
 
@@ -159,10 +159,10 @@ FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        BasicHistogram__print_as_json(NULL);
+        Histogram__print_as_json(NULL);
         return;
     }
-    BasicHistogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->histogram);
 }
 
 void
@@ -170,7 +170,7 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
 {
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
-    BasicHistogram__destroy(&me->histogram);
+    Histogram__destroy(&me->histogram);
     SplayPriorityQueue__destroy(&me->pq);
     *me = (struct FixedSizeShards){0};
 }

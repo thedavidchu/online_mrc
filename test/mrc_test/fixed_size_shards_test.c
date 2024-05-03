@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -21,7 +21,7 @@ access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
     uint64_t hist_bkt_oracle[11] = {4000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    struct BasicHistogram histogram_oracle = {
+    struct Histogram histogram_oracle = {
         .histogram = hist_bkt_oracle,
         .num_bins = ARRAY_SIZE(hist_bkt_oracle),
         .bin_size = 1,
@@ -36,7 +36,7 @@ access_same_key_five_times(void)
         FixedSizeShards__access_item(&me, entries[i]);
     }
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }
@@ -54,10 +54,10 @@ small_exact_trace_test(void)
         0, 10, 8, 3,  1, 2, 6, 7, 3, 10, 8,  6, 10, 6,  6,  2, 6,  0,  7, 9,
         6, 10, 1, 10, 2, 6, 2, 7, 8, 8,  6,  0, 7,  3,  1,  1, 2,  10, 3, 10,
         5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
-    uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
-    struct BasicHistogram basic_histogram_oracle = {
-        .histogram = histogram_oracle,
-        .num_bins = ARRAY_SIZE(histogram_oracle),
+    uint64_t histogram_oracle_array[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
+    struct Histogram histogram_oracle = {
+        .histogram = histogram_oracle_array,
+        .num_bins = ARRAY_SIZE(histogram_oracle_array),
         .bin_size = 1,
         .false_infinity = 0,
         .infinity = 11,
@@ -69,14 +69,14 @@ small_exact_trace_test(void)
     g_assert_true(FixedSizeShards__init(&me,
                                         1.0,
                                         ARRAY_SIZE(entries),
-                                        basic_histogram_oracle.num_bins));
+                                        histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
     FixedSizeShards__print_histogram_as_json(&me);
-    BasicHistogram__print_as_json(&basic_histogram_oracle);
+    Histogram__print_as_json(&histogram_oracle);
     g_assert_true(
-        BasicHistogram__exactly_equal(&me.histogram, &basic_histogram_oracle));
+        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }
@@ -103,8 +103,8 @@ long_accuracy_trace_test(void)
         FixedSizeShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000033);

@@ -4,7 +4,7 @@
 
 #include <glib.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -13,7 +13,7 @@
 struct Olken {
     struct Tree tree;
     struct HashTable hash_table;
-    struct BasicHistogram histogram;
+    struct Histogram histogram;
     TimeStampType current_time_stamp;
 };
 

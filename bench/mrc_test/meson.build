@@ -5,7 +5,7 @@ mrc_performance_test_exe = executable(
         mytester_include,
     ],
     dependencies: [
-        basic_histogram_dep,
+        histogram_dep,
         bucketed_shards_dep,
         common_dep,
         fixed_rate_shards_dep,

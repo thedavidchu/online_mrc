@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 
 bool
-BasicHistogram__init(struct BasicHistogram *me,
-                     const uint64_t num_bins,
-                     const uint64_t bin_size)
+Histogram__init(struct Histogram *me,
+                const uint64_t num_bins,
+                const uint64_t bin_size)
 {
     if (me == NULL || num_bins == 0) {
         return false;
@@ -28,7 +28,7 @@ BasicHistogram__init(struct BasicHistogram *me,
 }
 
 bool
-BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
+Histogram__insert_finite(struct Histogram *me, const uint64_t index)
 {
     if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
@@ -46,9 +46,9 @@ BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
 }
 
 bool
-BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
-                                     const uint64_t index,
-                                     const uint64_t scale)
+Histogram__insert_scaled_finite(struct Histogram *me,
+                                const uint64_t index,
+                                const uint64_t scale)
 {
     const uint64_t scaled_index = scale * index;
     if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
@@ -67,7 +67,7 @@ BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
 }
 
 bool
-BasicHistogram__insert_infinite(struct BasicHistogram *me)
+Histogram__insert_infinite(struct Histogram *me)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -78,8 +78,7 @@ BasicHistogram__insert_infinite(struct BasicHistogram *me)
 }
 
 bool
-BasicHistogram__insert_scaled_infinite(struct BasicHistogram *me,
-                                       const uint64_t scale)
+Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -90,17 +89,17 @@ BasicHistogram__insert_scaled_infinite(struct BasicHistogram *me,
 }
 
 void
-BasicHistogram__print_as_json(struct BasicHistogram *me)
+Histogram__print_as_json(struct Histogram *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}");
         return;
     }
     if (me->histogram == NULL) {
-        printf("{\"type\": \"BasicHistogram\", \".histogram\": null}\n");
+        printf("{\"type\": \"Histogram\", \".histogram\": null}\n");
         return;
     }
-    printf("{\"type\": \"BasicHistogram\", \".num_bins\": %" PRIu64
+    printf("{\"type\": \"Histogram\", \".num_bins\": %" PRIu64
            ", \".running_sum\": %" PRIu64 ", \".histogram\": {",
            me->num_bins,
            me->running_sum);
@@ -119,8 +118,7 @@ BasicHistogram__print_as_json(struct BasicHistogram *me)
 }
 
 bool
-BasicHistogram__exactly_equal(struct BasicHistogram *me,
-                              struct BasicHistogram *other)
+Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
 {
     if (me == other) {
         return true;
@@ -129,8 +127,7 @@ BasicHistogram__exactly_equal(struct BasicHistogram *me,
         return false;
     }
 
-    if (me->num_bins != other->num_bins ||
-        me->bin_size != other->bin_size ||
+    if (me->num_bins != other->num_bins || me->bin_size != other->bin_size ||
         me->false_infinity != other->false_infinity ||
         me->infinity != other->infinity ||
         me->running_sum != other->running_sum) {
@@ -147,12 +144,12 @@ BasicHistogram__exactly_equal(struct BasicHistogram *me,
 }
 
 void
-BasicHistogram__destroy(struct BasicHistogram *me)
+Histogram__destroy(struct Histogram *me)
 {
     if (me == NULL) {
         return;
     }
     free(me->histogram);
-    *me = (struct BasicHistogram){0};
+    *me = (struct Histogram){0};
     return;
 }

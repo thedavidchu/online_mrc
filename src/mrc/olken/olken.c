@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "olken/olken.h"
@@ -26,7 +26,7 @@ Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
     if (!r) {
         goto hash_table_error;
     }
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries, 1);
+    r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
     if (!r) {
         goto histogram_error;
     }
@@ -65,7 +65,7 @@ Olken__access_item(struct Olken *me, EntryType entry)
                "update should replace value");
         ++me->current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
-        BasicHistogram__insert_finite(&me->histogram, distance);
+        Histogram__insert_finite(&me->histogram, distance);
     } else {
         enum PutUniqueStatus s =
             HashTable__put_unique(&me->hash_table,
@@ -75,7 +75,7 @@ Olken__access_item(struct Olken *me, EntryType entry)
                "update should insert key/value");
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        BasicHistogram__insert_infinite(&me->histogram);
+        Histogram__insert_infinite(&me->histogram);
     }
 }
 
@@ -85,10 +85,10 @@ Olken__print_histogram_as_json(struct Olken *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        BasicHistogram__print_as_json(NULL);
+        Histogram__print_as_json(NULL);
         return;
     }
-    BasicHistogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->histogram);
 }
 
 void
@@ -99,6 +99,6 @@ Olken__destroy(struct Olken *me)
     }
     tree__destroy(&me->tree);
     HashTable__destroy(&me->hash_table);
-    BasicHistogram__destroy(&me->histogram);
+    Histogram__destroy(&me->histogram);
     *me = (struct Olken){0};
 }

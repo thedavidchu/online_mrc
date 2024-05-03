@@ -6,7 +6,7 @@ miss_rate_curve_test_exe = executable(
     ],
     dependencies: [
         common_dep,
-        basic_histogram_dep,
+        histogram_dep,
         fractional_histogram_dep,
         glib_dep,
         miss_rate_curve_dep,

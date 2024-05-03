@@ -3,7 +3,7 @@
 
 #include <glib.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "histogram/fractional_histogram.h"
 
 #include "test/mytester.h"
@@ -23,7 +23,7 @@ const uint64_t random_values_0_to_11[100] = {
     do {                                                                       \
         if (!(r)) {                                                            \
             /* Clean up resources */                                           \
-            BasicHistogram__destroy((histogram_ptr));                          \
+            Histogram__destroy((histogram_ptr));                               \
             printf("[ERROR] %s:%d %s\n", __FILE__, __LINE__, (msg));           \
             /* NOTE This assertion is for debugging purposes so that we have a \
             finer grain understanding of where the failure occurred. */        \
@@ -33,23 +33,23 @@ const uint64_t random_values_0_to_11[100] = {
     } while (0)
 
 static bool
-test_basic_histogram(void)
+test_histogram(void)
 {
-    struct BasicHistogram hist = {0};
+    struct Histogram hist = {0};
 
-    bool r = BasicHistogram__init(&hist, 10, 1);
+    bool r = Histogram__init(&hist, 10, 1);
     if (!r) {
         return false;
     }
 
     for (uint64_t i = 0; i < 100; ++i) {
-        r = BasicHistogram__insert_finite(&hist, random_values_0_to_11[i]);
+        r = Histogram__insert_finite(&hist, random_values_0_to_11[i]);
         if (!r) {
             return false;
         }
     }
     for (uint64_t i = 0; i < 3; ++i) {
-        r = BasicHistogram__insert_infinite(&hist);
+        r = Histogram__insert_infinite(&hist);
         if (!r) {
             return false;
         }
@@ -120,7 +120,7 @@ main(int argc, char **argv)
 {
     UNUSED(argc);
     UNUSED(argv);
-    ASSERT_FUNCTION_RETURNS_TRUE(test_basic_histogram());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_histogram());
     ASSERT_FUNCTION_RETURNS_TRUE(test_fractional_histogram());
     return 0;
 }

@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "hash/types.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "priority_queue/splay_priority_queue.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
@@ -12,7 +12,7 @@
 struct FixedSizeShards {
     struct Tree tree;
     GHashTable *hash_table;
-    struct BasicHistogram histogram;
+    struct Histogram histogram;
     struct SplayPriorityQueue pq;
     TimeStampType current_time_stamp;
     Hash64BitType threshold;

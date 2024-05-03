@@ -33,8 +33,8 @@ access_same_key_five_times(void)
         FixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.olken.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000001);
@@ -70,8 +70,8 @@ small_exact_trace_test(void)
         FixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.olken.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000001);
@@ -102,8 +102,8 @@ long_accuracy_trace_test(void)
         FixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.olken.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.04);
@@ -147,7 +147,7 @@ long_parda_matching_trace_test(void)
         oracle.program_data.histogram,
         oracle.current_time_stamp,
         oracle.program_data.histogram[B_OVFL]);
-    MissRateCurve__init_from_basic_histogram(&mrc, &me.olken.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf\n", mse);
     g_assert_true(mse == 0.000000);

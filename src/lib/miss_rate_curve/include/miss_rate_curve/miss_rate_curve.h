@@ -5,7 +5,7 @@
 
 #include <glib.h> // for MIN()
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 #include "histogram/fractional_histogram.h"
 
 struct MissRateCurve {
@@ -19,9 +19,9 @@ MissRateCurve__init_from_fractional_histogram(
     struct FractionalHistogram *histogram);
 
 bool
-MissRateCurve__init_from_basic_histogram(
+MissRateCurve__init_from_histogram(
     struct MissRateCurve *me,
-    struct BasicHistogram *histogram);
+    struct Histogram *histogram);
 
 /// NOTE    The arguments are in a terrible order. Sorry.
 bool

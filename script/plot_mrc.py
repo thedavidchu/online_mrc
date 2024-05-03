@@ -17,7 +17,7 @@ def decode_json_as_histogram(
     if "type" not in histogram:
         raise ValueError("expected 'type' field in histogram")
     
-    if histogram["type"] in {"BasicHistogram", "FractionalHistogram"}:
+    if histogram["type"] in {"Histogram", "FractionalHistogram"}:
         histogram = histogram[".histogram"]
     histogram = {float(key): value for key, value in histogram.items() if value > 0 and key != INFINITY}
     return histogram
