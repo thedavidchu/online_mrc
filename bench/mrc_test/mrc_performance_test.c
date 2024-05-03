@@ -54,7 +54,7 @@ test_all(void)
 {
     PERFORMANCE_TEST(struct Olken,
                      me,
-                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
+                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1 << 10),
                      Olken__access_item,
                      Olken__destroy);
 
@@ -95,7 +95,7 @@ test_all(void)
 
     PERFORMANCE_TEST(struct FixedRateShards,
                      me,
-                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
+                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
                      FixedRateShards__access_item,
                      FixedRateShards__destroy);
 
@@ -127,7 +127,7 @@ test_shards(void)
 
     PERFORMANCE_TEST(struct FixedRateShards,
                      me,
-                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
+                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
                      FixedRateShards__access_item,
                      FixedRateShards__destroy);
 #endif

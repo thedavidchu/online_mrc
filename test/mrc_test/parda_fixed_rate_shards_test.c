@@ -24,7 +24,7 @@ access_same_key_five_times(void)
     struct PardaFixedRateShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(PardaFixedRateShards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
@@ -67,7 +67,7 @@ small_exact_trace_test(void)
     struct PardaFixedRateShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(PardaFixedRateShards__init(&me, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
@@ -105,7 +105,7 @@ long_accuracy_trace_test(void)
                                        ZIPFIAN_RANDOM_SKEW,
                                        0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(PardaFixedRateShards__init(&me, 1e-3));
 
     for (uint64_t i = 0; i < trace_length; ++i) {

@@ -13,7 +13,9 @@
 #include "tree/types.h"
 
 bool
-Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
+Olken__init(struct Olken *me,
+            const uint64_t max_num_unique_entries,
+            const uint64_t histogram_bin_size)
 {
     if (me == NULL) {
         return false;
@@ -26,7 +28,9 @@ Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
     if (!r) {
         goto hash_table_error;
     }
-    r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
+    r = Histogram__init(&me->histogram,
+                        max_num_unique_entries,
+                        histogram_bin_size);
     if (!r) {
         goto histogram_error;
     }
@@ -67,10 +71,9 @@ Olken__access_item(struct Olken *me, EntryType entry)
         // TODO(dchu): Maybe record the infinite distances for Parda!
         Histogram__insert_finite(&me->histogram, distance);
     } else {
-        enum PutUniqueStatus s =
-            HashTable__put_unique(&me->hash_table,
-                                  entry,
-                                  me->current_time_stamp);
+        enum PutUniqueStatus s = HashTable__put_unique(&me->hash_table,
+                                                       entry,
+                                                       me->current_time_stamp);
         assert(s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
                "update should insert key/value");
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);

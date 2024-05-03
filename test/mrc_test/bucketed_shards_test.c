@@ -3,13 +3,13 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "logger/logger.h"
 #include "bucketed_shards/bucketed_shards.h"
+#include "logger/logger.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
-#include "miss_rate_curve/miss_rate_curve.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const uint64_t trace_length = 1 << 20;
@@ -23,7 +23,7 @@ access_same_key_five_times(void)
     struct BucketedShards me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(BucketedShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
@@ -60,7 +60,7 @@ small_exact_trace_test(void)
 
     // The maximum trace length is obviously the number of possible unique items
     // I deliberately underestimate it (it should be 11).
-    g_assert_true(Olken__init(&oracle, 10));
+    g_assert_true(Olken__init(&oracle, 10, 1));
     g_assert_true(BucketedShards__init(&me, 1024, 10, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
@@ -92,8 +92,9 @@ long_accuracy_trace_test(void)
                                       ZIPFIAN_RANDOM_SKEW,
                                       0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
-    g_assert_true(BucketedShards__init(&me, 1 << 12, MAX_NUM_UNIQUE_ENTRIES, 1));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
+    g_assert_true(
+        BucketedShards__init(&me, 1 << 12, MAX_NUM_UNIQUE_ENTRIES, 1));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);

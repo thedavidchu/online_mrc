@@ -93,7 +93,7 @@ long_accuracy_trace_test(void)
                                       ZIPFIAN_RANDOM_SKEW,
                                       0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(
         FixedSizeShards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES));
 

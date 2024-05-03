@@ -18,7 +18,9 @@ struct Olken {
 };
 
 bool
-Olken__init(struct Olken *me, const uint64_t max_num_unique_entries);
+Olken__init(struct Olken *me,
+            const uint64_t max_num_unique_entries,
+            const uint64_t histogram_bin_size);
 
 void
 Olken__access_item(struct Olken *me, EntryType entry);
