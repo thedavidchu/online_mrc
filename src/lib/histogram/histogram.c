@@ -100,19 +100,26 @@ Histogram__print_as_json(struct Histogram *me)
         return;
     }
     printf("{\"type\": \"Histogram\", \".num_bins\": %" PRIu64
-           ", \".running_sum\": %" PRIu64 ", \".histogram\": {",
+           ", \".bin_size\": %" PRIu64 ", \".running_sum\": %" PRIu64
+           ", \".histogram\": {",
            me->num_bins,
+           me->bin_size,
            me->running_sum);
+    bool first_value = true;
     for (uint64_t i = 0; i < me->num_bins; ++i) {
         if (me->histogram[i] != 0) {
-            printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
+            if (first_value) {
+                first_value = false;
+            } else {
+                printf(", ");
+            }
+            printf("\"%" PRIu64 "\": %" PRIu64 "",
+                   i * me->bin_size,
+                   me->histogram[i]);
         }
     }
     // NOTE I assume me->num_bins is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %" PRIu64 "}, \".false_infinity\": %" PRIu64
-           ", \".infinity\": %" PRIu64 "}\n",
-           me->num_bins,
-           me->false_infinity,
+    printf("}, \".false_infinity\": %" PRIu64 ", \".infinity\": %" PRIu64 "}\n",
            me->false_infinity,
            me->infinity);
 }

@@ -83,7 +83,7 @@ bin_portion(uint64_t bin_id,
     } else {
         overlap = bin_size;
     }
-    return (double)scale * (double) overlap / (double)range;
+    return (double)scale * (double)overlap / (double)range;
 }
 
 /// @brief  Update the histogram over a fully-in-range section.
@@ -196,21 +196,19 @@ FractionalHistogram__print_as_json(struct FractionalHistogram *me)
            me->num_bins,
            me->running_sum,
            me->bin_size);
+    bool first_value = true;
     for (uint64_t i = 0; i < me->num_bins; ++i) {
         if (me->histogram[i] != 0.0) {
-            printf("\"%" PRIu64 "\": %lf, ",
-                   i * me->bin_size,
-                   me->histogram[i]);
+            if (first_value) {
+                first_value = false;
+            } else {
+                printf(", ");
+            }
+            printf("\"%" PRIu64 "\": %lf", i * me->bin_size, me->histogram[i]);
         }
     }
     // NOTE I assume me->length is much less than SIZE_MAX
-    // NOTE I print the "false infinity" as the end of the list because
-    //      it simplifies printing the JSON since I don't have to think
-    //      about the trailing comma.
-    printf("\"%" PRIu64
-           "\": %lf}, \".false_infinity\": %lf, \".infinity\": %" PRIu64 "}\n",
-           me->num_bins * me->bin_size,
-           me->false_infinity,
+    printf("}, \".false_infinity\": %lf, \".infinity\": %" PRIu64 "}\n",
            me->false_infinity,
            me->infinity);
 }
@@ -258,10 +256,11 @@ debug(struct FractionalHistogram *me, bool print)
     sum += me->infinity;
 
     if (print)
-        fprintf(stderr, "Expected sum: %g. Got sum: %g. Difference: %g\n",
-               expected_sum,
-               sum,
-               expected_sum - sum);
+        fprintf(stderr,
+                "Expected sum: %g. Got sum: %g. Difference: %g\n",
+                expected_sum,
+                sum,
+                expected_sum - sum);
     // I choose 1e-6 because this will print to the same value by default
     return doubles_are_close(expected_sum, sum, 1e-6);
 }
