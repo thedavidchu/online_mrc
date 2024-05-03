@@ -1,3 +1,4 @@
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,16 +18,25 @@ struct SampledHashTableNode {
 };
 
 bool
-SampledHashTable__init(struct SampledHashTable *me, const size_t length)
+SampledHashTable__init(struct SampledHashTable *me,
+                       const size_t length,
+                       const double init_sampling_ratio)
 {
-    if (me == NULL)
+    if (me == NULL || length == 0 || init_sampling_ratio <= 0.0 ||
+        init_sampling_ratio > 1.0)
         return false;
 
     me->data = malloc(length * sizeof(*me->data));
     // HACK Set the threshold to some low number to begin (otherwise, we
     //      end up with teething performance issues)
     for (size_t i = 0; i < length; ++i) {
-        me->data[i].hash = 1e-3 * UINT64_MAX;
+        uint64_t r = init_sampling_ratio * UINT64_MAX;
+        // NOTE If init_sampling_ratio == 1.0, then it causes the
+        //      UINT64_MAX to overflow and become zero. This is a way of
+        //      preventing this... I think.
+        if (r < init_sampling_ratio)
+            r = UINT64_MAX;
+        me->data[i].hash = r;
     }
     me->length = length;
     return true;
@@ -77,9 +87,10 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
 }
 
 static void
-print_SampledHashTableNode(struct SampledHashTableNode *me)
+print_SampledHashTableNode(struct SampledHashTableNode *me,
+                           uint64_t invalid_hash)
 {
-    if (me->hash == UINT64_MAX) {
+    if (me->hash == invalid_hash) {
         printf("null");
     } else {
         printf("[%" PRIu64 ", %" PRIu64 ", %" PRIu64 "]",
@@ -105,7 +116,7 @@ SampledHashTable__print_as_json(struct SampledHashTable *me)
            ", \".data\": [",
            me->length);
     for (size_t i = 0; i < me->length; ++i) {
-        print_SampledHashTableNode(&me->data[i]);
+        print_SampledHashTableNode(&me->data[i], UINT64_MAX * 1e-3);
         if (i < me->length - 1) {
             printf(", ");
         }

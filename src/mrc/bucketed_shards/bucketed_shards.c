@@ -24,7 +24,7 @@ BucketedShards__init(struct BucketedShards *me,
     bool r = tree__init(&me->tree);
     if (!r)
         goto tree_error;
-    r = SampledHashTable__init(&me->hash_table, num_hash_buckets);
+    r = SampledHashTable__init(&me->hash_table, num_hash_buckets, 1e-3);
     if (!r)
         goto hash_table_error;
     r = BasicHistogram__init(&me->histogram, max_num_unique_entries);

@@ -31,7 +31,7 @@ struct SampledLookupReturn {
 };
 
 bool
-SampledHashTable__init(struct SampledHashTable *me, const size_t length);
+SampledHashTable__init(struct SampledHashTable *me, const size_t length, const double init_sampling_ratio);
 
 struct SampledLookupReturn
 SampledHashTable__lookup(struct SampledHashTable *me, KeyType key);
