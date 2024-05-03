@@ -155,6 +155,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
         return false;
     }
     me->num_bins = num_bins;
+    me->bin_size = bin_size;
     return true;
 }
 

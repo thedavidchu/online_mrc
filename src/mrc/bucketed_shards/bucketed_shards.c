@@ -11,6 +11,7 @@
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/time_stamp_type.h"
+#include "unused/mark_unused.h"
 
 #include "bucketed_shards/bucketed_shards.h"
 
@@ -48,6 +49,7 @@ handle_found(struct BucketedShards *me,
              Hash64BitType hash,
              TimeStampType prev_timestamp)
 {
+    UNUSED(hash);
     assert(me != NULL);
     uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)prev_timestamp);
     bool r = tree__sleator_remove(&me->tree, (KeyType)prev_timestamp);
@@ -78,6 +80,7 @@ handle_not_found(struct BucketedShards *me, EntryType entry)
     ++me->current_time_stamp;
 
     Hash64BitType hash = splitmix64_hash(entry);
+    UNUSED(hash);
     Histogram__insert_scaled_infinite(
         &me->histogram,
         1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
