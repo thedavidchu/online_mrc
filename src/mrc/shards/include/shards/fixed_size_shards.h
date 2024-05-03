@@ -25,17 +25,16 @@ struct FixedSizeShards {
 ///                         Additional elements will be removed.
 bool
 FixedSizeShards__init(struct FixedSizeShards *me,
-                        const double starting_sampling_ratio,
-                        const uint64_t max_size,
-                        const uint64_t max_num_unique_entries);
+                      const double starting_sampling_ratio,
+                      const uint64_t max_size,
+                      const uint64_t max_num_unique_entries,
+                      const uint64_t histogram_bin_size);
 
 void
-FixedSizeShards__access_item(struct FixedSizeShards *me,
-                               EntryType entry);
+FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);
 
 void
-FixedSizeShards__print_histogram_as_json(
-    struct FixedSizeShards *me);
+FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me);
 
 void
 FixedSizeShards__destroy(struct FixedSizeShards *me);

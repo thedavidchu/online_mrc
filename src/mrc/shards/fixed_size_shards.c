@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -6,6 +7,7 @@
 
 #include "hash/splitmix64.h"
 #include "histogram/histogram.h"
+#include "math/positive_ceiling_divide.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -56,7 +58,8 @@ bool
 FixedSizeShards__init(struct FixedSizeShards *me,
                       const double starting_sampling_ratio,
                       const uint64_t max_size,
-                      const uint64_t max_num_unique_entries)
+                      const uint64_t max_num_unique_entries,
+                      const uint64_t histogram_bin_size)
 {
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
@@ -75,7 +78,10 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
+    r = Histogram__init(
+        &me->histogram,
+        POSITIVE_CEILING_DIVIDE(max_num_unique_entries, histogram_bin_size),
+        histogram_bin_size);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
@@ -134,16 +140,14 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
                              (gpointer)entry,
                              (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        Histogram__insert_scaled_finite(&me->histogram,
-                                              distance,
-                                              me->scale);
+        Histogram__insert_scaled_finite(&me->histogram, distance, me->scale);
     } else {
         if (SplayPriorityQueue__is_full(&me->pq)) {
             make_room(me);
         }
         SplayPriorityQueue__insert_if_room(&me->pq,
-                                             splitmix64_hash((uint64_t)entry),
-                                             entry);
+                                           splitmix64_hash((uint64_t)entry),
+                                           entry);
         g_hash_table_insert(me->hash_table,
                             (gpointer)entry,
                             (gpointer)me->current_time_stamp);

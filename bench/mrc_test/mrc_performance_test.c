@@ -58,12 +58,15 @@ test_all(void)
                      Olken__access_item,
                      Olken__destroy);
 
-    PERFORMANCE_TEST(
-        struct FixedSizeShards,
-        me,
-        FixedSizeShards__init(&me, 1e-3, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
-        FixedSizeShards__access_item,
-        FixedSizeShards__destroy);
+    PERFORMANCE_TEST(struct FixedSizeShards,
+                     me,
+                     FixedSizeShards__init(&me,
+                                           1e-3,
+                                           1 << 13,
+                                           MAX_NUM_UNIQUE_ENTRIES,
+                                           1 << 10),
+                     FixedSizeShards__access_item,
+                     FixedSizeShards__destroy);
 
     PERFORMANCE_TEST(
         struct Mimir,
@@ -100,12 +103,15 @@ test_all(void)
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 
-    PERFORMANCE_TEST(
-        struct BucketedShards,
-        me,
-        BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
-        BucketedShards__access_item,
-        BucketedShards__destroy);
+    PERFORMANCE_TEST(struct BucketedShards,
+                     me,
+                     BucketedShards__init(&me,
+                                          1 << 13,
+                                          MAX_NUM_UNIQUE_ENTRIES,
+                                          1e-3,
+                                          1 << 10),
+                     BucketedShards__access_item,
+                     BucketedShards__destroy);
 }
 
 static void
@@ -119,12 +125,15 @@ test_shards(void)
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
 
-    PERFORMANCE_TEST(
-        struct FixedSizeShards,
-        me,
-        FixedSizeShards__init(&me, 1e-3, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
-        FixedSizeShards__access_item,
-        FixedSizeShards__destroy);
+    PERFORMANCE_TEST(struct FixedSizeShards,
+                     me,
+                     FixedSizeShards__init(&me,
+                                           1e-3,
+                                           1 << 13,
+                                           MAX_NUM_UNIQUE_ENTRIES,
+                                           1 << 10),
+                     FixedSizeShards__access_item,
+                     FixedSizeShards__destroy);
 
     PERFORMANCE_TEST(
         struct FixedRateShards,
@@ -133,12 +142,15 @@ test_shards(void)
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif
-    PERFORMANCE_TEST(
-        struct BucketedShards,
-        me,
-        BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
-        BucketedShards__access_item,
-        BucketedShards__destroy);
+    PERFORMANCE_TEST(struct BucketedShards,
+                     me,
+                     BucketedShards__init(&me,
+                                          1 << 13,
+                                          MAX_NUM_UNIQUE_ENTRIES,
+                                          1e-3,
+                                          1 << 10),
+                     BucketedShards__access_item,
+                     BucketedShards__destroy);
 }
 
 int

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <stdbool.h> // bool
 #include <stdint.h>  // uint64_t
 #include <stdio.h>
@@ -19,7 +20,8 @@ bool
 BucketedShards__init(struct BucketedShards *me,
                      const uint64_t num_hash_buckets,
                      const uint64_t max_num_unique_entries,
-                     const double init_sampling_ratio)
+                     const double init_sampling_ratio,
+                     const uint64_t histogram_bin_size)
 {
     if (me == NULL)
         return false;
@@ -31,7 +33,9 @@ BucketedShards__init(struct BucketedShards *me,
                                init_sampling_ratio);
     if (!r)
         goto hash_table_error;
-    r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
+    r = Histogram__init(&me->histogram,
+                        max_num_unique_entries,
+                        histogram_bin_size);
     if (!r)
         goto histogram_error;
     me->current_time_stamp = 0;

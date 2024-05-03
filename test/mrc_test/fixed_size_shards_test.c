@@ -32,7 +32,7 @@ access_same_key_five_times(void)
 
     struct FixedSizeShards me = {0};
     g_assert_true(
-        FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.num_bins));
+        FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.num_bins, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
@@ -69,7 +69,8 @@ small_exact_trace_test(void)
     g_assert_true(FixedSizeShards__init(&me,
                                         1.0,
                                         ARRAY_SIZE(entries),
-                                        histogram_oracle.num_bins));
+                                        histogram_oracle.num_bins,
+                                        1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
@@ -94,7 +95,7 @@ long_accuracy_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(
-        FixedSizeShards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES));
+        FixedSizeShards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES, 1));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
