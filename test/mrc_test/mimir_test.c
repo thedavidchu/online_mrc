@@ -4,7 +4,6 @@
 
 #include "arrays/array_size.h"
 #include "histogram/fractional_histogram.h"
-#include "math/positive_ceiling_divide.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "mimir/private_buckets.h"
@@ -187,7 +186,7 @@ main(int argc, char **argv)
     UNUSED(argv);
     // Unit tests
     ASSERT_FUNCTION_RETURNS_TRUE(test_mimir_buckets());
-    // // Integration tests
+    // Integration tests
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
     ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_ROUNDER));
