@@ -6,11 +6,12 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include "hash/splitmix64.h"
+#include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "lookup/parallel_hash_table.h"
 #include "lookup/sampled_hash_table.h"
-#include "hash/splitmix64.h"
 #include "test/mytester.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -205,6 +206,14 @@ sampled_insert(struct SampledHashTable *me,
     assert(me != NULL);
 
     // Insert with an expected status
+    const bool debug = false;
+    if (debug) {
+        LOGGER_DEBUG("key: %lu, value: %lu, expected_put_status: %d\n",
+                     key,
+                     value,
+                     expected_put_status);
+        SampledHashTable__print_as_json(me);
+    }
     g_assert_cmpint(SampledHashTable__put_unique(me, key, value),
                     ==,
                     expected_put_status);
@@ -216,7 +225,8 @@ sampled_insert(struct SampledHashTable *me,
         g_assert_cmpuint(r.status, ==, SAMPLED_NOTTRACKED);
         break;
     }
-    case SAMPLED_UPDATED: /* Intentional fall through... */
+    case SAMPLED_INSERTED: /* Intentional fall through... */
+    case SAMPLED_UPDATED:  /* Intentional fall through... */
     case SAMPLED_REPLACED: {
         struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
         g_assert_cmpuint(r.status, ==, SAMPLED_FOUND);
@@ -238,17 +248,17 @@ sampled_test(void)
     g_assert_true(SampledHashTable__init(&me, 8, 1.0));
 
     // Test inserts
-    sampled_insert(&me, 0, 0, SAMPLED_REPLACED);
-    sampled_insert(&me, 1, 0, SAMPLED_REPLACED);
-    sampled_insert(&me, 2, 0, SAMPLED_REPLACED);
+    sampled_insert(&me, 0, 0, SAMPLED_INSERTED);
+    sampled_insert(&me, 1, 0, SAMPLED_INSERTED);
+    sampled_insert(&me, 2, 0, SAMPLED_INSERTED);
     sampled_insert(&me, 3, 0, SAMPLED_NOTTRACKED);
-    sampled_insert(&me, 4, 0, SAMPLED_REPLACED);
+    sampled_insert(&me, 4, 0, SAMPLED_INSERTED);
     sampled_insert(&me, 5, 0, SAMPLED_REPLACED);
     sampled_insert(&me, 6, 0, SAMPLED_NOTTRACKED);
     sampled_insert(&me, 7, 0, SAMPLED_REPLACED);
     sampled_insert(&me, 8, 0, SAMPLED_NOTTRACKED);
-    sampled_insert(&me, 9, 0, SAMPLED_REPLACED);
-    sampled_insert(&me, 10, 0, SAMPLED_REPLACED);
+    sampled_insert(&me, 9, 0, SAMPLED_INSERTED);
+    sampled_insert(&me, 10, 0, SAMPLED_INSERTED);
 
     // Test updates
     sampled_insert(&me, 0, 1, SAMPLED_UPDATED);

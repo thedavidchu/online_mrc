@@ -25,7 +25,6 @@ SampledHashTable__init(struct SampledHashTable *me,
                        const size_t length,
                        const double init_sampling_ratio)
 {
-    const uint64_t threshold = ratio_uint64(init_sampling_ratio);
     if (me == NULL || length == 0 || init_sampling_ratio <= 0.0 ||
         init_sampling_ratio > 1.0)
         return false;
@@ -33,16 +32,18 @@ SampledHashTable__init(struct SampledHashTable *me,
     struct SampledHashTableNode *data = malloc(length * sizeof(*me->data));
     if (data == NULL)
         return false;
-    // HACK Set the threshold to some low number to begin (otherwise, we
-    //      end up with teething performance issues)
+    // NOTE There is no way to allow us to sample values with a hash of
+    //      UINT64_MAX because we reserve this as the "invalid" hash value.
     for (size_t i = 0; i < length; ++i) {
-        data[i].hash = threshold;
+        data[i].hash = UINT64_MAX;
     }
 
     *me = (struct SampledHashTable){
         .data = data,
         .length = length,
-        .threshold = threshold,
+        // HACK Set the threshold to some low number to begin
+        //      (otherwise, we end up with teething performance issues).
+        .threshold = ratio_uint64(init_sampling_ratio),
     };
     return true;
 }
@@ -58,7 +59,10 @@ SampledHashTable__lookup(struct SampledHashTable *me, KeyType key)
 
     if (hash < incumbent->hash) {
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
-    } else if (hash == incumbent->hash && key == incumbent->key) {
+    } else if (key == incumbent->key) {
+        // NOTE If the key comparison is expensive, then one could
+        //      first compare the hashes. However, in this case, they
+        //      are not expensive.
         return (struct SampledLookupReturn){.status = SAMPLED_FOUND,
                                             .hash = incumbent->hash,
                                             .timestamp = incumbent->value};
@@ -78,12 +82,22 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
     Hash64BitType hash = splitmix64_hash(key);
     struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
 
-    if (hash < incumbent->hash) {
+    // HACK Note that the hash value of UINT64_MAX is reserved to mark
+    //      the bucket as "invalid" (i.e. no valid element has been inserted).
+    if (incumbent->hash == UINT64_MAX) {
+        *incumbent = (struct SampledHashTableNode){.key = key,
+                                                   .hash = hash,
+                                                   .value = value};
+        return SAMPLED_INSERTED;
+    } else if (hash < incumbent->hash) {
         *incumbent = (struct SampledHashTableNode){.key = key,
                                                    .hash = hash,
                                                    .value = value};
         return SAMPLED_REPLACED;
-    } else if (hash == incumbent->hash && key == incumbent->key) {
+    } else if (key == incumbent->key) {
+        // NOTE If the key comparison is expensive, then one could
+        //      first compare the hashes. However, in this case, they
+        //      are not expensive.
         incumbent->value = value;
         return SAMPLED_UPDATED;
     } else {
@@ -133,12 +147,12 @@ SampledHashTable__print_as_json(struct SampledHashTable *me)
            ", \".data\": [",
            me->length);
     for (size_t i = 0; i < me->length; ++i) {
-        print_SampledHashTableNode(&me->data[i], UINT64_MAX * 1e-3);
+        print_SampledHashTableNode(&me->data[i], UINT64_MAX);
         if (i < me->length - 1) {
             printf(", ");
         }
     }
-    printf("]}");
+    printf("]}\n");
 }
 
 void
