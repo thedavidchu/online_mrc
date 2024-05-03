@@ -42,8 +42,7 @@ access_same_key_five_times(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         g_assert_true(QuickMRC__access_item(&me, entries[i]));
     }
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     QuickMRC__destroy(&me);
     return true;
 }
@@ -75,8 +74,7 @@ small_merge_test(void)
     if (PRINT_HISTOGRAM) {
         QuickMRC__print_histogram_as_json(&me);
     }
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     QuickMRC__destroy(&me);
     return true;
 }
@@ -128,14 +126,10 @@ mean_absolute_error_test(void)
     }
 
     struct MissRateCurve my_mrc = {0}, olken_mrc = {0};
+    g_assert_true(MissRateCurve__init_from_histogram(&my_mrc, &me.histogram));
     g_assert_true(
-        MissRateCurve__init_from_histogram(&my_mrc,
-                                                         &me.histogram));
-    g_assert_true(
-        MissRateCurve__init_from_histogram(&olken_mrc,
-                                                         &olken.histogram));
-    double mae =
-        MissRateCurve__mean_absolute_error(&my_mrc, &olken_mrc);
+        MissRateCurve__init_from_histogram(&olken_mrc, &olken.histogram));
+    double mae = MissRateCurve__mean_absolute_error(&my_mrc, &olken_mrc);
     printf("Mean Absolute Error: %f\n", mae);
 
     ZipfianRandom__destroy(&zrng);
@@ -182,7 +176,8 @@ parallel_test(void)
 #define THREAD_COUNT 4
     struct WorkerData data[THREAD_COUNT] = {0};
     const uint64_t keys_per_thread = ARRAY_SIZE(entries) / THREAD_COUNT;
-    const uint64_t remaining_keys_per_thread = ARRAY_SIZE(entries) % THREAD_COUNT;
+    const uint64_t remaining_keys_per_thread =
+        ARRAY_SIZE(entries) % THREAD_COUNT;
     for (int i = 0; i < THREAD_COUNT; ++i) {
         uint64_t key_count = keys_per_thread;
         if (i == 0) {

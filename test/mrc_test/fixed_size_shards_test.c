@@ -31,12 +31,12 @@ access_same_key_five_times(void)
     };
 
     struct FixedSizeShards me = {0};
-    g_assert_true(FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.num_bins));
+    g_assert_true(
+        FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }
@@ -75,8 +75,7 @@ small_exact_trace_test(void)
     }
     FixedSizeShards__print_histogram_as_json(&me);
     Histogram__print_as_json(&histogram_oracle);
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }

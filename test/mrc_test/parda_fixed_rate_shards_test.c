@@ -3,11 +3,11 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "parda_shards/parda_fixed_rate_shards.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "parda.h"
+#include "parda_shards/parda_fixed_rate_shards.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
@@ -33,14 +33,12 @@ access_same_key_five_times(void)
         PardaFixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_histogram(&oracle_mrc,
-                                                     &oracle.histogram);
-    MissRateCurve__init_from_parda_histogram(
-        &mrc,
-        nbuckets,
-        me.program_data.histogram,
-        me.current_time_stamp,
-        me.program_data.histogram[B_OVFL]);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_parda_histogram(&mrc,
+                                             nbuckets,
+                                             me.program_data.histogram,
+                                             me.current_time_stamp,
+                                             me.program_data.histogram[B_OVFL]);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000001);
@@ -76,14 +74,12 @@ small_exact_trace_test(void)
         PardaFixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_histogram(&oracle_mrc,
-                                                     &oracle.histogram);
-    MissRateCurve__init_from_parda_histogram(
-        &mrc,
-        nbuckets,
-        me.program_data.histogram,
-        me.current_time_stamp,
-        me.program_data.histogram[B_OVFL]);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_parda_histogram(&mrc,
+                                             nbuckets,
+                                             me.program_data.histogram,
+                                             me.current_time_stamp,
+                                             me.program_data.histogram[B_OVFL]);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.000001);
@@ -101,9 +97,9 @@ long_accuracy_trace_test(void)
     struct PardaFixedRateShards me = {0};
 
     g_assert_true(ZipfianRandom__init(&zrng,
-                                       MAX_NUM_UNIQUE_ENTRIES,
-                                       ZIPFIAN_RANDOM_SKEW,
-                                       0));
+                                      MAX_NUM_UNIQUE_ENTRIES,
+                                      ZIPFIAN_RANDOM_SKEW,
+                                      0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(PardaFixedRateShards__init(&me, 1e-3));
@@ -114,14 +110,12 @@ long_accuracy_trace_test(void)
         PardaFixedRateShards__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_histogram(&oracle_mrc,
-                                                     &oracle.histogram);
-    MissRateCurve__init_from_parda_histogram(
-        &mrc,
-        nbuckets,
-        me.program_data.histogram,
-        me.current_time_stamp,
-        me.program_data.histogram[B_OVFL]);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_parda_histogram(&mrc,
+                                             nbuckets,
+                                             me.program_data.histogram,
+                                             me.current_time_stamp,
+                                             me.program_data.histogram[B_OVFL]);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.04);

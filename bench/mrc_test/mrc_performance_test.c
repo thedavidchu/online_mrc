@@ -93,11 +93,12 @@ test_all(void)
                      QuickMRC__access_item,
                      QuickMRC__destroy);
 
-    PERFORMANCE_TEST(struct FixedRateShards,
-                     me,
-                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
-                     FixedRateShards__access_item,
-                     FixedRateShards__destroy);
+    PERFORMANCE_TEST(
+        struct FixedRateShards,
+        me,
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
+        FixedRateShards__access_item,
+        FixedRateShards__destroy);
 
     PERFORMANCE_TEST(
         struct BucketedShards,
@@ -125,11 +126,12 @@ test_shards(void)
         FixedSizeShards__access_item,
         FixedSizeShards__destroy);
 
-    PERFORMANCE_TEST(struct FixedRateShards,
-                     me,
-                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
-                     FixedRateShards__access_item,
-                     FixedRateShards__destroy);
+    PERFORMANCE_TEST(
+        struct FixedRateShards,
+        me,
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
+        FixedRateShards__access_item,
+        FixedRateShards__destroy);
 #endif
     PERFORMANCE_TEST(
         struct BucketedShards,

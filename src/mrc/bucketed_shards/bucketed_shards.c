@@ -26,7 +26,9 @@ BucketedShards__init(struct BucketedShards *me,
     bool r = tree__init(&me->tree);
     if (!r)
         goto tree_error;
-    r = SampledHashTable__init(&me->hash_table, num_hash_buckets, init_sampling_ratio);
+    r = SampledHashTable__init(&me->hash_table,
+                               num_hash_buckets,
+                               init_sampling_ratio);
     if (!r)
         goto hash_table_error;
     r = Histogram__init(&me->histogram, max_num_unique_entries, 1);
@@ -62,10 +64,9 @@ handle_found(struct BucketedShards *me,
     assert(s == SAMPLED_UPDATED && "update should replace value");
     ++me->current_time_stamp;
     // TODO(dchu): Maybe record the infinite distances for Parda!
-    Histogram__insert_scaled_finite(
-        &me->histogram,
-        distance,
-        1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
+    Histogram__insert_scaled_finite(&me->histogram,
+                                    distance,
+                                    1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
 
 static void
@@ -81,9 +82,8 @@ handle_not_found(struct BucketedShards *me, EntryType entry)
 
     Hash64BitType hash = splitmix64_hash(entry);
     UNUSED(hash);
-    Histogram__insert_scaled_infinite(
-        &me->histogram,
-        1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
+    Histogram__insert_scaled_infinite(&me->histogram,
+                                      1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
 
 void

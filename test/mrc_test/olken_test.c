@@ -37,8 +37,7 @@ access_same_key_five_times(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     Olken__destroy(&me);
     return true;
 }
@@ -72,8 +71,7 @@ small_exact_trace_test(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     Olken__destroy(&me);
     return true;
 }
@@ -97,7 +95,8 @@ small_inexact_trace_test(void)
         .histogram = histogram_oracle_array,
         .num_bins = ARRAY_SIZE(histogram_oracle_array) - 2,
         .bin_size = 1,
-        .false_infinity = histogram_oracle_array[9] + histogram_oracle_array[10],
+        .false_infinity =
+            histogram_oracle_array[9] + histogram_oracle_array[10],
         .infinity = 11,
         .running_sum = ARRAY_SIZE(entries),
     };
@@ -108,8 +107,7 @@ small_inexact_trace_test(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
-    g_assert_true(
-        Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
     Olken__destroy(&me);
     return true;
 }

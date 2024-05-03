@@ -110,7 +110,8 @@ test_binned_histogram(void)
     // NOTE This makes no sense in the context of MRC generation since
     //      the number of infinities must equal the the number of unique
     //      elements used. However, this is not an MRC test, so it's OK!
-    const uint64_t histogram_oracle[10] = {9 + 9, 12 + 9, 4 + 8, 15 + 9, 6 + 8, 11};
+    const uint64_t histogram_oracle[10] =
+        {9 + 9, 12 + 9, 4 + 8, 15 + 9, 6 + 8, 11};
     const uint64_t num_bins_oracle = 10;
     const uint64_t bin_size_oracle = 2;
     const uint64_t false_infinity_oracle = 4;
