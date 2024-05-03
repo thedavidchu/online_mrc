@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "hash/splitmix64.h"
@@ -41,6 +41,7 @@ SampledHashTable__lookup(struct SampledHashTable *me, KeyType key)
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
     } else if (hash == incumbent->hash && key == incumbent->key) {
         return (struct SampledLookupReturn){.status = SAMPLED_FOUND,
+                                            .hash = incumbent->hash,
                                             .timestamp = incumbent->value};
     } else {
         return (struct SampledLookupReturn){.status = SAMPLED_NOTTRACKED};
@@ -77,7 +78,10 @@ print_SampledHashTableNode(struct SampledHashTableNode *me)
     if (me->hash == UINT64_MAX) {
         printf("null");
     } else {
-        printf("[%" PRIu64 ", %" PRIu64", %" PRIu64 "]", me->key, me->hash, me->value);
+        printf("[%" PRIu64 ", %" PRIu64 ", %" PRIu64 "]",
+               me->key,
+               me->hash,
+               me->value);
     }
 }
 
@@ -93,14 +97,16 @@ SampledHashTable__print_as_json(struct SampledHashTable *me)
         return;
     }
 
-    printf("{\"type\": \"SampledHashTable\", \".length\": %" PRIu64 ", \".data\": [", me->length);
+    printf("{\"type\": \"SampledHashTable\", \".length\": %" PRIu64
+           ", \".data\": [",
+           me->length);
     for (size_t i = 0; i < me->length; ++i) {
         print_SampledHashTableNode(&me->data[i]);
         if (i < me->length - 1) {
             printf(", ");
         }
     }
-    printf("]}");    
+    printf("]}");
 }
 
 void

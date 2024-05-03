@@ -10,6 +10,7 @@
 #include "lookup/lookup.h"
 #include "lookup/parallel_hash_table.h"
 #include "lookup/sampled_hash_table.h"
+#include "hash/splitmix64.h"
 #include "test/mytester.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -219,6 +220,7 @@ sampled_insert(struct SampledHashTable *me,
     case SAMPLED_REPLACED: {
         struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
         g_assert_cmpuint(r.status, ==, SAMPLED_FOUND);
+        g_assert_cmpuint(r.hash, ==, splitmix64_hash(key));
         g_assert_cmpuint(r.timestamp, ==, value);
         break;
     }

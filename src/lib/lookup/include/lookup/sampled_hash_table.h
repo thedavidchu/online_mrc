@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "hash/types.h"
 #include "types/value_type.h"
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
@@ -25,6 +26,7 @@ enum SampledStatus {
 
 struct SampledLookupReturn {
     enum SampledStatus status;
+    Hash64BitType hash;
     TimeStampType timestamp;
 };
 
