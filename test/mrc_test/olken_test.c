@@ -24,7 +24,8 @@ access_same_key_five_times(void)
     uint64_t histogram_oracle[11] = {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle),
+        .num_bins = ARRAY_SIZE(histogram_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1,
         .running_sum = ARRAY_SIZE(entries),
@@ -32,7 +33,7 @@ access_same_key_five_times(void)
 
     struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(Olken__init(&me, basic_histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
@@ -58,7 +59,8 @@ small_exact_trace_test(void)
     uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle),
+        .num_bins = ARRAY_SIZE(histogram_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 11,
         .running_sum = ARRAY_SIZE(entries),
@@ -66,7 +68,7 @@ small_exact_trace_test(void)
 
     struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(Olken__init(&me, basic_histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }
@@ -93,7 +95,8 @@ small_inexact_trace_test(void)
     uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle) - 2,
+        .num_bins = ARRAY_SIZE(histogram_oracle) - 2,
+        .bin_size = 1,
         .false_infinity = histogram_oracle[9] + histogram_oracle[10],
         .infinity = 11,
         .running_sum = ARRAY_SIZE(entries),
@@ -101,7 +104,7 @@ small_inexact_trace_test(void)
 
     struct Olken me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&me, basic_histogram_oracle.length));
+    g_assert_true(Olken__init(&me, basic_histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         Olken__access_item(&me, entries[i]);
     }

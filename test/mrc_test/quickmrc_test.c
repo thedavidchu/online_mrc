@@ -29,7 +29,8 @@ access_same_key_five_times(void)
     uint64_t histogram_oracle[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle),
+        .num_bins = ARRAY_SIZE(histogram_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1,
         .running_sum = ARRAY_SIZE(entries),
@@ -37,7 +38,7 @@ access_same_key_five_times(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         g_assert_true(QuickMRC__access_item(&me, entries[i]));
     }
@@ -57,7 +58,8 @@ small_merge_test(void)
     uint64_t histogram_oracle[11] = {0};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle),
+        .num_bins = ARRAY_SIZE(histogram_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1000,
         .running_sum = 1000,
@@ -65,7 +67,7 @@ small_merge_test(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.num_bins));
     for (uint64_t i = 0; i < 1000; ++i) {
         QuickMRC__access_item(&me, i);
     }
@@ -166,7 +168,8 @@ parallel_test(void)
     uint64_t histogram_oracle[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle),
+        .num_bins = ARRAY_SIZE(histogram_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1,
         .running_sum = ARRAY_SIZE(entries),
@@ -174,7 +177,7 @@ parallel_test(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.length));
+    g_assert_true(QuickMRC__init(&me, 60, 100, basic_histogram_oracle.num_bins));
 
 #define THREAD_COUNT 4
     struct WorkerData data[THREAD_COUNT] = {0};

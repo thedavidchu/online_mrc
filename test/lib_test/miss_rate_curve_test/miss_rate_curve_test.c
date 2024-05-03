@@ -52,7 +52,7 @@ test_miss_rate_curve_for_basic_histogram(void)
     uint64_t hist_vals[] = {9, 9, 12, 9, 4, 8, 15, 9, 6, 8};
     struct BasicHistogram basic_hist = {
         .histogram = hist_vals,
-        .length = 10,
+        .num_bins = 10,
         .false_infinity = 11,
         .infinity = 3,
         .running_sum = 103,

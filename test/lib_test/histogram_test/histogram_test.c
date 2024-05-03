@@ -37,7 +37,7 @@ test_basic_histogram(void)
 {
     struct BasicHistogram hist = {0};
 
-    bool r = BasicHistogram__init(&hist, 10);
+    bool r = BasicHistogram__init(&hist, 10, 1);
     if (!r) {
         return false;
     }
@@ -72,7 +72,7 @@ test_basic_histogram(void)
                                     "histogram should match oracle",
                                     &hist);
     }
-    ASSERT_TRUE_OR_RETURN_FALSE(hist.length == length_oracle,
+    ASSERT_TRUE_OR_RETURN_FALSE(hist.num_bins == length_oracle,
                                 "length should match oracle",
                                 &hist);
     ASSERT_TRUE_OR_RETURN_FALSE(hist.false_infinity == false_infinity_oracle,

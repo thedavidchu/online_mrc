@@ -26,7 +26,7 @@ Olken__init(struct Olken *me, const uint64_t max_num_unique_entries)
     if (!r) {
         goto hash_table_error;
     }
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries);
+    r = BasicHistogram__init(&me->histogram, max_num_unique_entries, 1);
     if (!r) {
         goto histogram_error;
     }

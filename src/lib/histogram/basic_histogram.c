@@ -7,17 +7,20 @@
 #include "histogram/basic_histogram.h"
 
 bool
-BasicHistogram__init(struct BasicHistogram *me, const uint64_t length)
+BasicHistogram__init(struct BasicHistogram *me,
+                     const uint64_t num_bins,
+                     const uint64_t bin_size)
 {
-    if (me == NULL || length == 0) {
+    if (me == NULL || num_bins == 0) {
         return false;
     }
     // Assume it is either NULL or an uninitialized address!
-    me->histogram = (uint64_t *)calloc(length, sizeof(uint64_t));
+    me->histogram = (uint64_t *)calloc(num_bins, sizeof(uint64_t));
     if (me->histogram == NULL) {
         return false;
     }
-    me->length = length;
+    me->num_bins = num_bins;
+    me->bin_size = bin_size;
     me->infinity = 0;
     me->false_infinity = 0;
     me->running_sum = 0;
@@ -27,13 +30,13 @@ BasicHistogram__init(struct BasicHistogram *me, const uint64_t length)
 bool
 BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
 {
-    if (me == NULL || me->histogram == NULL) {
+    if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
-    if (index < me->length) {
-        ++me->histogram[index];
+    if (index < me->num_bins * me->bin_size) {
+        ++me->histogram[index / me->bin_size];
         ++me->running_sum;
     } else {
         ++me->false_infinity;
@@ -48,13 +51,13 @@ BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
                                      const uint64_t scale)
 {
     const uint64_t scaled_index = scale * index;
-    if (me == NULL || me->histogram == NULL) {
+    if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
-    if (scaled_index < me->length) {
-        me->histogram[scaled_index] += scale;
+    if (scaled_index < me->num_bins * me->bin_size) {
+        me->histogram[scaled_index / me->bin_size] += scale;
         me->running_sum += scale;
     } else {
         me->false_infinity += scale;
@@ -97,19 +100,19 @@ BasicHistogram__print_as_json(struct BasicHistogram *me)
         printf("{\"type\": \"BasicHistogram\", \".histogram\": null}\n");
         return;
     }
-    printf("{\"type\": \"BasicHistogram\", \".length\": %" PRIu64
+    printf("{\"type\": \"BasicHistogram\", \".num_bins\": %" PRIu64
            ", \".running_sum\": %" PRIu64 ", \".histogram\": {",
-           me->length,
+           me->num_bins,
            me->running_sum);
-    for (uint64_t i = 0; i < me->length; ++i) {
+    for (uint64_t i = 0; i < me->num_bins; ++i) {
         if (me->histogram[i] != 0) {
             printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
         }
     }
-    // NOTE I assume me->length is much less than SIZE_MAX
+    // NOTE I assume me->num_bins is much less than SIZE_MAX
     printf("\"%" PRIu64 "\": %" PRIu64 "}, \".false_infinity\": %" PRIu64
            ", \".infinity\": %" PRIu64 "}\n",
-           me->length,
+           me->num_bins,
            me->false_infinity,
            me->false_infinity,
            me->infinity);
@@ -126,7 +129,8 @@ BasicHistogram__exactly_equal(struct BasicHistogram *me,
         return false;
     }
 
-    if (me->length != other->length ||
+    if (me->num_bins != other->num_bins ||
+        me->bin_size != other->bin_size ||
         me->false_infinity != other->false_infinity ||
         me->infinity != other->infinity ||
         me->running_sum != other->running_sum) {
@@ -136,7 +140,7 @@ BasicHistogram__exactly_equal(struct BasicHistogram *me,
     //      since the size of the address space * sizeof(uint64_t) < 2^64.
     if (memcmp(me->histogram,
                other->histogram,
-               sizeof(*me->histogram) * me->length) != 0) {
+               sizeof(*me->histogram) * me->num_bins) != 0) {
         return false;
     }
     return true;

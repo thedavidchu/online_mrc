@@ -7,8 +7,10 @@
 /// @note   I assume no overflow in any of these values!
 struct BasicHistogram {
     uint64_t *histogram;
-    /// Maximum allowable length of the histogram
-    uint64_t length;
+    /// Number of bins in the histogram
+    uint64_t num_bins;
+    // Size of each bin
+    uint64_t bin_size;
     /// We have seen this before, but we do not track stacks this large
     uint64_t false_infinity;
     /// We have not seen this before
@@ -17,7 +19,9 @@ struct BasicHistogram {
 };
 
 bool
-BasicHistogram__init(struct BasicHistogram *me, const uint64_t length);
+BasicHistogram__init(struct BasicHistogram *me,
+                     const uint64_t num_bins,
+                     const uint64_t bin_size);
 
 bool
 BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index);

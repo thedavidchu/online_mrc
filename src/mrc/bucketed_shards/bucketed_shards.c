@@ -28,7 +28,7 @@ BucketedShards__init(struct BucketedShards *me,
     r = SampledHashTable__init(&me->hash_table, num_hash_buckets, init_sampling_ratio);
     if (!r)
         goto hash_table_error;
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries);
+    r = BasicHistogram__init(&me->histogram, max_num_unique_entries, 1);
     if (!r)
         goto histogram_error;
     me->current_time_stamp = 0;

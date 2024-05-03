@@ -23,14 +23,15 @@ access_same_key_five_times(void)
     uint64_t hist_bkt_oracle[11] = {4000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct BasicHistogram histogram_oracle = {
         .histogram = hist_bkt_oracle,
-        .length = ARRAY_SIZE(hist_bkt_oracle),
+        .num_bins = ARRAY_SIZE(hist_bkt_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 1 * 1000,
         .running_sum = ARRAY_SIZE(entries) * 1000,
     };
 
     struct FixedSizeShards me = {0};
-    g_assert_true(FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.length));
+    g_assert_true(FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
@@ -56,7 +57,8 @@ small_exact_trace_test(void)
     uint64_t histogram_oracle[11] = {8, 11, 7, 7, 6, 4, 13, 11, 9, 12, 1};
     struct BasicHistogram basic_histogram_oracle = {
         .histogram = histogram_oracle,
-        .length = ARRAY_SIZE(histogram_oracle),
+        .num_bins = ARRAY_SIZE(histogram_oracle),
+        .bin_size = 1,
         .false_infinity = 0,
         .infinity = 11,
         .running_sum = ARRAY_SIZE(entries),
@@ -67,7 +69,7 @@ small_exact_trace_test(void)
     g_assert_true(FixedSizeShards__init(&me,
                                         1.0,
                                         ARRAY_SIZE(entries),
-                                        basic_histogram_oracle.length));
+                                        basic_histogram_oracle.num_bins));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }

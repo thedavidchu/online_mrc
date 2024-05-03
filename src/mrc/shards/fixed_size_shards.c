@@ -75,7 +75,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries);
+    r = BasicHistogram__init(&me->histogram, max_num_unique_entries, 1);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);

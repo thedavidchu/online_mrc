@@ -62,12 +62,12 @@ MissRateCurve__init_from_basic_histogram(struct MissRateCurve *me,
                                          struct BasicHistogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
-        histogram->length == 0) {
+        histogram->num_bins == 0) {
         return false;
     }
     // NOTE We include 1 past the histogram length to record "false infinities",
     //      i.e. elements past the maximum length of the histogram.
-    const uint64_t length = histogram->length + 2;
+    const uint64_t length = histogram->num_bins + 2;
     me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
         return false;
@@ -77,7 +77,7 @@ MissRateCurve__init_from_basic_histogram(struct MissRateCurve *me,
     // Generate the MRC
     const uint64_t total = histogram->running_sum;
     uint64_t tmp = total;
-    for (uint64_t i = 0; i < histogram->length; ++i) {
+    for (uint64_t i = 0; i < histogram->num_bins; ++i) {
         const uint64_t h = histogram->histogram[i];
         // TODO(dchu): Check for division by zero! How do we intelligently
         //              resolve this?
@@ -86,9 +86,9 @@ MissRateCurve__init_from_basic_histogram(struct MissRateCurve *me,
                "the subtraction should yield a non-negative result");
         tmp -= h;
     }
-    me->miss_rate[histogram->length] = (double)tmp / (double)total;
+    me->miss_rate[histogram->num_bins] = (double)tmp / (double)total;
     tmp -= histogram->false_infinity;
-    me->miss_rate[histogram->length + 1] = (double)tmp / (double)total;
+    me->miss_rate[histogram->num_bins + 1] = (double)tmp / (double)total;
     assert(tmp - histogram->infinity == 0);
     return true;
 }
