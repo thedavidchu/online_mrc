@@ -101,7 +101,7 @@ test_all(void)
 
     PERFORMANCE_TEST(struct BucketedShards,
                      me,
-                     BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
+                     BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
                      BucketedShards__access_item,
                      BucketedShards__destroy);
 }
@@ -132,7 +132,7 @@ test_shards(void)
 #endif
     PERFORMANCE_TEST(struct BucketedShards,
                      me,
-                     BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
+                     BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
                      BucketedShards__access_item,
                      BucketedShards__destroy);
 }

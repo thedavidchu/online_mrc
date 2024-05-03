@@ -17,14 +17,15 @@
 bool
 BucketedShards__init(struct BucketedShards *me,
                      const uint64_t num_hash_buckets,
-                     const uint64_t max_num_unique_entries)
+                     const uint64_t max_num_unique_entries,
+                     const double init_sampling_ratio)
 {
     if (me == NULL)
         return false;
     bool r = tree__init(&me->tree);
     if (!r)
         goto tree_error;
-    r = SampledHashTable__init(&me->hash_table, num_hash_buckets, 1e-3);
+    r = SampledHashTable__init(&me->hash_table, num_hash_buckets, init_sampling_ratio);
     if (!r)
         goto hash_table_error;
     r = BasicHistogram__init(&me->histogram, max_num_unique_entries);
