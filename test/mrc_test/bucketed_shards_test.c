@@ -105,7 +105,7 @@ long_accuracy_trace_test(void)
     MissRateCurve__init_from_basic_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.04);
+    g_assert_cmpfloat(mse, <=, 0.005);
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
