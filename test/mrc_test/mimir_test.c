@@ -15,7 +15,7 @@
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.99;
-const uint64_t trace_length = 1 << 20;
+const uint64_t TRACE_LENGTH = 1 << 20;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// UNIT TESTS
@@ -161,7 +161,7 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
     //      is kind of useless!
-    for (uint64_t i = 0; i < trace_length; ++i) {
+    for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         Mimir__access_item(&me, entry);

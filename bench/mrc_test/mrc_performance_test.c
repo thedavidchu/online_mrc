@@ -18,6 +18,7 @@
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.5;
 const uint64_t RANDOM_SEED = 0;
+const uint64_t TRACE_LENGTH = 1 << 20;
 
 #define PERFORMANCE_TEST(MRCStructType,                                        \
                          mrc_var_name,                                         \
@@ -25,7 +26,6 @@ const uint64_t RANDOM_SEED = 0;
                          access_item_func_name,                                \
                          destroy_func_name)                                    \
     do {                                                                       \
-        const uint64_t trace_length = 1 << 20;                                 \
         struct ZipfianRandom zrng = {0};                                       \
         MRCStructType mrc_var_name = {0};                                      \
                                                                                \
@@ -36,7 +36,7 @@ const uint64_t RANDOM_SEED = 0;
         /* The maximum trace length is the number of possible unique items */  \
         g_assert_true(((init_expr)));                                          \
         clock_t start_time = clock();                                          \
-        for (uint64_t i = 0; i < trace_length; ++i) {                          \
+        for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {                          \
             uint64_t key = ZipfianRandom__next(&zrng);                         \
             ((access_item_func_name))(&((mrc_var_name)), key);                 \
         }                                                                      \
@@ -118,6 +118,15 @@ static void
 test_shards(void)
 {
 #if 1
+    // Compare against Olken as a baseline
+    PERFORMANCE_TEST(struct Olken,
+                     me,
+                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1 << 10),
+                     Olken__access_item,
+                     Olken__destroy);
+#endif
+#if 1
+    // Compare various SHARDS implementations
     // NOTE I order these simply by when I wrote it (from first to last)!
     PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
@@ -142,6 +151,8 @@ test_shards(void)
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif
+
+    // Compare the novel SHARDS
     PERFORMANCE_TEST(struct BucketedShards,
                      me,
                      BucketedShards__init(&me,
