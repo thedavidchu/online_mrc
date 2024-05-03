@@ -80,7 +80,8 @@ handle_not_found(struct BucketedShards *me, EntryType entry)
     enum SampledStatus s = SampledHashTable__put_unique(&me->hash_table,
                                                         entry,
                                                         me->current_time_stamp);
-    assert(s == SAMPLED_REPLACED && "update should insert key/value");
+    assert((s == SAMPLED_REPLACED || s == SAMPLED_INSERTED) &&
+           "update should insert key/value");
     tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
     ++me->current_time_stamp;
 
@@ -98,6 +99,8 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
     struct SampledLookupReturn found =
         SampledHashTable__lookup(&me->hash_table, entry);
 #if 0
+    // I tried an if-else statement with "likely" and "unlikely" branches.
+    // There was no performance improvement.
     if (found.status == SAMPLED_NOTTRACKED) {
     } else if (found.status == SAMPLED_NOTFOUND) {
         handle_not_found(me, entry);
