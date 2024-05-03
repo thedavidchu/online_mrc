@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "hash/types.h"
 #include "histogram/basic_histogram.h"
 #include "tree/types.h"
 #include "types/entry_type.h"

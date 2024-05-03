@@ -109,6 +109,7 @@ test_all(void)
 static void
 test_shards(void)
 {
+#if 1
     // NOTE I order these simply by when I wrote it (from first to last)!
     PERFORMANCE_TEST(struct PardaFixedRateShards,
                      me,
@@ -128,7 +129,7 @@ test_shards(void)
                      FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
                      FixedRateShards__access_item,
                      FixedRateShards__destroy);
-
+#endif
     PERFORMANCE_TEST(struct BucketedShards,
                      me,
                      BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
@@ -142,6 +143,7 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
 
+    UNUSED(test_all);
 #if 0
     test_all();
 #endif

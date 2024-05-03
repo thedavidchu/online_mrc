@@ -23,7 +23,11 @@ SampledHashTable__init(struct SampledHashTable *me, const size_t length)
         return false;
 
     me->data = malloc(length * sizeof(*me->data));
-    memset(me->data, 0xFF, length * sizeof(*me->data));
+    // HACK Set the threshold to some low number to begin (otherwise, we
+    //      end up with teething performance issues)
+    for (size_t i = 0; i < length; ++i) {
+        me->data[i].hash = 1e-3 * UINT64_MAX;
+    }
     me->length = length;
     return true;
 }

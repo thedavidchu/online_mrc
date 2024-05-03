@@ -7,11 +7,9 @@
 #include "hash/splitmix64.h"
 #include "hash/types.h"
 #include "histogram/basic_histogram.h"
-#include "lookup/lookup.h"
 #include "lookup/sampled_hash_table.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
-#include "tree/types.h"
 #include "types/time_stamp_type.h"
 
 #include "bucketed_shards/bucketed_shards.h"
@@ -61,7 +59,10 @@ handle_found(struct BucketedShards *me,
     assert(s == SAMPLED_UPDATED && "update should replace value");
     ++me->current_time_stamp;
     // TODO(dchu): Maybe record the infinite distances for Parda!
-    BasicHistogram__insert_scaled_finite(&me->histogram, distance, 1/*hash == 0 ? 1 : UINT64_MAX / hash*/);
+    BasicHistogram__insert_scaled_finite(
+        &me->histogram,
+        distance,
+        1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
 
 static void
@@ -76,7 +77,9 @@ handle_not_found(struct BucketedShards *me, EntryType entry)
     ++me->current_time_stamp;
 
     Hash64BitType hash = splitmix64_hash(entry);
-    BasicHistogram__insert_scaled_infinite(&me->histogram,1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
+    BasicHistogram__insert_scaled_infinite(
+        &me->histogram,
+        1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
 
 void
@@ -86,6 +89,14 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
         return;
     struct SampledLookupReturn found =
         SampledHashTable__lookup(&me->hash_table, entry);
+#if 0
+    if (found.status == SAMPLED_NOTTRACKED) {
+    } else if (found.status == SAMPLED_NOTFOUND) {
+        handle_not_found(me, entry);
+    } else {
+        handle_found(me, entry, found.hash, found.timestamp);
+    }
+#else
     switch (found.status) {
     case SAMPLED_NOTTRACKED:
         /* Do no work -- this is like SHARDS */
@@ -99,6 +110,7 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
     default:
         assert(0 && "impossible");
     }
+#endif
 }
 
 void
