@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <float.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -25,12 +26,13 @@ MissRateCurve__init_from_fractional_histogram(
     }
     // NOTE We include 1 past the histogram length to record "false infinities",
     //      i.e. elements past the maximum length of the histogram.
-    const uint64_t length = histogram->num_bins + 2;
-    me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
+    const uint64_t num_bins = histogram->num_bins + 2;
+    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
         return false;
     }
-    me->length = length;
+    me->num_bins = num_bins;
+    me->bin_size = histogram->bin_size;
 
     // Generate the MRC
     const double total = (double)histogram->running_sum;
@@ -59,7 +61,7 @@ MissRateCurve__init_from_fractional_histogram(
 
 bool
 MissRateCurve__init_from_histogram(struct MissRateCurve *me,
-                                         struct Histogram *histogram)
+                                   struct Histogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
         histogram->num_bins == 0) {
@@ -67,12 +69,13 @@ MissRateCurve__init_from_histogram(struct MissRateCurve *me,
     }
     // NOTE We include 1 past the histogram length to record "false infinities",
     //      i.e. elements past the maximum length of the histogram.
-    const uint64_t length = histogram->num_bins + 2;
-    me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
+    const uint64_t num_bins = histogram->num_bins + 2;
+    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
         return false;
     }
-    me->length = length;
+    me->num_bins = num_bins;
+    me->bin_size = histogram->bin_size;
 
     // Generate the MRC
     const uint64_t total = histogram->running_sum;
@@ -106,12 +109,13 @@ MissRateCurve__init_from_parda_histogram(struct MissRateCurve *me,
     }
     // NOTE We include 1 past the histogram length to record "infinities". The
     //      "false infinity" is already recorded in the
-    const uint64_t length = histogram_length + 2;
-    me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
+    const uint64_t num_bins = histogram_length + 2;
+    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
         return false;
     }
-    me->length = length;
+    me->num_bins = num_bins;
+    me->bin_size = 1;
 
     // Generate the MRC
     uint64_t tmp = histogram_total;
@@ -131,25 +135,26 @@ MissRateCurve__init_from_parda_histogram(struct MissRateCurve *me,
 bool
 MissRateCurve__init_from_file(struct MissRateCurve *me,
                               char const *restrict const file_name,
-                              const uint64_t length)
+                              const uint64_t num_bins,
+                              const uint64_t bin_size)
 {
     if (me == NULL) {
         return false;
     }
-    me->miss_rate = (double *)malloc(length * sizeof(*me->miss_rate));
+    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
         return false;
     }
     FILE *fp = fopen(file_name, "rb");
     // NOTE I am assuming the endianness of the writer and reader will be the
     // same.
-    size_t n = fread(me->miss_rate, sizeof(*me->miss_rate), length, fp);
+    size_t n = fread(me->miss_rate, sizeof(*me->miss_rate), num_bins, fp);
     // Try to clean up regardless of the outcome of the fread(...).
     int r = fclose(fp);
-    if (n != length || r != 0) {
+    if (n != num_bins || r != 0) {
         return false;
     }
-    me->length = length;
+    me->num_bins = num_bins;
     return true;
 }
 
@@ -163,10 +168,10 @@ MissRateCurve__write_binary_to_file(struct MissRateCurve *me,
     FILE *fp = fopen(file_name, "wb");
     // NOTE I am assuming the endianness of the writer and reader will be the
     // same.
-    size_t n = fwrite(me->miss_rate, sizeof(*me->miss_rate), me->length, fp);
+    size_t n = fwrite(me->miss_rate, sizeof(*me->miss_rate), me->num_bins, fp);
     // Try to clean up regardless of the outcome of the fwrite(...).
     int r = fclose(fp);
-    if (n != me->length || r != 0) {
+    if (n != me->num_bins || r != 0) {
         return false;
     }
     return true;
@@ -180,15 +185,15 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
         return 0.0;
     }
     // Correctness assertions
-    if (lhs->miss_rate == NULL && lhs->length != 0) {
+    if (lhs->miss_rate == NULL && lhs->num_bins != 0) {
         return -1.0;
     }
-    if (rhs->miss_rate == NULL && rhs->length != 0) {
+    if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
         return -1.0;
     }
 
-    const uint64_t min_bound = MIN(lhs->length, rhs->length);
-    const uint64_t max_bound = MAX(lhs->length, rhs->length);
+    const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
+    const uint64_t max_bound = MAX(lhs->num_bins, rhs->num_bins);
     double mse = 0.0;
     for (uint64_t i = 0; i < min_bound; ++i) {
         const double diff = lhs->miss_rate[i] - rhs->miss_rate[i];
@@ -198,7 +203,7 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
         // NOTE I'm assuming the compiler pulls this if-statement out of the
         //      loop. I think this arrangement is more idiomatic than having
         //      separate for-loops.
-        double diff = (lhs->length > rhs->length)
+        double diff = (lhs->num_bins > rhs->num_bins)
                           ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
                           : rhs->miss_rate[i] - lhs->miss_rate[min_bound - 1];
         mse += diff * diff;
@@ -214,15 +219,15 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
         return 0.0;
     }
     // Correctness assertions
-    if (lhs->miss_rate == NULL && lhs->length != 0) {
+    if (lhs->miss_rate == NULL && lhs->num_bins != 0) {
         return -1.0;
     }
-    if (rhs->miss_rate == NULL && rhs->length != 0) {
+    if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
         return -1.0;
     }
 
-    const uint64_t min_bound = MIN(lhs->length, rhs->length);
-    const uint64_t max_bound = MAX(lhs->length, rhs->length);
+    const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
+    const uint64_t max_bound = MAX(lhs->num_bins, rhs->num_bins);
     double mae = 0.0;
     for (uint64_t i = 0; i < min_bound; ++i) {
         // NOTE This is just a little (potential) optimization to have the ABS
@@ -236,7 +241,7 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
         // NOTE I'm assuming the compiler pulls this if-statement out of the
         //      loop. I think this arrangement is more idiomatic than having
         //      separate for-loops.
-        double diff = (lhs->length > rhs->length)
+        double diff = (lhs->num_bins > rhs->num_bins)
                           ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
                           : rhs->miss_rate[i] - lhs->miss_rate[min_bound - 1];
         mae += ABS(diff);
@@ -252,7 +257,7 @@ MissRateCurve__print_as_json(struct MissRateCurve *me)
         return;
     }
     if (me->miss_rate == NULL) {
-        assert(me->length == 0);
+        assert(me->num_bins == 0);
         printf("{\"type\": \"BasicMissRateCurve\", \"length\": 0, "
                "\"miss_rate\": null}\n");
         return;
@@ -260,9 +265,9 @@ MissRateCurve__print_as_json(struct MissRateCurve *me)
 
     printf("{\"type\": \"BasicMissRateCurve\", \"length\": %" PRIu64
            ", \"miss_rate\": [",
-           me->length);
-    for (uint64_t i = 0; i < me->length; ++i) {
-        printf("%lf%s", me->miss_rate[i], (i != me->length - 1) ? ", " : "");
+           me->num_bins);
+    for (uint64_t i = 0; i < me->num_bins; ++i) {
+        printf("%lf%s", me->miss_rate[i], (i != me->num_bins - 1) ? ", " : "");
     }
     printf("]}\n");
 }

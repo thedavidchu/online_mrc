@@ -27,10 +27,10 @@ exact_match(struct MissRateCurve *lhs, struct MissRateCurve *rhs)
 {
     assert(lhs != NULL && rhs != NULL && lhs->miss_rate != NULL &&
            rhs->miss_rate != NULL);
-    if (lhs->length != rhs->length) {
+    if (lhs->num_bins != rhs->num_bins) {
         return false;
     }
-    for (uint64_t i = 0; i < lhs->length; ++i) {
+    for (uint64_t i = 0; i < lhs->num_bins; ++i) {
         if (!doubles_are_equal(lhs->miss_rate[i], rhs->miss_rate[i])) {
             LOGGER_ERROR("Mismatch in iteration %" PRIu64 ": %lf != %lf\n",
                          i,
@@ -60,15 +60,15 @@ test_miss_rate_curve_for_histogram(void)
 
     struct MissRateCurve mrc = {0};
     struct MissRateCurve mrc_from_file = {0};
-    g_assert_true(
-        MissRateCurve__init_from_histogram(&mrc, &basic_hist));
+    g_assert_true(MissRateCurve__init_from_histogram(&mrc, &basic_hist));
     g_assert_true(MissRateCurve__write_binary_to_file(&mrc, "mrc.bin"));
     g_assert_true(MissRateCurve__init_from_file(&mrc_from_file,
-                                                        "mrc.bin",
-                                                        mrc.length));
+                                                "mrc.bin",
+                                                mrc.num_bins,
+                                                1));
     g_assert_true(exact_match(&mrc, &mrc_from_file));
-    g_assert_true(
-        MissRateCurve__mean_squared_error(&mrc, &mrc_from_file) == 0.0);
+    g_assert_true(MissRateCurve__mean_squared_error(&mrc, &mrc_from_file) ==
+                  0.0);
     MissRateCurve__destroy(&mrc);
     MissRateCurve__destroy(&mrc_from_file);
     return true;
