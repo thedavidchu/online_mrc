@@ -22,7 +22,7 @@ project(
 
 # For some reason, the <math.h> library needs to be added to the compiler
 # separately in Linux. Source: https://mesonbuild.com/howtox.html#add-math-library-lm-portably
-cc = meson.get_compiler('c')
+cc = meson.get_compiler('c', native: true)
 math_dep = cc.find_library('m', required: false)
 thread_dep = dependency('threads')
 

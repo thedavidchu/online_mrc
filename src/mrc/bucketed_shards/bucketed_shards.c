@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "hash/splitmix64.h"
+#include "hash/types.h"
 #include "histogram/basic_histogram.h"
 #include "lookup/lookup.h"
 #include "lookup/sampled_hash_table.h"
@@ -44,6 +46,7 @@ tree_error:
 static void
 handle_found(struct BucketedShards *me,
              EntryType entry,
+             Hash64BitType hash,
              TimeStampType prev_timestamp)
 {
     assert(me != NULL);
@@ -58,7 +61,7 @@ handle_found(struct BucketedShards *me,
     assert(s == SAMPLED_UPDATED && "update should replace value");
     ++me->current_time_stamp;
     // TODO(dchu): Maybe record the infinite distances for Parda!
-    BasicHistogram__insert_finite(&me->histogram, distance);
+    BasicHistogram__insert_scaled_finite(&me->histogram, distance, 1/*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
 
 static void
@@ -71,7 +74,9 @@ handle_not_found(struct BucketedShards *me, EntryType entry)
     assert(s == SAMPLED_REPLACED && "update should insert key/value");
     tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
     ++me->current_time_stamp;
-    BasicHistogram__insert_infinite(&me->histogram);
+
+    Hash64BitType hash = splitmix64_hash(entry);
+    BasicHistogram__insert_scaled_infinite(&me->histogram,1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
 
 void
@@ -89,7 +94,7 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
         handle_not_found(me, entry);
         break;
     case SAMPLED_FOUND:
-        handle_found(me, entry, found.timestamp);
+        handle_found(me, entry, found.hash, found.timestamp);
         break;
     default:
         assert(0 && "impossible");

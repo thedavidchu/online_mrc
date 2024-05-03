@@ -6,10 +6,12 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
+#include "bucketed_shards/bucketed_shards.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
 #include "quickmrc/quickmrc.h"
+#include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
 #include "unused/mark_unused.h"
 
@@ -47,12 +49,9 @@ const uint64_t RANDOM_SEED = 0;
         ((destroy_func_name))(&((mrc_var_name)));                              \
     } while (0)
 
-int
-main(int argc, char **argv)
+static void
+test_all(void)
 {
-    UNUSED(argc);
-    UNUSED(argv);
-
     PERFORMANCE_TEST(struct Olken,
                      me,
                      Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES),
@@ -62,7 +61,7 @@ main(int argc, char **argv)
     PERFORMANCE_TEST(
         struct FixedSizeShards,
         me,
-        FixedSizeShards__init(&me, 1e-3, 10000, MAX_NUM_UNIQUE_ENTRIES),
+        FixedSizeShards__init(&me, 1e-3, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
         FixedSizeShards__access_item,
         FixedSizeShards__destroy);
 
@@ -93,6 +92,60 @@ main(int argc, char **argv)
                      QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES),
                      QuickMRC__access_item,
                      QuickMRC__destroy);
+
+    PERFORMANCE_TEST(struct FixedRateShards,
+                     me,
+                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
+                     FixedRateShards__access_item,
+                     FixedRateShards__destroy);
+
+    PERFORMANCE_TEST(struct BucketedShards,
+                     me,
+                     BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
+                     BucketedShards__access_item,
+                     BucketedShards__destroy);
+}
+
+static void
+test_shards(void)
+{
+    // NOTE I order these simply by when I wrote it (from first to last)!
+    PERFORMANCE_TEST(struct PardaFixedRateShards,
+                     me,
+                     PardaFixedRateShards__init(&me, 1e-3),
+                     PardaFixedRateShards__access_item,
+                     PardaFixedRateShards__destroy);
+
+    PERFORMANCE_TEST(
+        struct FixedSizeShards,
+        me,
+        FixedSizeShards__init(&me, 1e-3, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
+        FixedSizeShards__access_item,
+        FixedSizeShards__destroy);
+
+    PERFORMANCE_TEST(struct FixedRateShards,
+                     me,
+                     FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
+                     FixedRateShards__access_item,
+                     FixedRateShards__destroy);
+
+    PERFORMANCE_TEST(struct BucketedShards,
+                     me,
+                     BucketedShards__init(&me, 1 << 13, MAX_NUM_UNIQUE_ENTRIES),
+                     BucketedShards__access_item,
+                     BucketedShards__destroy);
+}
+
+int
+main(int argc, char **argv)
+{
+    UNUSED(argc);
+    UNUSED(argv);
+
+#if 0
+    test_all();
+#endif
+    test_shards();
 
     return EXIT_SUCCESS;
 }
