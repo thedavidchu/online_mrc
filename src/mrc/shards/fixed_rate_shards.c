@@ -4,8 +4,10 @@
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
+#include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
+#include "math/ratio.h"
 #include "olken/olken.h"
 #include "shards/fixed_rate_shards.h"
 #include "tree/basic_tree.h"
@@ -28,6 +30,12 @@ FixedRateShards__init(struct FixedRateShards *me,
     if (!r)
         return false;
     me->sampling_ratio = sampling_ratio;
+    me->threshold = ratio_uint64(sampling_ratio);
+    me->scale = 1 / sampling_ratio;
+    LOGGER_INFO("ratio: %f, threshold: %lu, scale: %lu",
+                me->sampling_ratio,
+                me->threshold,
+                me->scale);
     return true;
 }
 
@@ -41,7 +49,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
     }
 
     Hash64BitType hash = splitmix64_hash(entry);
-    if (hash > UINT64_MAX * me->sampling_ratio)
+    if (hash > me->threshold)
         return;
 
     struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
@@ -63,7 +71,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         // TODO(dchu): Maybe record the infinite distances for Parda!
         Histogram__insert_scaled_finite(&me->olken.histogram,
                                         distance,
-                                        1 / me->sampling_ratio);
+                                        me->scale);
     } else {
         enum PutUniqueStatus s =
             HashTable__put_unique(&me->olken.hash_table,
@@ -74,8 +82,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         tree__sleator_insert(&me->olken.tree,
                              (KeyType)me->olken.current_time_stamp);
         ++me->olken.current_time_stamp;
-        Histogram__insert_scaled_infinite(&me->olken.histogram,
-                                          1 / me->sampling_ratio);
+        Histogram__insert_scaled_infinite(&me->olken.histogram, me->scale);
     }
 }
 
