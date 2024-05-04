@@ -32,6 +32,7 @@ get_file_size_in_bytes(FILE *fp)
 }
 
 /// @note   Hehe... bit twiddly hacks.
+/// Source: https://man7.org/linux/man-pages/man3/endian.3.html
 static inline struct TraceItem
 construct_trace_item(uint8_t const *const restrict bytes)
 {
