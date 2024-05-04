@@ -149,8 +149,8 @@ long_parda_matching_trace_test(void)
         oracle.program_data.histogram[B_OVFL]);
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
-    LOGGER_INFO("Mean-Squared Error: %lf\n", mse);
-    g_assert_true(mse == 0.000000);
+    LOGGER_INFO("Mean-Squared Error: %lf", mse);
+    g_assert_true(mse == 0.0);
 
     ZipfianRandom__destroy(&zrng);
     PardaFixedRateShards__destroy(&oracle);
