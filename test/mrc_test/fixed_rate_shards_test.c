@@ -26,7 +26,7 @@ access_same_key_five_times(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
+    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
@@ -37,7 +37,7 @@ access_same_key_five_times(void)
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.000001);
+    g_assert_cmpfloat(mse, ==, 0.0);
 
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
@@ -62,7 +62,7 @@ small_exact_trace_test(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
+    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
@@ -74,7 +74,7 @@ small_exact_trace_test(void)
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.000001);
+    g_assert_cmpfloat(mse, ==, 0.0);
 
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
