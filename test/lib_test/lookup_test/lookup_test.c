@@ -214,15 +214,15 @@ sampled_insert(struct SampledHashTable *me,
                      expected_put_status);
         SampledHashTable__print_as_json(me);
     }
-    g_assert_cmpint(SampledHashTable__put_unique(me, key, value),
+    g_assert_cmpint(SampledHashTable__put_unique(me, key, value).status,
                     ==,
                     expected_put_status);
 
     // Lookup with expected status
     switch (expected_put_status) {
-    case SAMPLED_NOTTRACKED: {
+    case SAMPLED_IGNORED: {
         struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
-        g_assert_cmpuint(r.status, ==, SAMPLED_NOTTRACKED);
+        g_assert_cmpuint(r.status, ==, SAMPLED_IGNORED);
         break;
     }
     case SAMPLED_INSERTED: /* Intentional fall through... */
@@ -251,12 +251,12 @@ sampled_test(void)
     sampled_insert(&me, 0, 0, SAMPLED_INSERTED);
     sampled_insert(&me, 1, 0, SAMPLED_INSERTED);
     sampled_insert(&me, 2, 0, SAMPLED_INSERTED);
-    sampled_insert(&me, 3, 0, SAMPLED_NOTTRACKED);
+    sampled_insert(&me, 3, 0, SAMPLED_IGNORED);
     sampled_insert(&me, 4, 0, SAMPLED_INSERTED);
     sampled_insert(&me, 5, 0, SAMPLED_REPLACED);
-    sampled_insert(&me, 6, 0, SAMPLED_NOTTRACKED);
+    sampled_insert(&me, 6, 0, SAMPLED_IGNORED);
     sampled_insert(&me, 7, 0, SAMPLED_REPLACED);
-    sampled_insert(&me, 8, 0, SAMPLED_NOTTRACKED);
+    sampled_insert(&me, 8, 0, SAMPLED_IGNORED);
     sampled_insert(&me, 9, 0, SAMPLED_INSERTED);
     sampled_insert(&me, 10, 0, SAMPLED_INSERTED);
 
@@ -264,12 +264,12 @@ sampled_test(void)
     sampled_insert(&me, 0, 1, SAMPLED_UPDATED);
     sampled_insert(&me, 1, 1, SAMPLED_UPDATED);
     sampled_insert(&me, 2, 1, SAMPLED_UPDATED);
-    sampled_insert(&me, 3, 1, SAMPLED_NOTTRACKED);
-    sampled_insert(&me, 4, 1, SAMPLED_NOTTRACKED);
-    sampled_insert(&me, 5, 1, SAMPLED_NOTTRACKED);
-    sampled_insert(&me, 6, 1, SAMPLED_NOTTRACKED);
+    sampled_insert(&me, 3, 1, SAMPLED_IGNORED);
+    sampled_insert(&me, 4, 1, SAMPLED_IGNORED);
+    sampled_insert(&me, 5, 1, SAMPLED_IGNORED);
+    sampled_insert(&me, 6, 1, SAMPLED_IGNORED);
     sampled_insert(&me, 7, 1, SAMPLED_UPDATED);
-    sampled_insert(&me, 8, 1, SAMPLED_NOTTRACKED);
+    sampled_insert(&me, 8, 1, SAMPLED_IGNORED);
     sampled_insert(&me, 9, 1, SAMPLED_UPDATED);
     sampled_insert(&me, 10, 1, SAMPLED_UPDATED);
 

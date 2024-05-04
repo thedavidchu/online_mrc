@@ -5,21 +5,22 @@
 #include <stdint.h>
 
 #include "hash/types.h"
-#include "types/value_type.h"
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
+#include "types/value_type.h"
 
 struct SampledHashTableNode;
 
 struct SampledHashTable {
     struct SampledHashTableNode *data;
     size_t length;
-    Hash64BitType threshold;
+    Hash64BitType global_threshold;
 };
 
 enum SampledStatus {
-    SAMPLED_NOTFOUND, 
-    SAMPLED_NOTTRACKED,
+    SAMPLED_HITHERTOEMPTY,
+    SAMPLED_NOTFOUND,
+    SAMPLED_IGNORED,
     SAMPLED_FOUND,
     SAMPLED_INSERTED,
     SAMPLED_REPLACED,
@@ -32,14 +33,38 @@ struct SampledLookupReturn {
     TimeStampType timestamp;
 };
 
+struct SampledPutReturn {
+    enum SampledStatus status;
+    Hash64BitType new_hash;
+    TimeStampType old_timestamp;
+};
+
 bool
-SampledHashTable__init(struct SampledHashTable *me, const size_t length, const double init_sampling_ratio);
+SampledHashTable__init(struct SampledHashTable *me,
+                       const size_t length,
+                       const double init_sampling_ratio);
 
 struct SampledLookupReturn
 SampledHashTable__lookup(struct SampledHashTable *me, KeyType key);
 
-enum SampledStatus
-SampledHashTable__put_unique(struct SampledHashTable *me, KeyType key, ValueType value);
+struct SampledPutReturn
+SampledHashTable__put_unique(struct SampledHashTable *me,
+                             KeyType key,
+                             ValueType value);
+
+struct SampledTryPutReturn {
+    
+};
+
+static inline struct SampledTryPutReturn
+SampledHashTable__try_put(struct SampledHashTable *me,
+                          KeyType key,
+                          ValueType value)
+{
+    if (me == NULL || me->data == NULL || me->length == 0)
+        return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
+
+}
 
 /// @note   If we know the globally maximum threshold, then we can
 ///         immediately discard any element that is greater than this.

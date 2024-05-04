@@ -8,6 +8,7 @@
 #include "hash/splitmix64.h"
 #include "hash/types.h"
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "lookup/sampled_hash_table.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
@@ -62,10 +63,10 @@ handle_found(struct BucketedShards *me,
     assert(r && "remove should not fail");
     r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
     assert(r && "insert should not fail");
-    enum SampledStatus s = SampledHashTable__put_unique(&me->hash_table,
+    struct SampledPutReturn s = SampledHashTable__put_unique(&me->hash_table,
                                                         entry,
                                                         me->current_time_stamp);
-    assert(s == SAMPLED_UPDATED && "update should replace value");
+    assert(s.status == SAMPLED_UPDATED && "update should replace value");
     ++me->current_time_stamp;
     // TODO(dchu): Maybe record the infinite distances for Parda!
     Histogram__insert_scaled_finite(&me->histogram,
@@ -74,19 +75,35 @@ handle_found(struct BucketedShards *me,
 }
 
 static void
-handle_not_found(struct BucketedShards *me, EntryType entry)
+handle_hitherto_empty_bucket(struct BucketedShards *me, EntryType entry)
 {
     assert(me != NULL);
-    enum SampledStatus s = SampledHashTable__put_unique(&me->hash_table,
+    struct SampledPutReturn r = SampledHashTable__put_unique(&me->hash_table,
                                                         entry,
                                                         me->current_time_stamp);
-    assert((s == SAMPLED_REPLACED || s == SAMPLED_INSERTED) &&
-           "update should insert key/value");
+    assert(r.status == SAMPLED_INSERTED && "insert should insert key/value");
     tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
     ++me->current_time_stamp;
 
-    Hash64BitType hash = splitmix64_hash(entry);
-    UNUSED(hash);
+    Histogram__insert_scaled_infinite(&me->histogram,
+                                      1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
+}
+
+static void
+handle_not_found(struct BucketedShards *me, EntryType entry)
+{
+    assert(me != NULL);
+    struct SampledPutReturn s = SampledHashTable__put_unique(&me->hash_table,
+                                                        entry,
+                                                        me->current_time_stamp);
+    assert(s.status == SAMPLED_REPLACED && "replace should replace key/value");
+    bool r = false;
+    // r = tree__sleator_remove(&me->tree, s.old_timestamp);
+    // assert(r && "remove should be successful");
+    r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
+    assert(r && "insert should be successful");
+    ++me->current_time_stamp;
+
     Histogram__insert_scaled_infinite(&me->histogram,
                                       1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
 }
@@ -109,8 +126,11 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
     }
 #else
     switch (found.status) {
-    case SAMPLED_NOTTRACKED:
+    case SAMPLED_IGNORED:
         /* Do no work -- this is like SHARDS */
+        break;
+    case SAMPLED_HITHERTOEMPTY:
+        handle_hitherto_empty_bucket(me, entry);
         break;
     case SAMPLED_NOTFOUND:
         handle_not_found(me, entry);

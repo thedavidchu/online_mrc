@@ -12,6 +12,7 @@
 #include "lookup/sampled_hash_table.h"
 #include "math/ratio.h"
 #include "types/key_type.h"
+#include "types/time_stamp_type.h"
 #include "types/value_type.h"
 
 struct SampledHashTableNode {
@@ -43,7 +44,7 @@ SampledHashTable__init(struct SampledHashTable *me,
         .length = length,
         // HACK Set the threshold to some low number to begin
         //      (otherwise, we end up with teething performance issues).
-        .threshold = ratio_uint64(init_sampling_ratio),
+        .global_threshold = ratio_uint64(init_sampling_ratio),
     };
     return true;
 }
@@ -55,29 +56,30 @@ SampledHashTable__lookup(struct SampledHashTable *me, KeyType key)
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
 
     Hash64BitType hash = splitmix64_hash(key);
-    struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
+    if (hash > me->global_threshold)
+        return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 
-    if (hash < incumbent->hash) {
+    struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
+    if (incumbent->hash == UINT64_MAX)
+        return (struct SampledLookupReturn){.status = SAMPLED_HITHERTOEMPTY};
+    if (hash < incumbent->hash)
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
-    } else if (key == incumbent->key) {
-        // NOTE If the key comparison is expensive, then one could
-        //      first compare the hashes. However, in this case, they
-        //      are not expensive.
+    // NOTE If the key comparison is expensive, then one could first
+    //      compare the hashes. However, in this case, they are not expensive.
+    if (key == incumbent->key)
         return (struct SampledLookupReturn){.status = SAMPLED_FOUND,
                                             .hash = incumbent->hash,
                                             .timestamp = incumbent->value};
-    } else {
-        return (struct SampledLookupReturn){.status = SAMPLED_NOTTRACKED};
-    }
+    return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 }
 
-enum SampledStatus
+struct SampledPutReturn
 SampledHashTable__put_unique(struct SampledHashTable *me,
                              KeyType key,
                              ValueType value)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
-        return SAMPLED_NOTFOUND;
+        return (struct SampledPutReturn){.status = SAMPLED_NOTFOUND};
 
     Hash64BitType hash = splitmix64_hash(key);
     struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
@@ -85,24 +87,33 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
     // HACK Note that the hash value of UINT64_MAX is reserved to mark
     //      the bucket as "invalid" (i.e. no valid element has been inserted).
     if (incumbent->hash == UINT64_MAX) {
+        TimeStampType old_timestamp = incumbent->value;
         *incumbent = (struct SampledHashTableNode){.key = key,
                                                    .hash = hash,
                                                    .value = value};
-        return SAMPLED_INSERTED;
-    } else if (hash < incumbent->hash) {
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
-        return SAMPLED_REPLACED;
-    } else if (key == incumbent->key) {
-        // NOTE If the key comparison is expensive, then one could
-        //      first compare the hashes. However, in this case, they
-        //      are not expensive.
-        incumbent->value = value;
-        return SAMPLED_UPDATED;
-    } else {
-        return SAMPLED_NOTTRACKED;
+        return (struct SampledPutReturn){.status = SAMPLED_INSERTED,
+                                         .new_hash = hash,
+                                         .old_timestamp = old_timestamp};
     }
+    if (hash < incumbent->hash) {
+        TimeStampType old_timestamp = incumbent->value;
+        *incumbent = (struct SampledHashTableNode){.key = key,
+                                                   .hash = hash,
+                                                   .value = value};
+        return (struct SampledPutReturn){.status = SAMPLED_REPLACED,
+                                         .new_hash = hash,
+                                         .old_timestamp = old_timestamp};
+    }
+    // NOTE If the key comparison is expensive, then one could first
+    //      compare the hashes. However, in this case, they are not expensive.
+    if (key == incumbent->key) {
+        TimeStampType old_timestamp = incumbent->value;
+        incumbent->value = value;
+        return (struct SampledPutReturn){.status = SAMPLED_UPDATED,
+                                         .new_hash = hash,
+                                         .old_timestamp = old_timestamp};
+    }
+    return (struct SampledPutReturn){.status = SAMPLED_IGNORED};
 }
 
 void
@@ -114,7 +125,7 @@ SampledHashTable__refresh_threshold(struct SampledHashTable *me)
         if (hash > max_hash)
             max_hash = hash;
     }
-    me->threshold = max_hash;
+    me->global_threshold = max_hash;
 }
 
 static void
