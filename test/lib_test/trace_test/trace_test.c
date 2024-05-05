@@ -1,6 +1,6 @@
 #include <glib.h>
 
-#include "trace/read_trace.h"
+#include "trace/reader.h"
 
 int
 main(void)
