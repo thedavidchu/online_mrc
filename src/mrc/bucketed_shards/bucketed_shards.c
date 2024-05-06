@@ -12,7 +12,9 @@
 #include "lookup/sampled_hash_table.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
+#include "types/entry_type.h"
 #include "types/time_stamp_type.h"
+#include "types/value_type.h"
 #include "unused/mark_unused.h"
 
 #include "bucketed_shards/bucketed_shards.h"
@@ -50,62 +52,64 @@ tree_error:
     return false;
 }
 
-static void
-handle_found(struct BucketedShards *me,
-             EntryType entry,
-             Hash64BitType hash,
-             TimeStampType prev_timestamp)
+static inline void
+handle_inserted(struct BucketedShards *me,
+                struct SampledTryPutReturn s,
+                TimeStampType value)
 {
-    UNUSED(hash);
+    UNUSED(s);
     assert(me != NULL);
-    uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)prev_timestamp);
-    bool r = tree__sleator_remove(&me->tree, (KeyType)prev_timestamp);
-    assert(r && "remove should not fail");
-    r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-    assert(r && "insert should not fail");
-    struct SampledPutReturn s = SampledHashTable__put_unique(&me->hash_table,
-                                                        entry,
-                                                        me->current_time_stamp);
-    assert(s.status == SAMPLED_UPDATED && "update should replace value");
-    ++me->current_time_stamp;
-    // TODO(dchu): Maybe record the infinite distances for Parda!
-    Histogram__insert_scaled_finite(&me->histogram,
-                                    distance,
-                                    1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
-}
 
-static void
-handle_hitherto_empty_bucket(struct BucketedShards *me, EntryType entry)
-{
-    assert(me != NULL);
-    struct SampledPutReturn r = SampledHashTable__put_unique(&me->hash_table,
-                                                        entry,
-                                                        me->current_time_stamp);
-    assert(r.status == SAMPLED_INSERTED && "insert should insert key/value");
-    tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-    ++me->current_time_stamp;
-
-    Histogram__insert_scaled_infinite(&me->histogram,
-                                      1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
-}
-
-static void
-handle_not_found(struct BucketedShards *me, EntryType entry)
-{
-    assert(me != NULL);
-    struct SampledPutReturn s = SampledHashTable__put_unique(&me->hash_table,
-                                                        entry,
-                                                        me->current_time_stamp);
-    assert(s.status == SAMPLED_REPLACED && "replace should replace key/value");
+    const uint64_t scale = 1; // TODO scale properly
     bool r = false;
-    // r = tree__sleator_remove(&me->tree, s.old_timestamp);
-    // assert(r && "remove should be successful");
-    r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-    assert(r && "insert should be successful");
-    ++me->current_time_stamp;
+    MAYBE_UNUSED(r);
 
-    Histogram__insert_scaled_infinite(&me->histogram,
-                                      1 /*hash == 0 ? 1 : UINT64_MAX / hash*/);
+    r = tree__sleator_insert(&me->tree, value);
+    assert(r);
+    Histogram__insert_scaled_infinite(&me->histogram, scale);
+    ++me->current_time_stamp;
+}
+
+static inline void
+handle_replaced(struct BucketedShards *me,
+                struct SampledTryPutReturn s,
+                TimeStampType timestamp)
+{
+    assert(me != NULL);
+
+    const uint64_t scale = 1; // TODO scale properly
+    bool r = false;
+    MAYBE_UNUSED(r);
+
+    r = tree__sleator_remove(&me->tree, s.old_value);
+    assert(r);
+    r = tree__sleator_insert(&me->tree, timestamp);
+    assert(r);
+
+    Histogram__insert_scaled_infinite(&me->histogram, scale);
+    ++me->current_time_stamp;
+}
+
+static inline void
+handle_updated(struct BucketedShards *me,
+               struct SampledTryPutReturn s,
+               TimeStampType timestamp)
+{
+    assert(me != NULL);
+
+    const uint64_t scale = 1; // TODO scale properly
+    bool r = false;
+    uint64_t distance = 0;
+    MAYBE_UNUSED(r);
+
+    distance = tree__reverse_rank(&me->tree, (KeyType)s.old_value);
+    r = tree__sleator_remove(&me->tree, s.old_value);
+    assert(r);
+    r = tree__sleator_insert(&me->tree, timestamp);
+    assert(r);
+
+    Histogram__insert_scaled_finite(&me->histogram, distance, scale);
+    ++me->current_time_stamp;
 }
 
 void
@@ -113,35 +117,27 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
 {
     if (me == NULL)
         return;
-    struct SampledLookupReturn found =
-        SampledHashTable__lookup(&me->hash_table, entry);
-#if 0
-    // I tried an if-else statement with "likely" and "unlikely" branches.
-    // There was no performance improvement.
-    if (found.status == SAMPLED_NOTTRACKED) {
-    } else if (found.status == SAMPLED_NOTFOUND) {
-        handle_not_found(me, entry);
-    } else {
-        handle_found(me, entry, found.hash, found.timestamp);
-    }
-#else
-    switch (found.status) {
+
+    ValueType timestamp = me->current_time_stamp;
+    struct SampledTryPutReturn r =
+        SampledHashTable__try_put(&me->hash_table, entry, timestamp);
+
+    switch (r.status) {
     case SAMPLED_IGNORED:
         /* Do no work -- this is like SHARDS */
         break;
-    case SAMPLED_HITHERTOEMPTY:
-        handle_hitherto_empty_bucket(me, entry);
+    case SAMPLED_INSERTED:
+        handle_inserted(me, r, timestamp);
         break;
-    case SAMPLED_NOTFOUND:
-        handle_not_found(me, entry);
+    case SAMPLED_REPLACED:
+        handle_replaced(me, r, timestamp);
         break;
-    case SAMPLED_FOUND:
-        handle_found(me, entry, found.hash, found.timestamp);
+    case SAMPLED_UPDATED:
+        handle_updated(me, r, timestamp);
         break;
     default:
         assert(0 && "impossible");
     }
-#endif
 }
 
 void
