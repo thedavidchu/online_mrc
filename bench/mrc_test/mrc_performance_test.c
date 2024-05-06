@@ -200,11 +200,12 @@ test_quickmrc()
                      QuickMRC__access_item,
                      QuickMRC__destroy);
 
-    PERFORMANCE_TEST(struct QuickMRC,
-                     me,
-                     QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
-                     QuickMRC__access_item,
-                     QuickMRC__destroy);
+    PERFORMANCE_TEST(
+        struct QuickMRC,
+        me,
+        QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
+        QuickMRC__access_item,
+        QuickMRC__destroy);
 }
 
 int
@@ -219,10 +220,10 @@ main(int argc, char **argv)
 #if 0
     test_all();
 #endif
-#if 0
+#if 1
     test_sampling();
 #endif
-#if 1
+#if 0
     test_quickmrc();
 #endif
 

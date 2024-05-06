@@ -15,12 +15,6 @@
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
 
-struct SampledHashTableNode {
-    KeyType key;
-    Hash64BitType hash;
-    ValueType value;
-};
-
 bool
 SampledHashTable__init(struct SampledHashTable *me,
                        const size_t length,
@@ -114,55 +108,6 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
                                          .old_timestamp = old_timestamp};
     }
     return (struct SampledPutReturn){.status = SAMPLED_IGNORED};
-}
-
-struct SampledTryPutReturn
-SampledHashTable__try_put(struct SampledHashTable *me,
-                          KeyType key,
-                          ValueType value)
-{
-    if (me == NULL || me->data == NULL || me->length == 0)
-        return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
-
-    Hash64BitType hash = splitmix64_hash(key);
-    if (hash > me->global_threshold)
-        return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
-
-    struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
-    if (incumbent->hash == UINT64_MAX) {
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
-        return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
-                                            .new_hash = hash};
-    }
-    if (hash < incumbent->hash) {
-        struct SampledTryPutReturn r = (struct SampledTryPutReturn){
-            .status = SAMPLED_REPLACED,
-            .new_hash = hash,
-            .old_key = incumbent->key,
-            .old_hash = incumbent->hash,
-            .old_value = incumbent->value,
-        };
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
-        return r;
-    }
-    // NOTE If the key comparison is expensive, then one could first
-    //      compare the hashes. However, in this case, they are not expensive.
-    if (key == incumbent->key) {
-        struct SampledTryPutReturn r = (struct SampledTryPutReturn){
-            .status = SAMPLED_UPDATED,
-            .new_hash = hash,
-            .old_key = key,
-            .old_hash = hash,
-            .old_value = incumbent->value,
-        };
-        incumbent->value = value;
-        return r;
-    }
-    return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 }
 
 void
