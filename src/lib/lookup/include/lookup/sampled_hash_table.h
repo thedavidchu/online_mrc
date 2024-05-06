@@ -39,6 +39,14 @@ struct SampledPutReturn {
     TimeStampType old_timestamp;
 };
 
+struct SampledTryPutReturn {
+    enum SampledStatus status;
+    Hash64BitType new_hash;
+    KeyType old_key;
+    Hash64BitType old_hash;
+    ValueType old_value;
+};
+
 bool
 SampledHashTable__init(struct SampledHashTable *me,
                        const size_t length,
@@ -52,19 +60,10 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
                              KeyType key,
                              ValueType value);
 
-struct SampledTryPutReturn {
-    
-};
-
-static inline struct SampledTryPutReturn
+struct SampledTryPutReturn
 SampledHashTable__try_put(struct SampledHashTable *me,
                           KeyType key,
-                          ValueType value)
-{
-    if (me == NULL || me->data == NULL || me->length == 0)
-        return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
-
-}
+                          ValueType value);
 
 /// @note   If we know the globally maximum threshold, then we can
 ///         immediately discard any element that is greater than this.
