@@ -132,7 +132,7 @@ bucketed_quickmrc_test_exe = executable(
 
 test('olken_test', olken_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
-test('mimir_test', mimir_test_exe, timeout: 0)
+test('mimir_test', mimir_test_exe)
 test('parda_fixed_rate_shards_test', parda_fixed_rate_shards_test_exe)
 test('fixed_rate_shards_test', fixed_rate_shards_test_exe)
 test('quickmrc_test', quickmrc_test_exe)
