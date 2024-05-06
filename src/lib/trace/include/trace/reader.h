@@ -115,7 +115,7 @@ read_trace(char const *const restrict file_name)
         goto cleanup;
     }
 
-    nobj_read = fread(trace, 25, file_size / 25, fp);
+    nobj_read = fread(bytes, 25, file_size / 25, fp);
     if (file_size != 25 * nobj_read) {
         LOGGER_ERROR("expected %zu bytes, got %zu bytes", file_size, 25 * nobj_read);
         goto cleanup;
