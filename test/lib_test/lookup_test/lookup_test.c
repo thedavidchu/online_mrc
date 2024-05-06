@@ -280,9 +280,9 @@ sampled_test(void)
 int
 main(void)
 {
-    // ASSERT_FUNCTION_RETURNS_TRUE(hash_table_test());
-    // ASSERT_FUNCTION_RETURNS_TRUE(single_thread_test());
-    // ASSERT_FUNCTION_RETURNS_TRUE(multi_thread_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(hash_table_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(single_thread_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(multi_thread_test());
     ASSERT_FUNCTION_RETURNS_TRUE(sampled_test());
     return 0;
 }
