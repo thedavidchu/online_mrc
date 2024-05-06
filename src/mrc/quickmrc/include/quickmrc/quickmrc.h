@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -22,15 +23,19 @@ struct QuickMRC {
     // Number of entries at or below the SHARDS theshold.
     uint64_t total_entries_processed;
 
+    // SHARDS sampling
+    uint64_t threshold;
+    uint64_t scale;
     // TODO
     // - Ghost cache + capacity
 };
 
 bool
 QuickMRC__init(struct QuickMRC *me,
-               uint64_t default_num_buckets,
-               uint64_t max_bucket_size,
-               uint64_t histogram_length);
+               const uint64_t default_num_buckets,
+               const uint64_t max_bucket_size,
+               const uint64_t histogram_length,
+               const double sampling_ratio);
 
 bool
 QuickMRC__access_item(struct QuickMRC *me, EntryType entry);

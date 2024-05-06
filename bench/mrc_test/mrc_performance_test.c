@@ -92,7 +92,7 @@ test_all(void)
 
     PERFORMANCE_TEST(struct QuickMRC,
                      me,
-                     QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES),
+                     QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES, 1.0),
                      QuickMRC__access_item,
                      QuickMRC__destroy);
 
