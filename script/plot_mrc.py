@@ -61,6 +61,7 @@ def plot_miss_rate_curve(mrc: Dict[float, Union[float, int]]):
     plt.xlabel("Number of key-value pairs")
     plt.ylabel("Miss-rate")
     plt.plot(mrc.keys(), mrc.values())
+    plt.ylim(0, 1)
     plt.savefig("mrc.png")
 
 
@@ -72,6 +73,7 @@ def read_and_plot_mrc(file_name: str):
     plt.xlabel("Number of key-value pairs")
     plt.ylabel("Miss-rate")
     plt.plot(mrc)
+    plt.ylim(0, 1)
     plt.savefig("mrc.png")
 
 
