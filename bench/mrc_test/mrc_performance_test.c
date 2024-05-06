@@ -115,7 +115,7 @@ test_all(void)
 }
 
 static void
-test_shards(void)
+test_sampling(void)
 {
 #if 1
     // Compare against Olken as a baseline
@@ -164,6 +164,49 @@ test_shards(void)
                      BucketedShards__destroy);
 }
 
+void
+test_quickmrc()
+{
+#if 1
+    // Compare against Olken as a baseline
+    PERFORMANCE_TEST(struct Olken,
+                     me,
+                     Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1 << 10),
+                     Olken__access_item,
+                     Olken__destroy);
+#endif
+#if 1
+    // Compare various SHARDS implementations
+    PERFORMANCE_TEST(struct FixedSizeShards,
+                     me,
+                     FixedSizeShards__init(&me,
+                                           1e-3,
+                                           1 << 13,
+                                           MAX_NUM_UNIQUE_ENTRIES,
+                                           1 << 10),
+                     FixedSizeShards__access_item,
+                     FixedSizeShards__destroy);
+
+    PERFORMANCE_TEST(
+        struct FixedRateShards,
+        me,
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
+        FixedRateShards__access_item,
+        FixedRateShards__destroy);
+#endif
+    PERFORMANCE_TEST(struct QuickMRC,
+                     me,
+                     QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES, 1.0),
+                     QuickMRC__access_item,
+                     QuickMRC__destroy);
+
+    PERFORMANCE_TEST(struct QuickMRC,
+                     me,
+                     QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
+                     QuickMRC__access_item,
+                     QuickMRC__destroy);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -171,10 +214,17 @@ main(int argc, char **argv)
     UNUSED(argv);
 
     UNUSED(test_all);
+    UNUSED(test_sampling);
+    UNUSED(test_quickmrc);
 #if 0
     test_all();
 #endif
-    test_shards();
+#if 0
+    test_sampling();
+#endif
+#if 1
+    test_quickmrc();
+#endif
 
     return EXIT_SUCCESS;
 }
