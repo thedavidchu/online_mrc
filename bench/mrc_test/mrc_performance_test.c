@@ -235,7 +235,7 @@ main(int argc, char **argv)
 #if 1
     test_sampling();
 #endif
-#if 0
+#if 1
     test_quickmrc();
 #endif
 
