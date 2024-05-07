@@ -10,6 +10,7 @@
 #include "mimir/mimir.h"
 #include "olken/olken.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
+#include "quickmrc/bucketed_quickmrc.h"
 #include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
@@ -206,6 +207,17 @@ test_quickmrc()
         QuickMRC__init(&me, 1024, 16, MAX_NUM_UNIQUE_ENTRIES, 1e-3),
         QuickMRC__access_item,
         QuickMRC__destroy);
+
+    PERFORMANCE_TEST(struct BucketedQuickMRC,
+                     me,
+                     BucketedQuickMRC__init(&me,
+                                            1024,
+                                            16,
+                                            MAX_NUM_UNIQUE_ENTRIES,
+                                            1e-3,
+                                            1 << 13),
+                     BucketedQuickMRC__access_item,
+                     BucketedQuickMRC__destroy);
 }
 
 int

@@ -16,6 +16,7 @@ mrc_performance_test_exe = executable(
         olken_dep,
         parda_fixed_rate_shards_dep,
         quickmrc_dep,
+        bucketed_quickmrc_dep,
         splitmix64_dep,
         tree_dep,
         zipfian_random_dep,

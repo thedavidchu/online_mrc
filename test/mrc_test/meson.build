@@ -113,6 +113,23 @@ bucketed_shards_test_exe = executable(
     ],
 )
 
+bucketed_quickmrc_test_exe = executable(
+    'bucketed_quickmrc_test_exe',
+    'bucketed_quickmrc_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        bucketed_quickmrc_dep,
+        glib_dep,
+        splitmix64_dep,
+        histogram_dep,
+        miss_rate_curve_dep,
+        zipfian_random_dep,
+        olken_dep,
+    ],
+)
+
 test('olken_test', olken_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
 test('mimir_test', mimir_test_exe, timeout: 0)
@@ -120,3 +137,4 @@ test('parda_fixed_rate_shards_test', parda_fixed_rate_shards_test_exe)
 test('fixed_rate_shards_test', fixed_rate_shards_test_exe)
 test('quickmrc_test', quickmrc_test_exe)
 test('bucketed_shards_test', bucketed_shards_test_exe)
+test('bucketed_quickmrc_test', bucketed_quickmrc_test_exe)

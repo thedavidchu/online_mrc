@@ -28,8 +28,8 @@ struct QuickMRCBuckets {
 
 bool
 QuickMRCBuckets__init(struct QuickMRCBuckets *me,
-                       uint64_t default_num_buckets,
-                       uint64_t max_bucket_size);
+                      uint64_t default_num_buckets,
+                      uint64_t max_bucket_size);
 
 /// Increment the newest bucket and return
 bool
@@ -40,6 +40,13 @@ QuickMRCBuckets__insert_new(struct QuickMRCBuckets *me);
 /// @return Return stack distance or UINT64_MAX on error.
 uint64_t
 QuickMRCBuckets__reaccess_old(struct QuickMRCBuckets *me,
+                              TimeStampType old_timestamp);
+
+/// Decrement a bucket corresponding to the old timestamp. Get the stack
+/// distance.
+/// @return Return stack distance or UINT64_MAX on error.
+bool
+QuickMRCBuckets__decrement_old(struct QuickMRCBuckets *me,
                                TimeStampType old_timestamp);
 
 void

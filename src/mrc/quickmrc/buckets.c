@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -148,7 +149,7 @@ get_stack_distance_and_decrement(struct QuickMRCBuckets *me,
 }
 
 /// Decrement a bucket corresponding to the old timestamp. Get the stack
-/// distance.
+/// distance. Increment the newest bucket.
 /// @return Return stack distance or UINT64_MAX on error.
 uint64_t
 QuickMRCBuckets__reaccess_old(struct QuickMRCBuckets *me,
@@ -157,6 +158,16 @@ QuickMRCBuckets__reaccess_old(struct QuickMRCBuckets *me,
     if (me == NULL)
         return UINT64_MAX;
     if (!increment_newest_bucket(me))
+        return UINT64_MAX;
+    uint64_t stack_dist = get_stack_distance_and_decrement(me, old_timestamp);
+    return stack_dist;
+}
+
+bool
+QuickMRCBuckets__decrement_old(struct QuickMRCBuckets *me,
+                               TimeStampType old_timestamp)
+{
+    if (me == NULL || me->buckets == NULL || me->num_buckets == 0)
         return UINT64_MAX;
     uint64_t stack_dist = get_stack_distance_and_decrement(me, old_timestamp);
     return stack_dist;
