@@ -163,7 +163,10 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times());
-    // ASSERT_FUNCTION_RETURNS_TRUE(small_merge_test());
+#if 0
+    ASSERT_FUNCTION_RETURNS_TRUE(small_merge_test());
+#endif
+    UNUSED(small_merge_test);
     ASSERT_FUNCTION_RETURNS_TRUE(mean_absolute_error_test());
     ASSERT_FUNCTION_RETURNS_TRUE(long_trace_test());
     return EXIT_SUCCESS;
