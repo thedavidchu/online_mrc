@@ -2,6 +2,7 @@
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
+#include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
 #include "trace/reader.h"
@@ -15,6 +16,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_OLKEN,
     MRC_ALGORITHM_FIXED_RATE_SHARDS,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
+    MRC_ALGORITHM_QUICKMRC,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -24,6 +26,7 @@ static char *algorithm_names[] = {
     "Olken",
     "Fixed-Rate-SHARDS",
     "Fixed-Size-SHARDS",
+    "QuickMRC",
 };
 
 struct CommandLineArguments {
@@ -232,6 +235,16 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     MissRateCurve__init_from_histogram,
     FixedSizeShards__destroy)
 
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_quickmrc,
+    struct QuickMRC,
+    me,
+    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1.0),
+    QuickMRC__access_item,
+    histogram,
+    MissRateCurve__init_from_histogram,
+    QuickMRC__destroy)
+
 int
 main(int argc, char **argv)
 {
@@ -258,6 +271,9 @@ main(int argc, char **argv)
         break;
     case MRC_ALGORITHM_FIXED_SIZE_SHARDS:
         mrc = run_fixed_size_shards(&trace);
+        break;
+    case MRC_ALGORITHM_QUICKMRC:
+        mrc = run_quickmrc(&trace);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);

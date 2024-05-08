@@ -24,6 +24,7 @@ generate_mrc_exe = executable(
         glib_dep,
         miss_rate_curve_dep,
         olken_dep,
+        quickmrc_dep,
         trace_dep,
     ],
 )
