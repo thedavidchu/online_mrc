@@ -202,7 +202,9 @@ cleanup:
             ((access_func))(&var_name, trace->trace[i].key);                   \
         }                                                                      \
         struct MissRateCurve mrc = {0};                                        \
-        Histogram__write_as_json(stdout, &var_name.hist);                      \
+        if (false) {                                                           \
+            Histogram__write_as_json(stdout, &var_name.hist);                  \
+        }                                                                      \
         ((hist_func))(&mrc, &var_name.hist);                                   \
         ((destroy_func))(&var_name);                                           \
         return mrc;                                                            \
