@@ -69,6 +69,7 @@ handle_inserted(struct BucketedQuickMRC *me,
                 TimeStampType value)
 {
     UNUSED(s);
+    UNUSED(value);
     assert(me != NULL);
 
     const uint64_t scale = 1; // TODO scale properly
@@ -86,6 +87,7 @@ handle_replaced(struct BucketedQuickMRC *me,
                 struct SampledTryPutReturn s,
                 TimeStampType timestamp)
 {
+    UNUSED(timestamp);
     assert(me != NULL);
 
     const uint64_t scale = 1; // TODO scale properly
@@ -109,6 +111,7 @@ handle_updated(struct BucketedQuickMRC *me,
                struct SampledTryPutReturn s,
                TimeStampType timestamp)
 {
+    UNUSED(timestamp);
     assert(me != NULL);
 
     const uint64_t scale = 1; // TODO scale properly
