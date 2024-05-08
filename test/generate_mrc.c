@@ -3,6 +3,7 @@
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "shards/fixed_rate_shards.h"
+#include "shards/fixed_size_shards.h"
 #include "trace/reader.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_INVALID,
     MRC_ALGORITHM_OLKEN,
     MRC_ALGORITHM_FIXED_RATE_SHARDS,
+    MRC_ALGORITHM_FIXED_SIZE_SHARDS,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -21,6 +23,7 @@ static char *algorithm_names[] = {
     "INVALID",
     "Olken",
     "Fixed-Rate-SHARDS",
+    "Fixed-Size-SHARDS",
 };
 
 struct CommandLineArguments {
@@ -97,16 +100,16 @@ print_command_line_arguments(struct CommandLineArguments const *args)
 static enum MRCAlgorithm
 parse_algorithm_string(struct CommandLineArguments const *args, char *str)
 {
-    if (strcmp("Olken", str) == 0) {
-        return MRC_ALGORITHM_OLKEN;
-    } else if (strcmp("Fixed-Rate-SHARDS", str) == 0) {
-        return MRC_ALGORITHM_FIXED_RATE_SHARDS;
-    } else {
-        LOGGER_ERROR("unparsable algorithm string: '%s'", str);
-        print_help(stdout, args);
-        exit(-1);
+    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
+        if (strcmp(algorithm_names[i], str) == 0)
+            return (enum MRCAlgorithm)i;
     }
-    /* IMPOSSIBLE! */
+
+    LOGGER_ERROR("unparsable algorithm string: '%s'", str);
+    fprintf(LOGGER_STREAM, "   expected: ");
+    print_available_algorithms(LOGGER_STREAM);
+    fprintf(LOGGER_STREAM, "\n");
+    print_help(stdout, args);
     exit(-1);
 }
 
@@ -179,35 +182,55 @@ cleanup:
     exit(-1);
 }
 
-static struct MissRateCurve
-run_olken(struct Trace *trace)
-{
-    struct Olken me = {0};
-    g_assert_true(Olken__init(&me, trace->length, 1));
-    for (size_t i = 0; i < trace->length; ++i) {
-        Olken__access_item(&me, trace->trace[i].key);
+#define CONSTRUCT_RUN_ALGORITHM_FUNCTION(func_name,                            \
+                                         type,                                 \
+                                         var_name,                             \
+                                         init_call,                            \
+                                         access_func,                          \
+                                         hist,                                 \
+                                         hist_func,                            \
+                                         destroy_func)                         \
+    static struct MissRateCurve func_name(struct Trace *trace)                 \
+    {                                                                          \
+        type var_name = {0};                                                   \
+        g_assert_true((init_call));                                            \
+        for (size_t i = 0; i < trace->length; ++i) {                           \
+            ((access_func))(&var_name, trace->trace[i].key);                   \
+        }                                                                      \
+        struct MissRateCurve mrc = {0};                                        \
+        ((hist_func))(&mrc, &var_name.hist);                                   \
+        ((destroy_func))(&var_name);                                           \
+        return mrc;                                                            \
     }
 
-    struct MissRateCurve mrc = {0};
-    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
-    Olken__destroy(&me);
-    return mrc;
-}
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
+                                 struct Olken,
+                                 me,
+                                 Olken__init(&me, trace->length, 1),
+                                 Olken__access_item,
+                                 histogram,
+                                 MissRateCurve__init_from_histogram,
+                                 Olken__destroy)
 
-static struct MissRateCurve
-run_fixed_rate_shards(struct Trace *trace)
-{
-    struct FixedRateShards me = {0};
-    g_assert_true(FixedRateShards__init(&me, trace->length, 1e-3, 1));
-    for (size_t i = 0; i < trace->length; ++i) {
-        FixedRateShards__access_item(&me, trace->trace[i].key);
-    }
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_fixed_rate_shards,
+    struct FixedRateShards,
+    me,
+    FixedRateShards__init(&me, trace->length, 1e-3, 1),
+    FixedRateShards__access_item,
+    olken.histogram,
+    MissRateCurve__init_from_histogram,
+    FixedRateShards__destroy)
 
-    struct MissRateCurve mrc = {0};
-    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
-    FixedRateShards__destroy(&me);
-    return mrc;
-}
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_fixed_size_shards,
+    struct FixedSizeShards,
+    me,
+    FixedSizeShards__init(&me, trace->length, 1 << 13, trace->length, 1),
+    FixedSizeShards__access_item,
+    histogram,
+    MissRateCurve__init_from_histogram,
+    FixedSizeShards__destroy)
 
 int
 main(int argc, char **argv)
@@ -232,6 +255,9 @@ main(int argc, char **argv)
         break;
     case MRC_ALGORITHM_FIXED_RATE_SHARDS:
         mrc = run_fixed_rate_shards(&trace);
+        break;
+    case MRC_ALGORITHM_FIXED_SIZE_SHARDS:
+        mrc = run_fixed_size_shards(&trace);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);

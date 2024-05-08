@@ -16,6 +16,7 @@ fixed_size_shards_dep = declare_dependency(
     include_directories: include_directories('include'),
     dependencies: [
         splay_priority_queue_dep,
+        splitmix64_dep,
     ],
 )
 
