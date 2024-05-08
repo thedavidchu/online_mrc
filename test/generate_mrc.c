@@ -1,4 +1,5 @@
 #include "arrays/array_size.h"
+#include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -201,6 +202,7 @@ cleanup:
             ((access_func))(&var_name, trace->trace[i].key);                   \
         }                                                                      \
         struct MissRateCurve mrc = {0};                                        \
+        Histogram__write_as_json(stdout, &var_name.hist);                      \
         ((hist_func))(&mrc, &var_name.hist);                                   \
         ((destroy_func))(&var_name);                                           \
         return mrc;                                                            \
