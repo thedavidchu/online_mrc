@@ -64,45 +64,43 @@ def plot_histogram(histogram: dict[float, float]):
     plt.savefig("histogram.png")
 
 
-def plot_miss_rate_curve(sparse_mrc: dict[float, float], output_path: str):
-    plt.figure()
-    plt.title("Miss-Rate Curve")
-    plt.xlabel("Number of key-value pairs")
-    plt.ylabel("Miss-rate")
-    plt.plot(sparse_mrc.keys(), sparse_mrc.values())
-    plt.ylim(0, 1)
-    plt.savefig(output_path)
+def plot_miss_rate_curve(input_path: str, label: str):
+    with open(input_path) as f:
+        histogram_json = json.load(f)
+    sparse_histogram = decode_histogram_json(histogram_json)
+    sparse_mrc = convert_histogram_to_miss_rate_curve(sparse_histogram)
+    plt.plot(sparse_mrc.keys(), sparse_mrc.values(), label=label)
 
 
-def read_and_plot_mrc(input_path: str, output_path: str):
+def read_and_plot_mrc(input_path: str, label: str):
     with open(input_path, "rb") as f:
         dense_mrc = np.fromfile(f, dtype=np.float64)
-    plt.figure()
-    plt.title("Miss-Rate Curve")
-    plt.xlabel("Number of key-value pairs")
-    plt.ylabel("Miss-rate")
-    plt.plot(dense_mrc)
-    plt.ylim(0, 1)
-    plt.savefig(output_path)
+    plt.plot(dense_mrc, label=label)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, required=True, help="input path")
+    parser.add_argument(
+        "--input", nargs="+", type=str, required=True, help="input path(s)"
+    )
     parser.add_argument("--output", type=str, default="mrc.png", help="output path")
     args = parser.parse_args()
 
-    input_path = args.input
+    input_paths: list[str] = args.input
     output_path = args.output
 
-    if os.path.splitext(input_path)[-1] == ".json":
-        with open(input_path) as f:
-            histogram_json = json.load(f)
-        histogram = decode_histogram_json(histogram_json)
-        mrc = convert_histogram_to_miss_rate_curve(histogram)
-        plot_miss_rate_curve(mrc, output_path)
-    else:
-        read_and_plot_mrc(input_path, output_path)
+    plt.figure()
+    plt.title("Miss-Rate Curve")
+    plt.xlabel("Number of key-value pairs")
+    plt.ylabel("Miss-rate")
+    plt.ylim(0, 1)
+    for input_path in input_paths:
+        if os.path.splitext(input_path)[-1] == ".json":
+            plot_miss_rate_curve(input_path, os.path.splitext(input_path)[0])
+        else:
+            read_and_plot_mrc(input_path, os.path.splitext(input_path)[0])
+    plt.legend()
+    plt.savefig(output_path)
 
 
 if __name__ == "__main__":
