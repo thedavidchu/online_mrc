@@ -64,7 +64,7 @@ MissRateCurve__init_from_histogram(struct MissRateCurve *me,
                                    struct Histogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
-        histogram->num_bins == 0) {
+        histogram->num_bins == 0 || histogram->bin_size == 0) {
         return false;
     }
     // NOTE We include 1 past the histogram length to record "false infinities",
