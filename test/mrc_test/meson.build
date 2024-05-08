@@ -130,26 +130,6 @@ bucketed_quickmrc_test_exe = executable(
     ],
 )
 
-################################################################################
-### GENERATE MRCs
-################################################################################
-
-generate_mrc_exe = executable(
-    'generate_mrc_exe',
-    'generate_mrc.c',
-    include_directories: [
-        mytester_include,
-    ],
-    dependencies: [
-        common_dep,
-        fixed_rate_shards_dep,
-        glib_dep,
-        miss_rate_curve_dep,
-        olken_dep,
-        trace_dep,
-    ],
-)
-
 test('olken_test', olken_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
 test('mimir_test', mimir_test_exe)
