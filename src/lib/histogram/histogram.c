@@ -89,39 +89,49 @@ Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
 }
 
 void
-Histogram__print_as_json(struct Histogram *me)
+Histogram__write_as_json(FILE *stream, struct Histogram *me)
 {
     if (me == NULL) {
-        printf("{\"type\": null}");
+        fprintf(stream, "{\"type\": null}");
         return;
     }
     if (me->histogram == NULL) {
-        printf("{\"type\": \"Histogram\", \".histogram\": null}\n");
+        fprintf(stream, "{\"type\": \"Histogram\", \".histogram\": null}\n");
         return;
     }
-    printf("{\"type\": \"Histogram\", \".num_bins\": %" PRIu64
-           ", \".bin_size\": %" PRIu64 ", \".running_sum\": %" PRIu64
-           ", \".histogram\": {",
-           me->num_bins,
-           me->bin_size,
-           me->running_sum);
+    fprintf(stream,
+            "{\"type\": \"Histogram\", \".num_bins\": %" PRIu64
+            ", \".bin_size\": %" PRIu64 ", \".running_sum\": %" PRIu64
+            ", \".histogram\": {",
+            me->num_bins,
+            me->bin_size,
+            me->running_sum);
     bool first_value = true;
     for (uint64_t i = 0; i < me->num_bins; ++i) {
         if (me->histogram[i] != 0) {
             if (first_value) {
                 first_value = false;
             } else {
-                printf(", ");
+                fprintf(stream, ", ");
             }
-            printf("\"%" PRIu64 "\": %" PRIu64 "",
-                   i * me->bin_size,
-                   me->histogram[i]);
+            fprintf(stream,
+                    "\"%" PRIu64 "\": %" PRIu64 "",
+                    i * me->bin_size,
+                    me->histogram[i]);
         }
     }
     // NOTE I assume me->num_bins is much less than SIZE_MAX
-    printf("}, \".false_infinity\": %" PRIu64 ", \".infinity\": %" PRIu64 "}\n",
-           me->false_infinity,
-           me->infinity);
+    fprintf(stream,
+            "}, \".false_infinity\": %" PRIu64 ", \".infinity\": %" PRIu64
+            "}\n",
+            me->false_infinity,
+            me->infinity);
+}
+
+void
+Histogram__print_as_json(struct Histogram *me)
+{
+    Histogram__write_as_json(stdout, me);
 }
 
 bool
