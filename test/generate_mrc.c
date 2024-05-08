@@ -1,3 +1,4 @@
+#include "arrays/array_size.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -35,6 +36,21 @@ struct CommandLineArguments {
     bool debug;
 };
 
+/// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
+static void
+print_available_algorithms(FILE *stream)
+{
+    fprintf(stream, "{");
+    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
+    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
+        fprintf(stream, "%s", algorithm_names[i]);
+        if (i != ARRAY_SIZE(algorithm_names) - 1) {
+            fprintf(stream, ",");
+        }
+    }
+    fprintf(stream, "}");
+}
+
 static void
 print_help(FILE *stream, struct CommandLineArguments const *args)
 {
@@ -45,9 +61,9 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
     fprintf(stream,
             "    --input, -i <input-path>: path to the input ('~/...' may not "
             "work)\n");
-    fprintf(stream,
-            "    --algorithm, -a <algorithm>: algorithm, pick "
-            "{Olken,Fixed-Rate-SHARDS}\n");
+    fprintf(stream, "    --algorithm, -a <algorithm>: algorithm, pick ");
+    print_available_algorithms(stream);
+    fprintf(stream, "\n");
     fprintf(stream,
             "    --output, -o <output-path>: path to the output file ('~/...' "
             "may not work)\n");
@@ -94,38 +110,8 @@ parse_algorithm_string(struct CommandLineArguments const *args, char *str)
     exit(-1);
 }
 
-static struct MissRateCurve
-run_olken(struct Trace *trace)
-{
-    struct Olken me = {0};
-    g_assert_true(Olken__init(&me, trace->length, 1));
-    for (size_t i = 0; i < trace->length; ++i) {
-        Olken__access_item(&me, trace->trace[i].key);
-    }
-
-    struct MissRateCurve mrc = {0};
-    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
-    Olken__destroy(&me);
-    return mrc;
-}
-
-static struct MissRateCurve
-run_fixed_rate_shards(struct Trace *trace)
-{
-    struct FixedRateShards me = {0};
-    g_assert_true(FixedRateShards__init(&me, trace->length, 1e-3, 1));
-    for (size_t i = 0; i < trace->length; ++i) {
-        FixedRateShards__access_item(&me, trace->trace[i].key);
-    }
-
-    struct MissRateCurve mrc = {0};
-    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
-    FixedRateShards__destroy(&me);
-    return mrc;
-}
-
-int
-main(int argc, char **argv)
+static struct CommandLineArguments
+parse_command_line_arguments(int argc, char **argv)
 {
     struct CommandLineArguments args = {0};
     args.executable = argv[0];
@@ -168,16 +154,66 @@ main(int argc, char **argv)
     }
 
     // Check existence of required arguments
+    bool error = false;
     if (args.input_path == NULL) {
         LOGGER_ERROR("must specify input path!");
+        error = true;
     }
     if (args.algorithm == MRC_ALGORITHM_INVALID) {
         LOGGER_ERROR("must specify algorithm!");
+        error = true;
     }
     if (args.output_path == NULL) {
         LOGGER_ERROR("must specify output path!");
+        error = true;
     }
+    if (error)
+        goto cleanup;
+
     print_command_line_arguments(&args);
+
+    return args;
+
+cleanup:
+    print_help(stdout, &args);
+    exit(-1);
+}
+
+static struct MissRateCurve
+run_olken(struct Trace *trace)
+{
+    struct Olken me = {0};
+    g_assert_true(Olken__init(&me, trace->length, 1));
+    for (size_t i = 0; i < trace->length; ++i) {
+        Olken__access_item(&me, trace->trace[i].key);
+    }
+
+    struct MissRateCurve mrc = {0};
+    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
+    Olken__destroy(&me);
+    return mrc;
+}
+
+static struct MissRateCurve
+run_fixed_rate_shards(struct Trace *trace)
+{
+    struct FixedRateShards me = {0};
+    g_assert_true(FixedRateShards__init(&me, trace->length, 1e-3, 1));
+    for (size_t i = 0; i < trace->length; ++i) {
+        FixedRateShards__access_item(&me, trace->trace[i].key);
+    }
+
+    struct MissRateCurve mrc = {0};
+    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
+    FixedRateShards__destroy(&me);
+    return mrc;
+}
+
+int
+main(int argc, char **argv)
+{
+    struct CommandLineArguments args = {0};
+    args = parse_command_line_arguments(argc, argv);
 
     // Read in trace
     struct Trace trace = read_trace(args.input_path);
@@ -199,7 +235,7 @@ main(int argc, char **argv)
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
-        exit(-1);
+        return EXIT_FAILURE;
     }
 
     // Write out trace
