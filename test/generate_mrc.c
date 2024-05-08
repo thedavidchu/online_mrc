@@ -226,7 +226,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_size_shards,
     struct FixedSizeShards,
     me,
-    FixedSizeShards__init(&me, trace->length, 1 << 13, trace->length, 1),
+    FixedSizeShards__init(&me, 1e-1, 1 << 13, trace->length, 1),
     FixedSizeShards__access_item,
     histogram,
     MissRateCurve__init_from_histogram,

@@ -7,6 +7,7 @@
 
 #include "hash/splitmix64.h"
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "math/positive_ceiling_divide.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
@@ -64,18 +65,20 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
         1.0 < starting_sampling_ratio || max_size == 0) {
+        LOGGER_TRACE("bad input");
         return false;
     }
 
     r = tree__init(&me->tree);
     if (!r) {
-        return false;
+        LOGGER_TRACE("failed to initialize tree");
+        goto cleanup;
     }
 
     me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
     if (me->hash_table == NULL) {
-        tree__destroy(&me->tree);
-        return false;
+        LOGGER_TRACE("failed to initialize hash table");
+        goto cleanup;
     }
 
     r = Histogram__init(
@@ -83,17 +86,14 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         POSITIVE_CEILING_DIVIDE(max_num_unique_entries, histogram_bin_size),
         histogram_bin_size);
     if (!r) {
-        tree__destroy(&me->tree);
-        g_hash_table_destroy(me->hash_table);
-        return false;
+        LOGGER_TRACE("failed to initialize histogram");
+        goto cleanup;
     }
 
     r = SplayPriorityQueue__init(&me->pq, max_size);
     if (!r) {
-        tree__destroy(&me->tree);
-        g_hash_table_destroy(me->hash_table);
-        Histogram__destroy(&me->histogram);
-        return false;
+        LOGGER_TRACE("failed to initialize priority queue");
+        goto cleanup;
     }
     me->current_time_stamp = 0;
     me->scale = 1 / starting_sampling_ratio;
@@ -106,6 +106,14 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     //              double to make sure there can't be overflow.
     me->threshold = (long double)UINT64_MAX * starting_sampling_ratio;
     return true;
+
+cleanup:
+    tree__destroy(&me->tree);
+    if (me->hash_table != NULL) {
+        g_hash_table_destroy(me->hash_table);
+    }
+    Histogram__destroy(&me->histogram);
+    return false;
 }
 
 void
