@@ -7,7 +7,9 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "histogram/basic_histogram.h"
+#include "hash/splitmix64.h"
+#include "histogram/histogram.h"
+#include "math/ratio.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -17,9 +19,10 @@
 
 bool
 QuickMRC__init(struct QuickMRC *me,
-               uint64_t default_num_buckets,
-               uint64_t max_bucket_size,
-               uint64_t histogram_length)
+               const uint64_t default_num_buckets,
+               const uint64_t max_bucket_size,
+               const uint64_t histogram_length,
+               const double sampling_ratio)
 {
     bool r = false;
     if (me == NULL) {
@@ -36,7 +39,7 @@ QuickMRC__init(struct QuickMRC *me,
         HashTable__destroy(&me->hash_table);
         return false;
     }
-    r = BasicHistogram__init(&me->histogram, histogram_length);
+    r = Histogram__init(&me->histogram, histogram_length, 1);
     if (!r) {
         HashTable__destroy(&me->hash_table);
         QuickMRCBuckets__destroy(&me->buckets);
@@ -44,6 +47,8 @@ QuickMRC__init(struct QuickMRC *me,
     }
     me->total_entries_seen = 0;
     me->total_entries_processed = 0;
+    me->threshold = ratio_uint64(sampling_ratio);
+    me->scale = 1 / sampling_ratio;
     return true;
 }
 
@@ -53,6 +58,9 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
+
+    if (splitmix64_hash(entry) > me->threshold)
+        return true;
 
     // This assumes there won't be any errors further on.
     me->total_entries_processed += 1;
@@ -66,12 +74,12 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
         HashTable__put_unique(&me->hash_table, entry, new_timestamp);
-        BasicHistogram__insert_finite(&me->histogram, stack_dist);
+        Histogram__insert_scaled_finite(&me->histogram, stack_dist, me->scale);
     } else {
         if (!QuickMRCBuckets__insert_new(&me->buckets)) {
             return false;
         }
-        if (!BasicHistogram__insert_infinite(&me->histogram)) {
+        if (!Histogram__insert_scaled_infinite(&me->histogram, me->scale)) {
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
@@ -87,10 +95,10 @@ QuickMRC__print_histogram_as_json(struct QuickMRC *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        BasicHistogram__print_as_json(NULL);
+        Histogram__print_as_json(NULL);
         return;
     }
-    BasicHistogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->histogram);
 }
 
 void
@@ -101,6 +109,10 @@ QuickMRC__destroy(struct QuickMRC *me)
     }
     HashTable__destroy(&me->hash_table);
     QuickMRCBuckets__destroy(&me->buckets);
-    BasicHistogram__destroy(&me->histogram);
+    Histogram__destroy(&me->histogram);
+    // The num_buckets is const qualified, so we do memset to sketchily avoid
+    // a compiler error (at the expense of making this undefined behaviour).
+    // ARGH, C IS SO FRUSTRATING SOMETIMES! I wish it had special provisions for
+    // initializing and destroying the structures.
     memset(me, 0, sizeof(*me));
 }

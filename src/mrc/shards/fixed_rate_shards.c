@@ -15,14 +15,16 @@
 bool
 FixedRateShards__init(struct FixedRateShards *me,
                       const uint64_t max_num_unique_entries,
-                      const double sampling_ratio)
+                      const double sampling_ratio,
+                      const uint64_t histogram_bin_size)
 {
     if (me == NULL || sampling_ratio <= 0.0 || 1.0 < sampling_ratio)
         return false;
     // NOTE I am assuming that Olken does not have any structures that
     //      point to the containing structure (i.e. the 'shell' of the
     //      Olken structure is not referenced anywhere).
-    bool r = Olken__init(&me->olken, max_num_unique_entries);
+    bool r =
+        Olken__init(&me->olken, max_num_unique_entries, histogram_bin_size);
     if (!r)
         return false;
     me->sampling_ratio = sampling_ratio;
@@ -59,7 +61,9 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                "update should replace value");
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
-        BasicHistogram__insert_scaled_finite(&me->olken.histogram, distance, 1 / me->sampling_ratio);
+        Histogram__insert_scaled_finite(&me->olken.histogram,
+                                        distance,
+                                        1 / me->sampling_ratio);
     } else {
         enum PutUniqueStatus s =
             HashTable__put_unique(&me->olken.hash_table,
@@ -70,7 +74,8 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         tree__sleator_insert(&me->olken.tree,
                              (KeyType)me->olken.current_time_stamp);
         ++me->olken.current_time_stamp;
-        BasicHistogram__insert_scaled_infinite(&me->olken.histogram, 1 / me->sampling_ratio);
+        Histogram__insert_scaled_infinite(&me->olken.histogram,
+                                          1 / me->sampling_ratio);
     }
 }
 

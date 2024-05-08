@@ -1,11 +1,13 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include <glib.h>
 
 #include "hash/splitmix64.h"
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
+#include "math/positive_ceiling_divide.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -56,7 +58,8 @@ bool
 FixedSizeShards__init(struct FixedSizeShards *me,
                       const double starting_sampling_ratio,
                       const uint64_t max_size,
-                      const uint64_t max_num_unique_entries)
+                      const uint64_t max_num_unique_entries,
+                      const uint64_t histogram_bin_size)
 {
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
@@ -75,7 +78,10 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    r = BasicHistogram__init(&me->histogram, max_num_unique_entries);
+    r = Histogram__init(
+        &me->histogram,
+        POSITIVE_CEILING_DIVIDE(max_num_unique_entries, histogram_bin_size),
+        histogram_bin_size);
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
@@ -86,7 +92,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     if (!r) {
         tree__destroy(&me->tree);
         g_hash_table_destroy(me->hash_table);
-        BasicHistogram__destroy(&me->histogram);
+        Histogram__destroy(&me->histogram);
         return false;
     }
     me->current_time_stamp = 0;
@@ -134,22 +140,20 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
                              (gpointer)entry,
                              (gpointer)me->current_time_stamp);
         ++me->current_time_stamp;
-        BasicHistogram__insert_scaled_finite(&me->histogram,
-                                              distance,
-                                              me->scale);
+        Histogram__insert_scaled_finite(&me->histogram, distance, me->scale);
     } else {
         if (SplayPriorityQueue__is_full(&me->pq)) {
             make_room(me);
         }
         SplayPriorityQueue__insert_if_room(&me->pq,
-                                             splitmix64_hash((uint64_t)entry),
-                                             entry);
+                                           splitmix64_hash((uint64_t)entry),
+                                           entry);
         g_hash_table_insert(me->hash_table,
                             (gpointer)entry,
                             (gpointer)me->current_time_stamp);
         tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
         ++me->current_time_stamp;
-        BasicHistogram__insert_scaled_infinite(&me->histogram, me->scale);
+        Histogram__insert_scaled_infinite(&me->histogram, me->scale);
     }
 }
 
@@ -159,10 +163,10 @@ FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me)
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
         // this isn't very smart and will confuse future-me? Oh well!
-        BasicHistogram__print_as_json(NULL);
+        Histogram__print_as_json(NULL);
         return;
     }
-    BasicHistogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->histogram);
 }
 
 void
@@ -170,7 +174,7 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
 {
     tree__destroy(&me->tree);
     g_hash_table_destroy(me->hash_table);
-    BasicHistogram__destroy(&me->histogram);
+    Histogram__destroy(&me->histogram);
     SplayPriorityQueue__destroy(&me->pq);
     *me = (struct FixedSizeShards){0};
 }

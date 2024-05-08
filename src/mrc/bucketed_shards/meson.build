@@ -1,7 +1,7 @@
-olken_dep = declare_dependency(
+bucketed_shards_dep = declare_dependency(
     link_with: library(
-        'olken_lib',
-        'olken.c',
+        'bucketed_shards_lib',
+        'bucketed_shards.c',
         include_directories: include_directories('include'),
         dependencies: [
             sleator_tree_dep,

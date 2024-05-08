@@ -4,20 +4,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "histogram/basic_histogram.h"
+#include "histogram/histogram.h"
 
 bool
-BasicHistogram__init(struct BasicHistogram *me, const uint64_t length)
+Histogram__init(struct Histogram *me,
+                const uint64_t num_bins,
+                const uint64_t bin_size)
 {
-    if (me == NULL || length == 0) {
+    if (me == NULL || num_bins == 0) {
         return false;
     }
     // Assume it is either NULL or an uninitialized address!
-    me->histogram = (uint64_t *)calloc(length, sizeof(uint64_t));
+    me->histogram = (uint64_t *)calloc(num_bins, sizeof(uint64_t));
     if (me->histogram == NULL) {
         return false;
     }
-    me->length = length;
+    me->num_bins = num_bins;
+    me->bin_size = bin_size;
     me->infinity = 0;
     me->false_infinity = 0;
     me->running_sum = 0;
@@ -25,15 +28,15 @@ BasicHistogram__init(struct BasicHistogram *me, const uint64_t length)
 }
 
 bool
-BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
+Histogram__insert_finite(struct Histogram *me, const uint64_t index)
 {
-    if (me == NULL || me->histogram == NULL) {
+    if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
-    if (index < me->length) {
-        ++me->histogram[index];
+    if (index < me->num_bins * me->bin_size) {
+        ++me->histogram[index / me->bin_size];
         ++me->running_sum;
     } else {
         ++me->false_infinity;
@@ -43,18 +46,18 @@ BasicHistogram__insert_finite(struct BasicHistogram *me, const uint64_t index)
 }
 
 bool
-BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
-                                     const uint64_t index,
-                                     const uint64_t scale)
+Histogram__insert_scaled_finite(struct Histogram *me,
+                                const uint64_t index,
+                                const uint64_t scale)
 {
     const uint64_t scaled_index = scale * index;
-    if (me == NULL || me->histogram == NULL) {
+    if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
-    if (scaled_index < me->length) {
-        me->histogram[scaled_index] += scale;
+    if (scaled_index < me->num_bins * me->bin_size) {
+        me->histogram[scaled_index / me->bin_size] += scale;
         me->running_sum += scale;
     } else {
         me->false_infinity += scale;
@@ -64,7 +67,7 @@ BasicHistogram__insert_scaled_finite(struct BasicHistogram *me,
 }
 
 bool
-BasicHistogram__insert_infinite(struct BasicHistogram *me)
+Histogram__insert_infinite(struct Histogram *me)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -75,8 +78,7 @@ BasicHistogram__insert_infinite(struct BasicHistogram *me)
 }
 
 bool
-BasicHistogram__insert_scaled_infinite(struct BasicHistogram *me,
-                                       const uint64_t scale)
+Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
 {
     if (me == NULL || me->histogram == NULL) {
         return false;
@@ -87,37 +89,43 @@ BasicHistogram__insert_scaled_infinite(struct BasicHistogram *me,
 }
 
 void
-BasicHistogram__print_as_json(struct BasicHistogram *me)
+Histogram__print_as_json(struct Histogram *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}");
         return;
     }
     if (me->histogram == NULL) {
-        printf("{\"type\": \"BasicHistogram\", \".histogram\": null}\n");
+        printf("{\"type\": \"Histogram\", \".histogram\": null}\n");
         return;
     }
-    printf("{\"type\": \"BasicHistogram\", \".length\": %" PRIu64
-           ", \".running_sum\": %" PRIu64 ", \".histogram\": {",
-           me->length,
+    printf("{\"type\": \"Histogram\", \".num_bins\": %" PRIu64
+           ", \".bin_size\": %" PRIu64 ", \".running_sum\": %" PRIu64
+           ", \".histogram\": {",
+           me->num_bins,
+           me->bin_size,
            me->running_sum);
-    for (uint64_t i = 0; i < me->length; ++i) {
+    bool first_value = true;
+    for (uint64_t i = 0; i < me->num_bins; ++i) {
         if (me->histogram[i] != 0) {
-            printf("\"%" PRIu64 "\": %" PRIu64 ", ", i, me->histogram[i]);
+            if (first_value) {
+                first_value = false;
+            } else {
+                printf(", ");
+            }
+            printf("\"%" PRIu64 "\": %" PRIu64 "",
+                   i * me->bin_size,
+                   me->histogram[i]);
         }
     }
-    // NOTE I assume me->length is much less than SIZE_MAX
-    printf("\"%" PRIu64 "\": %" PRIu64 "}, \".false_infinity\": %" PRIu64
-           ", \".infinity\": %" PRIu64 "}\n",
-           me->length,
-           me->false_infinity,
+    // NOTE I assume me->num_bins is much less than SIZE_MAX
+    printf("}, \".false_infinity\": %" PRIu64 ", \".infinity\": %" PRIu64 "}\n",
            me->false_infinity,
            me->infinity);
 }
 
 bool
-BasicHistogram__exactly_equal(struct BasicHistogram *me,
-                              struct BasicHistogram *other)
+Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
 {
     if (me == other) {
         return true;
@@ -126,7 +134,7 @@ BasicHistogram__exactly_equal(struct BasicHistogram *me,
         return false;
     }
 
-    if (me->length != other->length ||
+    if (me->num_bins != other->num_bins || me->bin_size != other->bin_size ||
         me->false_infinity != other->false_infinity ||
         me->infinity != other->infinity ||
         me->running_sum != other->running_sum) {
@@ -136,19 +144,19 @@ BasicHistogram__exactly_equal(struct BasicHistogram *me,
     //      since the size of the address space * sizeof(uint64_t) < 2^64.
     if (memcmp(me->histogram,
                other->histogram,
-               sizeof(*me->histogram) * me->length) != 0) {
+               sizeof(*me->histogram) * me->num_bins) != 0) {
         return false;
     }
     return true;
 }
 
 void
-BasicHistogram__destroy(struct BasicHistogram *me)
+Histogram__destroy(struct Histogram *me)
 {
     if (me == NULL) {
         return;
     }
     free(me->histogram);
-    *me = (struct BasicHistogram){0};
+    *me = (struct Histogram){0};
     return;
 }

@@ -26,7 +26,8 @@ struct FixedRateShards {
 bool
 FixedRateShards__init(struct FixedRateShards *me,
                       const uint64_t max_num_unique_entries,
-                      const double sampling_ratio);
+                      const double sampling_ratio,
+                      const uint64_t histogram_bin_size);
 
 void
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);

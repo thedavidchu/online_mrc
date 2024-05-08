@@ -5,7 +5,7 @@ histogram_test_exe = executable(
         mytester_include,
     ],
     dependencies: [
-        basic_histogram_dep,
+        histogram_dep,
         common_dep,
         fractional_histogram_dep,
         glib_dep,

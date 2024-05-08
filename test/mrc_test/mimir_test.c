@@ -4,7 +4,6 @@
 
 #include "arrays/array_size.h"
 #include "histogram/fractional_histogram.h"
-#include "math/positive_ceiling_divide.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "mimir/private_buckets.h"
@@ -16,7 +15,7 @@
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.99;
-const uint64_t trace_length = 1 << 20;
+const uint64_t TRACE_LENGTH = 1 << 20;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// UNIT TESTS
@@ -155,21 +154,20 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
                                       ZIPFIAN_RANDOM_SKEW,
                                       0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES));
+    g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(
         Mimir__init(&me, 1000, 100, MAX_NUM_UNIQUE_ENTRIES, aging_policy));
     Mimir__validate(&me);
     // NOTE I reduced the max_num_unique_entries to reduce the runtime. Doing so
     //      absolutely demolishes the accuracy as well. Oh well, now this test
     //      is kind of useless!
-    for (uint64_t i = 0; i < trace_length; ++i) {
+    for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         Mimir__access_item(&me, entry);
-        Mimir__validate(&me);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
-    MissRateCurve__init_from_basic_histogram(&oracle_mrc, &oracle.histogram);
+    MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_fractional_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
@@ -188,7 +186,7 @@ main(int argc, char **argv)
     UNUSED(argv);
     // Unit tests
     ASSERT_FUNCTION_RETURNS_TRUE(test_mimir_buckets());
-    // // Integration tests
+    // Integration tests
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
     ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
     ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_ROUNDER));
