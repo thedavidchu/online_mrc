@@ -12,7 +12,7 @@ parda_fixed_rate_shards_dep = declare_dependency(
         dependencies: [
             common_dep,
             glib_dep,
-            splitmix64_dep,
+            hash_dep,
         ],
     ),
     include_directories: include_directories('include', 'parda'),

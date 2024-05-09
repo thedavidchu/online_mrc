@@ -8,7 +8,7 @@ olken_dep = declare_dependency(
             common_dep,
             histogram_dep,
             glib_dep,
-            splitmix64_dep,
+            hash_dep,
             lookup_dep,
         ],
     ),

@@ -8,7 +8,7 @@ lookup_test_exe = executable(
         common_dep,
         glib_dep,
         lookup_dep,
-        splitmix64_dep,
+        hash_dep,
         thread_dep,
     ],
 )

@@ -7,7 +7,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
 #include "math/ratio.h"
 #include "quickmrc/buckets.h"
@@ -59,7 +59,7 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
         return false;
     }
 
-    if (splitmix64_hash(entry) > me->threshold)
+    if (MyMurmurHash3(entry) > me->threshold)
         return true;
 
     // This assumes there won't be any errors further on.

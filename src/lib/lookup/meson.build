@@ -11,7 +11,7 @@ lookup_dep = declare_dependency(
             common_dep,
             glib_dep,
             thread_dep,
-            splitmix64_dep,
+            hash_dep,
         ],
         include_directories: include_directories('include'),
     ),

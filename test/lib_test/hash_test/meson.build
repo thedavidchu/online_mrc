@@ -7,8 +7,8 @@ hash_test_exe = executable(
     dependencies: [
         common_dep,
         glib_dep,
-        murmur_hash_3_dep,
-        splitmix64_dep,
+        hash_dep,
+        hash_dep,
     ],
 )
 

@@ -4,7 +4,7 @@
 
 #include <glib.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "math/positive_ceiling_divide.h"
@@ -130,7 +130,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 
     // Skip items above the threshold. Note that we accept items that are equal
     // to the threshold because the maximum hash is the threshold.
-    if (splitmix64_hash((uint64_t)entry) > me->threshold) {
+    if (MyMurmurHash3((uint64_t)entry) > me->threshold) {
         return;
     }
 
@@ -153,7 +153,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
             make_room(me);
         }
         SplayPriorityQueue__insert_if_room(&me->pq,
-                                           splitmix64_hash((uint64_t)entry),
+                                           MyMurmurHash3((uint64_t)entry),
                                            entry);
         g_hash_table_insert(me->hash_table,
                             (gpointer)entry,
