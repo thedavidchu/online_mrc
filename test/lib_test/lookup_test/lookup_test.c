@@ -207,7 +207,7 @@ sampled_insert(struct SampledHashTable *me,
     // Insert with an expected status
     const bool debug = false;
     if (debug) {
-        LOGGER_DEBUG("key: %lu, value: %lu, expected_put_status: %d\n",
+        LOGGER_DEBUG("key: %lu, value: %lu, expected_put_status: %d",
                      key,
                      value,
                      expected_put_status);
@@ -287,7 +287,7 @@ sampled_try_put(struct SampledHashTable *me,
     // Insert with an expected status
     const bool debug = true;
     if (debug) {
-        LOGGER_DEBUG("key: %lu, value: %lu, expected_put_status: %d\n",
+        LOGGER_DEBUG("key: %lu, value: %lu, expected_put_status: %d",
                      key,
                      value,
                      expected_put_status);
