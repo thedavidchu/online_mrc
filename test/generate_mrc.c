@@ -1,3 +1,8 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "arrays/array_size.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
@@ -6,16 +11,15 @@
 #include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
+#include "trace/generator.h"
 #include "trace/reader.h"
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "trace/trace.h"
 
 enum MRCAlgorithm {
     MRC_ALGORITHM_INVALID,
     MRC_ALGORITHM_OLKEN,
     MRC_ALGORITHM_FIXED_RATE_SHARDS,
+    MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
 };
@@ -26,6 +30,7 @@ static char *algorithm_names[] = {
     "INVALID",
     "Olken",
     "Fixed-Rate-SHARDS",
+    "Fixed-Rate-SHARDS-Adj",
     "Fixed-Size-SHARDS",
     "QuickMRC",
 };
@@ -65,9 +70,10 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "Usage: %s [--input|-i <input-path>] [--algorithm|-a <algorithm>] "
             "[--output|-o <output-path>]\n",
             args->executable);
-    fprintf(stream,
-            "    --input, -i <input-path>: path to the input ('~/...' may not "
-            "work)\n");
+    fprintf(
+        stream,
+        "    --input, -i <input-path>: path to the input ('~/...' may not "
+        "work) or 'zipf' (for a randomly generated Zipfian distribution)\n");
     fprintf(stream, "    --algorithm, -a <algorithm>: algorithm, pick ");
     print_available_algorithms(stream);
     fprintf(stream, "\n");
@@ -128,7 +134,7 @@ parse_command_line_arguments(int argc, char **argv)
         if (matches_option(argv[i], "--input", "-i")) {
             ++i;
             if (i >= argc) {
-                LOGGER_ERROR("expecting input path!");
+                LOGGER_ERROR("expecting input path (or 'zipf')");
                 print_help(stdout, &args);
                 exit(-1);
             }
@@ -226,6 +232,17 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_rate_shards,
     struct FixedRateShards,
     me,
+    FixedRateShards__init(&me, trace->length, 1e-3, 1, false),
+    FixedRateShards__access_item,
+    FixedRateShards__post_process,
+    olken.histogram,
+    MissRateCurve__init_from_histogram,
+    FixedRateShards__destroy)
+
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_fixed_rate_shards_adj,
+    struct FixedRateShards,
+    me,
     FixedRateShards__init(&me, trace->length, 1e-3, 1, true),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
@@ -255,6 +272,19 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     MissRateCurve__init_from_histogram,
     QuickMRC__destroy)
 
+/// @note   I introduce this function so that I can do perform some logic but
+///         also maintain the constant-qualification of the members of struct
+///         Trace.
+static struct Trace
+get_trace(char *input_path)
+{
+    if (strcmp(input_path, "zipf") == 0) {
+        return generate_trace(1 << 20, 1 << 20, 0.99, 0);
+    } else {
+        return read_trace(input_path);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -262,7 +292,7 @@ main(int argc, char **argv)
     args = parse_command_line_arguments(argc, argv);
 
     // Read in trace
-    struct Trace trace = read_trace(args.input_path);
+    struct Trace trace = get_trace(args.input_path);
     if (trace.trace == NULL || trace.length == 0) {
         // I cast to (void *) so that it doesn't complain about printing it.
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
@@ -279,6 +309,9 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_FIXED_RATE_SHARDS:
         mrc = run_fixed_rate_shards(&trace);
         break;
+    case MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ:
+        mrc = run_fixed_rate_shards_adj(&trace);
+        break;
     case MRC_ALGORITHM_FIXED_SIZE_SHARDS:
         mrc = run_fixed_size_shards(&trace);
         break;
@@ -293,6 +326,7 @@ main(int argc, char **argv)
     // Write out trace
     g_assert_true(MissRateCurve__write_binary_to_file(&mrc, args.output_path));
     MissRateCurve__destroy(&mrc);
+    Trace__destroy(&trace);
 
     return 0;
 }

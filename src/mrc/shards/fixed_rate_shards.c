@@ -52,6 +52,9 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
 
     ++me->num_entries_seen;
     Hash64BitType hash = splitmix64_hash(entry);
+    // NOTE Taking the modulo of the hash by 1 << 24 reduces the accuracy
+    //      significantly. I tried dividing the threshold by 1 << 24 and also
+    //      leaving the threshold alone. Neither worked to improve accuracy.
     if (hash > me->threshold)
         return;
     ++me->num_entries_processed;
