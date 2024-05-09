@@ -191,6 +191,7 @@ cleanup:
                                          var_name,                             \
                                          init_call,                            \
                                          access_func,                          \
+                                         post_process_func,                    \
                                          hist,                                 \
                                          hist_func,                            \
                                          destroy_func)                         \
@@ -201,6 +202,7 @@ cleanup:
         for (size_t i = 0; i < trace->length; ++i) {                           \
             ((access_func))(&var_name, trace->trace[i].key);                   \
         }                                                                      \
+        ((post_process_func))(&var_name);                                      \
         struct MissRateCurve mrc = {0};                                        \
         if (false) {                                                           \
             Histogram__write_as_json(stdout, &var_name.hist);                  \
@@ -215,6 +217,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  me,
                                  Olken__init(&me, trace->length, 1),
                                  Olken__access_item,
+                                 Olken__post_process,
                                  histogram,
                                  MissRateCurve__init_from_histogram,
                                  Olken__destroy)
@@ -225,6 +228,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     me,
     FixedRateShards__init(&me, trace->length, 1e-3, 1),
     FixedRateShards__access_item,
+    FixedRateShards__post_process,
     olken.histogram,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
@@ -235,6 +239,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     me,
     FixedSizeShards__init(&me, 1e-1, 1 << 13, trace->length, 1),
     FixedSizeShards__access_item,
+    FixedSizeShards__post_process,
     histogram,
     MissRateCurve__init_from_histogram,
     FixedSizeShards__destroy)
@@ -245,6 +250,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     me,
     QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1.0),
     QuickMRC__access_item,
+    QuickMRC__post_process,
     histogram,
     MissRateCurve__init_from_histogram,
     QuickMRC__destroy)

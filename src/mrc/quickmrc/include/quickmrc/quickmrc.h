@@ -11,6 +11,7 @@
 #include "lookup/hash_table.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
+#include "unused/mark_unused.h"
 
 struct QuickMRC {
     struct HashTable hash_table;
@@ -40,6 +41,11 @@ QuickMRC__init(struct QuickMRC *me,
 bool
 QuickMRC__access_item(struct QuickMRC *me, EntryType entry);
 
+static inline void
+QuickMRC__post_process(struct QuickMRC *me)
+{
+    UNUSED(me);
+}
 void
 QuickMRC__print_histogram_as_json(struct QuickMRC *me);
 

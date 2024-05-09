@@ -9,6 +9,7 @@
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
+#include "unused/mark_unused.h"
 
 struct Olken {
     struct Tree tree;
@@ -24,6 +25,12 @@ Olken__init(struct Olken *me,
 
 void
 Olken__access_item(struct Olken *me, EntryType entry);
+
+static inline void
+Olken__post_process(struct Olken *me)
+{
+    UNUSED(me);
+}
 
 void
 Olken__print_histogram_as_json(struct Olken *me);

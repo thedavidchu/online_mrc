@@ -8,6 +8,7 @@
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
+#include "unused/mark_unused.h"
 
 struct FixedSizeShards {
     struct Tree tree;
@@ -32,6 +33,12 @@ FixedSizeShards__init(struct FixedSizeShards *me,
 
 void
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);
+
+static inline void
+FixedSizeShards__post_process(struct FixedSizeShards *me)
+{
+    UNUSED(me);
+}
 
 void
 FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me);

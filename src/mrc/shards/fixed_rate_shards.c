@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <bits/stdint-uintn.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -32,10 +33,9 @@ FixedRateShards__init(struct FixedRateShards *me,
     me->sampling_ratio = sampling_ratio;
     me->threshold = ratio_uint64(sampling_ratio);
     me->scale = 1 / sampling_ratio;
-    LOGGER_INFO("ratio: %f, threshold: %lu, scale: %lu",
-                me->sampling_ratio,
-                me->threshold,
-                me->scale);
+
+    me->num_entries_seen = 0;
+    me->num_entries_processed = 0;
     return true;
 }
 
@@ -48,9 +48,11 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         return;
     }
 
+    ++me->num_entries_seen;
     Hash64BitType hash = splitmix64_hash(entry);
     if (hash > me->threshold)
         return;
+    ++me->num_entries_processed;
 
     struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
     if (found.success) {
@@ -84,6 +86,24 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         ++me->olken.current_time_stamp;
         Histogram__insert_scaled_infinite(&me->olken.histogram, me->scale);
     }
+}
+
+void
+FixedRateShards__post_process(struct FixedRateShards *me)
+{
+    if (me == NULL || me->olken.histogram.histogram == NULL ||
+        me->olken.histogram.num_bins < 1)
+        return;
+
+    // NOTE I need to scale the adjustment by the scale that I've been adjusting
+    //      all values. Conversely, I could just not scale any values by the
+    //      scale and I'd be equally well off (in fact, better probably,
+    //      because a smaller chance of overflowing).
+    int64_t adjustment =
+        me->scale *
+        (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
+    me->olken.histogram.histogram[0] += adjustment;
+    me->olken.histogram.running_sum += adjustment;
 }
 
 void

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -19,6 +20,10 @@ struct FixedRateShards {
     double sampling_ratio;
     uint64_t threshold;
     uint64_t scale;
+
+    // SHARDS Adjustment Parameters
+    uint64_t num_entries_seen;
+    uint64_t num_entries_processed;
 };
 
 /// @brief  Initialize the structures needed for fixed-size SHARDS.
@@ -33,6 +38,9 @@ FixedRateShards__init(struct FixedRateShards *me,
 
 void
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);
+
+void
+FixedRateShards__post_process(struct FixedRateShards *me);
 
 void
 FixedRateShards__print_histogram_as_json(struct FixedRateShards *me);
