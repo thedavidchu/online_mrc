@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -43,6 +44,11 @@ Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale);
 
 bool
 Histogram__exactly_equal(struct Histogram *me, struct Histogram *other);
+
+bool
+Histogram__debug_difference(struct Histogram *me,
+                            struct Histogram *other,
+                            const size_t max_num_mismatch);
 
 /// @brief  Write the Histogram as a JSON object to an arbitrary stream.
 void

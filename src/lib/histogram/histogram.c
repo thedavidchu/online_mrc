@@ -1,10 +1,13 @@
 #include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 
 bool
 Histogram__init(struct Histogram *me,
@@ -138,9 +141,11 @@ bool
 Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
 {
     if (me == other) {
+        LOGGER_DEBUG("Histograms are identical objects");
         return true;
     }
     if (me == NULL || other == NULL) {
+        LOGGER_DEBUG("One Histograms is NULL");
         return false;
     }
 
@@ -148,6 +153,7 @@ Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
         me->false_infinity != other->false_infinity ||
         me->infinity != other->infinity ||
         me->running_sum != other->running_sum) {
+        LOGGER_DEBUG("Histograms differ in metadata");
         return false;
     }
     // NOTE I do not account for overflow; I believe overflow is impossible
@@ -158,6 +164,50 @@ Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
         return false;
     }
     return true;
+}
+
+bool
+Histogram__debug_difference(struct Histogram *me,
+                            struct Histogram *other,
+                            const size_t max_num_mismatch)
+{
+    if (me == NULL || me->histogram == NULL || me->bin_size == 0 ||
+        me->num_bins == 0) {
+        LOGGER_DEBUG("Invalid me object");
+        return false;
+    }
+    if (other == NULL || other->histogram == NULL || other->bin_size == 0 ||
+        other->num_bins == 0) {
+        LOGGER_DEBUG("Invalid other object");
+        return false;
+    }
+
+    if (me->bin_size != other->bin_size || me->num_bins != other->num_bins) {
+        LOGGER_DEBUG("Metadata mismatch: .bin_size = {%" PRIu64 ", %" PRIu64
+                     "}, .num_bins = {%" PRIu64 ", %" PRIu64 "}",
+                     me->bin_size,
+                     other->bin_size,
+                     me->num_bins,
+                     other->num_bins);
+        return false;
+    }
+
+    size_t num_mismatch = 0;
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        if (me->histogram[i] != other->histogram[i]) {
+            LOGGER_DEBUG("Mismatch at %zu: %" PRIu64 " vs %" PRIu64,
+                         i,
+                         me->histogram[i],
+                         other->histogram[i]);
+            ++num_mismatch;
+        }
+
+        if (num_mismatch >= max_num_mismatch) {
+            LOGGER_DEBUG("too many mismatches!");
+            return false;
+        }
+    }
+    return num_mismatch == 0;
 }
 
 void

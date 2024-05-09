@@ -3,7 +3,13 @@ histogram_dep = declare_dependency(
         'histogram_lib',
         'histogram.c',
         include_directories: include_directories('include'),
+        dependencies: [
+            common_dep,
+        ],
     ),
+    dependencies: [
+        common_dep,
+    ],
     include_directories: include_directories('include'),
 )
 
