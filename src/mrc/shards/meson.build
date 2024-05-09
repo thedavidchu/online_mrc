@@ -8,7 +8,7 @@ fixed_size_shards_dep = declare_dependency(
             common_dep,
             glib_dep,
             histogram_dep,
-            my_hash_dep,
+            hash_dep,
             sleator_tree_dep,
             splay_priority_queue_dep,
         ],

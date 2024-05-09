@@ -10,6 +10,7 @@ murmur_hash_3_lib = library(
 )
 
 my_murmur_hash_3_lib = library(
+    'my_murmur_hash_3_lib',
     link_with: [
         murmur_hash_3_lib,
     ],
