@@ -51,7 +51,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
     }
 
     ++me->num_entries_seen;
-    Hash64BitType hash = MyMurmurHash3(entry);
+    Hash64BitType hash = Hash64bit(entry);
     // NOTE Taking the modulo of the hash by 1 << 24 reduces the accuracy
     //      significantly. I tried dividing the threshold by 1 << 24 and also
     //      leaving the threshold alone. Neither worked to improve accuracy.

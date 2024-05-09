@@ -59,7 +59,7 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
         return false;
     }
 
-    if (MyMurmurHash3(entry) > me->threshold)
+    if (Hash64bit(entry) > me->threshold)
         return true;
 
     // This assumes there won't be any errors further on.

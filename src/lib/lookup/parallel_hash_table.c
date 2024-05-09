@@ -23,15 +23,15 @@ ParallelHashTable__init(struct ParallelHashTable *me, size_t num_buckets)
 
 bool
 ParallelHashTable__put_unique(struct ParallelHashTable *me,
-                          EntryType entry,
-                          TimeStampType timestamp)
+                              EntryType entry,
+                              TimeStampType timestamp)
 {
     if (me == NULL || me->table == NULL || me->length == 0)
         return false;
     Hash64BitType hash = splitmix64_hash(entry);
     return ParallelList__put_unique(&me->table[hash % me->length],
-                                entry,
-                                timestamp);
+                                    entry,
+                                    timestamp);
 }
 
 struct LookupReturn

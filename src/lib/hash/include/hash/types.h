@@ -6,3 +6,7 @@
 
 typedef uint32_t Hash32BitType;
 typedef uint64_t Hash64BitType;
+
+struct Hash128BitType {
+    Hash64BitType hash[2];
+};

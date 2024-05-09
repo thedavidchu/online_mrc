@@ -29,7 +29,7 @@ PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
     if (me == NULL) {
         return;
     }
-    if (MyMurmurHash3(entry) > UINT64_MAX * me->sampling_ratio) {
+    if (Hash64bit(entry) > UINT64_MAX * me->sampling_ratio) {
         return;
     }
     // I need to convert it to a string because Parda will strdup(...) it.

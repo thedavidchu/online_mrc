@@ -130,7 +130,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 
     // Skip items above the threshold. Note that we accept items that are equal
     // to the threshold because the maximum hash is the threshold.
-    if (MyMurmurHash3((uint64_t)entry) > me->threshold) {
+    if (Hash64bit((uint64_t)entry) > me->threshold) {
         return;
     }
 
@@ -153,7 +153,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
             make_room(me);
         }
         SplayPriorityQueue__insert_if_room(&me->pq,
-                                           MyMurmurHash3((uint64_t)entry),
+                                           Hash64bit((uint64_t)entry),
                                            entry);
         g_hash_table_insert(me->hash_table,
                             (gpointer)entry,
