@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <bits/stdint-uintn.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -19,7 +20,8 @@ bool
 FixedRateShards__init(struct FixedRateShards *me,
                       const uint64_t max_num_unique_entries,
                       const double sampling_ratio,
-                      const uint64_t histogram_bin_size)
+                      const uint64_t histogram_bin_size,
+                      const bool adjustment)
 {
     if (me == NULL || sampling_ratio <= 0.0 || 1.0 < sampling_ratio)
         return false;
@@ -34,6 +36,7 @@ FixedRateShards__init(struct FixedRateShards *me,
     me->threshold = ratio_uint64(sampling_ratio);
     me->scale = 1 / sampling_ratio;
 
+    me->adjustment = adjustment;
     me->num_entries_seen = 0;
     me->num_entries_processed = 0;
     return true;
@@ -93,6 +96,9 @@ FixedRateShards__post_process(struct FixedRateShards *me)
 {
     if (me == NULL || me->olken.histogram.histogram == NULL ||
         me->olken.histogram.num_bins < 1)
+        return;
+
+    if (!me->adjustment)
         return;
 
     // NOTE I need to scale the adjustment by the scale that I've been adjusting

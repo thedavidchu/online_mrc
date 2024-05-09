@@ -100,7 +100,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
-        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10, true),
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 
@@ -148,7 +148,7 @@ test_sampling(void)
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
-        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10, true),
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif
@@ -191,7 +191,7 @@ test_quickmrc()
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
-        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10),
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1 << 10, true),
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif

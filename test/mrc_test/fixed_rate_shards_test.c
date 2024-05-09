@@ -26,7 +26,8 @@ access_same_key_five_times(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1, true));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
@@ -62,7 +63,8 @@ small_exact_trace_test(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1, true));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
@@ -94,7 +96,8 @@ long_accuracy_trace_test(void)
                                       0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1, true));
 
     for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
@@ -127,7 +130,8 @@ long_parda_matching_trace_test(void)
                                       0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(PardaFixedRateShards__init(&oracle, 1e-3));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1, true));
 
     // NOTE We (theoretically) need to use a trace that cannot produce
     //      more items than PARDA or my implementation can handle with

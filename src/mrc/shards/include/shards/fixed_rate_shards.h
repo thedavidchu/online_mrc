@@ -22,6 +22,7 @@ struct FixedRateShards {
     uint64_t scale;
 
     // SHARDS Adjustment Parameters
+    bool adjustment;
     uint64_t num_entries_seen;
     uint64_t num_entries_processed;
 };
@@ -30,11 +31,14 @@ struct FixedRateShards {
 /// @param  me:
 /// @param  max_num_unique_entries:
 /// @param  sampling_ratio: this is the ratio that SHARDS samples
+/// @param  adjustment: whether to perform the SHARDS adjustment (default
+///             should be true according to Waldspurger!)
 bool
 FixedRateShards__init(struct FixedRateShards *me,
                       const uint64_t max_num_unique_entries,
                       const double sampling_ratio,
-                      const uint64_t histogram_bin_size);
+                      const uint64_t histogram_bin_size,
+                      const bool adjustment);
 
 void
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);

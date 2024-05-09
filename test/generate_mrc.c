@@ -226,7 +226,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_rate_shards,
     struct FixedRateShards,
     me,
-    FixedRateShards__init(&me, trace->length, 1e-3, 1),
+    FixedRateShards__init(&me, trace->length, 1e-3, 1, true),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     olken.histogram,
