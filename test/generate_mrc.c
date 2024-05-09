@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "arrays/array_size.h"
 #include "histogram/histogram.h"
@@ -213,10 +214,17 @@ cleanup:
     {                                                                          \
         type var_name = {0};                                                   \
         g_assert_true((init_call));                                            \
+        clock_t t0 = clock();                                                  \
         for (size_t i = 0; i < trace->length; ++i) {                           \
             ((access_func))(&var_name, trace->trace[i].key);                   \
         }                                                                      \
+        clock_t t1 = clock();                                                  \
         ((post_process_func))(&var_name);                                      \
+        clock_t t2 = clock();                                                  \
+        LOGGER_INFO("Runtime: %f, Post-Process Time: %f, Total Time: %f",      \
+                    (double)(t1 - t0) / CLOCKS_PER_SEC,                        \
+                    (double)(t2 - t1) / CLOCKS_PER_SEC,                        \
+                    (double)(t2 - t0) / CLOCKS_PER_SEC);                       \
         struct MissRateCurve mrc = {0};                                        \
         if (false) {                                                           \
             Histogram__write_as_json(stdout, &var_name.hist);                  \
