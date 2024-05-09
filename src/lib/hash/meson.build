@@ -9,7 +9,8 @@ murmur_hash_3_lib = library(
     include_directories: hash_inc,
 )
 
-# My wrapper around the MurmurHash3 functions
+# My wrapper around the MurmurHash3 functions. I don't like the name because it
+# doesn't match the functions inside.
 my_murmur_hash_3_lib = library(
     'my_murmur_hash_3_lib',
     link_with: [
