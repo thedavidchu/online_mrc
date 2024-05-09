@@ -1,3 +1,4 @@
+subdir('hash_test')
 subdir('histogram_test')
 subdir('lookup_test')
 subdir('miss_rate_curve_test')
