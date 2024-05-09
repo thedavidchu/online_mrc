@@ -23,6 +23,9 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
     MRC_ALGORITHM_QUICKMRC_SHARDS,
+    MRC_ALGORITHM_QUICKMRC_SHARDS_3,
+    MRC_ALGORITHM_QUICKMRC_SHARDS_2,
+    MRC_ALGORITHM_QUICKMRC_SHARDS_1,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -35,6 +38,9 @@ static char *algorithm_names[] = {
     "Fixed-Size-SHARDS",
     "QuickMRC",
     "QuickMRC-SHARDS",
+    "QuickMRC-SHARDS-3",
+    "QuickMRC-SHARDS-2",
+    "QuickMRC-SHARDS-1",
 };
 
 struct CommandLineArguments {
@@ -275,10 +281,32 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     QuickMRC__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_quickmrc_shards,
+    run_quickmrc_shards_3,
     struct QuickMRC,
     me,
     QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-3),
+    QuickMRC__access_item,
+    QuickMRC__post_process,
+    histogram,
+    MissRateCurve__init_from_histogram,
+    QuickMRC__destroy)
+
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_quickmrc_shards_2,
+    struct QuickMRC,
+    me,
+    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-2),
+    QuickMRC__access_item,
+    QuickMRC__post_process,
+    histogram,
+    MissRateCurve__init_from_histogram,
+    QuickMRC__destroy)
+
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_quickmrc_shards_1,
+    struct QuickMRC,
+    me,
+    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-1),
     QuickMRC__access_item,
     QuickMRC__post_process,
     histogram,
@@ -332,7 +360,16 @@ main(int argc, char **argv)
         mrc = run_quickmrc(&trace);
         break;
     case MRC_ALGORITHM_QUICKMRC_SHARDS:
-        mrc = run_quickmrc_shards(&trace);
+        mrc = run_quickmrc_shards_3(&trace);
+        break;
+    case MRC_ALGORITHM_QUICKMRC_SHARDS_3:
+        mrc = run_quickmrc_shards_3(&trace);
+        break;
+    case MRC_ALGORITHM_QUICKMRC_SHARDS_2:
+        mrc = run_quickmrc_shards_2(&trace);
+        break;
+    case MRC_ALGORITHM_QUICKMRC_SHARDS_1:
+        mrc = run_quickmrc_shards_1(&trace);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
