@@ -22,6 +22,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
+    MRC_ALGORITHM_QUICKMRC_SHARDS,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -33,6 +34,7 @@ static char *algorithm_names[] = {
     "Fixed-Rate-SHARDS-Adj",
     "Fixed-Size-SHARDS",
     "QuickMRC",
+    "QuickMRC-SHARDS",
 };
 
 struct CommandLineArguments {
@@ -272,6 +274,17 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     MissRateCurve__init_from_histogram,
     QuickMRC__destroy)
 
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_quickmrc_shards,
+    struct QuickMRC,
+    me,
+    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-3),
+    QuickMRC__access_item,
+    QuickMRC__post_process,
+    histogram,
+    MissRateCurve__init_from_histogram,
+    QuickMRC__destroy)
+
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -317,6 +330,9 @@ main(int argc, char **argv)
         break;
     case MRC_ALGORITHM_QUICKMRC:
         mrc = run_quickmrc(&trace);
+        break;
+    case MRC_ALGORITHM_QUICKMRC_SHARDS:
+        mrc = run_quickmrc_shards(&trace);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
