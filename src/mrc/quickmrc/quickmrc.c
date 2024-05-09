@@ -127,8 +127,6 @@ QuickMRC__post_process(struct QuickMRC *me)
             break;
         }
     }
-    LOGGER_DEBUG("%ld", tmp_adj);
-    assert(tmp_adj <= 0);
     me->histogram.running_sum += adjustment;
 }
 

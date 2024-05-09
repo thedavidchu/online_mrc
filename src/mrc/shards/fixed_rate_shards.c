@@ -1,10 +1,12 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "hash/MyMurmurHash3.h"
 #include "hash/types.h"
+#include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
@@ -107,22 +109,25 @@ FixedRateShards__post_process(struct FixedRateShards *me)
     //      all values. Conversely, I could just not scale any values by the
     //      scale and I'd be equally well off (in fact, better probably,
     //      because a smaller chance of overflowing).
-    int64_t adjustment =
+    const int64_t adjustment =
         me->scale *
         (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
-
-    // HACK This handles the case when the adjustment is a larger negative than
-    //      the first histogram bin is a positive. This happens when the number
-    //      of references processed vastly exceeds the expected number of
-    //      entries and the first histogram bin.
-    if ((int64_t)me->olken.histogram.histogram[0] + adjustment < 0) {
-        LOGGER_WARN(
-            "adjustment is too negative, so truncating it from %ld to -%lu",
-            adjustment,
-            me->olken.histogram.histogram[0]);
-        adjustment = -me->olken.histogram.histogram[0];
+    // NOTE SHARDS-Adj only adds to the first bucket; but what if the
+    //      adjustment would make it negative? Well, in that case, I
+    //      add it to the next buckets. I figure this is OKAY because
+    //      histogram bin size is configurable and it's like using a
+    //      larger bin.
+    int64_t tmp_adj = adjustment;
+    for (size_t i = 0; i < me->olken.histogram.num_bins; ++i) {
+        int64_t hist = me->olken.histogram.histogram[i];
+        if ((int64_t)me->olken.histogram.histogram[i] + tmp_adj < 0) {
+            me->olken.histogram.histogram[i] = 0;
+            tmp_adj += hist;
+        } else {
+            me->olken.histogram.histogram[i] += tmp_adj;
+            break;
+        }
     }
-    me->olken.histogram.histogram[0] += adjustment;
     me->olken.histogram.running_sum += adjustment;
 }
 
