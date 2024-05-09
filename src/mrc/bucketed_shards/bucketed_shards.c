@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <bits/stdint-uintn.h>
 #include <stdbool.h> // bool
 #include <stdint.h>  // uint64_t
 #include <stdio.h>
