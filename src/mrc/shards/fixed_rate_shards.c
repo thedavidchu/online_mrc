@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -108,6 +107,18 @@ FixedRateShards__post_process(struct FixedRateShards *me)
     int64_t adjustment =
         me->scale *
         (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
+
+    // HACK This handles the case when the adjustment is a larger negative than
+    //      the first histogram bin is a positive. This happens when the number
+    //      of references processed vastly exceeds the expected number of
+    //      entries and the first histogram bin.
+    if ((int64_t)me->olken.histogram.histogram[0] + adjustment < 0) {
+        LOGGER_WARN(
+            "adjustment is too negative, so truncating it from %ld to -%lu",
+            adjustment,
+            me->olken.histogram.histogram[0]);
+        adjustment = -me->olken.histogram.histogram[0];
+    }
     me->olken.histogram.histogram[0] += adjustment;
     me->olken.histogram.running_sum += adjustment;
 }
