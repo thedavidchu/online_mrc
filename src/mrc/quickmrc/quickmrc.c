@@ -9,6 +9,7 @@
 
 #include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "math/ratio.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
@@ -47,6 +48,7 @@ QuickMRC__init(struct QuickMRC *me,
     }
     me->total_entries_seen = 0;
     me->total_entries_processed = 0;
+    me->sampling_ratio = sampling_ratio;
     me->threshold = ratio_uint64(sampling_ratio);
     me->scale = 1 / sampling_ratio;
     return true;
@@ -59,11 +61,11 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
         return false;
     }
 
+    ++me->total_entries_seen;
     if (Hash64bit(entry) > me->threshold)
         return true;
-
     // This assumes there won't be any errors further on.
-    me->total_entries_processed += 1;
+    ++me->total_entries_processed;
 
     struct LookupReturn r = HashTable__lookup(&me->hash_table, entry);
     if (r.success) {
@@ -87,6 +89,40 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
     }
 
     return true;
+}
+
+void
+QuickMRC__post_process(struct QuickMRC *me)
+{
+    if (me == NULL || me->histogram.histogram == NULL ||
+        me->histogram.num_bins < 1)
+        return;
+
+    // Adjustment
+    if (!true)
+        return;
+
+    // NOTE I need to scale the adjustment by the scale that I've been adjusting
+    //      all values. Conversely, I could just not scale any values by the
+    //      scale and I'd be equally well off (in fact, better probably,
+    //      because a smaller chance of overflowing).
+    int64_t adjustment =
+        me->scale * (me->total_entries_seen * me->sampling_ratio -
+                     me->total_entries_processed);
+
+    // HACK This handles the case when the adjustment is a larger negative than
+    //      the first histogram bin is a positive. This happens when the number
+    //      of references processed vastly exceeds the expected number of
+    //      entries and the first histogram bin.
+    if ((int64_t)me->histogram.histogram[0] + adjustment < 0) {
+        LOGGER_WARN(
+            "adjustment is too negative, so truncating it from %ld to -%lu",
+            adjustment,
+            me->histogram.histogram[0]);
+        adjustment = -me->histogram.histogram[0];
+    }
+    me->histogram.histogram[0] += adjustment;
+    me->histogram.running_sum += adjustment;
 }
 
 void

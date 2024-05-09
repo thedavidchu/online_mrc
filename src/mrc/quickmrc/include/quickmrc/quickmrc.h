@@ -24,6 +24,7 @@ struct QuickMRC {
     uint64_t total_entries_processed;
 
     // SHARDS sampling
+    double sampling_ratio;
     uint64_t threshold;
     uint64_t scale;
     // TODO
@@ -40,11 +41,9 @@ QuickMRC__init(struct QuickMRC *me,
 bool
 QuickMRC__access_item(struct QuickMRC *me, EntryType entry);
 
-static inline void
-QuickMRC__post_process(struct QuickMRC *me)
-{
-    UNUSED(me);
-}
+void
+QuickMRC__post_process(struct QuickMRC *me);
+
 void
 QuickMRC__print_histogram_as_json(struct QuickMRC *me);
 
