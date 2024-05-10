@@ -1,0 +1,20 @@
+trace_test_exe = executable(
+    'trace_test_exe',
+    'trace_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        glib_dep,
+        trace_dep,
+    ],
+)
+
+# I'm not going to push a random trace to github
+fs = import('fs')
+test_trace = '/home/david/Downloads/src2.bin'
+if fs.exists(test_trace)
+    test('trace_test', trace_test_exe, args : [test_trace])
+else
+    message('could not find file: ' + test_trace)
+endif

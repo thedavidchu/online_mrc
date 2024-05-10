@@ -3,7 +3,7 @@ splay_priority_queue_dep = declare_dependency(
         'splay_priority_queue_lib',
         'splay_priority_queue.c',
         include_directories: include_directories('include'),
-        dependencies: [common_dep, splitmix64_dep],
+        dependencies: [common_dep, hash_dep],
     ),
     include_directories: include_directories('include'),
 )

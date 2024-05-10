@@ -1,12 +1,12 @@
 #include <assert.h>
-#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include <glib.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "math/positive_ceiling_divide.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
@@ -64,18 +64,20 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
         1.0 < starting_sampling_ratio || max_size == 0) {
+        LOGGER_TRACE("bad input");
         return false;
     }
 
     r = tree__init(&me->tree);
     if (!r) {
-        return false;
+        LOGGER_TRACE("failed to initialize tree");
+        goto cleanup;
     }
 
     me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
     if (me->hash_table == NULL) {
-        tree__destroy(&me->tree);
-        return false;
+        LOGGER_TRACE("failed to initialize hash table");
+        goto cleanup;
     }
 
     r = Histogram__init(
@@ -83,17 +85,14 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         POSITIVE_CEILING_DIVIDE(max_num_unique_entries, histogram_bin_size),
         histogram_bin_size);
     if (!r) {
-        tree__destroy(&me->tree);
-        g_hash_table_destroy(me->hash_table);
-        return false;
+        LOGGER_TRACE("failed to initialize histogram");
+        goto cleanup;
     }
 
     r = SplayPriorityQueue__init(&me->pq, max_size);
     if (!r) {
-        tree__destroy(&me->tree);
-        g_hash_table_destroy(me->hash_table);
-        Histogram__destroy(&me->histogram);
-        return false;
+        LOGGER_TRACE("failed to initialize priority queue");
+        goto cleanup;
     }
     me->current_time_stamp = 0;
     me->scale = 1 / starting_sampling_ratio;
@@ -106,6 +105,14 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     //              double to make sure there can't be overflow.
     me->threshold = (long double)UINT64_MAX * starting_sampling_ratio;
     return true;
+
+cleanup:
+    tree__destroy(&me->tree);
+    if (me->hash_table != NULL) {
+        g_hash_table_destroy(me->hash_table);
+    }
+    Histogram__destroy(&me->histogram);
+    return false;
 }
 
 void
@@ -123,7 +130,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 
     // Skip items above the threshold. Note that we accept items that are equal
     // to the threshold because the maximum hash is the threshold.
-    if (splitmix64_hash((uint64_t)entry) > me->threshold) {
+    if (Hash64bit((uint64_t)entry) > me->threshold) {
         return;
     }
 
@@ -146,7 +153,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
             make_room(me);
         }
         SplayPriorityQueue__insert_if_room(&me->pq,
-                                           splitmix64_hash((uint64_t)entry),
+                                           Hash64bit((uint64_t)entry),
                                            entry);
         g_hash_table_insert(me->hash_table,
                             (gpointer)entry,

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,7 +7,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
 #include "lookup/sampled_hash_table.h"
 #include "math/ratio.h"
@@ -69,6 +68,7 @@ handle_inserted(struct BucketedQuickMRC *me,
                 TimeStampType value)
 {
     UNUSED(s);
+    UNUSED(value);
     assert(me != NULL);
 
     const uint64_t scale = 1; // TODO scale properly
@@ -86,6 +86,7 @@ handle_replaced(struct BucketedQuickMRC *me,
                 struct SampledTryPutReturn s,
                 TimeStampType timestamp)
 {
+    UNUSED(timestamp);
     assert(me != NULL);
 
     const uint64_t scale = 1; // TODO scale properly
@@ -109,6 +110,7 @@ handle_updated(struct BucketedQuickMRC *me,
                struct SampledTryPutReturn s,
                TimeStampType timestamp)
 {
+    UNUSED(timestamp);
     assert(me != NULL);
 
     const uint64_t scale = 1; // TODO scale properly
@@ -127,7 +129,7 @@ BucketedQuickMRC__access_item(struct BucketedQuickMRC *me, EntryType entry)
         return false;
     }
 
-    if (splitmix64_hash(entry) > me->threshold)
+    if (Hash64bit(entry) > me->threshold)
         return true;
 
     // This assumes there won't be any errors further on.

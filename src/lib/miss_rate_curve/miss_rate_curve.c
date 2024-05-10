@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <bits/stdint-uintn.h>
 #include <float.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -64,7 +63,7 @@ MissRateCurve__init_from_histogram(struct MissRateCurve *me,
                                    struct Histogram *histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
-        histogram->num_bins == 0) {
+        histogram->num_bins == 0 || histogram->bin_size == 0) {
         return false;
     }
     // NOTE We include 1 past the histogram length to record "false infinities",
@@ -85,14 +84,15 @@ MissRateCurve__init_from_histogram(struct MissRateCurve *me,
         // TODO(dchu): Check for division by zero! How do we intelligently
         //              resolve this?
         me->miss_rate[i] = (double)tmp / (double)total;
-        assert(tmp >= h &&
-               "the subtraction should yield a non-negative result");
+        // The subtraction should yield a non-negative result
+        g_assert_cmpuint(tmp, >=, h);
         tmp -= h;
     }
     me->miss_rate[histogram->num_bins] = (double)tmp / (double)total;
     tmp -= histogram->false_infinity;
     me->miss_rate[histogram->num_bins + 1] = (double)tmp / (double)total;
-    assert(tmp - histogram->infinity == 0);
+    // We want to check that there is nothing left over!
+    g_assert_cmpuint(tmp, ==, histogram->infinity);
     return true;
 }
 
@@ -122,8 +122,8 @@ MissRateCurve__init_from_parda_histogram(struct MissRateCurve *me,
     for (uint64_t i = 0; i < histogram_length; ++i) {
         const uint64_t h = histogram[i];
         me->miss_rate[i] = (double)tmp / (double)histogram_total;
-        assert(tmp >= h &&
-               "the subtraction should yield a non-negative result");
+        // The subtraction should yield a non-negative result
+        g_assert_cmpuint(tmp, >=, h);
         tmp -= h;
     }
     me->miss_rate[histogram_length] = (double)tmp / (double)histogram_total;

@@ -4,6 +4,7 @@ subdir('lookup')
 subdir('histogram')
 subdir('priority_queue')
 subdir('random')
+subdir('trace')
 subdir('tree')
 
 # The following relies on the histogram library

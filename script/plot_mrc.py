@@ -1,6 +1,6 @@
 import argparse
 import json
-from typing import Dict, Union
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,35 +9,43 @@ import matplotlib.pyplot as plt
 INFINITY = float("inf")
 
 
-def decode_json_as_histogram(
-        histogram: Union[str, Dict[str, Union[float, int]]]
-) -> Dict[float, Union[int, float]]:
-    if isinstance(histogram, str):
-        histogram = json.loads(histogram)
-    if "type" not in histogram:
-        raise ValueError("expected 'type' field in histogram")
-    
-    if histogram["type"] in {"Histogram", "FractionalHistogram"}:
-        histogram = histogram[".histogram"]
-    histogram = {float(key): value for key, value in histogram.items() if value > 0 and key != INFINITY}
-    return histogram
+def decode_histogram_json(
+    histogram_json: dict[str, float | int | dict[str, float]]
+) -> dict[float, float]:
+    """
+    Expecting a JSON (string or object) of format:
+    {
+        ".type": "Histogram" | "FractionalHistogram",
+        ".num_bins": %u64,
+        ".bin_size": %u64,
+        ".running_sum": %u64,
+        ".histogram": {"%f": %f},
+        ".false_infinity": %f,
+        ".infinity": %f
+    }
+    """
+    assert histogram_json["type"] in {"Histogram", "FractionalHistogram"}
 
-
-def input_histogram() -> Dict[float, Union[int, float]]:
-    while True:
-        histogram_text = input()
-        # NOTE  We assume that there will only be a single JSON. This will be
-        #       only line that starts with the character '{' and the entire
-        #       JSON string will be on a single line.
-        if histogram_text.startswith(r"{"):
-            break
-    histogram = decode_json_as_histogram(histogram_text)
+    histogram = {
+        float(key) * histogram_json[".bin_size"]: float(value)
+        for key, value in histogram_json[".histogram"].items()
+    }
+    histogram.update(
+        (
+            (
+                histogram_json[".num_bins"] * histogram_json[".bin_size"],
+                histogram_json[".false_infinity"],
+            ),
+            (INFINITY, histogram_json[".infinity"]),
+        )
+    )
+    histogram = dict(sorted(list(histogram.items())))
     return histogram
 
 
 def convert_histogram_to_miss_rate_curve(
-        histogram: Dict[float, Union[float, int]]
-) -> Dict[float, Union[float, int]]:
+    histogram: dict[float, float]
+) -> dict[float, float]:
     total = sum(histogram.values())
     running_inverse_total = total
     mrc = {}
@@ -46,7 +54,8 @@ def convert_histogram_to_miss_rate_curve(
         running_inverse_total -= value
     return mrc
 
-def plot_histogram(histogram: Dict[float, Union[float, int]]):
+
+def plot_histogram(histogram: dict[float, float]):
     plt.figure()
     plt.title("Histogram")
     plt.xlabel("Reuse Stack Distance")
@@ -55,54 +64,43 @@ def plot_histogram(histogram: Dict[float, Union[float, int]]):
     plt.savefig("histogram.png")
 
 
-def plot_miss_rate_curve(mrc: Dict[float, Union[float, int]]):
-    plt.figure()
-    plt.title("Miss-Rate Curve")
-    plt.xlabel("Number of key-value pairs")
-    plt.ylabel("Miss-rate")
-    plt.plot(mrc.keys(), mrc.values())
-    plt.savefig("mrc.png")
+def plot_miss_rate_curve(input_path: str, label: str):
+    with open(input_path) as f:
+        histogram_json = json.load(f)
+    sparse_histogram = decode_histogram_json(histogram_json)
+    sparse_mrc = convert_histogram_to_miss_rate_curve(sparse_histogram)
+    plt.plot(sparse_mrc.keys(), sparse_mrc.values(), label=label)
 
 
-def read_and_plot_mrc(file_name: str):
-    with open(file_name, "rb") as f:
-        mrc = np.fromfile(f, dtype=np.float64)
-    plt.figure()
-    plt.title("Miss-Rate Curve")
-    plt.xlabel("Number of key-value pairs")
-    plt.ylabel("Miss-rate")
-    plt.plot(mrc)
-    plt.savefig("mrc.png")
+def read_and_plot_mrc(input_path: str, label: str):
+    with open(input_path, "rb") as f:
+        dense_mrc = np.fromfile(f, dtype=np.float64)
+    plt.plot(dense_mrc, label=label)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input",
-        type=str,
-        default=None,
-        help=r"Possibilities: {stdin,file,hardcode}"
+        "--input", nargs="+", type=str, required=True, help="input path(s)"
     )
+    parser.add_argument("--output", type=str, default="mrc.png", help="output path")
     args = parser.parse_args()
 
-    if args.input is None:
-        histogram = {k: v for k, v in enumerate([1.000000, 0.912621, 0.825243, 0.708738, 0.621359, 0.582524, 0.504854, 0.359223, 0.271845, 0.213592, 0.135922, 0.029126])}
-        histogram = decode_json_as_histogram(histogram)
-        plot_histogram(histogram)
-        mrc = convert_histogram_to_miss_rate_curve(histogram)
-        plot_miss_rate_curve(mrc)
-    elif args.input == "stdin":
-        histogram = input_histogram()
-        plot_histogram(histogram)
-        mrc = convert_histogram_to_miss_rate_curve(histogram)
-        plot_miss_rate_curve(mrc)
-    elif args.input.startswith(r"{"):
-        histogram = args.input
-        plot_histogram(histogram)
-        mrc = convert_histogram_to_miss_rate_curve(histogram)
-        plot_miss_rate_curve(mrc)
-    else:
-        read_and_plot_mrc(args.input)
+    input_paths: list[str] = args.input
+    output_path = args.output
+
+    plt.figure()
+    plt.title("Miss-Rate Curve")
+    plt.xlabel("Number of key-value pairs")
+    plt.ylabel("Miss-rate")
+    plt.ylim(0, 1)
+    for input_path in input_paths:
+        if os.path.splitext(input_path)[-1] == ".json":
+            plot_miss_rate_curve(input_path, os.path.splitext(input_path)[0])
+        else:
+            read_and_plot_mrc(input_path, os.path.splitext(input_path)[0])
+    plt.legend()
+    plt.savefig(output_path)
 
 
 if __name__ == "__main__":

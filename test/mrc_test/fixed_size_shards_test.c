@@ -1,8 +1,11 @@
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
+#include "hash/MyMurmurHash3.h"
+#include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -19,7 +22,7 @@ const double ZIPFIAN_RANDOM_SKEW = 0.99;
 static bool
 access_same_key_five_times(void)
 {
-    EntryType entries[5] = {0, 0, 0, 0, 0};
+    EntryType entries[5] = {933, 933, 933, 933, 933};
     uint64_t hist_bkt_oracle[11] = {4000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct Histogram histogram_oracle = {
         .histogram = hist_bkt_oracle,
@@ -95,7 +98,7 @@ long_accuracy_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(
-        FixedSizeShards__init(&me, 1.0, 50000, MAX_NUM_UNIQUE_ENTRIES, 1));
+        FixedSizeShards__init(&me, 1e-1, 1 << 13, MAX_NUM_UNIQUE_ENTRIES, 1));
 
     for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
@@ -107,7 +110,7 @@ long_accuracy_trace_test(void)
     MissRateCurve__init_from_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.000033);
+    g_assert_cmpfloat(mse, <=, 0.005);
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);

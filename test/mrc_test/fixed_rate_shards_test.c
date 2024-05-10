@@ -26,18 +26,21 @@ access_same_key_five_times(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1, true));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
     }
+    FixedRateShards__post_process(&me);
+
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.000001);
+    g_assert_cmpfloat(mse, ==, 0.0);
 
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
@@ -62,19 +65,22 @@ small_exact_trace_test(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1, true));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
     }
+    FixedRateShards__post_process(&me);
+
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.000001);
+    g_assert_cmpfloat(mse, ==, 0.0);
 
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
@@ -94,13 +100,16 @@ long_accuracy_trace_test(void)
                                       0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1));
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1, true));
 
     for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
     }
+    FixedRateShards__post_process(&me);
+
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
@@ -127,7 +136,10 @@ long_parda_matching_trace_test(void)
                                       0));
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(PardaFixedRateShards__init(&oracle, 1e-3));
-    g_assert_true(FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1));
+    // NOTE I do not implement the SHARDS adjustment in PARDA, so we cannot test
+    //      it here. Oh well.
+    g_assert_true(
+        FixedRateShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1e-3, 1, false));
 
     // NOTE We (theoretically) need to use a trace that cannot produce
     //      more items than PARDA or my implementation can handle with
@@ -140,6 +152,8 @@ long_parda_matching_trace_test(void)
         PardaFixedRateShards__access_item(&oracle, entry);
         FixedRateShards__access_item(&me, entry);
     }
+    FixedRateShards__post_process(&me);
+
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_parda_histogram(
         &oracle_mrc,
@@ -149,8 +163,8 @@ long_parda_matching_trace_test(void)
         oracle.program_data.histogram[B_OVFL]);
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
-    LOGGER_INFO("Mean-Squared Error: %lf\n", mse);
-    g_assert_true(mse == 0.000000);
+    LOGGER_INFO("Mean-Squared Error: %lf", mse);
+    g_assert_cmpfloat(mse, ==, 0.0);
 
     ZipfianRandom__destroy(&zrng);
     PardaFixedRateShards__destroy(&oracle);

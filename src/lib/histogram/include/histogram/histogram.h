@@ -1,7 +1,9 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /// @brief  This histogram tracks (potentially scaled) equal-sized values.
 /// @note   I assume no overflow in any of these values!
@@ -43,6 +45,16 @@ Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale);
 bool
 Histogram__exactly_equal(struct Histogram *me, struct Histogram *other);
 
+bool
+Histogram__debug_difference(struct Histogram *me,
+                            struct Histogram *other,
+                            const size_t max_num_mismatch);
+
+/// @brief  Write the Histogram as a JSON object to an arbitrary stream.
+void
+Histogram__write_as_json(FILE *stream, struct Histogram *me);
+
+/// @brief  Write the Histogram as a JSON object to stdout.
 void
 Histogram__print_as_json(struct Histogram *me);
 

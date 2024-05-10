@@ -7,7 +7,7 @@ priority_queue_test_exe = executable(
     dependencies: [
         common_dep,
         glib_dep,
-        splitmix64_dep,
+        hash_dep,
         splay_priority_queue_dep,
     ],
 )

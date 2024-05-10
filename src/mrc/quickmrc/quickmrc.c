@@ -7,8 +7,9 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "math/ratio.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
@@ -47,6 +48,7 @@ QuickMRC__init(struct QuickMRC *me,
     }
     me->total_entries_seen = 0;
     me->total_entries_processed = 0;
+    me->sampling_ratio = sampling_ratio;
     me->threshold = ratio_uint64(sampling_ratio);
     me->scale = 1 / sampling_ratio;
     return true;
@@ -59,11 +61,11 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
         return false;
     }
 
-    if (splitmix64_hash(entry) > me->threshold)
+    ++me->total_entries_seen;
+    if (Hash64bit(entry) > me->threshold)
         return true;
-
     // This assumes there won't be any errors further on.
-    me->total_entries_processed += 1;
+    ++me->total_entries_processed;
 
     struct LookupReturn r = HashTable__lookup(&me->hash_table, entry);
     if (r.success) {
@@ -87,6 +89,45 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
     }
 
     return true;
+}
+
+void
+QuickMRC__post_process(struct QuickMRC *me)
+{
+    if (me == NULL || me->histogram.histogram == NULL ||
+        me->histogram.num_bins < 1)
+        return;
+
+    // NOTE SHARDS-Adj is part of the core algorithm, so I treat this as
+    //      mandatory for everything except for the SHARD-less implementation.
+    if (me->sampling_ratio == 1.0)
+        return;
+
+    // NOTE I need to scale the adjustment by the scale that I've been adjusting
+    //      all values. Conversely, I could just not scale any values by the
+    //      scale and I'd be equally well off (in fact, better probably,
+    //      because a smaller chance of overflowing).
+    const int64_t adjustment =
+        me->scale * (me->total_entries_seen * me->sampling_ratio -
+                     me->total_entries_processed);
+
+    // NOTE SHARDS-Adj only adds to the first bucket; but what if the
+    //      adjustment would make it negative? Well, in that case, I
+    //      add it to the next buckets. I figure this is OKAY because
+    //      histogram bin size is configurable and it's like using a
+    //      larger bin.
+    int64_t tmp_adj = adjustment;
+    for (size_t i = 0; i < me->histogram.num_bins; ++i) {
+        int64_t hist = me->histogram.histogram[i];
+        if ((int64_t)me->histogram.histogram[i] + tmp_adj < 0) {
+            me->histogram.histogram[i] = 0;
+            tmp_adj += hist;
+        } else {
+            me->histogram.histogram[i] += tmp_adj;
+            break;
+        }
+    }
+    me->histogram.running_sum += adjustment;
 }
 
 void
