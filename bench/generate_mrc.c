@@ -1,3 +1,6 @@
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +18,10 @@
 #include "trace/generator.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
+#include "unused/mark_unused.h"
+
+static const size_t DEFAULT_TRACE_LENGTH = 1 << 28;
+static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 
 enum MRCAlgorithm {
     MRC_ALGORITHM_INVALID,
@@ -23,10 +30,6 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
-    MRC_ALGORITHM_QUICKMRC_SHARDS,
-    MRC_ALGORITHM_QUICKMRC_SHARDS_3,
-    MRC_ALGORITHM_QUICKMRC_SHARDS_2,
-    MRC_ALGORITHM_QUICKMRC_SHARDS_1,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -38,10 +41,6 @@ static char *algorithm_names[] = {
     "Fixed-Rate-SHARDS-Adj",
     "Fixed-Size-SHARDS",
     "QuickMRC",
-    "QuickMRC-SHARDS",
-    "QuickMRC-SHARDS-3",
-    "QuickMRC-SHARDS-2",
-    "QuickMRC-SHARDS-1",
 };
 
 struct CommandLineArguments {
@@ -49,6 +48,9 @@ struct CommandLineArguments {
     enum MRCAlgorithm algorithm;
     char *input_path;
     char *output_path;
+
+    double shards_sampling_ratio;
+    size_t trace_length;
 
     /* UNUSED */
     int size;
@@ -90,6 +92,15 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "    --output, -o <output-path>: path to the output file ('~/...' "
             "may not work)\n");
     fprintf(stream,
+            "    --sampling-ratio, -s <ratio in (0.0, 1.0]>: ratio of for "
+            "SHARDS (must pick a SHARDS algorithm). Default: %g.",
+            DEFAULT_SHARDS_SAMPLING_RATIO);
+    fprintf(stream,
+            "    --number-entries, -n <trace-length>: number of entries in an "
+            "artificial trace (must pick an artificial trace, e.g. 'zipf'). "
+            "Default: %zu.",
+            DEFAULT_TRACE_LENGTH);
+    fprintf(stream,
             "    --help, -h: print this help message. Overrides all else!\n");
 }
 
@@ -97,6 +108,23 @@ static inline bool
 matches_option(char *arg, char *long_option, char *short_option)
 {
     return strcmp(arg, long_option) == 0 || strcmp(arg, short_option) == 0;
+}
+
+static inline size_t
+parse_positive_size(char const *const str)
+{
+    unsigned long long u = strtoull(str, NULL, 10);
+    assert(!(u == ULLONG_MAX && errno == ERANGE));
+    // I'm assuming the conversion for ULL to size_t is safe...
+    return (size_t)u;
+}
+
+static inline double
+parse_positive_double(char const *const str)
+{
+    double d = strtod(str, NULL);
+    assert(d > 0.0 && !(d == HUGE_VAL && errno == ERANGE));
+    return d;
 }
 
 static inline char *
@@ -108,7 +136,7 @@ bool_to_string(bool x)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    printf("CommandLinArguments(executable='%s', input='%s', algorithm='%s', "
+    printf("CommandLineArguments(executable='%s', input='%s', algorithm='%s', "
            "output='%s')\n",
            args->executable,
            args->input_path,
@@ -138,6 +166,10 @@ parse_command_line_arguments(int argc, char **argv)
     struct CommandLineArguments args = {0};
     args.executable = argv[0];
 
+    // Set defaults
+    args.shards_sampling_ratio = DEFAULT_SHARDS_SAMPLING_RATIO;
+    args.trace_length = DEFAULT_TRACE_LENGTH;
+
     // Set parameters based on user arguments
     for (int i = 1; i < argc; ++i) {
         if (matches_option(argv[i], "--input", "-i")) {
@@ -164,6 +196,22 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.output_path = argv[i];
+        } else if (matches_option(argv[i], "--sampling-ratio", "-s")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting sampling ratio!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.shards_sampling_ratio = parse_positive_double(argv[i]);
+        } else if (matches_option(argv[i], "--number-entries", "-n")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting output path!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.trace_length = parse_positive_size(argv[i]);
         } else if (matches_option(argv[i], "--help", "-h")) {
             print_help(stdout, &args);
             exit(0);
@@ -201,17 +249,24 @@ cleanup:
     exit(-1);
 }
 
+/// @note   I specify the var_name and args_name explicitly because the init
+///         function needs to use these names, so I don't want the user to be
+///         confused about magic variables. Maybe this is more confusing.
 #define CONSTRUCT_RUN_ALGORITHM_FUNCTION(func_name,                            \
                                          type,                                 \
                                          var_name,                             \
+                                         args_name,                            \
                                          init_call,                            \
                                          access_func,                          \
                                          post_process_func,                    \
                                          hist,                                 \
                                          hist_func,                            \
                                          destroy_func)                         \
-    static struct MissRateCurve func_name(struct Trace *trace)                 \
+    static struct MissRateCurve func_name(                                     \
+        struct Trace *trace,                                                   \
+        struct CommandLineArguments args_name)                                 \
     {                                                                          \
+        MAYBE_UNUSED(args_name);                                               \
         type var_name = {0};                                                   \
         g_assert_true((init_call));                                            \
         clock_t t0 = clock();                                                  \
@@ -237,6 +292,7 @@ cleanup:
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  struct Olken,
                                  me,
+                                 args,
                                  Olken__init(&me, trace->length, 1),
                                  Olken__access_item,
                                  Olken__post_process,
@@ -248,7 +304,12 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_rate_shards,
     struct FixedRateShards,
     me,
-    FixedRateShards__init(&me, trace->length, 1e-3, 1, false),
+    args,
+    FixedRateShards__init(&me,
+                          trace->length,
+                          args.shards_sampling_ratio,
+                          1,
+                          false),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     olken.histogram,
@@ -259,7 +320,12 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_rate_shards_adj,
     struct FixedRateShards,
     me,
-    FixedRateShards__init(&me, trace->length, 1e-3, 1, true),
+    args,
+    FixedRateShards__init(&me,
+                          trace->length,
+                          args.shards_sampling_ratio,
+                          1,
+                          true),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     olken.histogram,
@@ -270,67 +336,43 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_size_shards,
     struct FixedSizeShards,
     me,
-    FixedSizeShards__init(&me, 1e-1, 1 << 13, trace->length, 1),
+    args,
+    FixedSizeShards__init(&me,
+                          args.shards_sampling_ratio,
+                          1 << 13,
+                          trace->length,
+                          1),
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
     histogram,
     MissRateCurve__init_from_histogram,
     FixedSizeShards__destroy)
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_quickmrc,
-    struct QuickMRC,
-    me,
-    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1.0),
-    QuickMRC__access_item,
-    QuickMRC__post_process,
-    histogram,
-    MissRateCurve__init_from_histogram,
-    QuickMRC__destroy)
-
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_quickmrc_shards_3,
-    struct QuickMRC,
-    me,
-    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-3),
-    QuickMRC__access_item,
-    QuickMRC__post_process,
-    histogram,
-    MissRateCurve__init_from_histogram,
-    QuickMRC__destroy)
-
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_quickmrc_shards_2,
-    struct QuickMRC,
-    me,
-    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-2),
-    QuickMRC__access_item,
-    QuickMRC__post_process,
-    histogram,
-    MissRateCurve__init_from_histogram,
-    QuickMRC__destroy)
-
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_quickmrc_shards_1,
-    struct QuickMRC,
-    me,
-    QuickMRC__init(&me, 1024, 1 << 8, trace->length, 1e-1),
-    QuickMRC__access_item,
-    QuickMRC__post_process,
-    histogram,
-    MissRateCurve__init_from_histogram,
-    QuickMRC__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
+                                 struct QuickMRC,
+                                 me,
+                                 args,
+                                 QuickMRC__init(&me,
+                                                1024,
+                                                1 << 8,
+                                                trace->length,
+                                                args.shards_sampling_ratio),
+                                 QuickMRC__access_item,
+                                 QuickMRC__post_process,
+                                 histogram,
+                                 MissRateCurve__init_from_histogram,
+                                 QuickMRC__destroy)
 
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
 static struct Trace
-get_trace(char *input_path)
+get_trace(struct CommandLineArguments args)
 {
-    if (strcmp(input_path, "zipf") == 0) {
-        return generate_trace(1 << 20, 1 << 20, 0.99, 0);
+    if (strcmp(args.input_path, "zipf") == 0) {
+        return generate_trace(args.trace_length, args.trace_length, 0.99, 0);
     } else {
-        return read_trace(input_path);
+        return read_trace(args.input_path);
     }
 }
 
@@ -341,7 +383,7 @@ main(int argc, char **argv)
     args = parse_command_line_arguments(argc, argv);
 
     // Read in trace
-    struct Trace trace = get_trace(args.input_path);
+    struct Trace trace = get_trace(args);
     if (trace.trace == NULL || trace.length == 0) {
         // I cast to (void *) so that it doesn't complain about printing it.
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
@@ -353,31 +395,19 @@ main(int argc, char **argv)
     struct MissRateCurve mrc = {0};
     switch (args.algorithm) {
     case MRC_ALGORITHM_OLKEN:
-        mrc = run_olken(&trace);
+        mrc = run_olken(&trace, args);
         break;
     case MRC_ALGORITHM_FIXED_RATE_SHARDS:
-        mrc = run_fixed_rate_shards(&trace);
+        mrc = run_fixed_rate_shards(&trace, args);
         break;
     case MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ:
-        mrc = run_fixed_rate_shards_adj(&trace);
+        mrc = run_fixed_rate_shards_adj(&trace, args);
         break;
     case MRC_ALGORITHM_FIXED_SIZE_SHARDS:
-        mrc = run_fixed_size_shards(&trace);
+        mrc = run_fixed_size_shards(&trace, args);
         break;
     case MRC_ALGORITHM_QUICKMRC:
-        mrc = run_quickmrc(&trace);
-        break;
-    case MRC_ALGORITHM_QUICKMRC_SHARDS:
-        mrc = run_quickmrc_shards_3(&trace);
-        break;
-    case MRC_ALGORITHM_QUICKMRC_SHARDS_3:
-        mrc = run_quickmrc_shards_3(&trace);
-        break;
-    case MRC_ALGORITHM_QUICKMRC_SHARDS_2:
-        mrc = run_quickmrc_shards_2(&trace);
-        break;
-    case MRC_ALGORITHM_QUICKMRC_SHARDS_1:
-        mrc = run_quickmrc_shards_1(&trace);
+        mrc = run_quickmrc(&trace, args);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
