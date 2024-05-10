@@ -9,6 +9,25 @@ import matplotlib.pyplot as plt
 INFINITY = float("inf")
 
 
+def timing(f):
+    """I ripped this off of StackOverFlow: https://stackoverflow.com/questions/1622943/timeit-versus-timing-decorator"""
+    from functools import wraps
+    from time import time
+
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        pretty_args = [repr(v) for v in args]
+        pretty_kw = [f"{k}={repr(v)}" for k, v in kw.items()]
+        all_args = ", ".join([*pretty_args, *pretty_kw])
+        print(f"{f.__name__}({all_args}) took: {te - ts} sec")
+        return result
+
+    return wrap
+
+
 def decode_histogram_json(
     histogram_json: dict[str, float | int | dict[str, float]]
 ) -> dict[float, float]:
@@ -72,12 +91,20 @@ def plot_miss_rate_curve(path: str, label: str):
     plt.plot(sparse_mrc.keys(), sparse_mrc.values(), label=label)
 
 
-def read_and_plot_mrc(path: str, label: str):
+def read_and_plot_dense_mrc(path: str, label: str):
     with open(path, "rb") as f:
         dense_mrc = np.fromfile(f, dtype=np.float64)
     plt.plot(dense_mrc, label=label)
 
 
+def read_and_plot_sparse_mrc(path: str, label: str):
+    dt = np.dtype([("index", np.uint64), ("miss-rate", np.float64)])
+    with open(path, "rb") as f:
+        sparse_mrc = np.fromfile(f, dtype=dt)
+    plt.plot(sparse_mrc["index"], sparse_mrc["miss-rate"], label=label)
+
+
+@timing
 def plot_from_path(path: str, label: str = None):
     root, ext = os.path.splitext(path)
 
@@ -89,7 +116,7 @@ def plot_from_path(path: str, label: str = None):
     if ext == ".json":
         plot_miss_rate_curve(path, label)
     elif ext == ".bin":
-        read_and_plot_mrc(path, label)
+        read_and_plot_sparse_mrc(path, label)
     else:
         raise ValueError(f"unrecognized file type. Expecting {{.json,.bin}}, got {ext}")
 
