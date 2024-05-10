@@ -1,3 +1,4 @@
+#include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -72,7 +73,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        Mimir__init(&me, 1000, 100, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
+        Mimir__init(&me, 1000, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_ROUNDER),
         Mimir__access_item,
         Mimir__destroy);
 
@@ -80,7 +81,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        Mimir__init(&me, 1000, 100, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
+        Mimir__init(&me, 1000, 1000, MAX_NUM_UNIQUE_ENTRIES, MIMIR_STACKER),
         Mimir__access_item,
         Mimir__destroy);
 #endif
@@ -134,7 +135,9 @@ test_sampling(void)
                      PardaFixedRateShards__init(&me, 1e-3),
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
+#endif
 
+#if 1
     PERFORMANCE_TEST(struct FixedSizeShards,
                      me,
                      FixedSizeShards__init(&me,
@@ -144,7 +147,9 @@ test_sampling(void)
                                            1 << 10),
                      FixedSizeShards__access_item,
                      FixedSizeShards__destroy);
+#endif
 
+#if 1
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
@@ -153,6 +158,15 @@ test_sampling(void)
         FixedRateShards__destroy);
 #endif
 
+#if 1
+    PERFORMANCE_TEST(struct FixedRateShards,
+                     me,
+                     FixedRateShards__init(&me, 1, 1e-12, 1, true),
+                     FixedRateShards__access_item,
+                     FixedRateShards__destroy);
+#endif
+
+#if 1
     // Compare the novel SHARDS
     PERFORMANCE_TEST(struct BucketedShards,
                      me,
@@ -163,6 +177,7 @@ test_sampling(void)
                                           1 << 10),
                      BucketedShards__access_item,
                      BucketedShards__destroy);
+#endif
 }
 
 static void
@@ -226,10 +241,11 @@ main(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
 
-    UNUSED(test_all);
-    UNUSED(test_sampling);
-    UNUSED(test_quickmrc);
-#if 0
+    MAYBE_UNUSED(test_all);
+    MAYBE_UNUSED(test_sampling);
+    MAYBE_UNUSED(test_quickmrc);
+
+#if 1
     test_all();
 #endif
 #if 1
