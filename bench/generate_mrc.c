@@ -22,6 +22,9 @@
 
 static const size_t DEFAULT_TRACE_LENGTH = 1 << 28;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
+static char *DEFAULT_ORACLE_PATH = NULL;
+
+static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
 
 enum MRCAlgorithm {
     MRC_ALGORITHM_INVALID,
@@ -52,11 +55,7 @@ struct CommandLineArguments {
     double shards_sampling_ratio;
     size_t trace_length;
 
-    /* UNUSED */
-    int size;
-    int repeats;
-    bool check;
-    bool debug;
+    char *oracle_path;
 };
 
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
@@ -74,12 +73,19 @@ print_available_algorithms(FILE *stream)
     fprintf(stream, "}");
 }
 
+static inline char const *
+bool_to_string(bool x)
+{
+    return x ? BOOLEAN_STRINGS[1] : BOOLEAN_STRINGS[0];
+}
+
 static void
 print_help(FILE *stream, struct CommandLineArguments const *args)
 {
     fprintf(stream,
-            "Usage: %s [--input|-i <input-path>] [--algorithm|-a <algorithm>] "
-            "[--output|-o <output-path>]\n",
+            "Usage: %s --input|-i <input-path> --algorithm|-a <algorithm> "
+            "--output|-o <output-path> [--sampling-ratio|-s <ratio>] "
+            "[--number-entries|-n <trace-length>] [--oracle <oracle-path>]\n",
             args->executable);
     fprintf(
         stream,
@@ -93,13 +99,17 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "may not work)\n");
     fprintf(stream,
             "    --sampling-ratio, -s <ratio in (0.0, 1.0]>: ratio of for "
-            "SHARDS (must pick a SHARDS algorithm). Default: %g.",
+            "SHARDS (must pick a SHARDS algorithm). Default: %g.\n",
             DEFAULT_SHARDS_SAMPLING_RATIO);
     fprintf(stream,
             "    --number-entries, -n <trace-length>: number of entries in an "
             "artificial trace (must pick an artificial trace, e.g. 'zipf'). "
-            "Default: %zu.",
+            "Default: %zu.\n",
             DEFAULT_TRACE_LENGTH);
+    fprintf(stream,
+            "    --oracle: the oracle path to use as a cache for the Olken "
+            "results. Default: %s.\n",
+            DEFAULT_ORACLE_PATH ? DEFAULT_ORACLE_PATH : "(null)");
     fprintf(stream,
             "    --help, -h: print this help message. Overrides all else!\n");
 }
@@ -127,21 +137,18 @@ parse_positive_double(char const *const str)
     return d;
 }
 
-static inline char *
-bool_to_string(bool x)
-{
-    return x ? "true" : "false";
-}
-
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
     printf("CommandLineArguments(executable='%s', input='%s', algorithm='%s', "
-           "output='%s')\n",
+           "output='%s', shards_ratio='%g', trace_length='%zu', oracle='%s')\n",
            args->executable,
            args->input_path,
            algorithm_names[args->algorithm],
-           args->output_path);
+           args->output_path,
+           args->shards_sampling_ratio,
+           args->trace_length,
+           args->oracle_path ? args->oracle_path : "(null)");
 }
 
 static enum MRCAlgorithm
@@ -212,6 +219,15 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.trace_length = parse_positive_size(argv[i]);
+        } else if (matches_option(argv[i], "--oracle", "--oracle")) {
+            // NOTE There is no short form of the oracle flag.
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting oracle path!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.oracle_path = argv[i];
         } else if (matches_option(argv[i], "--help", "-h")) {
             print_help(stdout, &args);
             exit(0);
@@ -263,8 +279,8 @@ cleanup:
                                          hist_func,                            \
                                          destroy_func)                         \
     static struct MissRateCurve func_name(                                     \
-        struct Trace *trace,                                                   \
-        struct CommandLineArguments args_name)                                 \
+        struct Trace const *const trace,                                       \
+        struct CommandLineArguments const args_name)                           \
     {                                                                          \
         MAYBE_UNUSED(args_name);                                               \
         type var_name = {0};                                                   \
@@ -376,6 +392,41 @@ get_trace(struct CommandLineArguments args)
     }
 }
 
+static struct MissRateCurve
+get_oracle_mrc(struct CommandLineArguments const args,
+               struct Trace const *const trace,
+               struct MissRateCurve const *const mrc)
+{
+    struct MissRateCurve oracle_mrc = {0};
+    bool oracle_exists = MissRateCurve__init_from_file(&oracle_mrc,
+                                                       args.oracle_path,
+                                                       trace->length,
+                                                       1);
+    if (oracle_exists) {
+        LOGGER_TRACE("using existing oracle");
+        return oracle_mrc;
+    } else if (args.algorithm == MRC_ALGORITHM_OLKEN) {
+        LOGGER_TRACE("using Olken result as oracle");
+        g_assert_true(
+            MissRateCurve__write_binary_to_file(mrc, args.oracle_path));
+        g_assert_true(MissRateCurve__init_from_file(&oracle_mrc,
+                                                    args.oracle_path,
+                                                    mrc->num_bins,
+                                                    mrc->bin_size));
+        return oracle_mrc;
+    } else {
+        LOGGER_WARN("running Olken to produce oracle");
+        oracle_mrc = run_olken(trace, args);
+        g_assert_true(
+            MissRateCurve__write_binary_to_file(&oracle_mrc, args.oracle_path));
+        g_assert_true(MissRateCurve__init_from_file(&oracle_mrc,
+                                                    args.oracle_path,
+                                                    mrc->num_bins,
+                                                    mrc->bin_size));
+        return oracle_mrc;
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -412,6 +463,19 @@ main(int argc, char **argv)
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
         return EXIT_FAILURE;
+    }
+
+    // Optionally check MAE and MSE
+    if (args.oracle_path != NULL) {
+        struct MissRateCurve oracle_mrc = {0};
+        oracle_mrc = get_oracle_mrc(args, &trace, &mrc);
+
+        double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
+        double mae = MissRateCurve__mean_absolute_error(&oracle_mrc, &mrc);
+        LOGGER_INFO("Mean Squared Error: %f", mse);
+        LOGGER_INFO("Mean Absolute Error: %f", mae);
+
+        MissRateCurve__destroy(&oracle_mrc);
     }
 
     // Write out trace
