@@ -44,6 +44,13 @@ bool
 MissRateCurve__write_binary_to_file(struct MissRateCurve *me,
                                     char const *restrict const file_name);
 
+/// @brief  Save pairs of (index, value) so it's much sparser and thus
+///         easier to plot.
+bool
+MissRateCurve__write_sparse_binary_to_file(
+    struct MissRateCurve *me,
+    char const *restrict const file_name);
+
 /// @return non-negative mean squared error, or a negative number (e.g. -1.0) on
 ///         error.
 double
