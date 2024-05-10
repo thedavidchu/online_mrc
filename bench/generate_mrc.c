@@ -415,7 +415,8 @@ main(int argc, char **argv)
     }
 
     // Write out trace
-    g_assert_true(MissRateCurve__write_binary_to_file(&mrc, args.output_path));
+    g_assert_true(
+        MissRateCurve__write_sparse_binary_to_file(&mrc, args.output_path));
     MissRateCurve__destroy(&mrc);
     Trace__destroy(&trace);
 
