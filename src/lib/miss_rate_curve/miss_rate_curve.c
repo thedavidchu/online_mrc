@@ -138,7 +138,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
                               const uint64_t num_bins,
                               const uint64_t bin_size)
 {
-    if (me == NULL) {
+    if (me == NULL || file_name == NULL) {
         return false;
     }
     me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
@@ -146,12 +146,17 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
         return false;
     }
     FILE *fp = fopen(file_name, "rb");
+    if (fp == NULL) {
+        free(me->miss_rate);
+        return false;
+    }
     // NOTE I am assuming the endianness of the writer and reader will be the
     // same.
     size_t n = fread(me->miss_rate, sizeof(*me->miss_rate), num_bins, fp);
     // Try to clean up regardless of the outcome of the fread(...).
     int r = fclose(fp);
     if (n != num_bins || r != 0) {
+        free(me->miss_rate);
         return false;
     }
     me->num_bins = num_bins;
@@ -160,7 +165,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
 }
 
 bool
-MissRateCurve__write_binary_to_file(struct MissRateCurve *me,
+MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
                                     char const *restrict const file_name)
 {
     if (me == NULL || me->miss_rate == NULL) {

@@ -41,7 +41,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
 ///         this information some other way. Sorry, but it would make the
 ///         output binary more complicated if I were to pass it.
 bool
-MissRateCurve__write_binary_to_file(struct MissRateCurve *me,
+MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
                                     char const *restrict const file_name);
 
 /// @brief  Save pairs of (index, value) so it's much sparser and thus
