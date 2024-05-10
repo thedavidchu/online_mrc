@@ -165,8 +165,8 @@ test_sampling(void)
                      BucketedShards__destroy);
 }
 
-void
-test_quickmrc()
+static void
+test_quickmrc(void)
 {
 #if 1
     // Compare against Olken as a baseline
