@@ -284,15 +284,21 @@ cleanup:
     {                                                                          \
         MAYBE_UNUSED(args_name);                                               \
         type var_name = {0};                                                   \
+        LOGGER_TRACE("Initialize MRC Algorithm");                              \
         g_assert_true((init_call));                                            \
+        LOGGER_TRACE("Begin running trace");                                   \
         clock_t t0 = clock();                                                  \
         for (size_t i = 0; i < trace->length; ++i) {                           \
             ((access_func))(&var_name, trace->trace[i].key);                   \
+            if (i % 1000000 == 0) {                                            \
+                LOGGER_TRACE("Finished %zu / %zu", i, trace->length);          \
+            }                                                                  \
         }                                                                      \
         clock_t t1 = clock();                                                  \
+        LOGGER_TRACE("Begin post process");                                    \
         ((post_process_func))(&var_name);                                      \
         clock_t t2 = clock();                                                  \
-        LOGGER_INFO("Runtime: %f, Post-Process Time: %f, Total Time: %f",      \
+        LOGGER_INFO("Runtime: %f | Post-Process Time: %f | Total Time: %f",    \
                     (double)(t1 - t0) / CLOCKS_PER_SEC,                        \
                     (double)(t2 - t1) / CLOCKS_PER_SEC,                        \
                     (double)(t2 - t0) / CLOCKS_PER_SEC);                       \
@@ -386,8 +392,10 @@ static struct Trace
 get_trace(struct CommandLineArguments args)
 {
     if (strcmp(args.input_path, "zipf") == 0) {
+        LOGGER_TRACE("Generating artificial Zipfian trace");
         return generate_trace(args.trace_length, args.trace_length, 0.99, 0);
     } else {
+        LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path);
     }
 }
@@ -415,6 +423,7 @@ get_oracle_mrc(struct CommandLineArguments const args,
                                                     mrc->bin_size));
         return oracle_mrc;
     } else {
+        LOGGER_TRACE("running Olken to produce oracle");
         LOGGER_WARN("running Olken to produce oracle");
         oracle_mrc = run_olken(trace, args);
         g_assert_true(
@@ -446,18 +455,23 @@ main(int argc, char **argv)
     struct MissRateCurve mrc = {0};
     switch (args.algorithm) {
     case MRC_ALGORITHM_OLKEN:
+        LOGGER_TRACE("running Olken");
         mrc = run_olken(&trace, args);
         break;
     case MRC_ALGORITHM_FIXED_RATE_SHARDS:
+        LOGGER_TRACE("running Fixed-Rate SHARDS");
         mrc = run_fixed_rate_shards(&trace, args);
         break;
     case MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ:
+        LOGGER_TRACE("running Fixed-Rate SHARDS Adjusted");
         mrc = run_fixed_rate_shards_adj(&trace, args);
         break;
     case MRC_ALGORITHM_FIXED_SIZE_SHARDS:
+        LOGGER_TRACE("running Fixed-Size SHARDS");
         mrc = run_fixed_size_shards(&trace, args);
         break;
     case MRC_ALGORITHM_QUICKMRC:
+        LOGGER_TRACE("running QuickMRC");
         mrc = run_quickmrc(&trace, args);
         break;
     default:
@@ -467,6 +481,7 @@ main(int argc, char **argv)
 
     // Optionally check MAE and MSE
     if (args.oracle_path != NULL) {
+        LOGGER_TRACE("Comparing against oracle");
         struct MissRateCurve oracle_mrc = {0};
         oracle_mrc = get_oracle_mrc(args, &trace, &mrc);
 
