@@ -20,7 +20,7 @@
 #include "trace/trace.h"
 #include "unused/mark_unused.h"
 
-static const size_t DEFAULT_TRACE_LENGTH = 1 << 28;
+static const size_t DEFAULT_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
 
