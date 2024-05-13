@@ -89,7 +89,7 @@ def main():
     input_paths: list[str] = args.input
     output_path = args.output
 
-    plt.figure()
+    plt.figure(figsize=(12, 8), dpi=300)
     plt.title("Miss-Rate Curve")
     plt.xlabel("Number of key-value pairs")
     plt.ylabel("Miss-rate")
