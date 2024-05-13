@@ -450,13 +450,13 @@ subtree__free(struct Subtree *me, size_t const recursion_depth)
     if (me == NULL) {
         return;
     }
-    LOGGER_TRACE("Begin subtree__free(me={.key = %lu, .length = %zu, .left = "
-                 "%p, .right = %p}, recursion_depth=%zu)",
-                 me->key,
-                 me->cardinality,
-                 (void *)me->left_subtree,
-                 (void *)me->right_subtree,
-                 recursion_depth);
+    LOGGER_VERBOSE("Begin subtree__free(me={.key = %lu, .length = %zu, .left = "
+                   "%p, .right = %p}, recursion_depth=%zu)",
+                   me->key,
+                   me->cardinality,
+                   (void *)me->left_subtree,
+                   (void *)me->right_subtree,
+                   recursion_depth);
     // Limit the possibility of stackoverflow for tree that has devolved into a
     // linked list
     if (me->left_subtree == NULL) {
