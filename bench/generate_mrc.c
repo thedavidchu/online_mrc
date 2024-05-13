@@ -307,7 +307,9 @@ cleanup:
             Histogram__write_as_json(stdout, &var_name.hist);                  \
         }                                                                      \
         ((hist_func))(&mrc, &var_name.hist);                                   \
+        LOGGER_TRACE("Wrote histogram");                                       \
         ((destroy_func))(&var_name);                                           \
+        LOGGER_TRACE("Destroyed MRC generator object");                        \
         return mrc;                                                            \
     }
 
@@ -496,8 +498,11 @@ main(int argc, char **argv)
     // Write out trace
     g_assert_true(
         MissRateCurve__write_sparse_binary_to_file(&mrc, args.output_path));
+    LOGGER_TRACE("Wrote out sparse MRC to '%s'", args.output_path);
     MissRateCurve__destroy(&mrc);
+    LOGGER_TRACE("Destroyed MRC object");
     Trace__destroy(&trace);
+    LOGGER_TRACE("Destroyed trace object");
 
     return 0;
 }
