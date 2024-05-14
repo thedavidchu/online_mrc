@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "arrays/array_size.h"
+#include "bucketed_shards/bucketed_shards.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -20,7 +21,7 @@
 #include "trace/trace.h"
 #include "unused/mark_unused.h"
 
-static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
+static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 28;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
 
@@ -33,6 +34,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
+    MRC_ALGORITHM_BUCKETED_SHARDS,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -44,6 +46,7 @@ static char *algorithm_names[] = {
     "Fixed-Rate-SHARDS-Adj",
     "Fixed-Size-SHARDS",
     "QuickMRC",
+    "Bucketed-SHARDS",
 };
 
 struct CommandLineArguments {
@@ -388,6 +391,21 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                  MissRateCurve__init_from_histogram,
                                  QuickMRC__destroy)
 
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_bucketed_shards,
+    struct BucketedShards,
+    me,
+    args,
+    BucketedShards__init(&me,
+                         1 << 13,
+                         trace->length,
+                         args.shards_sampling_ratio,
+                         1),
+    BucketedShards__access_item,
+    BucketedShards__post_process,
+    histogram,
+    MissRateCurve__init_from_histogram,
+    BucketedShards__destroy)
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -479,6 +497,10 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_QUICKMRC:
         LOGGER_TRACE("running QuickMRC");
         mrc = run_quickmrc(&trace, args);
+        break;
+    case MRC_ALGORITHM_BUCKETED_SHARDS:
+        LOGGER_TRACE("running Bucketed Shards");
+        mrc = run_bucketed_shards(&trace, args);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
