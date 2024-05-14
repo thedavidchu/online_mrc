@@ -18,7 +18,7 @@ time $EXE -i $INPUT_PATH -a QuickMRC -s 1e-3 -o qmrcs1e-3-mrc.bin
 time $EXE -i $INPUT_PATH -a QuickMRC -s 1e-2 -o qmrcs1e-2-mrc.bin
 time $EXE -i $INPUT_PATH -a QuickMRC -s 1e-1 -o qmrcs1e-1-mrc.bin
 
-python3 ../script/plot_mrc.py \
+python3 ../scripts/plot_mrc.py \
     --oracle olken-mrc.bin \
     --input \
     frs1e-3-mrc.bin frsa1e-3-mrc.bin hash-mrc.bin fss1e-1-mrc.bin \
