@@ -79,8 +79,10 @@ read_trace(char const *const restrict file_name)
 
     file_size = get_file_size_in_bytes(fp);
     if (file_size % 25 != 0) {
-        LOGGER_ERROR("file size is not divisible by 25 bytes (i.e. the size of "
-                     "each entry)");
+        LOGGER_ERROR(
+            "file size %zu is not divisible by 25 bytes (i.e. the size of "
+            "each entry)",
+            file_size);
         goto cleanup;
     }
 

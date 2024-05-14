@@ -138,7 +138,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
                               const uint64_t num_bins,
                               const uint64_t bin_size)
 {
-    if (me == NULL) {
+    if (me == NULL || file_name == NULL) {
         return false;
     }
     me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
@@ -146,12 +146,17 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
         return false;
     }
     FILE *fp = fopen(file_name, "rb");
+    if (fp == NULL) {
+        free(me->miss_rate);
+        return false;
+    }
     // NOTE I am assuming the endianness of the writer and reader will be the
     // same.
     size_t n = fread(me->miss_rate, sizeof(*me->miss_rate), num_bins, fp);
     // Try to clean up regardless of the outcome of the fread(...).
     int r = fclose(fp);
     if (n != num_bins || r != 0) {
+        free(me->miss_rate);
         return false;
     }
     me->num_bins = num_bins;
@@ -160,7 +165,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
 }
 
 bool
-MissRateCurve__write_binary_to_file(struct MissRateCurve *me,
+MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
                                     char const *restrict const file_name)
 {
     if (me == NULL || me->miss_rate == NULL) {
@@ -176,6 +181,61 @@ MissRateCurve__write_binary_to_file(struct MissRateCurve *me,
         return false;
     }
     return true;
+}
+
+static bool
+write_index_miss_rate_pair(FILE *fp,
+                           const uint64_t index,
+                           const double miss_rate)
+{
+    // We want to make sure we're writing the expected sizes out the file.
+    // Otherwise, our reader will be confused. We should write out:
+    // (uint64, float64)
+    assert(sizeof(index) == 8 && sizeof(miss_rate) == 8 && "unexpected sizes");
+
+    size_t n = 0;
+    n = fwrite(&index, sizeof(index), 1, fp);
+    if (n != 1) {
+        LOGGER_ERROR("failed to write index %zu", index);
+        return false;
+    }
+    n = fwrite(&miss_rate, sizeof(miss_rate), 1, fp);
+    if (n != 1) {
+        LOGGER_ERROR("failed to write object %zu: %g", index, miss_rate);
+        return false;
+    }
+    return true;
+}
+
+bool
+MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve *me,
+                                           char const *restrict const file_name)
+{
+    if (me == NULL || me->miss_rate == NULL || me->num_bins == 0) {
+        return false;
+    }
+
+    FILE *fp = fopen(file_name, "wb");
+    // NOTE I am assuming the endianness of the writer and reader will be the
+    // same.
+    if (!write_index_miss_rate_pair(fp, 0, me->miss_rate[0]))
+        goto cleanup;
+    for (size_t i = 1; i < me->num_bins; ++i) {
+        if (me->miss_rate[i] == me->miss_rate[i - 1]) {
+            continue;
+        }
+        if (!write_index_miss_rate_pair(fp, i, me->miss_rate[i]))
+            goto cleanup;
+    }
+    // Try to clean up regardless of the outcome of the fwrite(...).
+    if (fclose(fp) != 0) {
+        return false;
+    }
+    return true;
+
+cleanup:
+    fclose(fp);
+    return false;
 }
 
 double

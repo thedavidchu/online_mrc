@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "tree/types.h"
@@ -55,7 +56,7 @@ bool
 tree__validate(struct Tree *me);
 
 void
-subtree__free(struct Subtree *me);
+subtree__free(struct Subtree *me, size_t const recursion_depth);
 
 /// @brief  Free the structures within the tree without freeing the tree itself.
 ///         Useful if we allocated the tree on the stack.

@@ -64,19 +64,19 @@ FixedSizeShards__init(struct FixedSizeShards *me,
     bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
         1.0 < starting_sampling_ratio || max_size == 0) {
-        LOGGER_TRACE("bad input");
+        LOGGER_WARN("bad input");
         return false;
     }
 
     r = tree__init(&me->tree);
     if (!r) {
-        LOGGER_TRACE("failed to initialize tree");
+        LOGGER_WARN("failed to initialize tree");
         goto cleanup;
     }
 
     me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
     if (me->hash_table == NULL) {
-        LOGGER_TRACE("failed to initialize hash table");
+        LOGGER_WARN("failed to initialize hash table");
         goto cleanup;
     }
 
@@ -85,13 +85,13 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         POSITIVE_CEILING_DIVIDE(max_num_unique_entries, histogram_bin_size),
         histogram_bin_size);
     if (!r) {
-        LOGGER_TRACE("failed to initialize histogram");
+        LOGGER_WARN("failed to initialize histogram");
         goto cleanup;
     }
 
     r = SplayPriorityQueue__init(&me->pq, max_size);
     if (!r) {
-        LOGGER_TRACE("failed to initialize priority queue");
+        LOGGER_WARN("failed to initialize priority queue");
         goto cleanup;
     }
     me->current_time_stamp = 0;
