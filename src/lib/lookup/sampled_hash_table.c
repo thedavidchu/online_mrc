@@ -1,3 +1,5 @@
+#include <assert.h>
+#include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,11 +10,32 @@
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
+#include "logger/logger.h"
 #include "lookup/sampled_hash_table.h"
 #include "math/ratio.h"
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
+
+/// Source: https://en.wikipedia.org/wiki/HyperLogLog#Practical_considerations
+static double
+hll_alpha_m(size_t m)
+{
+    if (m == 16) {
+        return 0.673;
+    } else if (m == 32) {
+        return 0.697;
+    } else if (m == 64) {
+        return 0.709;
+    } else if (m >= 128) {
+        return 0.7213 / (1 + 1.079 / m);
+    } else {
+        LOGGER_WARN(
+            "unsupported HyperLogLog size of %zu, not using fudge factor!",
+            m);
+        return 1.0;
+    }
+}
 
 bool
 SampledHashTable__init(struct SampledHashTable *me,
@@ -38,6 +61,9 @@ SampledHashTable__init(struct SampledHashTable *me,
         // HACK Set the threshold to some low number to begin
         //      (otherwise, we end up with teething performance issues).
         .global_threshold = ratio_uint64(init_sampling_ratio),
+        .num_inserted = 0,
+        .running_denominator = 0,
+        .hll_alpha_m = hll_alpha_m(length),
     };
     return true;
 }
@@ -157,6 +183,19 @@ SampledHashTable__print_as_json(struct SampledHashTable *me)
         }
     }
     printf("]}\n");
+}
+
+double
+SampledHashTable__estimate_num_unique(struct SampledHashTable *me)
+{
+    if (me == NULL || me->data == NULL || me->length == 0)
+        return 0.0;
+    double avg_nlz = me->num_inserted / (me->running_denominator + DBL_EPSILON);
+    // NOTE I add this sketchy subtraction by 1 to compensate for my sketchy
+    //      addition by 1 for each element. On a simple trace, this matches the
+    //      actual number of elements better, so I am content. However, I do not
+    //      understand what I'm doing.
+    return me->hll_alpha_m * me->num_inserted * exp2(avg_nlz - 1);
 }
 
 void

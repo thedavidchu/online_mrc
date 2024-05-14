@@ -11,6 +11,7 @@ generate_mrc_exe = executable(
         mytester_include,
     ],
     dependencies: [
+        bucketed_shards_dep,
         common_dep,
         fixed_rate_shards_dep,
         fixed_size_shards_dep,

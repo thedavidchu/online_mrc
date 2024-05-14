@@ -7,6 +7,7 @@
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
+#include "unused/mark_unused.h"
 
 struct BucketedShards {
     struct Tree tree;
@@ -27,6 +28,12 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry);
 
 void
 BucketedShards__refresh_threshold(struct BucketedShards *me);
+
+static inline void
+BucketedShards__post_process(struct BucketedShards *me)
+{
+    UNUSED(me);
+}
 
 void
 BucketedShards__print_histogram_as_json(struct BucketedShards *me);
