@@ -1,5 +1,7 @@
 #pragma once
 
+#include <float.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,6 +26,7 @@ struct SampledHashTable {
 
     size_t num_inserted;
     double running_denominator;
+    double hll_alpha_m;
 };
 
 enum SampledStatus {
@@ -77,6 +80,12 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
 void
 SampledHashTable__refresh_threshold(struct SampledHashTable *me);
 
+static inline int
+clz(uint64_t x)
+{
+    return __builtin_clzll(x) + 1;
+}
+
 /// @brief  Try to put a value into the hash table.
 /// @note   This combines the lookup and put traditionally used by the
 ///         MRC algorithm. I haven't thought too hard about whether all
@@ -112,6 +121,7 @@ SampledHashTable__try_put(struct SampledHashTable *me,
         if (me->num_inserted == me->length) {
             SampledHashTable__refresh_threshold(me);
         }
+        me->running_denominator += 1.0 / clz(hash);
         return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
                                             .new_hash = hash};
     }
@@ -133,6 +143,7 @@ SampledHashTable__try_put(struct SampledHashTable *me,
         if (old_hash == me->global_threshold) {
             SampledHashTable__refresh_threshold(me);
         }
+        me->running_denominator += 1.0 / clz(hash) - 1.0 / clz(old_hash);
         return r;
     }
     // NOTE If the key comparison is expensive, then one could first
@@ -150,6 +161,9 @@ SampledHashTable__try_put(struct SampledHashTable *me,
     }
     return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 }
+
+double
+SampledHashTable__estimate_num_unique(struct SampledHashTable *me);
 
 void
 SampledHashTable__print_as_json(struct SampledHashTable *me);
