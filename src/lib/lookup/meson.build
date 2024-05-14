@@ -10,6 +10,7 @@ lookup_dep = declare_dependency(
         dependencies: [
             common_dep,
             glib_dep,
+            math_dep,
             thread_dep,
             hash_dep,
         ],
@@ -17,6 +18,7 @@ lookup_dep = declare_dependency(
     ),
     dependencies: [
         common_dep,
+        math_dep,
         thread_dep,
     ],
     include_directories: include_directories('include'),
