@@ -20,7 +20,7 @@
 #include "trace/trace.h"
 #include "unused/mark_unused.h"
 
-static const size_t DEFAULT_TRACE_LENGTH = 1 << 20;
+static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
 
@@ -53,7 +53,7 @@ struct CommandLineArguments {
     char *output_path;
 
     double shards_sampling_ratio;
-    size_t trace_length;
+    size_t artificial_trace_length;
 
     char *oracle_path;
 };
@@ -105,7 +105,7 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "    --number-entries, -n <trace-length>: number of entries in an "
             "artificial trace (must pick an artificial trace, e.g. 'zipf'). "
             "Default: %zu.\n",
-            DEFAULT_TRACE_LENGTH);
+            DEFAULT_ARTIFICIAL_TRACE_LENGTH);
     fprintf(stream,
             "    --oracle: the oracle path to use as a cache for the Olken "
             "results. Default: %s.\n",
@@ -140,14 +140,15 @@ parse_positive_double(char const *const str)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    printf("CommandLineArguments(executable='%s', input='%s', algorithm='%s', "
-           "output='%s', shards_ratio='%g', trace_length='%zu', oracle='%s')\n",
+    printf("CommandLineArguments(executable='%s', input_path='%s', "
+           "algorithm='%s', output_path='%s', shards_ratio='%g', "
+           "artifical_trace_length='%zu', oracle_path='%s')\n",
            args->executable,
            args->input_path,
            algorithm_names[args->algorithm],
            args->output_path,
            args->shards_sampling_ratio,
-           args->trace_length,
+           args->artificial_trace_length,
            args->oracle_path ? args->oracle_path : "(null)");
 }
 
@@ -175,7 +176,7 @@ parse_command_line_arguments(int argc, char **argv)
 
     // Set defaults
     args.shards_sampling_ratio = DEFAULT_SHARDS_SAMPLING_RATIO;
-    args.trace_length = DEFAULT_TRACE_LENGTH;
+    args.artificial_trace_length = DEFAULT_ARTIFICIAL_TRACE_LENGTH;
 
     // Set parameters based on user arguments
     for (int i = 1; i < argc; ++i) {
@@ -218,7 +219,7 @@ parse_command_line_arguments(int argc, char **argv)
                 print_help(stdout, &args);
                 exit(-1);
             }
-            args.trace_length = parse_positive_size(argv[i]);
+            args.artificial_trace_length = parse_positive_size(argv[i]);
         } else if (matches_option(argv[i], "--oracle", "--oracle")) {
             // NOTE There is no short form of the oracle flag.
             ++i;
@@ -395,7 +396,10 @@ get_trace(struct CommandLineArguments args)
 {
     if (strcmp(args.input_path, "zipf") == 0) {
         LOGGER_TRACE("Generating artificial Zipfian trace");
-        return generate_trace(args.trace_length, args.trace_length, 0.99, 0);
+        return generate_trace(args.artificial_trace_length,
+                              args.artificial_trace_length,
+                              0.99,
+                              0);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path);
