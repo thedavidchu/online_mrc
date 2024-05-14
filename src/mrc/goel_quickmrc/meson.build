@@ -12,6 +12,17 @@ goel_quickmrc_lib = library(
         'quickmrc',
         'quickmrc/qmrc',
     ),
+    c_args: [
+        '-DQMRC',
+        # NOTE  This is so then we can inline the vectorized instructions.
+        '-march=native',
+        # HACK  Turn off all of the failing compiler flags...
+        '-Wno-builtin-declaration-mismatch',
+        '-Wno-implicit-function-declaration',
+        '-Wno-pedantic',
+        '-Wno-psabi',
+        '-Wno-sign-compare',
+    ],
 )
 
 goel_quickmrc_dep = declare_dependency(
