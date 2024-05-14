@@ -1,0 +1,3 @@
+[submodule "src/mrc/goel_quickmrc/quickmrc"]
+	path = src/mrc/goel_quickmrc/quickmrc
+	url = https://github.com/ashvingoel/quickmrc.git
