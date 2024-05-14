@@ -6,6 +6,7 @@
 
 #include "hash/splitmix64.h"
 #include "hash/types.h"
+#include "logger/logger.h"
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
@@ -68,6 +69,14 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
                              KeyType key,
                              ValueType value);
 
+/// @note   If we know the globally maximum threshold, then we can
+///         immediately discard any element that is greater than this.
+/// @note   This is an optimization to try to match SHARDS's performance.
+///         Without this, we slightly underperform SHARDS. I don't know
+///         how the Splay Tree priority queue is so fast...
+void
+SampledHashTable__refresh_threshold(struct SampledHashTable *me);
+
 /// @brief  Try to put a value into the hash table.
 /// @note   This combines the lookup and put traditionally used by the
 ///         MRC algorithm. I haven't thought too hard about whether all
@@ -99,6 +108,10 @@ SampledHashTable__try_put(struct SampledHashTable *me,
         *incumbent = (struct SampledHashTableNode){.key = key,
                                                    .hash = hash,
                                                    .value = value};
+        ++me->num_inserted;
+        if (me->num_inserted == me->length) {
+            SampledHashTable__refresh_threshold(me);
+        }
         return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
                                             .new_hash = hash};
     }
@@ -110,9 +123,16 @@ SampledHashTable__try_put(struct SampledHashTable *me,
             .old_hash = incumbent->hash,
             .old_value = incumbent->value,
         };
+        uint64_t const old_hash = incumbent->hash;
+        // NOTE Update the incumbent before we do the scan for the maximum
+        //      threshold because we want do not want to "find" that the
+        //      maximum hasn't changed.
         *incumbent = (struct SampledHashTableNode){.key = key,
                                                    .hash = hash,
                                                    .value = value};
+        if (old_hash == me->global_threshold) {
+            SampledHashTable__refresh_threshold(me);
+        }
         return r;
     }
     // NOTE If the key comparison is expensive, then one could first
@@ -130,14 +150,6 @@ SampledHashTable__try_put(struct SampledHashTable *me,
     }
     return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 }
-
-/// @note   If we know the globally maximum threshold, then we can
-///         immediately discard any element that is greater than this.
-/// @note   This is an optimization to try to match SHARDS's performance.
-///         Without this, we slightly underperform SHARDS. I don't know
-///         how the Splay Tree priority queue is so fast...
-void
-SampledHashTable__refresh_threshold(struct SampledHashTable *me);
 
 void
 SampledHashTable__print_as_json(struct SampledHashTable *me);
