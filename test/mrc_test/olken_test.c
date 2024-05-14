@@ -16,6 +16,7 @@
 
 const bool PRINT_HISTOGRAM = false;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
+const double ZIPFIAN_RANDOM_SKEW = 0.99;
 
 static bool
 access_same_key_five_times(void)
@@ -119,8 +120,10 @@ long_trace_test(void)
     struct ZipfianRandom zrng = {0};
     struct Olken me = {0};
 
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
+    ASSERT_FUNCTION_RETURNS_TRUE(ZipfianRandom__init(&zrng,
+                                                     MAX_NUM_UNIQUE_ENTRIES,
+                                                     ZIPFIAN_RANDOM_SKEW,
+                                                     0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(Olken__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1));
 
