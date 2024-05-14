@@ -38,6 +38,8 @@ SampledHashTable__init(struct SampledHashTable *me,
         // HACK Set the threshold to some low number to begin
         //      (otherwise, we end up with teething performance issues).
         .global_threshold = ratio_uint64(init_sampling_ratio),
+        .num_inserted = 0,
+        .running_denominator = 0,
     };
     return true;
 }

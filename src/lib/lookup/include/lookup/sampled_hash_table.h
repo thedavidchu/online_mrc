@@ -20,6 +20,9 @@ struct SampledHashTable {
     struct SampledHashTableNode *data;
     size_t length;
     Hash64BitType global_threshold;
+
+    size_t num_inserted;
+    double running_denominator;
 };
 
 enum SampledStatus {
