@@ -59,7 +59,8 @@ handle_inserted(struct BucketedShards *me,
     UNUSED(s);
     assert(me != NULL);
 
-    const uint64_t scale = 1; // TODO scale properly
+    const uint64_t scale =
+        SampledHashTable__estimate_num_unique(&me->hash_table);
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -76,7 +77,8 @@ handle_replaced(struct BucketedShards *me,
 {
     assert(me != NULL);
 
-    const uint64_t scale = 1; // TODO scale properly
+    const uint64_t scale =
+        SampledHashTable__estimate_num_unique(&me->hash_table);
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -96,7 +98,8 @@ handle_updated(struct BucketedShards *me,
 {
     assert(me != NULL);
 
-    const uint64_t scale = 1; // TODO scale properly
+    const uint64_t scale =
+        SampledHashTable__estimate_num_unique(&me->hash_table);
     bool r = false;
     uint64_t distance = 0;
     MAYBE_UNUSED(r);
