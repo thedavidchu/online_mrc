@@ -4,6 +4,7 @@ subdir('lookup')
 subdir('histogram')
 subdir('priority_queue')
 subdir('random')
+subdir('sampling')  # Depends on 'random'
 subdir('trace')
 subdir('tree')
 
