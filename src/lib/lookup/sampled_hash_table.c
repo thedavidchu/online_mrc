@@ -190,12 +190,12 @@ SampledHashTable__estimate_num_unique(struct SampledHashTable *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
-    double avg_nlz = me->length / (me->running_denominator);
+    double avg_nlz = me->num_inserted / (me->running_denominator + DBL_EPSILON);
     // NOTE I add this sketchy subtraction by 1 to compensate for my sketchy
     //      addition by 1 for each element. On a simple trace, this matches the
     //      actual number of elements better, so I am content. However, I do not
     //      understand what I'm doing.
-    return me->hll_alpha_m * me->length * exp2(avg_nlz - 1);
+    return me->hll_alpha_m * me->num_inserted * exp2(avg_nlz - 1);
 }
 
 void
