@@ -27,9 +27,13 @@ hll_alpha_m(size_t m)
         return 0.697;
     } else if (m == 64) {
         return 0.709;
-    } else {
-        assert(m >= 128 && "unsupported HyperLogLog size");
+    } else if (m >= 128) {
         return 0.7213 / (1 + 1.079 / m);
+    } else {
+        LOGGER_WARN(
+            "unsupported HyperLogLog size of %zu, not using fudge factor!",
+            m);
+        return 1.0;
     }
 }
 
