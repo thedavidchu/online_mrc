@@ -186,22 +186,25 @@ MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
 static bool
 write_index_miss_rate_pair(FILE *fp,
                            const uint64_t index,
+                           const uint64_t bin_size,
                            const double miss_rate)
 {
+    size_t n = 0;
+    uint64_t scaled_idx = index * bin_size;
+
     // We want to make sure we're writing the expected sizes out the file.
     // Otherwise, our reader will be confused. We should write out:
     // (uint64, float64)
     assert(sizeof(index) == 8 && sizeof(miss_rate) == 8 && "unexpected sizes");
 
-    size_t n = 0;
-    n = fwrite(&index, sizeof(index), 1, fp);
+    n = fwrite(&scaled_idx, sizeof(scaled_idx), 1, fp);
     if (n != 1) {
-        LOGGER_ERROR("failed to write index %zu", index);
+        LOGGER_ERROR("failed to write scaled index %zu", scaled_idx);
         return false;
     }
     n = fwrite(&miss_rate, sizeof(miss_rate), 1, fp);
     if (n != 1) {
-        LOGGER_ERROR("failed to write object %zu: %g", index, miss_rate);
+        LOGGER_ERROR("failed to write object %zu: %g", scaled_idx, miss_rate);
         return false;
     }
     return true;
@@ -218,13 +221,15 @@ MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve *me,
     FILE *fp = fopen(file_name, "wb");
     // NOTE I am assuming the endianness of the writer and reader will be the
     // same.
-    if (!write_index_miss_rate_pair(fp, 0, me->miss_rate[0]))
+    // NOTE I do the 0th element separately so that from 1 onward, I can simply
+    //      compare with the previous.
+    if (!write_index_miss_rate_pair(fp, 0, me->bin_size, me->miss_rate[0]))
         goto cleanup;
     for (size_t i = 1; i < me->num_bins; ++i) {
         if (me->miss_rate[i] == me->miss_rate[i - 1]) {
             continue;
         }
-        if (!write_index_miss_rate_pair(fp, i, me->miss_rate[i]))
+        if (!write_index_miss_rate_pair(fp, i, me->bin_size, me->miss_rate[i]))
             goto cleanup;
     }
     // Try to clean up regardless of the outcome of the fwrite(...).
