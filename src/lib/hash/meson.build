@@ -7,6 +7,10 @@ murmur_hash_3_lib = library(
     'murmur_hash_3_lib',
     'MurmurHash3.c',
     include_directories: hash_inc,
+    c_args: [
+        # MurmurHash3 uses fallthrough in the switch-case extensively!
+        '-Wno-implicit-fallthrough',
+    ],
 )
 
 # My wrapper around the MurmurHash3 functions. I don't like the name because it

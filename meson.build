@@ -17,6 +17,8 @@ project(
         'default_library=static',
         # Build with -O2 -g
         'buildtype=debugoptimized',
+        # Enable link-time optimizations
+        'b_lto=true',
     ],
 )
 
