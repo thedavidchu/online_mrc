@@ -116,6 +116,10 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
     if (me == NULL)
         return;
 
+    // SHARDS-Adj seems to decrease the accuracy.
+    if (true)
+        return;
+
     // NOTE I need to scale the adjustment by the scale that I've been adjusting
     //      all values. Conversely, I could just not scale any values by the
     //      scale and I'd be equally well off (in fact, better probably,
@@ -168,7 +172,7 @@ GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me)
 
     // Generate the MRC
     struct histogram hist = me->cache->qmrc->hist;
-    const uint64_t total = me->num_entries_seen;
+    const uint64_t total = me->num_entries_processed;
     uint64_t tmp = total;
     for (uint64_t i = 0; i < num_bins; ++i) {
         const uint64_t h = hist.hits[i];
