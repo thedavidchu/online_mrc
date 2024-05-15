@@ -118,7 +118,7 @@ GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me)
         return false;
 
     uint64_t const num_bins = me->cache->qmrc->hist.length;
-    uint64_t const bin_size = 2 << me->cache->qmrc->hist.log_bucket_size;
+    uint64_t const bin_size = 1 << me->cache->qmrc->hist.log_bucket_size;
 
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins * bin_size + 1, sizeof(*mrc->miss_rate)),
