@@ -113,7 +113,32 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
 void
 GoelQuickMRC__post_process(struct GoelQuickMRC *me)
 {
-    UNUSED(me);
+    if (me == NULL)
+        return;
+
+    // NOTE I need to scale the adjustment by the scale that I've been adjusting
+    //      all values. Conversely, I could just not scale any values by the
+    //      scale and I'd be equally well off (in fact, better probably,
+    //      because a smaller chance of overflowing).
+    const int64_t adjustment =
+        me->scale *
+        (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
+    // NOTE SHARDS-Adj only adds to the first bucket; but what if the
+    //      adjustment would make it negative? Well, in that case, I
+    //      add it to the next buckets. I figure this is OKAY because
+    //      histogram bin size is configurable and it's like using a
+    //      larger bin.
+    int64_t tmp_adj = adjustment;
+    for (size_t i = 0; i < me->cache->qmrc->hist.length; ++i) {
+        int64_t hist = me->cache->qmrc->hist.hits[i];
+        if ((int64_t)me->cache->qmrc->hist.hits[i] + tmp_adj < 0) {
+            me->cache->qmrc->hist.hits[i] = 0;
+            tmp_adj += hist;
+        } else {
+            me->cache->qmrc->hist.hits[i] += tmp_adj;
+            break;
+        }
+    }
 }
 
 void
