@@ -12,6 +12,10 @@
 #include "types/entry_type.h"
 #include "unused/mark_unused.h"
 
+#ifndef QMRC
+#error "QMRC must be defined here"
+#endif
+
 #include "quickmrc/histogram.h"
 
 // HACK The structures are defined in the C files and moving them to the header
@@ -29,6 +33,40 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
                    const int log_epoch_limit,
                    const double shards_sampling_ratio)
 {
+    /* TODO: support larger max_keys. see definition of count_t in qmrc.c */
+    if (log_max_keys < 0 || log_max_keys >= 32) {
+        LOGGER_ERROR("log_max_keys = %d\n", log_max_keys);
+        LOGGER_ERROR("log_max_keys must be between 0 and 2^32\n");
+        return false;
+    }
+    if (log_hist_buckets <= 0) {
+        LOGGER_ERROR("log_hist_buckets must be > 0\n");
+        return false;
+    }
+
+#ifdef QMRC
+    if (log_qmrc_buckets <= 0) {
+        LOGGER_ERROR("log_qmrc_buckets must be > 0\n");
+        return false;
+    }
+    if (log_qmrc_buckets > log_hist_buckets) {
+        LOGGER_ERROR("log_qmrc_buckets must be <= log_hist_buckets\n");
+        return false;
+    }
+
+    if (log_epoch_limit < 0 || log_epoch_limit >= 32) {
+        LOGGER_ERROR("log_epoch_limit = %d\n", log_epoch_limit);
+        LOGGER_ERROR("log_epoch_limit must be between 0 and 2^32\n");
+        return false;
+    }
+    if (log_epoch_limit >= log_max_keys) {
+        LOGGER_ERROR("log_max_keys = %d, log_epoch_limit = %d\n",
+                     log_max_keys,
+                     log_epoch_limit);
+        LOGGER_ERROR("log_epoch_limit must be < log_max_keys\n");
+        return false;
+    }
+#endif /* QMRC */
     me->num_entries_seen = 0;
     me->cache = cache_init(log_max_keys,
                            log_hist_buckets,
