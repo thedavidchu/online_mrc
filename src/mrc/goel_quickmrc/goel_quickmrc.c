@@ -35,6 +35,10 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
                    const int log_epoch_limit,
                    const double shards_sampling_ratio)
 {
+    if (me == NULL || shards_sampling_ratio <= 0.0 ||
+        1.0 < shards_sampling_ratio)
+        return false;
+
     int const log_max_keys = ceil(log2(max_keys));
     if (1 << log_max_keys < max_keys) {
         LOGGER_ERROR("log_max_keys = %d, max_keys = %d",
@@ -125,10 +129,11 @@ GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me)
         return false;
 
     uint64_t const num_bins = me->cache->qmrc->hist.length;
-    uint64_t const bin_size = 1 << me->cache->qmrc->hist.log_bucket_size;
+    uint64_t const bin_size =
+        (1 << me->cache->qmrc->hist.log_bucket_size) * me->scale;
 
     *mrc = (struct MissRateCurve){
-        .miss_rate = calloc(num_bins * bin_size + 1, sizeof(*mrc->miss_rate)),
+        .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
         .bin_size = bin_size,
         .num_bins = num_bins};
     if (mrc->miss_rate == NULL) {
