@@ -439,18 +439,22 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                  MissRateCurve__init_from_histogram,
                                  QuickMRC__destroy)
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_goel_quickmrc,
-    struct GoelQuickMRC,
-    me,
-    args,
-    // Use the same configuration as Ashvin
-    GoelQuickMRC__init(&me, 24, 10, 7, 0, args.shards_sampling_ratio),
-    GoelQuickMRC__access_item,
-    GoelQuickMRC__post_process,
-    &me,
-    GoelQuickMRC__to_mrc,
-    GoelQuickMRC__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
+                                 struct GoelQuickMRC,
+                                 me,
+                                 args,
+                                 // Use the same configuration as Ashvin
+                                 GoelQuickMRC__init(&me,
+                                                    ceil(log2(trace->length)),
+                                                    10,
+                                                    7,
+                                                    0,
+                                                    args.shards_sampling_ratio),
+                                 GoelQuickMRC__access_item,
+                                 GoelQuickMRC__post_process,
+                                 &me,
+                                 GoelQuickMRC__to_mrc,
+                                 GoelQuickMRC__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_bucketed_shards,
