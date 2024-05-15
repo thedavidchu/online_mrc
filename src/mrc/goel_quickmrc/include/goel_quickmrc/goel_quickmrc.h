@@ -3,12 +3,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "types/entry_type.h"
 
 struct cache;
 
 struct GoelQuickMRC {
     struct cache *cache;
+
+    uint64_t num_entries_seen;
 };
 
 bool
@@ -27,6 +30,9 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me);
 
 void
 GoelQuickMRC__print_histogram_as_json(struct GoelQuickMRC *me);
+
+bool
+GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me);
 
 void
 GoelQuickMRC__destroy(struct GoelQuickMRC *me);

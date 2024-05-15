@@ -3,6 +3,7 @@ goel_quickmrc_inc = include_directories('include')
 goel_quickmrc_lib = library(
     'goel_quickmrc_lib',
     [
+        'goel_quickmrc.c',
         'quickmrc/qmrc/qmrc.c',
         'quickmrc/cache_simulation.c',
         'quickmrc/cache.c',
@@ -14,6 +15,7 @@ goel_quickmrc_lib = library(
     ),
     dependencies: [
         common_dep,
+        miss_rate_curve_dep,
     ],
     c_args: [
         '-DQMRC',
@@ -31,4 +33,7 @@ goel_quickmrc_lib = library(
 goel_quickmrc_dep = declare_dependency(
     link_with: goel_quickmrc_lib,
     include_directories: goel_quickmrc_inc,
+    dependencies: [
+        miss_rate_curve_dep,
+    ],
 )
