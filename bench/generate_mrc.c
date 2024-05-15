@@ -445,7 +445,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
                                  args,
                                  // Use the same configuration as Ashvin
                                  GoelQuickMRC__init(&me,
-                                                    ceil(log2(trace->length)),
+                                                    trace->length,
                                                     10,
                                                     7,
                                                     0,

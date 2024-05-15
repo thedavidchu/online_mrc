@@ -19,6 +19,7 @@ goel_quickmrc_lib = library(
     ],
     c_args: [
         '-DQMRC',
+        '-DASSERT',
         # NOTE  This is so then we can inline the vectorized instructions.
         '-march=native',
         # HACK  Turn off all of the failing compiler flags...
@@ -27,6 +28,7 @@ goel_quickmrc_lib = library(
         '-Wno-pedantic',
         '-Wno-psabi',
         '-Wno-sign-compare',
+        '-Wno-type-limits',
     ],
 )
 

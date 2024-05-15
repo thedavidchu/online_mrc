@@ -16,7 +16,7 @@ struct GoelQuickMRC {
 
 bool
 GoelQuickMRC__init(struct GoelQuickMRC *me,
-                   const int log_max_keys,
+                   const int max_keys,
                    const int log_hist_buckets,
                    const int log_qmrc_buckets,
                    const int log_epoch_limit,

@@ -27,12 +27,20 @@
 
 bool
 GoelQuickMRC__init(struct GoelQuickMRC *me,
-                   const int log_max_keys,
+                   const int max_keys,
                    const int log_hist_buckets,
                    const int log_qmrc_buckets,
                    const int log_epoch_limit,
                    const double shards_sampling_ratio)
 {
+    int const log_max_keys = ceil(log2(max_keys));
+    if (1 << log_max_keys < max_keys) {
+        LOGGER_ERROR("log_max_keys = %d, max_keys = %d",
+                     log_max_keys,
+                     max_keys);
+        LOGGER_ERROR("2^log_max_keys must be >= than max_keys");
+        return false;
+    }
     /* TODO: support larger max_keys. see definition of count_t in qmrc.c */
     if (log_max_keys < 0 || log_max_keys >= 32) {
         LOGGER_ERROR("log_max_keys = %d\n", log_max_keys);
