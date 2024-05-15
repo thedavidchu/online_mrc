@@ -15,6 +15,7 @@ goel_quickmrc_lib = library(
     ),
     dependencies: [
         common_dep,
+        hash_dep,
         miss_rate_curve_dep,
     ],
     c_args: [

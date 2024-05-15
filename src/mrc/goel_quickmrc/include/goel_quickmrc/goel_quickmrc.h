@@ -11,7 +11,14 @@ struct cache;
 struct GoelQuickMRC {
     struct cache *cache;
 
+    // SHARDS
+    double sampling_ratio;
+    uint64_t threshold;
+    uint64_t scale;
+
+    // Post-Processing for SHARDS and MRC Generation
     uint64_t num_entries_seen;
+    uint64_t num_entries_processed;
 };
 
 bool

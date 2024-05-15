@@ -7,7 +7,9 @@
 #include <stdlib.h>
 
 #include "goel_quickmrc/goel_quickmrc.h"
+#include "hash/MyMurmurHash3.h"
 #include "logger/logger.h"
+#include "math/ratio.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "types/entry_type.h"
 #include "unused/mark_unused.h"
@@ -75,6 +77,9 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
         return false;
     }
 #endif /* QMRC */
+    me->sampling_ratio = shards_sampling_ratio;
+    me->threshold = ratio_uint64(shards_sampling_ratio);
+    me->scale = 1 / shards_sampling_ratio;
     me->num_entries_seen = 0;
     me->cache = cache_init(log_max_keys,
                            log_hist_buckets,
@@ -82,7 +87,6 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
                            log_epoch_limit);
     if (!me->cache)
         return false;
-    UNUSED(shards_sampling_ratio);
     return true;
 }
 
@@ -95,6 +99,9 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
     if (me == NULL)
         return false;
     ++me->num_entries_seen;
+    if (Hash64bit(entry) > me->threshold)
+        return true;
+    ++me->num_entries_processed;
     cache_insert(me->cache, entry);
     return true;
 }
