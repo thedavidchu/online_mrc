@@ -289,8 +289,8 @@ parse_command_line_arguments(int argc, char **argv)
     }
     if (args.trace_format == TRACE_FORMAT_INVALID &&
         strcmp(args.input_path, "zipf") != 0) {
-        LOGGER_ERROR("must specify trace format!");
-        error = true;
+        LOGGER_WARN("trace format was not specified, so defaulting to Kia's");
+        args.trace_format = TRACE_FORMAT_KIA;
     }
     if (args.algorithm == MRC_ALGORITHM_INVALID) {
         LOGGER_ERROR("must specify algorithm!");
