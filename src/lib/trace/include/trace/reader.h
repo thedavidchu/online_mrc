@@ -35,6 +35,8 @@ enum TraceFormat {
     TRACE_FORMAT_SARI,
 };
 
+char const *const TRACE_FORMAT_STRINGS[] = {"Kia", "Sari"};
+
 /// @return Get the number of bytes per trace item.
 static inline size_t
 get_bytes_per_trace_item(enum TraceFormat format)
