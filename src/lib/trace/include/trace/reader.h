@@ -14,6 +14,7 @@
 #include "trace/trace.h"
 
 enum TraceFormat {
+    TRACE_FORMAT_INVALID,
     /// So the data format is basically each access occupies 25 bytes in this
     /// order:
     /// 8 bytes -> u64 -> timestamp (unix timestamp)

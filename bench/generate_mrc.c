@@ -53,6 +53,7 @@ struct CommandLineArguments {
     char *executable;
     enum MRCAlgorithm algorithm;
     char *input_path;
+    enum TraceFormat trace_format;
     char *output_path;
 
     double shards_sampling_ratio;
@@ -60,6 +61,20 @@ struct CommandLineArguments {
 
     char *oracle_path;
 };
+
+static void
+print_available_trace_formats(FILE *stream)
+{
+    fprintf(stream, "{");
+    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
+    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
+        fprintf(stream, "%s", TRACE_FORMAT_STRINGS[i]);
+        if (i != ARRAY_SIZE(TRACE_FORMAT_STRINGS) - 1) {
+            fprintf(stream, ",");
+        }
+    }
+    fprintf(stream, "}");
+}
 
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
 static void
@@ -155,6 +170,21 @@ print_command_line_arguments(struct CommandLineArguments const *args)
            args->oracle_path ? args->oracle_path : "(null)");
 }
 
+static enum TraceFormat
+parse_input_format_string(struct CommandLineArguments const *args, char *str)
+{
+    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
+        if (strcmp(TRACE_FORMAT_STRINGS[i], str) == 0)
+            return (enum TraceFormat)i;
+    }
+    LOGGER_ERROR("unparsable format string: '%s'", str);
+    fprintf(LOGGER_STREAM, "   expected: ");
+    print_available_trace_formats(LOGGER_STREAM);
+    fprintf(LOGGER_STREAM, "\n");
+    print_help(stdout, args);
+    exit(-1);
+}
+
 static enum MRCAlgorithm
 parse_algorithm_string(struct CommandLineArguments const *args, char *str)
 {
@@ -191,6 +221,14 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.input_path = argv[i];
+        } else if (matches_option(argv[i], "--format", "-f")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting input path (or 'zipf')");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.trace_format = parse_input_format_string(&args, argv[i]);
         } else if (matches_option(argv[i], "--algorithm", "-a")) {
             ++i;
             if (i >= argc) {
@@ -247,6 +285,11 @@ parse_command_line_arguments(int argc, char **argv)
     bool error = false;
     if (args.input_path == NULL) {
         LOGGER_ERROR("must specify input path!");
+        error = true;
+    }
+    if (args.trace_format == TRACE_FORMAT_INVALID &&
+        strcmp(args.input_path, "zipf") != 0) {
+        LOGGER_ERROR("must specify trace format!");
         error = true;
     }
     if (args.algorithm == MRC_ALGORITHM_INVALID) {
@@ -420,7 +463,7 @@ get_trace(struct CommandLineArguments args)
                               0);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
-        return read_trace(args.input_path, TRACE_FORMAT_KIA);
+        return read_trace(args.input_path, args.trace_format);
     }
 }
 
