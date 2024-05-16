@@ -87,6 +87,7 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
     me->scale = 1 / shards_sampling_ratio;
     me->shards_adjustment = shards_adjustment;
     me->num_entries_seen = 0;
+    me->num_entries_processed = 0;
     me->cache = cache_init(log_max_keys,
                            log_hist_buckets,
                            log_qmrc_buckets,
