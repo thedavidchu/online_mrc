@@ -1,6 +1,6 @@
 #pragma once
 
-#include <bits/stdint-uintn.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "logger/logger.h"
@@ -31,11 +31,7 @@ generate_trace(const uint64_t length,
 
     for (size_t i = 0; i < length; ++i) {
         trace[i] = (struct TraceItem){
-            .timestamp = 0,
-            .command = 0,
             .key = ZipfianRandom__next(&zrng),
-            .object_size = 0,
-            .time_to_live = 0,
         };
     }
 

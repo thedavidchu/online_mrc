@@ -11,7 +11,7 @@ main(int argc, char **argv)
         LOGGER_ERROR("expecting trace file name as argument");
         return EXIT_FAILURE;
     }
-    struct Trace trace = read_trace(argv[1]);
+    struct Trace trace = read_trace(argv[1], TRACE_FORMAT_KIA);
     g_assert_nonnull(trace.trace);
     return 0;
 }

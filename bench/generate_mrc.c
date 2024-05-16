@@ -420,7 +420,7 @@ get_trace(struct CommandLineArguments args)
                               0);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
-        return read_trace(args.input_path);
+        return read_trace(args.input_path, TRACE_FORMAT_KIA);
     }
 }
 
