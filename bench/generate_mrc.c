@@ -109,6 +109,11 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
         stream,
         "    --input, -i <input-path>: path to the input ('~/...' may not "
         "work) or 'zipf' (for a randomly generated Zipfian distribution)\n");
+    fprintf(stream,
+            "    --format, -f <input-trace-format>: format for the input "
+            "trace, pick ");
+    print_available_trace_formats(stream);
+    fprintf(stream, "\n");
     fprintf(stream, "    --algorithm, -a <algorithm>: algorithm, pick ");
     print_available_algorithms(stream);
     fprintf(stream, "\n");
