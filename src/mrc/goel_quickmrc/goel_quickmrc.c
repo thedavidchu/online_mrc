@@ -134,6 +134,15 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
     const int64_t adjustment =
         me->scale *
         (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
+    LOGGER_INFO("adjustment=%ld, scale=%lu, seen=%lu, sampling_ratio=%f, "
+                "expected=%lu, processed=%ld",
+                adjustment,
+                me->scale,
+                me->num_entries_seen,
+                me->sampling_ratio,
+                me->num_entries_seen * me->sampling_ratio,
+                me->num_entries_processed);
+    // LOGGER_INFO("processed=%lu", me->num_entries_processed);
     // NOTE SHARDS-Adj only adds to the first bucket; but what if the
     //      adjustment would make it negative? Well, in that case, I
     //      add it to the next buckets. I figure this is OKAY because
@@ -150,7 +159,7 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
             break;
         }
     }
-    me->num_entries_processed += adjustment;
+    // me->num_entries_processed += adjustment;
 }
 
 void
