@@ -33,7 +33,8 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
                    const int log_hist_buckets,
                    const int log_qmrc_buckets,
                    const int log_epoch_limit,
-                   const double shards_sampling_ratio)
+                   const double shards_sampling_ratio,
+                   const bool shards_adjustment)
 {
     if (me == NULL || shards_sampling_ratio <= 0.0 ||
         1.0 < shards_sampling_ratio)
@@ -84,6 +85,7 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
     me->sampling_ratio = shards_sampling_ratio;
     me->threshold = ratio_uint64(shards_sampling_ratio);
     me->scale = 1 / shards_sampling_ratio;
+    me->shards_adjustment = shards_adjustment;
     me->num_entries_seen = 0;
     me->cache = cache_init(log_max_keys,
                            log_hist_buckets,
@@ -113,12 +115,16 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
 void
 GoelQuickMRC__post_process(struct GoelQuickMRC *me)
 {
-    if (me == NULL)
+    if (me == NULL || me->cache == NULL || me->cache->qmrc == NULL) {
+        LOGGER_TRACE("cannot post-process uninitialized structure");
         return;
+    }
 
     // SHARDS-Adj seems to decrease the accuracy.
-    if (true)
+    if (!me->shards_adjustment) {
+        LOGGER_TRACE("configured to skip the SHARDS adjustment");
         return;
+    }
 
     // NOTE I need to scale the adjustment by the scale that I've been adjusting
     //      all values. Conversely, I could just not scale any values by the
@@ -143,6 +149,7 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
             break;
         }
     }
+    me->num_entries_processed += adjustment;
 }
 
 void

@@ -15,6 +15,7 @@ struct GoelQuickMRC {
     double sampling_ratio;
     uint64_t threshold;
     uint64_t scale;
+    bool shards_adjustment;
 
     // Post-Processing for SHARDS and MRC Generation
     uint64_t num_entries_seen;
@@ -27,7 +28,8 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
                    const int log_hist_buckets,
                    const int log_qmrc_buckets,
                    const int log_epoch_limit,
-                   const double shards_sampling_ratio);
+                   const double shards_sampling_ratio,
+                   const bool shards_adjustment);
 
 bool
 GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry);
