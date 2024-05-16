@@ -166,16 +166,17 @@ parse_positive_double(char const *const str)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    printf("CommandLineArguments(executable='%s', input_path='%s', "
-           "algorithm='%s', output_path='%s', shards_ratio='%g', "
-           "artifical_trace_length='%zu', oracle_path='%s')\n",
-           args->executable,
-           args->input_path,
-           algorithm_names[args->algorithm],
-           args->output_path,
-           args->shards_sampling_ratio,
-           args->artificial_trace_length,
-           args->oracle_path ? args->oracle_path : "(null)");
+    fprintf(stderr,
+            "CommandLineArguments(executable='%s', input_path='%s', "
+            "algorithm='%s', output_path='%s', shards_ratio='%g', "
+            "artifical_trace_length='%zu', oracle_path='%s')\n",
+            args->executable,
+            args->input_path,
+            algorithm_names[args->algorithm],
+            args->output_path,
+            args->shards_sampling_ratio,
+            args->artificial_trace_length,
+            args->oracle_path ? args->oracle_path : "(null)");
 }
 
 static enum TraceFormat
