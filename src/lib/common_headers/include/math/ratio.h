@@ -10,6 +10,12 @@ static inline uint64_t
 ratio_uint64(const double ratio)
 {
     const uint64_t threshold = ratio * UINT64_MAX;
+    // NOTE If init_sampling_ratio == 0.0 + \epsilon, where \epsilon is
+    //      very small but not zero, then we would have a threshold less
+    //      than the ratio and therefore return UINT64_MAX.
+    if (ratio < 1 / (double)UINT64_MAX) {
+        return 0;
+    }
     // NOTE If init_sampling_ratio == 1.0, then it causes the
     //      threshold to overflow and become zero. Therefore, if the
     //      threshold is less than the ratio, we assume we overflowed.
