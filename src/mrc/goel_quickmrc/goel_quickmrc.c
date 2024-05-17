@@ -159,7 +159,6 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
             break;
         }
     }
-    // me->num_entries_processed += adjustment;
 }
 
 void
@@ -189,7 +188,10 @@ GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me)
 
     // Generate the MRC
     struct histogram hist = me->cache->qmrc->hist;
-    const uint64_t total = me->num_entries_processed;
+    const int64_t adjustment =
+        me->scale *
+        (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
+    const uint64_t total = me->num_entries_processed + adjustment;
     uint64_t tmp = total;
     for (uint64_t i = 0; i < num_bins; ++i) {
         const uint64_t h = hist.hits[i];
