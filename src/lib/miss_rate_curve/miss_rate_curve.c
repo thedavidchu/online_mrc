@@ -257,6 +257,11 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
     if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
         return -1.0;
     }
+    if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
+        lhs->bin_size != rhs->bin_size) {
+        LOGGER_ERROR("cannot compare MRCs with different bin sizes");
+        return -1.0;
+    }
 
     const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
     const uint64_t max_bound = MAX(lhs->num_bins, rhs->num_bins);
@@ -289,6 +294,11 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
         return -1.0;
     }
     if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
+        return -1.0;
+    }
+    if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
+        lhs->bin_size != rhs->bin_size) {
+        LOGGER_ERROR("cannot compare MRCs with different bin sizes");
         return -1.0;
     }
 
