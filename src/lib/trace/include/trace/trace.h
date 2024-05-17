@@ -6,11 +6,16 @@
 #include <string.h>
 
 struct TraceItem {
+    uint64_t key;
+};
+
+struct FullTraceItem {
     uint64_t timestamp;
     uint8_t command;
     uint64_t key;
     uint32_t object_size;
-    uint32_t time_to_live;
+    uint32_t time_to_live; /* Kia stores TTL rather than expiry time */
+    uint32_t expiry_time;  /* Sari stores expiry time rather than the TTL */
 };
 
 struct Trace {
@@ -20,17 +25,17 @@ struct Trace {
     //      this value; but the written contract says aliases won't even exist.
     //      I defer to the written contract (until I'm convinced that it
     //      supports my interpretation of the examples).
-    struct TraceItem const *const trace;
-    size_t const length;
+    struct TraceItem const *trace;
+    size_t length;
 };
 
 void
-Trace__destroy(struct Trace *me)
+Trace__destroy(struct Trace *const me)
 {
     if (me == NULL)
         return;
 
     // HACK This is an utter hack to get around the const-qualifiers.
     free((void *)me->trace);
-    memset(me, 0, sizeof(*me));
+    *me = (struct Trace){0};
 }
