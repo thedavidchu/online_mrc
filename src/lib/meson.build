@@ -4,6 +4,7 @@ subdir('lookup')
 subdir('histogram')
 subdir('priority_queue')
 subdir('random')
+subdir('timer') # Relies on common_headers
 subdir('trace')
 subdir('tree')
 
