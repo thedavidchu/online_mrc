@@ -179,6 +179,17 @@ print_command_line_arguments(struct CommandLineArguments const *args)
             args->oracle_path ? args->oracle_path : "(null)");
 }
 
+static void
+print_trace_summary(struct CommandLineArguments const *args,
+                    struct Trace const *const trace)
+{
+    fprintf(stderr,
+            "Trace(source='%s', format='%s', length=%zu)\n",
+            args->input_path,
+            TRACE_FORMAT_STRINGS[args->trace_format],
+            trace->length);
+}
+
 static enum TraceFormat
 parse_input_format_string(struct CommandLineArguments const *args, char *str)
 {
@@ -311,8 +322,6 @@ parse_command_line_arguments(int argc, char **argv)
     }
     if (error)
         goto cleanup;
-
-    print_command_line_arguments(&args);
 
     return args;
 
@@ -532,6 +541,7 @@ main(int argc, char **argv)
 {
     struct CommandLineArguments args = {0};
     args = parse_command_line_arguments(argc, argv);
+    print_command_line_arguments(&args);
 
     // Read in trace
     struct Trace trace = get_trace(args);
@@ -542,6 +552,7 @@ main(int argc, char **argv)
                      trace.length);
         return EXIT_FAILURE;
     }
+    print_trace_summary(&args, &trace);
 
     struct MissRateCurve mrc = {0};
     switch (args.algorithm) {
