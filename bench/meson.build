@@ -20,6 +20,7 @@ generate_mrc_exe = executable(
         miss_rate_curve_dep,
         olken_dep,
         quickmrc_dep,
+        timer_dep,
         trace_dep,
     ],
 )

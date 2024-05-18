@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "arrays/array_size.h"
 #include "bucketed_shards/bucketed_shards.h"
@@ -17,6 +16,7 @@
 #include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
+#include "timer/timer.h"
 #include "trace/generator.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
@@ -352,21 +352,21 @@ cleanup:
         LOGGER_TRACE("Initialize MRC Algorithm");                              \
         g_assert_true((init_call));                                            \
         LOGGER_TRACE("Begin running trace");                                   \
-        clock_t t0 = clock();                                                  \
+        double t0 = get_wall_time_sec();                                       \
         for (size_t i = 0; i < trace->length; ++i) {                           \
             ((access_func))(&var_name, trace->trace[i].key);                   \
             if (i % 1000000 == 0) {                                            \
                 LOGGER_TRACE("Finished %zu / %zu", i, trace->length);          \
             }                                                                  \
         }                                                                      \
-        clock_t t1 = clock();                                                  \
+        double t1 = get_wall_time_sec();                                       \
         LOGGER_TRACE("Begin post process");                                    \
         ((post_process_func))(&var_name);                                      \
-        clock_t t2 = clock();                                                  \
+        double t2 = get_wall_time_sec();                                       \
         LOGGER_INFO("Runtime: %f | Post-Process Time: %f | Total Time: %f",    \
-                    (double)(t1 - t0) / CLOCKS_PER_SEC,                        \
-                    (double)(t2 - t1) / CLOCKS_PER_SEC,                        \
-                    (double)(t2 - t0) / CLOCKS_PER_SEC);                       \
+                    (double)(t1 - t0),                                         \
+                    (double)(t2 - t1),                                         \
+                    (double)(t2 - t0));                                        \
         struct MissRateCurve mrc = {0};                                        \
         ((hist_func))(&mrc, hist);                                             \
         LOGGER_TRACE("Wrote histogram");                                       \
