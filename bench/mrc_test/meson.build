@@ -17,6 +17,7 @@ mrc_performance_test_exe = executable(
         parda_fixed_rate_shards_dep,
         quickmrc_dep,
         bucketed_quickmrc_dep,
+        timer_dep,
         tree_dep,
         zipfian_random_dep,
     ],

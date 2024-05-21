@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
@@ -5,10 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "arrays/array_size.h"
 #include "bucketed_shards/bucketed_shards.h"
+#include "goel_quickmrc/goel_quickmrc.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -16,12 +17,13 @@
 #include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
+#include "timer/timer.h"
 #include "trace/generator.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
 #include "unused/mark_unused.h"
 
-static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 28;
+static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
 
@@ -34,6 +36,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_FIXED_RATE_SHARDS_ADJ,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
+    MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_BUCKETED_SHARDS,
 };
 
@@ -46,6 +49,7 @@ static char *algorithm_names[] = {
     "Fixed-Rate-SHARDS-Adj",
     "Fixed-Size-SHARDS",
     "QuickMRC",
+    "Goel-QuickMRC",
     "Bucketed-SHARDS",
 };
 
@@ -163,16 +167,28 @@ parse_positive_double(char const *const str)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    printf("CommandLineArguments(executable='%s', input_path='%s', "
-           "algorithm='%s', output_path='%s', shards_ratio='%g', "
-           "artifical_trace_length='%zu', oracle_path='%s')\n",
-           args->executable,
-           args->input_path,
-           algorithm_names[args->algorithm],
-           args->output_path,
-           args->shards_sampling_ratio,
-           args->artificial_trace_length,
-           args->oracle_path ? args->oracle_path : "(null)");
+    fprintf(stderr,
+            "CommandLineArguments(executable='%s', input_path='%s', "
+            "algorithm='%s', output_path='%s', shards_ratio='%g', "
+            "artifical_trace_length='%zu', oracle_path='%s')\n",
+            args->executable,
+            args->input_path,
+            algorithm_names[args->algorithm],
+            args->output_path,
+            args->shards_sampling_ratio,
+            args->artificial_trace_length,
+            args->oracle_path ? args->oracle_path : "(null)");
+}
+
+static void
+print_trace_summary(struct CommandLineArguments const *args,
+                    struct Trace const *const trace)
+{
+    fprintf(stderr,
+            "Trace(source='%s', format='%s', length=%zu)\n",
+            args->input_path,
+            TRACE_FORMAT_STRINGS[args->trace_format],
+            trace->length);
 }
 
 static enum TraceFormat
@@ -308,8 +324,6 @@ parse_command_line_arguments(int argc, char **argv)
     if (error)
         goto cleanup;
 
-    print_command_line_arguments(&args);
-
     return args;
 
 cleanup:
@@ -339,26 +353,23 @@ cleanup:
         LOGGER_TRACE("Initialize MRC Algorithm");                              \
         g_assert_true((init_call));                                            \
         LOGGER_TRACE("Begin running trace");                                   \
-        clock_t t0 = clock();                                                  \
+        double t0 = get_wall_time_sec();                                       \
         for (size_t i = 0; i < trace->length; ++i) {                           \
             ((access_func))(&var_name, trace->trace[i].key);                   \
             if (i % 1000000 == 0) {                                            \
                 LOGGER_TRACE("Finished %zu / %zu", i, trace->length);          \
             }                                                                  \
         }                                                                      \
-        clock_t t1 = clock();                                                  \
+        double t1 = get_wall_time_sec();                                       \
         LOGGER_TRACE("Begin post process");                                    \
         ((post_process_func))(&var_name);                                      \
-        clock_t t2 = clock();                                                  \
+        double t2 = get_wall_time_sec();                                       \
         LOGGER_INFO("Runtime: %f | Post-Process Time: %f | Total Time: %f",    \
-                    (double)(t1 - t0) / CLOCKS_PER_SEC,                        \
-                    (double)(t2 - t1) / CLOCKS_PER_SEC,                        \
-                    (double)(t2 - t0) / CLOCKS_PER_SEC);                       \
+                    (double)(t1 - t0),                                         \
+                    (double)(t2 - t1),                                         \
+                    (double)(t2 - t0));                                        \
         struct MissRateCurve mrc = {0};                                        \
-        if (false) {                                                           \
-            Histogram__write_as_json(stdout, &var_name.hist);                  \
-        }                                                                      \
-        ((hist_func))(&mrc, &var_name.hist);                                   \
+        ((hist_func))(&mrc, hist);                                             \
         LOGGER_TRACE("Wrote histogram");                                       \
         ((destroy_func))(&var_name);                                           \
         LOGGER_TRACE("Destroyed MRC generator object");                        \
@@ -372,7 +383,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  Olken__init(&me, trace->length, 1),
                                  Olken__access_item,
                                  Olken__post_process,
-                                 histogram,
+                                 &me.histogram,
                                  MissRateCurve__init_from_histogram,
                                  Olken__destroy)
 
@@ -388,7 +399,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                           false),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
-    olken.histogram,
+    &me.olken.histogram,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
 
@@ -404,7 +415,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                           true),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
-    olken.histogram,
+    &me.olken.histogram,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
 
@@ -420,7 +431,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                           1),
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
-    histogram,
+    &me.histogram,
     MissRateCurve__init_from_histogram,
     FixedSizeShards__destroy)
 
@@ -435,9 +446,27 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                                 args.shards_sampling_ratio),
                                  QuickMRC__access_item,
                                  QuickMRC__post_process,
-                                 histogram,
+                                 &me.histogram,
                                  MissRateCurve__init_from_histogram,
                                  QuickMRC__destroy)
+
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
+                                 struct GoelQuickMRC,
+                                 me,
+                                 args,
+                                 // Use the same configuration as Ashvin
+                                 GoelQuickMRC__init(&me,
+                                                    trace->length,
+                                                    10,
+                                                    7,
+                                                    0,
+                                                    args.shards_sampling_ratio,
+                                                    true),
+                                 GoelQuickMRC__access_item,
+                                 GoelQuickMRC__post_process,
+                                 &me,
+                                 GoelQuickMRC__to_mrc,
+                                 GoelQuickMRC__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_bucketed_shards,
@@ -451,7 +480,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                          1),
     BucketedShards__access_item,
     BucketedShards__post_process,
-    histogram,
+    &me.histogram,
     MissRateCurve__init_from_histogram,
     BucketedShards__destroy)
 /// @note   I introduce this function so that I can do perform some logic but
@@ -513,6 +542,7 @@ main(int argc, char **argv)
 {
     struct CommandLineArguments args = {0};
     args = parse_command_line_arguments(argc, argv);
+    print_command_line_arguments(&args);
 
     // Read in trace
     struct Trace trace = get_trace(args);
@@ -523,6 +553,7 @@ main(int argc, char **argv)
                      trace.length);
         return EXIT_FAILURE;
     }
+    print_trace_summary(&args, &trace);
 
     struct MissRateCurve mrc = {0};
     switch (args.algorithm) {
@@ -545,6 +576,10 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_QUICKMRC:
         LOGGER_TRACE("running QuickMRC");
         mrc = run_quickmrc(&trace, args);
+        break;
+    case MRC_ALGORITHM_GOEL_QUICKMRC:
+        LOGGER_TRACE("running Ashvin Goel's QuickMRC");
+        mrc = run_goel_quickmrc(&trace, args);
         break;
     case MRC_ALGORITHM_BUCKETED_SHARDS:
         LOGGER_TRACE("running Bucketed Shards");

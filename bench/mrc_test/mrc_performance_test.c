@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
@@ -15,6 +14,7 @@
 #include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
+#include "timer/timer.h"
 #include "unused/mark_unused.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
@@ -37,14 +37,13 @@ const uint64_t TRACE_LENGTH = 1 << 20;
                                           RANDOM_SEED));                       \
         /* The maximum trace length is the number of possible unique items */  \
         g_assert_true(((init_expr)));                                          \
-        clock_t start_time = clock();                                          \
+        double start_time = get_wall_time_sec();                               \
         for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {                          \
             uint64_t key = ZipfianRandom__next(&zrng);                         \
             ((access_item_func_name))(&((mrc_var_name)), key);                 \
         }                                                                      \
-        clock_t end_time = clock();                                            \
-        double elapsed_time =                                                  \
-            (double)(end_time - start_time) / (double)CLOCKS_PER_SEC;          \
+        double end_time = get_wall_time_sec();                                 \
+        double elapsed_time = (double)(end_time - start_time);                 \
         printf("Elapsed time for '" #MRCStructType "' workload: %.4f.\n",      \
                elapsed_time);                                                  \
         ZipfianRandom__destroy(&zrng);                                         \

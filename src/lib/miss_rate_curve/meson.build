@@ -11,5 +11,10 @@ miss_rate_curve_dep = declare_dependency(
         ],
     ),
     include_directories: include_directories('include'),
-    dependencies: common_dep,
+    dependencies: [
+        common_dep,
+        glib_dep,
+        histogram_dep,
+        fractional_histogram_dep,
+    ],
 )

@@ -17,6 +17,8 @@ project(
         'default_library=static',
         # Build with -O2 -g
         'buildtype=debugoptimized',
+        # Enable link-time optimizations
+        'b_lto=true',
     ],
 )
 
@@ -35,7 +37,9 @@ glib_dep = dependency(
     ],
 )
 
-use_gprof = true
+# NOTE  gprof cannot be used with valgrind! Source:
+#       https://stackoverflow.com/questions/2146082/valgrind-profiling-timer-expired
+use_gprof = false
 if use_gprof
     add_project_arguments('-pg', '-no-pie', language: 'c')
     # NOTE  I have no idea why this is
