@@ -5,6 +5,7 @@ trace_test_exe = executable(
         mytester_include,
     ],
     dependencies: [
+        common_dep,
         glib_dep,
         trace_dep,
     ],
@@ -14,7 +15,7 @@ trace_test_exe = executable(
 fs = import('fs')
 test_trace = '/home/david/Downloads/src2.bin'
 if fs.exists(test_trace)
-    test('trace_test', trace_test_exe, args : [test_trace])
+    test('trace_test', trace_test_exe, args: [test_trace])
 else
     warning('could not find file: ' + test_trace)
 endif
