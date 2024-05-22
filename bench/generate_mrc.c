@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "arrays/array_size.h"
+#include "average_eviction_time/average_eviction_time.h"
 #include "bucketed_shards/bucketed_shards.h"
 #include "goel_quickmrc/goel_quickmrc.h"
 #include "histogram/histogram.h"
@@ -38,6 +39,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_QUICKMRC,
     MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_BUCKETED_SHARDS,
+    MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -51,6 +53,7 @@ static char *algorithm_names[] = {
     "QuickMRC",
     "Goel-QuickMRC",
     "Bucketed-SHARDS",
+    "Average-Eviction-Time",
 };
 
 struct CommandLineArguments {
@@ -484,6 +487,20 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     &me.histogram,
     MissRateCurve__init_from_histogram,
     BucketedShards__destroy)
+
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
+                                 struct AverageEvictionTime,
+                                 me,
+                                 args,
+                                 AverageEvictionTime__init(&me,
+                                                           trace->length,
+                                                           1),
+                                 AverageEvictionTime__access_item,
+                                 AverageEvictionTime__post_process,
+                                 &me.histogram,
+                                 AverageEvictionTime__to_mrc,
+                                 AverageEvictionTime__destroy)
+
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -585,6 +602,10 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_BUCKETED_SHARDS:
         LOGGER_TRACE("running Bucketed Shards");
         mrc = run_bucketed_shards(&trace, args);
+        break;
+    case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
+        LOGGER_TRACE("running Average Eviction Time");
+        mrc = run_average_eviction_time(&trace, args);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);

@@ -78,22 +78,20 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
 }
 
 static double
-get_prob(struct AverageEvictionTime *me, size_t index)
+get_prob(struct Histogram *me, size_t index)
 {
-    assert(me != NULL && index < me->histogram.num_bins);
-    return (double)me->histogram.histogram[index] /
-           (double)me->histogram.running_sum;
+    assert(me != NULL && index < me->num_bins);
+    return (double)me->histogram[index] / (double)me->running_sum;
 }
 
 bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc,
-                            struct AverageEvictionTime *me)
+AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
 {
     if (mrc == NULL || me == NULL)
         return false;
 
-    uint64_t const num_bins = me->histogram.num_bins;
-    uint64_t const bin_size = me->histogram.bin_size;
+    uint64_t const num_bins = me->num_bins;
+    uint64_t const bin_size = me->bin_size;
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
         .bin_size = num_bins,
@@ -107,10 +105,10 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc,
 
     // Calculate false infinity miss rate
     double aggregate_reuse_time_prob =
-        (double)me->histogram.infinity / (double)me->histogram.running_sum;
+        (double)me->infinity / (double)me->running_sum;
     mrc->miss_rate[num_bins] = num_bins * bin_size - aggregate_reuse_time_prob;
-    aggregate_reuse_time_prob += (double)me->histogram.false_infinity /
-                                 (double)me->histogram.running_sum;
+    aggregate_reuse_time_prob +=
+        (double)me->false_infinity / (double)me->running_sum;
     for (size_t i = 0; i < num_bins; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
         uint64_t const cache_size = rev_i * bin_size;

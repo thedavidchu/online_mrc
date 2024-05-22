@@ -28,8 +28,7 @@ bool
 AverageEvictionTime__post_process(struct AverageEvictionTime *me);
 
 bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc,
-                            struct AverageEvictionTime *me);
+AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me);
 
 void
 AverageEvictionTime__destroy(struct AverageEvictionTime *me);

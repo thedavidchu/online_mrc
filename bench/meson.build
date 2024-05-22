@@ -11,6 +11,7 @@ generate_mrc_exe = executable(
         mytester_include,
     ],
     dependencies: [
+        average_eviction_time_dep,
         bucketed_shards_dep,
         common_dep,
         fixed_rate_shards_dep,
