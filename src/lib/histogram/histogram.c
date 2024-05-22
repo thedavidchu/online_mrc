@@ -210,6 +210,45 @@ Histogram__debug_difference(struct Histogram *me,
     return num_mismatch == 0;
 }
 
+bool
+Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment)
+{
+    if (me == NULL || me->num_bins < 1 || me->bin_size < 1)
+        return false;
+
+    // NOTE SHARDS-Adj only adds to the first bucket; but what if the
+    //      adjustment would make it negative? Well, in that case, I
+    //      add it to the next buckets. I figure this is OKAY because
+    //      histogram bin size is configurable and it's like using a
+    //      larger bin.
+    int64_t tmp_adj = adjustment;
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        int64_t hist = me->histogram[i];
+        if ((int64_t)me->histogram[i] + tmp_adj < 0) {
+            me->histogram[i] = 0;
+            tmp_adj += hist;
+        } else {
+            me->histogram[i] += tmp_adj;
+            tmp_adj = 0;
+            break;
+        }
+    }
+
+    me->running_sum += adjustment - tmp_adj;
+
+    // If the adjustment is larger than the number of elements, then
+    // we have a problem!
+    if (tmp_adj != 0) {
+        LOGGER_WARN("the attempted adjustment (%" PRId64 ") "
+                    "is larger than the adjustment we managed (%" PRId64 ")!",
+                    adjustment,
+                    adjustment - tmp_adj);
+        return false;
+    }
+
+    return true;
+}
+
 void
 Histogram__destroy(struct Histogram *me)
 {
