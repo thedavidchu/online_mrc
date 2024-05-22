@@ -19,8 +19,8 @@
 
 bool
 FixedRateShards__init(struct FixedRateShards *me,
-                      const uint64_t max_num_unique_entries,
                       const double sampling_ratio,
+                      const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size,
                       const bool adjustment)
 {
@@ -29,8 +29,7 @@ FixedRateShards__init(struct FixedRateShards *me,
     // NOTE I am assuming that Olken does not have any structures that
     //      point to the containing structure (i.e. the 'shell' of the
     //      Olken structure is not referenced anywhere).
-    bool r =
-        Olken__init(&me->olken, max_num_unique_entries, histogram_bin_size);
+    bool r = Olken__init(&me->olken, histogram_num_bins, histogram_bin_size);
     if (!r)
         return false;
     me->sampling_ratio = sampling_ratio;

@@ -101,7 +101,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
-        FixedRateShards__init(&me, hist_num_bins, 1e-3, hist_bin_size, true),
+        FixedRateShards__init(&me, 1e-3, hist_num_bins, hist_bin_size, true),
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 
@@ -153,7 +153,7 @@ test_sampling(void)
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
-        FixedRateShards__init(&me, hist_num_bins, 1e-3, hist_bin_size, true),
+        FixedRateShards__init(&me, 1e-3, hist_num_bins, hist_bin_size, true),
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif
@@ -161,7 +161,7 @@ test_sampling(void)
 #if 1
     PERFORMANCE_TEST(struct FixedRateShards,
                      me,
-                     FixedRateShards__init(&me, 1, 1e-12, 1, true),
+                     FixedRateShards__init(&me, 1e-12, 1, 1, true),
                      FixedRateShards__access_item,
                      FixedRateShards__destroy);
 #endif
@@ -206,7 +206,7 @@ test_quickmrc(void)
     PERFORMANCE_TEST(
         struct FixedRateShards,
         me,
-        FixedRateShards__init(&me, hist_num_bins, 1e-3, hist_bin_size, true),
+        FixedRateShards__init(&me, 1e-3, hist_num_bins, hist_bin_size, true),
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif

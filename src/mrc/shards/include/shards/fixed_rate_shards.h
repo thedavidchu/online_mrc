@@ -34,8 +34,8 @@ struct FixedRateShards {
 ///             should be true according to Waldspurger!)
 bool
 FixedRateShards__init(struct FixedRateShards *me,
-                      const uint64_t max_num_unique_entries,
                       const double sampling_ratio,
+                      const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size,
                       const bool adjustment);
 
