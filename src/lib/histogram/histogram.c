@@ -239,6 +239,8 @@ Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment)
     // If the adjustment is larger than the number of elements, then
     // we have a problem!
     if (tmp_adj != 0) {
+        // If I print warnings in many places, then I effectively get a
+        // stack trace! Isn't that nice?
         LOGGER_WARN("the attempted adjustment (%" PRId64 ") "
                     "is larger than the adjustment we managed (%" PRId64 ")!",
                     adjustment,
