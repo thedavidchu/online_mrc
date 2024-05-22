@@ -19,8 +19,8 @@
 
 bool
 FixedRateShards__init(struct FixedRateShards *me,
-                      const uint64_t max_num_unique_entries,
                       const double sampling_ratio,
+                      const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size,
                       const bool adjustment)
 {
@@ -29,8 +29,7 @@ FixedRateShards__init(struct FixedRateShards *me,
     // NOTE I am assuming that Olken does not have any structures that
     //      point to the containing structure (i.e. the 'shell' of the
     //      Olken structure is not referenced anywhere).
-    bool r =
-        Olken__init(&me->olken, max_num_unique_entries, histogram_bin_size);
+    bool r = Olken__init(&me->olken, histogram_num_bins, histogram_bin_size);
     if (!r)
         return false;
     me->sampling_ratio = sampling_ratio;
@@ -112,23 +111,10 @@ FixedRateShards__post_process(struct FixedRateShards *me)
     const int64_t adjustment =
         me->scale *
         (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
-    // NOTE SHARDS-Adj only adds to the first bucket; but what if the
-    //      adjustment would make it negative? Well, in that case, I
-    //      add it to the next buckets. I figure this is OKAY because
-    //      histogram bin size is configurable and it's like using a
-    //      larger bin.
-    int64_t tmp_adj = adjustment;
-    for (size_t i = 0; i < me->olken.histogram.num_bins; ++i) {
-        int64_t hist = me->olken.histogram.histogram[i];
-        if ((int64_t)me->olken.histogram.histogram[i] + tmp_adj < 0) {
-            me->olken.histogram.histogram[i] = 0;
-            tmp_adj += hist;
-        } else {
-            me->olken.histogram.histogram[i] += tmp_adj;
-            break;
-        }
+    bool r = Histogram__adjust_first_buckets(&me->olken.histogram, adjustment);
+    if (!r) {
+        LOGGER_WARN("error in adjusting buckets");
     }
-    me->olken.histogram.running_sum += adjustment;
 }
 
 void

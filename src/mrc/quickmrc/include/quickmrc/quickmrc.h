@@ -33,10 +33,11 @@ struct QuickMRC {
 
 bool
 QuickMRC__init(struct QuickMRC *me,
+               const double sampling_ratio,
                const uint64_t default_num_buckets,
                const uint64_t max_bucket_size,
-               const uint64_t histogram_length,
-               const double sampling_ratio);
+               const uint64_t histogram_num_bins,
+               const uint64_t histogram_bin_size);
 
 bool
 QuickMRC__access_item(struct QuickMRC *me, EntryType entry);

@@ -139,8 +139,8 @@ miss(struct Mimir *me, EntryType entry)
 bool
 Mimir__init(struct Mimir *me,
             const uint64_t num_buckets,
-            const uint64_t bin_size,
-            const uint64_t max_num_unique_entries,
+            const uint64_t histogram_num_bins,
+            const uint64_t histogram_bin_size,
             const enum MimirAgingPolicy aging_policy)
 {
     bool r = false;
@@ -151,10 +151,9 @@ Mimir__init(struct Mimir *me,
     if (!r) {
         goto buckets_error;
     }
-    r = FractionalHistogram__init(
-        &me->histogram,
-        POSITIVE_CEILING_DIVIDE(max_num_unique_entries, bin_size),
-        bin_size);
+    r = FractionalHistogram__init(&me->histogram,
+                                  histogram_num_bins,
+                                  histogram_bin_size);
     if (!r) {
         goto histogram_error;
     }

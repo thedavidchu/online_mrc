@@ -28,12 +28,12 @@ struct Mimir {
 };
 
 /// @param num_buckets: uint64_t   - number of MIMIR stack distance buckets
-/// @param bin_size: uint64_t   - size of the histogram bin
+/// @param histogram_bin_size: uint64_t   - size of the histogram bin
 bool
 Mimir__init(struct Mimir *me,
             const uint64_t num_buckets,
-            const uint64_t bin_size,
-            const uint64_t max_num_unique_entries,
+            const uint64_t histogram_num_bins,
+            const uint64_t histogram_bin_size,
             const enum MimirAgingPolicy aging_policy);
 
 void

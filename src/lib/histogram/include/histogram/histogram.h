@@ -58,5 +58,10 @@ Histogram__write_as_json(FILE *stream, struct Histogram *me);
 void
 Histogram__print_as_json(struct Histogram *me);
 
+/// @brief  Adjust the histogram starting from the first bucket.
+/// @note   This is for the SHARDS-Adj algorithm.
+bool
+Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment);
+
 void
 Histogram__destroy(struct Histogram *me);

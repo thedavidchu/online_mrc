@@ -24,11 +24,11 @@ struct GoelQuickMRC {
 
 bool
 GoelQuickMRC__init(struct GoelQuickMRC *me,
+                   const double shards_sampling_ratio,
                    const int max_keys,
                    const int log_hist_buckets,
                    const int log_qmrc_buckets,
                    const int log_epoch_limit,
-                   const double shards_sampling_ratio,
                    const bool shards_adjustment);
 
 bool

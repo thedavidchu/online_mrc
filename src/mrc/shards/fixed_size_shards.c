@@ -58,7 +58,7 @@ bool
 FixedSizeShards__init(struct FixedSizeShards *me,
                       const double starting_sampling_ratio,
                       const uint64_t max_size,
-                      const uint64_t max_num_unique_entries,
+                      const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size)
 {
     bool r = false;
@@ -80,10 +80,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         goto cleanup;
     }
 
-    r = Histogram__init(
-        &me->histogram,
-        POSITIVE_CEILING_DIVIDE(max_num_unique_entries, histogram_bin_size),
-        histogram_bin_size);
+    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
     if (!r) {
         LOGGER_WARN("failed to initialize histogram");
         goto cleanup;
