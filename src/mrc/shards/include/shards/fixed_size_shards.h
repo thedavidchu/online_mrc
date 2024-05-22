@@ -28,7 +28,7 @@ bool
 FixedSizeShards__init(struct FixedSizeShards *me,
                       const double starting_sampling_ratio,
                       const uint64_t max_size,
-                      const uint64_t max_num_unique_entries,
+                      const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size);
 
 void
