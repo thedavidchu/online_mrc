@@ -109,7 +109,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct BucketedShards,
         me,
-        BucketedShards__init(&me, 1 << 13, hist_num_bins, 1e-3, hist_bin_size),
+        BucketedShards__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
         BucketedShards__access_item,
         BucketedShards__destroy);
 }
@@ -172,7 +172,7 @@ test_sampling(void)
     PERFORMANCE_TEST(
         struct BucketedShards,
         me,
-        BucketedShards__init(&me, 1 << 13, hist_num_bins, 1e-3, hist_bin_size),
+        BucketedShards__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
         BucketedShards__access_item,
         BucketedShards__destroy);
 #endif

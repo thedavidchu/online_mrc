@@ -18,9 +18,9 @@ struct BucketedShards {
 
 bool
 BucketedShards__init(struct BucketedShards *me,
-                     const uint64_t num_hash_buckets,
-                     const uint64_t max_num_unique_entries,
                      const double init_sampling_ratio,
+                     const uint64_t num_hash_buckets,
+                     const uint64_t histogram_num_bins,
                      const uint64_t histogram_bin_size);
 
 void

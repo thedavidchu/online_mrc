@@ -24,7 +24,7 @@ access_same_key_five_times(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(BucketedShards__init(&me, MAX_NUM_UNIQUE_ENTRIES, 1, 1.0, 1));
+    g_assert_true(BucketedShards__init(&me, 1.0, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
@@ -61,7 +61,7 @@ small_exact_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     // I deliberately underestimate it (it should be 11).
     g_assert_true(Olken__init(&oracle, 10, 1));
-    g_assert_true(BucketedShards__init(&me, 1024, 10, 1.0, 1));
+    g_assert_true(BucketedShards__init(&me, 1.0, 1024, 10, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
@@ -94,7 +94,7 @@ long_accuracy_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(
-        BucketedShards__init(&me, 1 << 12, MAX_NUM_UNIQUE_ENTRIES, 1.0, 1));
+        BucketedShards__init(&me, 1.0, 1 << 12, MAX_NUM_UNIQUE_ENTRIES, 1));
 
     for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
