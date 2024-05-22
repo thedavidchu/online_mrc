@@ -73,7 +73,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        Mimir__init(&me, 1000, hist_bin_size, hist_num_bins, MIMIR_ROUNDER),
+        Mimir__init(&me, 1000, hist_num_bins, hist_bin_size, MIMIR_ROUNDER),
         Mimir__access_item,
         Mimir__destroy);
 
@@ -81,7 +81,7 @@ test_all(void)
     PERFORMANCE_TEST(
         struct Mimir,
         me,
-        Mimir__init(&me, 1000, hist_bin_size, hist_num_bins, MIMIR_STACKER),
+        Mimir__init(&me, 1000, hist_num_bins, hist_bin_size, MIMIR_STACKER),
         Mimir__access_item,
         Mimir__destroy);
 #endif
