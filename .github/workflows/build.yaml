@@ -13,7 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.ASHVINGOEL_QUICKMRC_PAT }}
+          # This is my Personal Access Token to my fork of Ashvin's QuickMRC
+          token: ${{ secrets.ASHVINGOEL_QUICKMRC_PAT_FOR_ONLINEMRC }}
           submodules: recursive
       - uses: actions/setup-python@v5
         with:
