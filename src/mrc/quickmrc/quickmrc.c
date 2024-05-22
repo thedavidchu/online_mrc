@@ -20,10 +20,11 @@
 
 bool
 QuickMRC__init(struct QuickMRC *me,
+               const double sampling_ratio,
                const uint64_t default_num_buckets,
                const uint64_t max_bucket_size,
-               const uint64_t histogram_length,
-               const double sampling_ratio)
+               const uint64_t histogram_num_bins,
+               const uint64_t histogram_bin_size)
 {
     bool r = false;
     if (me == NULL) {
@@ -40,7 +41,7 @@ QuickMRC__init(struct QuickMRC *me,
         HashTable__destroy(&me->hash_table);
         return false;
     }
-    r = Histogram__init(&me->histogram, histogram_length, 1);
+    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
     if (!r) {
         HashTable__destroy(&me->hash_table);
         QuickMRCBuckets__destroy(&me->buckets);
