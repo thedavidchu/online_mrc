@@ -8,7 +8,7 @@
 // NOTE These are globally configurable parameters. Having these as macros
 //      means there is no performance overhead for unused logging (assuming
 //      effective dead code elimination).
-#define LOGGER_STREAM stderr
+#define LOGGER_STREAM stdout
 #define LOGGER_LEVEL  LOGGER_LEVEL_INFO
 
 // NOTE The relationship between these levels is subject to change. But
@@ -52,6 +52,7 @@ _logger(FILE *const stream,
     vfprintf(stream, format, ap);
     va_end(ap);
     fprintf(stream, "\n");
+    fflush(stream);
 }
 
 #define LOGGER_VERBOSE(...)                                                    \
