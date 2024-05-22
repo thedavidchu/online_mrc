@@ -110,24 +110,10 @@ QuickMRC__post_process(struct QuickMRC *me)
     const int64_t adjustment =
         me->scale * (me->total_entries_seen * me->sampling_ratio -
                      me->total_entries_processed);
-
-    // NOTE SHARDS-Adj only adds to the first bucket; but what if the
-    //      adjustment would make it negative? Well, in that case, I
-    //      add it to the next buckets. I figure this is OKAY because
-    //      histogram bin size is configurable and it's like using a
-    //      larger bin.
-    int64_t tmp_adj = adjustment;
-    for (size_t i = 0; i < me->histogram.num_bins; ++i) {
-        int64_t hist = me->histogram.histogram[i];
-        if ((int64_t)me->histogram.histogram[i] + tmp_adj < 0) {
-            me->histogram.histogram[i] = 0;
-            tmp_adj += hist;
-        } else {
-            me->histogram.histogram[i] += tmp_adj;
-            break;
-        }
+    bool r = Histogram__adjust_first_buckets(&me->histogram, adjustment);
+    if (!r) {
+        LOGGER_WARN("error in adjusting buckets");
     }
-    me->histogram.running_sum += adjustment;
 }
 
 void
