@@ -107,13 +107,15 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
     double aggregate_reuse_time_prob =
         (double)me->infinity / (double)me->running_sum;
     mrc->miss_rate[num_bins] = num_bins * bin_size - aggregate_reuse_time_prob;
-    aggregate_reuse_time_prob +=
+    aggregate_reuse_time_prob =
+        2 * aggregate_reuse_time_prob +
         (double)me->false_infinity / (double)me->running_sum;
     for (size_t i = 0; i < num_bins; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
         uint64_t const cache_size = rev_i * bin_size;
         mrc->miss_rate[rev_i] = cache_size - aggregate_reuse_time_prob;
-        aggregate_reuse_time_prob += get_prob(me, rev_i);
+        aggregate_reuse_time_prob =
+            2 * aggregate_reuse_time_prob + get_prob(me, rev_i);
     }
     return true;
 }
