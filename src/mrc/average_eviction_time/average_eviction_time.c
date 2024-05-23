@@ -107,27 +107,13 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
     prob[num_bins - 1] = prob[num_bins] + me->false_infinity;
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        LOGGER_INFO("i: %zu, rev(i): %zu, P(rev(i)): %lu",
-                    i,
-                    rev_i,
-                    prob[rev_i]);
         prob[rev_i - 1] = prob[rev_i] + me->histogram[rev_i];
-    }
-
-    for (size_t i = 0; i < num_bins; ++i) {
-        LOGGER_INFO("P(%zu): %" PRIu64, i, prob[i]);
     }
 
     // Calculate MRC
     uint64_t accum = 0;
     size_t current_cache_size = 0;
-    LOGGER_INFO("num_bins: %zu, bin_size: %zu", num_bins, bin_size);
     for (size_t i = 0; i < num_bins; ++i) {
-        LOGGER_INFO("i: %zu, accum: %lu, prob[i]: %lu, current_cache_size: %zu",
-                    i,
-                    accum,
-                    prob[i],
-                    current_cache_size);
         accum += prob[i];
         if (accum >= current_cache_size * me->running_sum) {
             // Yes, I know that I only need to cast a single value to a
@@ -139,10 +125,6 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
     }
 
     free(prob);
-    for (size_t i = 0; i < num_bins; ++i) {
-        LOGGER_INFO("MRC(%zu): %f", i, mrc->miss_rate[i]);
-    }
-    LOGGER_INFO("DONE!");
     return true;
 }
 
