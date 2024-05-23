@@ -153,8 +153,18 @@ matches_option(char *arg, char *long_option, char *short_option)
 static inline size_t
 parse_positive_size(char const *const str)
 {
-    unsigned long long u = strtoull(str, NULL, 10);
-    assert(!(u == ULLONG_MAX && errno == ERANGE));
+    char *endptr = NULL;
+    unsigned long long u = strtoull(str, &endptr, 10);
+    if (u == ULLONG_MAX && errno == ERANGE) {
+        LOGGER_ERROR("integer (%s) out of range", str);
+        exit(EXIT_FAILURE);
+    }
+    if (&str[strlen(str)] != endptr) {
+        LOGGER_ERROR("only the first %d characters of '%s' was interpreted",
+                     endptr - str,
+                     str);
+        exit(EXIT_FAILURE);
+    }
     // I'm assuming the conversion for ULL to size_t is safe...
     return (size_t)u;
 }
@@ -162,8 +172,18 @@ parse_positive_size(char const *const str)
 static inline double
 parse_positive_double(char const *const str)
 {
-    double d = strtod(str, NULL);
-    assert(d > 0.0 && !(d == HUGE_VAL && errno == ERANGE));
+    char *endptr = NULL;
+    double d = strtod(str, &endptr);
+    if (d < 0.0 || (d == HUGE_VAL && errno == ERANGE)) {
+        LOGGER_ERROR("number (%s) out of range", str);
+        exit(EXIT_FAILURE);
+    }
+    if (&str[strlen(str)] != endptr) {
+        LOGGER_ERROR("only the first %d characters of '%s' was interpreted",
+                     endptr - str,
+                     str);
+        exit(EXIT_FAILURE);
+    }
     return d;
 }
 
