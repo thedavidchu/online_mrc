@@ -88,8 +88,8 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
     uint64_t const bin_size = me->bin_size;
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
-        .bin_size = num_bins,
-        .num_bins = bin_size,
+        .num_bins = num_bins,
+        .bin_size = bin_size,
     };
 
     if (mrc->miss_rate == NULL) {
