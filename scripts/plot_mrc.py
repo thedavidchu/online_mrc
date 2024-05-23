@@ -83,29 +83,35 @@ def plot_histogram(histogram: dict[float, float]):
     plt.savefig("histogram.png")
 
 
-def plot_miss_rate_curve(path: str, label: str):
+def plot_miss_rate_curve(path: str, label: str, debug: bool):
     with open(path) as f:
         histogram_json = json.load(f)
     sparse_histogram = decode_histogram_json(histogram_json)
     sparse_mrc = convert_histogram_to_miss_rate_curve(sparse_histogram)
+    if debug:
+        print(sparse_histogram)
     plt.plot(sparse_mrc.keys(), sparse_mrc.values(), label=label)
 
 
-def read_and_plot_dense_mrc(path: str, label: str):
+def read_and_plot_dense_mrc(path: str, label: str, debug: bool):
     with open(path, "rb") as f:
         dense_mrc = np.fromfile(f, dtype=np.float64)
+    if debug:
+        print(dense_mrc)
     plt.plot(dense_mrc, label=label)
 
 
-def read_and_plot_sparse_mrc(path: str, label: str):
+def read_and_plot_sparse_mrc(path: str, label: str, debug: bool):
     dt = np.dtype([("index", np.uint64), ("miss-rate", np.float64)])
     with open(path, "rb") as f:
         sparse_mrc = np.fromfile(f, dtype=dt)
+    if debug:
+        print(sparse_mrc)
     plt.plot(sparse_mrc["index"], sparse_mrc["miss-rate"], label=label)
 
 
 @timing
-def plot_from_path(path: str, label: str = None):
+def plot_from_path(path: str, *, label: str = None, debug: bool = False):
     root, ext = os.path.splitext(path)
 
     # Set the label to the root of the file name if the user hasn't
@@ -114,9 +120,9 @@ def plot_from_path(path: str, label: str = None):
         label = root
 
     if ext == ".json":
-        plot_miss_rate_curve(path, label)
+        plot_miss_rate_curve(path, label, debug)
     elif ext == ".bin":
-        read_and_plot_sparse_mrc(path, label)
+        read_and_plot_sparse_mrc(path, label, debug)
     else:
         raise ValueError(f"unrecognized file type. Expecting {{.json,.bin}}, got {ext}")
 
@@ -128,6 +134,7 @@ def main():
         "--input", nargs="+", type=str, required=True, help="input path(s)"
     )
     parser.add_argument("--output", type=str, default="mrc.png", help="output path")
+    parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
     oracle_path = args.oracle
@@ -141,9 +148,9 @@ def main():
     plt.ylim(0, 1)
     if oracle_path is not None:
         root, _ = os.path.splitext(oracle_path)
-        plot_from_path(oracle_path, f"Oracle ({root})")
+        plot_from_path(oracle_path, label=f"Oracle ({root})", debug=args.debug)
     for input_path in input_paths:
-        plot_from_path(input_path)
+        plot_from_path(input_path, debug=args.debug)
     plt.legend()
     plt.savefig(output_path)
 
