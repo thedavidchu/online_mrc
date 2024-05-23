@@ -334,14 +334,15 @@ MissRateCurve__print_as_json(struct MissRateCurve *me)
     }
     if (me->miss_rate == NULL) {
         assert(me->num_bins == 0);
-        printf("{\"type\": \"BasicMissRateCurve\", \"length\": 0, "
-               "\"miss_rate\": null}\n");
+        printf("{\"type\": \"BasicMissRateCurve\", \"num_bins\": 0, "
+               "\"bin_size\": 0, \"miss_rate\": null}\n");
         return;
     }
 
-    printf("{\"type\": \"BasicMissRateCurve\", \"length\": %" PRIu64
-           ", \"miss_rate\": [",
-           me->num_bins);
+    printf("{\"type\": \"BasicMissRateCurve\", \"num_bins\": %" PRIu64
+           ", \"bin_size\": %" PRIu64 ", \"miss_rate\": [",
+           me->num_bins,
+           me->bin_size);
     for (uint64_t i = 0; i < me->num_bins; ++i) {
         printf("%lf%s", me->miss_rate[i], (i != me->num_bins - 1) ? ", " : "");
     }
