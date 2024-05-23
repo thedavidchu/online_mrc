@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "arrays/reverse_index.h"
 #include "average_eviction_time/average_eviction_time.h"
@@ -77,13 +78,6 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     return true;
 }
 
-static double
-get_prob(struct Histogram *me, size_t index)
-{
-    assert(me != NULL && index < me->num_bins);
-    return (double)me->histogram[index] / (double)me->running_sum;
-}
-
 bool
 AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
 {
@@ -103,20 +97,52 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         return false;
     }
 
-    // Calculate false infinity miss rate
-    double aggregate_reuse_time_prob =
-        (double)me->infinity / (double)me->running_sum;
-    mrc->miss_rate[num_bins] = num_bins * bin_size - aggregate_reuse_time_prob;
-    aggregate_reuse_time_prob =
-        2 * aggregate_reuse_time_prob +
-        (double)me->false_infinity / (double)me->running_sum;
-    for (size_t i = 0; i < num_bins; ++i) {
-        size_t rev_i = REVERSE_INDEX(i, num_bins);
-        uint64_t const cache_size = rev_i * bin_size;
-        mrc->miss_rate[rev_i] = cache_size - aggregate_reuse_time_prob;
-        aggregate_reuse_time_prob =
-            2 * aggregate_reuse_time_prob + get_prob(me, rev_i);
+    // Convert the histogram to P(t)
+    uint64_t *prob = calloc(num_bins + 1, sizeof(*prob));
+    if (prob == NULL) {
+        LOGGER_ERROR("could not allocate buffer");
+        return false;
     }
+    prob[num_bins] = me->infinity;
+    prob[num_bins - 1] = prob[num_bins] + me->false_infinity;
+    for (size_t i = 0; i < num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, num_bins);
+        LOGGER_INFO("i: %zu, rev(i): %zu, P(rev(i)): %lu",
+                    i,
+                    rev_i,
+                    prob[rev_i]);
+        prob[rev_i - 1] = prob[rev_i] + me->histogram[rev_i];
+    }
+
+    for (size_t i = 0; i < num_bins; ++i) {
+        LOGGER_INFO("P(%zu): %" PRIu64, i, prob[i]);
+    }
+
+    // Calculate MRC
+    uint64_t accum = 0;
+    size_t current_cache_size = 0;
+    LOGGER_INFO("num_bins: %zu, bin_size: %zu", num_bins, bin_size);
+    for (size_t i = 0; i < num_bins; ++i) {
+        LOGGER_INFO("i: %zu, accum: %lu, prob[i]: %lu, current_cache_size: %zu",
+                    i,
+                    accum,
+                    prob[i],
+                    current_cache_size);
+        accum += prob[i];
+        if (accum >= current_cache_size * me->running_sum) {
+            // Yes, I know that I only need to cast a single value to a
+            // double, but I like to be explicit.
+            mrc->miss_rate[current_cache_size] =
+                (double)prob[i] / (double)me->running_sum;
+            ++current_cache_size;
+        }
+    }
+
+    free(prob);
+    for (size_t i = 0; i < num_bins; ++i) {
+        LOGGER_INFO("MRC(%zu): %f", i, mrc->miss_rate[i]);
+    }
+    LOGGER_INFO("DONE!");
     return true;
 }
 
