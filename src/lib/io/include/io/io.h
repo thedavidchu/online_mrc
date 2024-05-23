@@ -11,7 +11,9 @@ struct MemoryMap {
 };
 
 bool
-MemoryMap__init_readonly(struct MemoryMap *me, char const *const file_name);
+MemoryMap__init(struct MemoryMap *me,
+                char const *const file_name,
+                char const *const modes);
 
 bool
 MemoryMap__destroy(struct MemoryMap *me);

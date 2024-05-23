@@ -33,6 +33,7 @@ MemoryMap__init(struct MemoryMap *me,
                      file_name,
                      errno,
                      strerror(errno));
+        return false;
     }
 
     fd = fileno(fp);
@@ -41,6 +42,7 @@ MemoryMap__init(struct MemoryMap *me,
                      file_name,
                      errno,
                      strerror(errno));
+        fclose(fp);
         return false;
     }
 
@@ -49,6 +51,7 @@ MemoryMap__init(struct MemoryMap *me,
                      file_name,
                      errno,
                      strerror(errno));
+        // We close the file with close since we've transferred ownership to fd.
         if (close(fd) == -1) {
             LOGGER_ERROR("failed to close '%s' too, error %d: %s",
                          file_name,
