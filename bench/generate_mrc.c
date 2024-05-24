@@ -539,7 +539,7 @@ get_trace(struct CommandLineArguments args)
     } else if (strcmp(args.input_path, "step") == 0) {
         LOGGER_TRACE("Generating artificial step-function trace");
         return generate_step_trace(args.artificial_trace_length,
-                                   args.artificial_trace_length / 100);
+                                   args.artificial_trace_length / 10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);
