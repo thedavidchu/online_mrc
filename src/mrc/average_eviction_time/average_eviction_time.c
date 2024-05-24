@@ -95,28 +95,26 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
     }
 
     // Convert the histogram to n * P(t)
-    uint64_t *n_by_prob = calloc(num_bins + 1, sizeof(*n_by_prob));
-    if (n_by_prob == NULL) {
+    uint64_t *n_times_prob = calloc(num_bins + 1, sizeof(*n_times_prob));
+    if (n_times_prob == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         return false;
     }
-    n_by_prob[num_bins] = me->infinity;
-    n_by_prob[num_bins - 1] = n_by_prob[num_bins] + me->false_infinity;
+    n_times_prob[num_bins] = me->infinity;
+    n_times_prob[num_bins - 1] = n_times_prob[num_bins] + me->false_infinity;
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        n_by_prob[rev_i - 1] = n_by_prob[rev_i] + me->histogram[rev_i];
+        n_times_prob[rev_i - 1] = n_times_prob[rev_i] + me->histogram[rev_i];
     }
 
     // Calculate MRC
     uint64_t accum = 0;
     size_t current_cache_size = 0;
     for (size_t i = 0; i < num_bins; ++i) {
-        accum += n_by_prob[i];
+        accum += n_times_prob[i];
         if (accum >= current_cache_size * me->running_sum) {
-            // Yes, I know that I only need to cast a single value to a
-            // double, but I like to be explicit.
             mrc->miss_rate[current_cache_size] =
-                (double)n_by_prob[i] / (double)me->running_sum;
+                (double)n_times_prob[i] / me->running_sum;
             ++current_cache_size;
         }
     }
@@ -126,7 +124,7 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
     }
 
-    free(n_by_prob);
+    free(n_times_prob);
     return true;
 }
 
