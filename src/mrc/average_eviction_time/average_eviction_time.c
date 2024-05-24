@@ -84,6 +84,18 @@ get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
         LOGGER_ERROR("could not allocate buffer");
         return NULL;
     }
+#if 0
+    // NOTE This version matches the description in the AET paper but it fails
+    //      the invariant that the first bin in the MRC should have a miss rate
+    //      of exactly 1.0. This is because it doesn't add the value from the
+    //      first Probability.
+    n_times_prob[num_bins] = me->infinity;
+    n_times_prob[num_bins - 1] = n_times_prob[num_bins] + me->false_infinity;
+    for (size_t i = 0; i < num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, num_bins);
+        n_times_prob[rev_i - 1] = n_times_prob[rev_i] + me->histogram[rev_i];
+    }
+#else
     n_times_prob[num_bins] = me->infinity + me->false_infinity;
     n_times_prob[num_bins - 1] =
         n_times_prob[num_bins] + me->histogram[num_bins - 1];
@@ -92,6 +104,7 @@ get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
         n_times_prob[rev_i - 1] =
             n_times_prob[rev_i] + me->histogram[rev_i - 1];
     }
+#endif
 
     return n_times_prob;
 }
