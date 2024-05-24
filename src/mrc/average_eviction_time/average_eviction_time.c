@@ -6,6 +6,7 @@
 #include "arrays/reverse_index.h"
 #include "average_eviction_time/average_eviction_time.h"
 #include "histogram/histogram.h"
+#include "io/io.h"
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
@@ -72,6 +73,10 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     // NOTE Do nothing here...
     if (me == NULL)
         return false;
+    write_buffer("aet-hist.bin",
+                 me->histogram.histogram,
+                 me->histogram.num_bins,
+                 sizeof(*me->histogram.histogram));
     return true;
 }
 
@@ -105,6 +110,10 @@ get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
             n_times_prob[rev_i] + me->histogram[rev_i - 1];
     }
 #endif
+    write_buffer("aet-np.bin",
+                 n_times_prob,
+                 num_bins + 1,
+                 sizeof(*n_times_prob));
 
     return n_times_prob;
 }
@@ -131,6 +140,10 @@ calculate_mrc(struct MissRateCurve *mrc,
     for (size_t i = current_cache_size; i < num_bins; ++i) {
         mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
     }
+    write_buffer("aet-densemrc.bin",
+                 mrc->miss_rate,
+                 num_bins,
+                 sizeof(*mrc->miss_rate));
 }
 
 bool

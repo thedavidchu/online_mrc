@@ -6,6 +6,7 @@ average_eviction_time_lib = library(
     include_directories: average_eviction_time_inc,
     dependencies: [
         common_dep,
+        io_dep,
         lookup_dep,
         histogram_dep,
         miss_rate_curve_dep,
