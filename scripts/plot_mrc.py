@@ -107,7 +107,7 @@ def read_and_plot_sparse_mrc(path: str, label: str, debug: bool):
         sparse_mrc = np.fromfile(f, dtype=dt)
     if debug:
         print(sparse_mrc)
-    plt.plot(sparse_mrc["index"], sparse_mrc["miss-rate"], label=label)
+    plt.step(sparse_mrc["index"], sparse_mrc["miss-rate"], where="post", label=label)
 
 
 @timing
@@ -145,7 +145,7 @@ def main():
     plt.title("Miss-Rate Curve")
     plt.xlabel("Number of key-value pairs")
     plt.ylabel("Miss-rate")
-    plt.ylim(0, 1)
+    plt.ylim(0, 1.01)
     if oracle_path is not None:
         root, _ = os.path.splitext(oracle_path)
         plot_from_path(oracle_path, label=f"Oracle ({root})", debug=args.debug)
