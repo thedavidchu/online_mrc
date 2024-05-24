@@ -1,3 +1,4 @@
+subdir('average_eviction_time')
 subdir('bucketed_shards')
 subdir('goel_quickmrc')
 subdir('mimir')

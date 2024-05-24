@@ -37,6 +37,12 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
                               const uint64_t num_bins,
                               const uint64_t bin_size);
 
+bool
+MissRateCurve__init_from_sparse_file(struct MissRateCurve *me,
+                                     char const *restrict const file_name,
+                                     const uint64_t num_bins,
+                                     const uint64_t bin_size);
+
 /// @note   This does not save the bin_size, which means you need to pass
 ///         this information some other way. Sorry, but it would make the
 ///         output binary more complicated if I were to pass it.
@@ -48,7 +54,7 @@ MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
 ///         easier to plot.
 bool
 MissRateCurve__write_sparse_binary_to_file(
-    struct MissRateCurve *me,
+    struct MissRateCurve const *const me,
     char const *restrict const file_name);
 
 /// @return non-negative mean squared error, or a negative number (e.g. -1.0) on
@@ -65,6 +71,9 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
 
 void
 MissRateCurve__print_as_json(struct MissRateCurve *me);
+
+bool
+MissRateCurve__validate(struct MissRateCurve *me);
 
 void
 MissRateCurve__destroy(struct MissRateCurve *me);

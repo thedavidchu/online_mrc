@@ -13,7 +13,7 @@ trace_test_exe = executable(
 
 # I'm not going to push a random trace to github
 fs = import('fs')
-test_trace = '/home/david/Downloads/src2.bin'
+test_trace = fs.expanduser('~/projects/online_mrc/mydata/src2.bin')
 if fs.exists(test_trace)
     test('trace_test', trace_test_exe, args: [test_trace])
 else

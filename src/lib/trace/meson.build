@@ -11,6 +11,7 @@ trace_lib = library(
     dependencies: [
         common_dep,
         glib_dep,
+        io_dep,
         zipfian_random_dep,
     ],
 )

@@ -2,6 +2,7 @@ subdir('common_headers')
 subdir('hash')
 subdir('lookup')
 subdir('histogram')
+subdir('io')
 subdir('priority_queue')
 subdir('random')
 subdir('timer') # Relies on common_headers

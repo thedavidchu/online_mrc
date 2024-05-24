@@ -8,8 +8,11 @@
 #include <stdlib.h>
 
 #include <glib.h> // for MIN()
+#include <string.h>
+#include <sys/types.h>
 
 #include "histogram/fractional_histogram.h"
+#include "io/io.h"
 #include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -164,6 +167,81 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
     return true;
 }
 
+struct SparseEntry {
+    uint64_t key;
+    double value;
+};
+
+/// @return     Returns {0} upon out-of-bounds access.
+///             We use this to our advantage below.
+static struct SparseEntry
+read_sparse_entry(struct MemoryMap *mm, size_t offset)
+{
+    struct SparseEntry r = {0};
+    size_t num_entries = mm->num_bytes / (sizeof(r.key) + sizeof(r.value));
+    assert(mm && mm->buffer);
+    if (offset >= num_entries)
+        return r;
+    assert(mm->num_bytes % (sizeof(r.key) + sizeof(r.value)) == 0 &&
+           "unexpected format");
+
+    uint8_t *tmp =
+        &((uint8_t *)mm->buffer)[offset * (sizeof(r.key) + sizeof(r.value))];
+    memcpy(&r.key, &tmp[0], sizeof(r.key));
+    memcpy(&r.value, &tmp[sizeof(r.key)], sizeof(r.value));
+    return r;
+}
+
+bool
+MissRateCurve__init_from_sparse_file(struct MissRateCurve *me,
+                                     char const *restrict const file_name,
+                                     const uint64_t num_bins,
+                                     const uint64_t bin_size)
+{
+    if (me == NULL || file_name == NULL) {
+        return false;
+    }
+
+    struct MemoryMap mm = {0};
+    if (!MemoryMap__init(&mm, file_name, "rb")) {
+        LOGGER_ERROR("failed to open '%s'", file_name);
+        return false;
+    }
+
+    struct SparseEntry curr = {0}, next = {0};
+    size_t num_entries = mm.num_bytes / (sizeof(curr.key) + sizeof(curr.value));
+    if (num_entries == 0) {
+        MemoryMap__destroy(&mm);
+        return false;
+    }
+
+    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
+    if (me->miss_rate == NULL) {
+        return false;
+    }
+    size_t offset = 0; // Index into the mmap buffer
+    curr = read_sparse_entry(&mm, 0);
+    assert(curr.key == 0 && curr.value == 1.0);
+    next = read_sparse_entry(&mm, 1);
+    g_assert_cmpuint(num_entries, <=, num_bins);
+    for (size_t i = 0; i < num_bins; ++i) {
+        if (offset < num_entries - 1 && i == next.key) {
+            ++offset;
+            next = read_sparse_entry(&mm, offset + 1);
+            curr = read_sparse_entry(&mm, offset);
+        }
+        me->miss_rate[i] = curr.value;
+    }
+    if (!MemoryMap__destroy(&mm)) {
+        LOGGER_ERROR("failed to close '%s'", file_name);
+        free(me->miss_rate);
+        return false;
+    }
+    me->num_bins = num_bins;
+    me->bin_size = bin_size;
+    return true;
+}
+
 bool
 MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
                                     char const *restrict const file_name)
@@ -211,7 +289,7 @@ write_index_miss_rate_pair(FILE *fp,
 }
 
 bool
-MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve *me,
+MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve const *const me,
                                            char const *restrict const file_name)
 {
     if (me == NULL || me->miss_rate == NULL || me->num_bins == 0) {
@@ -325,6 +403,46 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
     return mae / (double)(max_bound == 0 ? 1 : max_bound);
 }
 
+bool
+MissRateCurve__validate(struct MissRateCurve *me)
+{
+    if (me == NULL) {
+        // I guess this is an error?
+        LOGGER_WARN("passed invalid argument");
+        return false;
+    }
+    if (me->miss_rate == NULL && me->num_bins != 0) {
+        LOGGER_ERROR("corrupted MRC");
+        return false;
+    }
+    if (me->num_bins == 0 || me->bin_size == 0) {
+        LOGGER_INFO("OK but empty MRC");
+        return true;
+    }
+
+    if (me->miss_rate[0] != 1.0) {
+        LOGGER_ERROR("MRC[0] == %g != 1.0", me->miss_rate[0]);
+        return false;
+    }
+
+    // Test monotonically decreasing
+    double prev = me->miss_rate[0];
+    for (size_t i = 1; i < me->num_bins; ++i) {
+        if (me->miss_rate[i] > prev) {
+            LOGGER_ERROR(
+                "not monotonically decreasing MRC[%zu] = %g, MRC[%zu] = %g",
+                i - 1,
+                prev,
+                i,
+                me->miss_rate[i]);
+            return false;
+        }
+        prev = me->miss_rate[i];
+    }
+
+    return true;
+}
+
 void
 MissRateCurve__print_as_json(struct MissRateCurve *me)
 {
@@ -334,14 +452,15 @@ MissRateCurve__print_as_json(struct MissRateCurve *me)
     }
     if (me->miss_rate == NULL) {
         assert(me->num_bins == 0);
-        printf("{\"type\": \"BasicMissRateCurve\", \"length\": 0, "
-               "\"miss_rate\": null}\n");
+        printf("{\"type\": \"BasicMissRateCurve\", \"num_bins\": 0, "
+               "\"bin_size\": 0, \"miss_rate\": null}\n");
         return;
     }
 
-    printf("{\"type\": \"BasicMissRateCurve\", \"length\": %" PRIu64
-           ", \"miss_rate\": [",
-           me->num_bins);
+    printf("{\"type\": \"BasicMissRateCurve\", \"num_bins\": %" PRIu64
+           ", \"bin_size\": %" PRIu64 ", \"miss_rate\": [",
+           me->num_bins,
+           me->bin_size);
     for (uint64_t i = 0; i < me->num_bins; ++i) {
         printf("%lf%s", me->miss_rate[i], (i != me->num_bins - 1) ? ", " : "");
     }

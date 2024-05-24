@@ -1,3 +1,6 @@
+/**
+ *  @brief  This file provides a runner for various MRC generation algorithms.
+ */
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
@@ -8,6 +11,7 @@
 #include <string.h>
 
 #include "arrays/array_size.h"
+#include "average_eviction_time/average_eviction_time.h"
 #include "bucketed_shards/bucketed_shards.h"
 #include "goel_quickmrc/goel_quickmrc.h"
 #include "histogram/histogram.h"
@@ -38,6 +42,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_QUICKMRC,
     MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_BUCKETED_SHARDS,
+    MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -51,6 +56,7 @@ static char *algorithm_names[] = {
     "QuickMRC",
     "Goel-QuickMRC",
     "Bucketed-SHARDS",
+    "Average-Eviction-Time",
 };
 
 struct CommandLineArguments {
@@ -109,10 +115,10 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "--output|-o <output-path> [--sampling-ratio|-s <ratio>] "
             "[--number-entries|-n <trace-length>] [--oracle <oracle-path>]\n",
             args->executable);
-    fprintf(
-        stream,
-        "    --input, -i <input-path>: path to the input ('~/...' may not "
-        "work) or 'zipf' (for a randomly generated Zipfian distribution)\n");
+    fprintf(stream,
+            "    --input, -i <input-path>: path to the input ('~/...' may not "
+            "work) or 'zipf' (for a randomly generated Zipfian distribution) "
+            "or 'step' (for a step function)\n");
     fprintf(stream,
             "    --format, -f <input-trace-format>: format for the input "
             "trace, pick ");
@@ -150,8 +156,18 @@ matches_option(char *arg, char *long_option, char *short_option)
 static inline size_t
 parse_positive_size(char const *const str)
 {
-    unsigned long long u = strtoull(str, NULL, 10);
-    assert(!(u == ULLONG_MAX && errno == ERANGE));
+    char *endptr = NULL;
+    unsigned long long u = strtoull(str, &endptr, 10);
+    if (u == ULLONG_MAX && errno == ERANGE) {
+        LOGGER_ERROR("integer (%s) out of range", str);
+        exit(EXIT_FAILURE);
+    }
+    if (&str[strlen(str)] != endptr) {
+        LOGGER_ERROR("only the first %d characters of '%s' was interpreted",
+                     endptr - str,
+                     str);
+        exit(EXIT_FAILURE);
+    }
     // I'm assuming the conversion for ULL to size_t is safe...
     return (size_t)u;
 }
@@ -159,8 +175,18 @@ parse_positive_size(char const *const str)
 static inline double
 parse_positive_double(char const *const str)
 {
-    double d = strtod(str, NULL);
-    assert(d > 0.0 && !(d == HUGE_VAL && errno == ERANGE));
+    char *endptr = NULL;
+    double d = strtod(str, &endptr);
+    if (d < 0.0 || (d == HUGE_VAL && errno == ERANGE)) {
+        LOGGER_ERROR("number (%s) out of range", str);
+        exit(EXIT_FAILURE);
+    }
+    if (&str[strlen(str)] != endptr) {
+        LOGGER_ERROR("only the first %d characters of '%s' was interpreted",
+                     endptr - str,
+                     str);
+        exit(EXIT_FAILURE);
+    }
     return d;
 }
 
@@ -484,6 +510,20 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     &me.histogram,
     MissRateCurve__init_from_histogram,
     BucketedShards__destroy)
+
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
+                                 struct AverageEvictionTime,
+                                 me,
+                                 args,
+                                 AverageEvictionTime__init(&me,
+                                                           trace->length,
+                                                           1),
+                                 AverageEvictionTime__access_item,
+                                 AverageEvictionTime__post_process,
+                                 &me.histogram,
+                                 AverageEvictionTime__to_mrc,
+                                 AverageEvictionTime__destroy)
+
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -492,10 +532,14 @@ get_trace(struct CommandLineArguments args)
 {
     if (strcmp(args.input_path, "zipf") == 0) {
         LOGGER_TRACE("Generating artificial Zipfian trace");
-        return generate_trace(args.artificial_trace_length,
-                              args.artificial_trace_length,
-                              0.99,
-                              0);
+        return generate_zipfian_trace(args.artificial_trace_length,
+                                      args.artificial_trace_length,
+                                      0.99,
+                                      0);
+    } else if (strcmp(args.input_path, "step") == 0) {
+        LOGGER_TRACE("Generating artificial step-function trace");
+        return generate_step_trace(args.artificial_trace_length,
+                                   args.artificial_trace_length / 10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);
@@ -508,32 +552,33 @@ get_oracle_mrc(struct CommandLineArguments const args,
                struct MissRateCurve const *const mrc)
 {
     struct MissRateCurve oracle_mrc = {0};
-    bool oracle_exists = MissRateCurve__init_from_file(&oracle_mrc,
-                                                       args.oracle_path,
-                                                       trace->length,
-                                                       1);
+    bool oracle_exists = MissRateCurve__init_from_sparse_file(&oracle_mrc,
+                                                              args.oracle_path,
+                                                              trace->length,
+                                                              1);
     if (oracle_exists) {
         LOGGER_TRACE("using existing oracle");
         return oracle_mrc;
     } else if (args.algorithm == MRC_ALGORITHM_OLKEN) {
         LOGGER_TRACE("using Olken result as oracle");
         g_assert_true(
-            MissRateCurve__write_binary_to_file(mrc, args.oracle_path));
-        g_assert_true(MissRateCurve__init_from_file(&oracle_mrc,
-                                                    args.oracle_path,
-                                                    mrc->num_bins,
-                                                    mrc->bin_size));
+            MissRateCurve__write_sparse_binary_to_file(mrc, args.oracle_path));
+        g_assert_true(MissRateCurve__init_from_sparse_file(&oracle_mrc,
+                                                           args.oracle_path,
+                                                           mrc->num_bins,
+                                                           mrc->bin_size));
         return oracle_mrc;
     } else {
         LOGGER_TRACE("running Olken to produce oracle");
         LOGGER_WARN("running Olken to produce oracle");
         oracle_mrc = run_olken(trace, args);
         g_assert_true(
-            MissRateCurve__write_binary_to_file(&oracle_mrc, args.oracle_path));
-        g_assert_true(MissRateCurve__init_from_file(&oracle_mrc,
-                                                    args.oracle_path,
-                                                    mrc->num_bins,
-                                                    mrc->bin_size));
+            MissRateCurve__write_sparse_binary_to_file(&oracle_mrc,
+                                                       args.oracle_path));
+        g_assert_true(MissRateCurve__init_from_sparse_file(&oracle_mrc,
+                                                           args.oracle_path,
+                                                           mrc->num_bins,
+                                                           mrc->bin_size));
         return oracle_mrc;
     }
 }
@@ -546,7 +591,10 @@ main(int argc, char **argv)
     print_command_line_arguments(&args);
 
     // Read in trace
+    double t0 = get_wall_time_sec();
     struct Trace trace = get_trace(args);
+    double t1 = get_wall_time_sec();
+    LOGGER_INFO("Trace Read Time: %f sec", t1 - t0);
     if (trace.trace == NULL || trace.length == 0) {
         // I cast to (void *) so that it doesn't complain about printing it.
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
@@ -585,6 +633,10 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_BUCKETED_SHARDS:
         LOGGER_TRACE("running Bucketed Shards");
         mrc = run_bucketed_shards(&trace, args);
+        break;
+    case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
+        LOGGER_TRACE("running Average Eviction Time");
+        mrc = run_average_eviction_time(&trace, args);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
