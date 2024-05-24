@@ -68,6 +68,26 @@ MemoryMap__init(struct MemoryMap *me,
 }
 
 bool
+MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me)
+{
+    if (stream == NULL) {
+        LOGGER_ERROR("stream is NULL");
+        return false;
+    }
+    if (me == NULL) {
+        fprintf(stream, "{\"type\": null}");
+        return false;
+    }
+    fprintf(stream,
+            "{\"type\": \"MemoryMap\", \".buffer\": %p, \".num_bytes\": %zu, "
+            "\".fd\": %d}\n",
+            me->buffer,
+            me->num_bytes,
+            me->fd);
+    return true;
+}
+
+bool
 MemoryMap__destroy(struct MemoryMap *me)
 {
     if (me == NULL || me->fd == -1) {

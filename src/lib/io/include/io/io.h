@@ -16,4 +16,7 @@ MemoryMap__init(struct MemoryMap *me,
                 char const *const modes);
 
 bool
+MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me);
+
+bool
 MemoryMap__destroy(struct MemoryMap *me);
