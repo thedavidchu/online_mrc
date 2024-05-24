@@ -43,15 +43,13 @@ bool
 AverageEvictionTime__access_item(struct AverageEvictionTime *me,
                                  EntryType entry)
 {
-    bool r = false;
     if (me == NULL)
         return false;
     struct LookupReturn s = HashTable__lookup(&me->hash_table, entry);
     if (s.success) {
         uint64_t const old_timestamp = s.timestamp;
         uint64_t const reuse_time = me->current_time_stamp - old_timestamp;
-        r = Histogram__insert_finite(&me->histogram, reuse_time);
-        if (!r)
+        if (!Histogram__insert_finite(&me->histogram, reuse_time))
             LOGGER_WARN("failed to insert into histogram");
         ++me->current_time_stamp;
     } else {
@@ -60,8 +58,7 @@ AverageEvictionTime__access_item(struct AverageEvictionTime *me,
                                                        me->current_time_stamp);
         if (t != LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE)
             LOGGER_WARN("failed to insert into hash table");
-        r = Histogram__insert_infinite(&me->histogram);
-        if (!r)
+        if (!Histogram__insert_infinite(&me->histogram))
             LOGGER_WARN("failed to insert into histogram");
         ++me->current_time_stamp;
     }
@@ -97,29 +94,29 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         return false;
     }
 
-    // Convert the histogram to P(t)
-    uint64_t *prob = calloc(num_bins + 1, sizeof(*prob));
-    if (prob == NULL) {
+    // Convert the histogram to n * P(t)
+    uint64_t *n_by_prob = calloc(num_bins + 1, sizeof(*n_by_prob));
+    if (n_by_prob == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         return false;
     }
-    prob[num_bins] = me->infinity;
-    prob[num_bins - 1] = prob[num_bins] + me->false_infinity;
+    n_by_prob[num_bins] = me->infinity;
+    n_by_prob[num_bins - 1] = n_by_prob[num_bins] + me->false_infinity;
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        prob[rev_i - 1] = prob[rev_i] + me->histogram[rev_i];
+        n_by_prob[rev_i - 1] = n_by_prob[rev_i] + me->histogram[rev_i];
     }
 
     // Calculate MRC
     uint64_t accum = 0;
     size_t current_cache_size = 0;
     for (size_t i = 0; i < num_bins; ++i) {
-        accum += prob[i];
+        accum += n_by_prob[i];
         if (accum >= current_cache_size * me->running_sum) {
             // Yes, I know that I only need to cast a single value to a
             // double, but I like to be explicit.
             mrc->miss_rate[current_cache_size] =
-                (double)prob[i] / (double)me->running_sum;
+                (double)n_by_prob[i] / (double)me->running_sum;
             ++current_cache_size;
         }
     }
@@ -129,7 +126,7 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
     }
 
-    free(prob);
+    free(n_by_prob);
     return true;
 }
 
