@@ -115,10 +115,10 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "--output|-o <output-path> [--sampling-ratio|-s <ratio>] "
             "[--number-entries|-n <trace-length>] [--oracle <oracle-path>]\n",
             args->executable);
-    fprintf(
-        stream,
-        "    --input, -i <input-path>: path to the input ('~/...' may not "
-        "work) or 'zipf' (for a randomly generated Zipfian distribution)\n");
+    fprintf(stream,
+            "    --input, -i <input-path>: path to the input ('~/...' may not "
+            "work) or 'zipf' (for a randomly generated Zipfian distribution) "
+            "or 'step' (for a step function)\n");
     fprintf(stream,
             "    --format, -f <input-trace-format>: format for the input "
             "trace, pick ");
@@ -532,10 +532,14 @@ get_trace(struct CommandLineArguments args)
 {
     if (strcmp(args.input_path, "zipf") == 0) {
         LOGGER_TRACE("Generating artificial Zipfian trace");
-        return generate_trace(args.artificial_trace_length,
-                              args.artificial_trace_length,
-                              0.99,
-                              0);
+        return generate_zipfian_trace(args.artificial_trace_length,
+                                      args.artificial_trace_length,
+                                      0.99,
+                                      0);
+    } else if (strcmp(args.input_path, "step") == 0) {
+        LOGGER_TRACE("Generating artificial step-function trace");
+        return generate_step_trace(args.artificial_trace_length,
+                                   args.artificial_trace_length / 100);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);
