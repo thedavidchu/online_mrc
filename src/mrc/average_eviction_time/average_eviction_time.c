@@ -75,6 +75,51 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     return true;
 }
 
+/// @brief  Convert the histogram to n * P(t)
+static uint64_t *
+get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
+{
+    uint64_t *n_times_prob = calloc(num_bins + 1, sizeof(*n_times_prob));
+    if (n_times_prob == NULL) {
+        LOGGER_ERROR("could not allocate buffer");
+        return NULL;
+    }
+    n_times_prob[num_bins] = me->infinity + me->false_infinity;
+    n_times_prob[num_bins - 1] =
+        n_times_prob[num_bins] + me->histogram[num_bins - 1];
+    for (size_t i = 0; i < num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, num_bins);
+        n_times_prob[rev_i - 1] =
+            n_times_prob[rev_i] + me->histogram[rev_i - 1];
+    }
+
+    return n_times_prob;
+}
+
+static void
+calculate_mrc(struct MissRateCurve *mrc,
+              struct Histogram *me,
+              size_t const num_bins,
+              uint64_t const *const n_times_prob)
+{
+    assert(mrc && me && num_bins >= 1 && n_times_prob);
+    uint64_t accum = 0;
+    size_t current_cache_size = 0;
+    for (size_t i = 0; i < num_bins; ++i) {
+        accum += n_times_prob[i];
+        if (accum >= current_cache_size * me->running_sum) {
+            mrc->miss_rate[current_cache_size] =
+                (double)n_times_prob[i] / me->running_sum;
+            ++current_cache_size;
+        }
+    }
+
+    // Set the rest of the MRC to the final value
+    for (size_t i = current_cache_size; i < num_bins; ++i) {
+        mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
+    }
+}
+
 bool
 AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
 {
@@ -94,35 +139,16 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         return false;
     }
 
-    // Convert the histogram to n * P(t)
-    uint64_t *n_times_prob = calloc(num_bins + 1, sizeof(*n_times_prob));
+    uint64_t *n_times_prob = get_n_times_prob(me, num_bins);
     if (n_times_prob == NULL) {
         LOGGER_ERROR("could not allocate buffer");
-        return false;
-    }
-    n_times_prob[num_bins] = me->infinity;
-    n_times_prob[num_bins - 1] = n_times_prob[num_bins] + me->false_infinity;
-    for (size_t i = 0; i < num_bins - 1; ++i) {
-        size_t rev_i = REVERSE_INDEX(i, num_bins);
-        n_times_prob[rev_i - 1] = n_times_prob[rev_i] + me->histogram[rev_i];
+        MissRateCurve__destroy(mrc);
+        return NULL;
     }
 
     // Calculate MRC
-    uint64_t accum = 0;
-    size_t current_cache_size = 0;
-    for (size_t i = 0; i < num_bins; ++i) {
-        accum += n_times_prob[i];
-        if (accum >= current_cache_size * me->running_sum) {
-            mrc->miss_rate[current_cache_size] =
-                (double)n_times_prob[i] / me->running_sum;
-            ++current_cache_size;
-        }
-    }
-
-    // Set the rest of the MRC to the final value
-    for (size_t i = current_cache_size; i < num_bins; ++i) {
-        mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
-    }
+    calculate_mrc(mrc, me, num_bins, n_times_prob);
+    assert(MissRateCurve__validate(mrc));
 
     free(n_times_prob);
     return true;
