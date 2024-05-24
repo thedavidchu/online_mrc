@@ -545,32 +545,33 @@ get_oracle_mrc(struct CommandLineArguments const args,
                struct MissRateCurve const *const mrc)
 {
     struct MissRateCurve oracle_mrc = {0};
-    bool oracle_exists = MissRateCurve__init_from_file(&oracle_mrc,
-                                                       args.oracle_path,
-                                                       trace->length,
-                                                       1);
+    bool oracle_exists = MissRateCurve__init_from_sparse_file(&oracle_mrc,
+                                                              args.oracle_path,
+                                                              trace->length,
+                                                              1);
     if (oracle_exists) {
         LOGGER_TRACE("using existing oracle");
         return oracle_mrc;
     } else if (args.algorithm == MRC_ALGORITHM_OLKEN) {
         LOGGER_TRACE("using Olken result as oracle");
         g_assert_true(
-            MissRateCurve__write_binary_to_file(mrc, args.oracle_path));
-        g_assert_true(MissRateCurve__init_from_file(&oracle_mrc,
-                                                    args.oracle_path,
-                                                    mrc->num_bins,
-                                                    mrc->bin_size));
+            MissRateCurve__write_sparse_binary_to_file(mrc, args.oracle_path));
+        g_assert_true(MissRateCurve__init_from_sparse_file(&oracle_mrc,
+                                                           args.oracle_path,
+                                                           mrc->num_bins,
+                                                           mrc->bin_size));
         return oracle_mrc;
     } else {
         LOGGER_TRACE("running Olken to produce oracle");
         LOGGER_WARN("running Olken to produce oracle");
         oracle_mrc = run_olken(trace, args);
         g_assert_true(
-            MissRateCurve__write_binary_to_file(&oracle_mrc, args.oracle_path));
-        g_assert_true(MissRateCurve__init_from_file(&oracle_mrc,
-                                                    args.oracle_path,
-                                                    mrc->num_bins,
-                                                    mrc->bin_size));
+            MissRateCurve__write_sparse_binary_to_file(&oracle_mrc,
+                                                       args.oracle_path));
+        g_assert_true(MissRateCurve__init_from_sparse_file(&oracle_mrc,
+                                                           args.oracle_path,
+                                                           mrc->num_bins,
+                                                           mrc->bin_size));
         return oracle_mrc;
     }
 }
