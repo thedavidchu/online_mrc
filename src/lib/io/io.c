@@ -102,3 +102,33 @@ MemoryMap__destroy(struct MemoryMap *me)
     *me = (struct MemoryMap){0};
     return true;
 }
+
+bool
+write_buffer(char const *const file_name,
+             void const *const buffer,
+             size_t const nmemb,
+             size_t size)
+{
+    FILE *fp = fopen(file_name, "wb");
+    if (fp == NULL) {
+        LOGGER_ERROR("failed to open file '%s', error %d: %s",
+                     file_name,
+                     errno,
+                     strerror(errno));
+        return false;
+    }
+
+    size_t nwritten = fwrite(buffer, size, nmemb, fp);
+    if (nwritten != nmemb) {
+        LOGGER_WARN("expected to write %zu, wrote %zu", nmemb, nwritten);
+    }
+
+    if (fclose(fp) != 0) {
+        LOGGER_ERROR("failed to close file '%s', error %d: %s",
+                     file_name,
+                     errno,
+                     strerror(errno));
+        return false;
+    }
+    return true;
+}

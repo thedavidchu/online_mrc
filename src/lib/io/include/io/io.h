@@ -20,3 +20,9 @@ MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me);
 
 bool
 MemoryMap__destroy(struct MemoryMap *me);
+
+bool
+write_buffer(char const *const file_name,
+             void const *const buffer,
+             size_t const nmemb,
+             size_t size);
