@@ -50,14 +50,19 @@ AverageEvictionTime__access_item(struct AverageEvictionTime *me,
     if (s.success) {
         uint64_t const old_timestamp = s.timestamp;
         uint64_t const reuse_time = me->current_time_stamp - old_timestamp;
+        if (HashTable__put_unique(&me->hash_table,
+                                  entry,
+                                  me->current_time_stamp) !=
+            LOOKUP_PUTUNIQUE_REPLACE_VALUE)
+            LOGGER_WARN("failed to replace value in hash table");
         if (!Histogram__insert_finite(&me->histogram, reuse_time))
             LOGGER_WARN("failed to insert into histogram");
         ++me->current_time_stamp;
     } else {
-        enum PutUniqueStatus t = HashTable__put_unique(&me->hash_table,
-                                                       entry,
-                                                       me->current_time_stamp);
-        if (t != LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE)
+        if (HashTable__put_unique(&me->hash_table,
+                                  entry,
+                                  me->current_time_stamp) !=
+            LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE)
             LOGGER_WARN("failed to insert into hash table");
         if (!Histogram__insert_infinite(&me->histogram))
             LOGGER_WARN("failed to insert into histogram");
