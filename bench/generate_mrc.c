@@ -1,3 +1,6 @@
+/**
+ *  @brief  This file provides a runner for various MRC generation algorithms.
+ */
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
@@ -584,7 +587,10 @@ main(int argc, char **argv)
     print_command_line_arguments(&args);
 
     // Read in trace
+    double t0 = get_wall_time_sec();
     struct Trace trace = get_trace(args);
+    double t1 = get_wall_time_sec();
+    LOGGER_INFO("Trace Read Time: %f sec", t1 - t0);
     if (trace.trace == NULL || trace.length == 0) {
         // I cast to (void *) so that it doesn't complain about printing it.
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
