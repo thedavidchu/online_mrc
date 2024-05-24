@@ -251,6 +251,40 @@ Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment)
     return true;
 }
 
+bool
+Histogram__validate(struct Histogram const *const me)
+{
+    if (me == NULL) {
+        // I guess this is an error?
+        LOGGER_WARN("passed invalid argument");
+        return false;
+    }
+    if (me->histogram == NULL && me->num_bins != 0) {
+        LOGGER_ERROR("corrupted histogram");
+        return false;
+    }
+    if (me->num_bins == 0 || me->bin_size == 0) {
+        LOGGER_INFO("OK but empty histogram");
+        return true;
+    }
+
+    uint64_t sum = 0;
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        sum += me->histogram[i];
+    }
+    sum += me->false_infinity;
+    sum += me->infinity;
+
+    if (sum != me->running_sum) {
+        LOGGER_ERROR("incorrect sum %" PRIu64 " vs %" PRIu64,
+                     sum,
+                     me->running_sum);
+        return false;
+    }
+
+    return true;
+}
+
 void
 Histogram__destroy(struct Histogram *me)
 {

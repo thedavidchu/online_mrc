@@ -63,5 +63,8 @@ Histogram__print_as_json(struct Histogram *me);
 bool
 Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment);
 
+bool
+Histogram__validate(struct Histogram const *const me);
+
 void
 Histogram__destroy(struct Histogram *me);
