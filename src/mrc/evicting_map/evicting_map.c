@@ -65,7 +65,7 @@ handle_inserted(struct EvictingMap *me,
 
     r = tree__sleator_insert(&me->tree, value);
     assert(r);
-    Histogram__insert_scaled_infinite(&me->histogram, scale);
+    Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
     ++me->current_time_stamp;
 }
 
@@ -87,7 +87,7 @@ handle_replaced(struct EvictingMap *me,
     r = tree__sleator_insert(&me->tree, timestamp);
     assert(r);
 
-    Histogram__insert_scaled_infinite(&me->histogram, scale);
+    Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
     ++me->current_time_stamp;
 }
 
@@ -111,7 +111,9 @@ handle_updated(struct EvictingMap *me,
     r = tree__sleator_insert(&me->tree, timestamp);
     assert(r);
 
-    Histogram__insert_scaled_finite(&me->histogram, distance, scale);
+    Histogram__insert_scaled_finite(&me->histogram,
+                                    distance,
+                                    scale == 0 ? 1 : scale);
     ++me->current_time_stamp;
 }
 
