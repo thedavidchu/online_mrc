@@ -38,15 +38,15 @@ hll_alpha_m(size_t m)
 }
 
 bool
-SampledHashTable__init(struct SampledHashTable *me,
-                       const size_t length,
-                       const double init_sampling_ratio)
+EvictingHashTable__init(struct EvictingHashTable *me,
+                        const size_t length,
+                        const double init_sampling_ratio)
 {
     if (me == NULL || length == 0 || init_sampling_ratio <= 0.0 ||
         init_sampling_ratio > 1.0)
         return false;
 
-    struct SampledHashTableNode *data = malloc(length * sizeof(*me->data));
+    struct EvictingHashTableNode *data = malloc(length * sizeof(*me->data));
     if (data == NULL)
         return false;
     // NOTE There is no way to allow us to sample values with a hash of
@@ -55,7 +55,7 @@ SampledHashTable__init(struct SampledHashTable *me,
         data[i].hash = UINT64_MAX;
     }
 
-    *me = (struct SampledHashTable){
+    *me = (struct EvictingHashTable){
         .data = data,
         .length = length,
         // HACK Set the threshold to some low number to begin
@@ -69,7 +69,7 @@ SampledHashTable__init(struct SampledHashTable *me,
 }
 
 struct SampledLookupReturn
-SampledHashTable__lookup(struct SampledHashTable *me, KeyType key)
+EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
@@ -78,7 +78,7 @@ SampledHashTable__lookup(struct SampledHashTable *me, KeyType key)
     if (hash > me->global_threshold)
         return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 
-    struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
+    struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
     if (incumbent->hash == UINT64_MAX)
         return (struct SampledLookupReturn){.status = SAMPLED_HITHERTOEMPTY};
     if (hash < incumbent->hash)
@@ -93,32 +93,32 @@ SampledHashTable__lookup(struct SampledHashTable *me, KeyType key)
 }
 
 struct SampledPutReturn
-SampledHashTable__put_unique(struct SampledHashTable *me,
-                             KeyType key,
-                             ValueType value)
+EvictingHashTable__put_unique(struct EvictingHashTable *me,
+                              KeyType key,
+                              ValueType value)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledPutReturn){.status = SAMPLED_NOTFOUND};
 
     Hash64BitType hash = splitmix64_hash(key);
-    struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
+    struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
 
     // HACK Note that the hash value of UINT64_MAX is reserved to mark
     //      the bucket as "invalid" (i.e. no valid element has been inserted).
     if (incumbent->hash == UINT64_MAX) {
         TimeStampType old_timestamp = incumbent->value;
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
+        *incumbent = (struct EvictingHashTableNode){.key = key,
+                                                    .hash = hash,
+                                                    .value = value};
         return (struct SampledPutReturn){.status = SAMPLED_INSERTED,
                                          .new_hash = hash,
                                          .old_timestamp = old_timestamp};
     }
     if (hash < incumbent->hash) {
         TimeStampType old_timestamp = incumbent->value;
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
+        *incumbent = (struct EvictingHashTableNode){.key = key,
+                                                    .hash = hash,
+                                                    .value = value};
         return (struct SampledPutReturn){.status = SAMPLED_REPLACED,
                                          .new_hash = hash,
                                          .old_timestamp = old_timestamp};
@@ -136,7 +136,7 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
 }
 
 void
-SampledHashTable__refresh_threshold(struct SampledHashTable *me)
+EvictingHashTable__refresh_threshold(struct EvictingHashTable *me)
 {
     Hash64BitType max_hash = 0;
     for (size_t i = 0; i < me->length; ++i) {
@@ -148,8 +148,8 @@ SampledHashTable__refresh_threshold(struct SampledHashTable *me)
 }
 
 static void
-print_SampledHashTableNode(struct SampledHashTableNode *me,
-                           uint64_t invalid_hash)
+print_EvictingHashTableNode(struct EvictingHashTableNode *me,
+                            uint64_t invalid_hash)
 {
     if (me->hash == invalid_hash) {
         printf("null");
@@ -162,22 +162,22 @@ print_SampledHashTableNode(struct SampledHashTableNode *me,
 }
 
 void
-SampledHashTable__print_as_json(struct SampledHashTable *me)
+EvictingHashTable__print_as_json(struct EvictingHashTable *me)
 {
     if (me == NULL) {
         printf("{\"type\": null}");
         return;
     }
     if (me->data == NULL) {
-        printf("{\"type\": \"SampledHashTable\", \".data\": null}");
+        printf("{\"type\": \"EvictingHashTable\", \".data\": null}");
         return;
     }
 
-    printf("{\"type\": \"SampledHashTable\", \".length\": %" PRIu64
+    printf("{\"type\": \"EvictingHashTable\", \".length\": %" PRIu64
            ", \".data\": [",
            me->length);
     for (size_t i = 0; i < me->length; ++i) {
-        print_SampledHashTableNode(&me->data[i], UINT64_MAX);
+        print_EvictingHashTableNode(&me->data[i], UINT64_MAX);
         if (i < me->length - 1) {
             printf(", ");
         }
@@ -186,7 +186,7 @@ SampledHashTable__print_as_json(struct SampledHashTable *me)
 }
 
 double
-SampledHashTable__estimate_num_unique(struct SampledHashTable *me)
+EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
@@ -199,10 +199,10 @@ SampledHashTable__estimate_num_unique(struct SampledHashTable *me)
 }
 
 void
-SampledHashTable__destroy(struct SampledHashTable *me)
+EvictingHashTable__destroy(struct EvictingHashTable *me)
 {
     if (me == NULL)
         return;
     free(me->data);
-    *me = (struct SampledHashTable){0};
+    *me = (struct EvictingHashTable){0};
 }

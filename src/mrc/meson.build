@@ -1,5 +1,5 @@
 subdir('average_eviction_time')
-subdir('bucketed_shards')
+subdir('evicting_map')
 subdir('goel_quickmrc')
 subdir('mimir')
 subdir('parda_shards')

@@ -96,14 +96,14 @@ fixed_rate_shards_test_exe = executable(
 )
 
 bucketed_shards_test_exe = executable(
-    'bucketed_shards_test_exe',
-    'bucketed_shards_test.c',
+    'evicting_map_test_exe',
+    'evicting_map_test.c',
     include_directories: [
         mytester_include,
     ],
     dependencies: [
         glib_dep,
-        bucketed_shards_dep,
+        evicting_map_dep,
         fixed_rate_shards_dep,
         hash_dep,
         histogram_dep,

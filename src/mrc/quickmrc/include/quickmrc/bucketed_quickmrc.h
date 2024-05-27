@@ -12,7 +12,7 @@
 #include "types/entry_type.h"
 
 struct BucketedQuickMRC {
-    struct SampledHashTable hash_table;
+    struct EvictingHashTable hash_table;
     struct QuickMRCBuckets buckets;
     struct Histogram histogram;
 

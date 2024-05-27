@@ -1,7 +1,7 @@
-bucketed_shards_dep = declare_dependency(
+evicting_map_dep = declare_dependency(
     link_with: library(
-        'bucketed_shards_lib',
-        'bucketed_shards.c',
+        'evicting_map_lib',
+        'evicting_map.c',
         include_directories: include_directories('include'),
         dependencies: [
             sleator_tree_dep,

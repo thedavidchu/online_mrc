@@ -13,14 +13,14 @@
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
 
-struct SampledHashTableNode {
+struct EvictingHashTableNode {
     KeyType key;
     Hash64BitType hash;
     ValueType value;
 };
 
-struct SampledHashTable {
-    struct SampledHashTableNode *data;
+struct EvictingHashTable {
+    struct EvictingHashTableNode *data;
     size_t length;
     Hash64BitType global_threshold;
 
@@ -60,17 +60,17 @@ struct SampledTryPutReturn {
 };
 
 bool
-SampledHashTable__init(struct SampledHashTable *me,
-                       const size_t length,
-                       const double init_sampling_ratio);
+EvictingHashTable__init(struct EvictingHashTable *me,
+                        const size_t length,
+                        const double init_sampling_ratio);
 
 struct SampledLookupReturn
-SampledHashTable__lookup(struct SampledHashTable *me, KeyType key);
+EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key);
 
 struct SampledPutReturn
-SampledHashTable__put_unique(struct SampledHashTable *me,
-                             KeyType key,
-                             ValueType value);
+EvictingHashTable__put_unique(struct EvictingHashTable *me,
+                              KeyType key,
+                              ValueType value);
 
 /// @note   If we know the globally maximum threshold, then we can
 ///         immediately discard any element that is greater than this.
@@ -78,7 +78,7 @@ SampledHashTable__put_unique(struct SampledHashTable *me,
 ///         Without this, we slightly underperform SHARDS. I don't know
 ///         how the Splay Tree priority queue is so fast...
 void
-SampledHashTable__refresh_threshold(struct SampledHashTable *me);
+EvictingHashTable__refresh_threshold(struct EvictingHashTable *me);
 
 static inline int
 clz(uint64_t x)
@@ -96,14 +96,14 @@ clz(uint64_t x)
 ///         the separate lookup and put. I'm not exactly sure why, but this has
 ///         a much more complex return type.
 static inline struct SampledTryPutReturn
-SampledHashTable__try_put(struct SampledHashTable *me,
-                          KeyType key,
-                          ValueType value);
+EvictingHashTable__try_put(struct EvictingHashTable *me,
+                           KeyType key,
+                           ValueType value);
 
 static inline struct SampledTryPutReturn
-SampledHashTable__try_put(struct SampledHashTable *me,
-                          KeyType key,
-                          ValueType value)
+EvictingHashTable__try_put(struct EvictingHashTable *me,
+                           KeyType key,
+                           ValueType value)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
@@ -112,14 +112,14 @@ SampledHashTable__try_put(struct SampledHashTable *me,
     if (hash > me->global_threshold)
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 
-    struct SampledHashTableNode *incumbent = &me->data[hash % me->length];
+    struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
     if (incumbent->hash == UINT64_MAX) {
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
+        *incumbent = (struct EvictingHashTableNode){.key = key,
+                                                    .hash = hash,
+                                                    .value = value};
         ++me->num_inserted;
         if (me->num_inserted == me->length) {
-            SampledHashTable__refresh_threshold(me);
+            EvictingHashTable__refresh_threshold(me);
         }
         me->running_denominator += 1.0 / clz(hash);
         return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
@@ -137,11 +137,11 @@ SampledHashTable__try_put(struct SampledHashTable *me,
         // NOTE Update the incumbent before we do the scan for the maximum
         //      threshold because we want do not want to "find" that the
         //      maximum hasn't changed.
-        *incumbent = (struct SampledHashTableNode){.key = key,
-                                                   .hash = hash,
-                                                   .value = value};
+        *incumbent = (struct EvictingHashTableNode){.key = key,
+                                                    .hash = hash,
+                                                    .value = value};
         if (old_hash == me->global_threshold) {
-            SampledHashTable__refresh_threshold(me);
+            EvictingHashTable__refresh_threshold(me);
         }
         me->running_denominator += 1.0 / clz(hash) - 1.0 / clz(old_hash);
         return r;
@@ -163,10 +163,10 @@ SampledHashTable__try_put(struct SampledHashTable *me,
 }
 
 double
-SampledHashTable__estimate_num_unique(struct SampledHashTable *me);
+EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me);
 
 void
-SampledHashTable__print_as_json(struct SampledHashTable *me);
+EvictingHashTable__print_as_json(struct EvictingHashTable *me);
 
 void
-SampledHashTable__destroy(struct SampledHashTable *me);
+EvictingHashTable__destroy(struct EvictingHashTable *me);

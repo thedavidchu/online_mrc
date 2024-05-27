@@ -7,7 +7,7 @@
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
-#include "bucketed_shards/bucketed_shards.h"
+#include "evicting_map/evicting_map.h"
 #include "mimir/mimir.h"
 #include "olken/olken.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
@@ -107,7 +107,7 @@ test_all(void)
         FixedRateShards__destroy);
 
     PERFORMANCE_TEST(
-        struct BucketedShards,
+        struct EvictingMap,
         me,
         BucketedShards__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
         BucketedShards__access_item,
@@ -170,7 +170,7 @@ test_sampling(void)
 #if 1
     // Compare the novel SHARDS
     PERFORMANCE_TEST(
-        struct BucketedShards,
+        struct EvictingMap,
         me,
         BucketedShards__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
         BucketedShards__access_item,
