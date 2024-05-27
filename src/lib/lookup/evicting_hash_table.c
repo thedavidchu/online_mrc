@@ -18,6 +18,7 @@
 #include "types/value_type.h"
 #include "unused/mark_unused.h"
 
+/// @note   Changing the hash function breaks my beautiful test cases.
 #define HASH_FUNCTION(key) splitmix64_hash(key)
 
 /// Source: https://en.wikipedia.org/wiki/HyperLogLog#Practical_considerations
