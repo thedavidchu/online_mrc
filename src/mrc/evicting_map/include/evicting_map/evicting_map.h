@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "histogram/histogram.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"

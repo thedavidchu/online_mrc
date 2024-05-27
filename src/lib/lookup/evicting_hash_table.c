@@ -11,7 +11,7 @@
 #include "hash/splitmix64.h"
 #include "hash/types.h"
 #include "logger/logger.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "math/ratio.h"
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
@@ -62,7 +62,7 @@ EvictingHashTable__init(struct EvictingHashTable *me,
         //      (otherwise, we end up with teething performance issues).
         .global_threshold = ratio_uint64(init_sampling_ratio),
         .num_inserted = 0,
-        .running_denominator = 0,
+        .running_denominator = length / init_sampling_ratio,
         .hll_alpha_m = hll_alpha_m(length),
     };
     return true;
@@ -190,12 +190,14 @@ EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
-    double avg_nlz = me->num_inserted / (me->running_denominator + DBL_EPSILON);
-    // NOTE I add this sketchy subtraction by 1 to compensate for my sketchy
-    //      addition by 1 for each element. On a simple trace, this matches the
-    //      actual number of elements better, so I am content. However, I do not
-    //      understand what I'm doing.
-    return me->hll_alpha_m * me->num_inserted * exp2(avg_nlz - 1);
+    double estimate =
+        me->hll_alpha_m * me->length * me->length / me->running_denominator;
+    LOGGER_INFO("\\alpha: %f, length: %zu, denom: %f, estimate: %f",
+                me->hll_alpha_m,
+                me->length,
+                me->running_denominator,
+                estimate);
+    return estimate;
 }
 
 void

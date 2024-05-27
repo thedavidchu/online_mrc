@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "types/key_type.h"
@@ -80,10 +80,12 @@ EvictingHashTable__put_unique(struct EvictingHashTable *me,
 void
 EvictingHashTable__refresh_threshold(struct EvictingHashTable *me);
 
+/// @brief  Count leading zeros in a uint64_t.
+/// @note   The value of __builtin_clzll(0) is undefined, as per GCC's docs.
 static inline int
 clz(uint64_t x)
 {
-    return __builtin_clzll(x) + 1;
+    return x == 0 ? 8 * sizeof(x) : __builtin_clzll(x);
 }
 
 /// @brief  Try to put a value into the hash table.
@@ -108,7 +110,7 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = splitmix64_hash(key);
+    Hash64BitType hash = Hash64bit(key);
     if (hash > me->global_threshold)
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 
@@ -121,7 +123,7 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
         if (me->num_inserted == me->length) {
             EvictingHashTable__refresh_threshold(me);
         }
-        me->running_denominator += 1.0 / clz(hash);
+        me->running_denominator += exp2(-clz(hash) - 1);
         return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
                                             .new_hash = hash};
     }
@@ -143,7 +145,8 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
         if (old_hash == me->global_threshold) {
             EvictingHashTable__refresh_threshold(me);
         }
-        me->running_denominator += 1.0 / clz(hash) - 1.0 / clz(old_hash);
+        me->running_denominator +=
+            exp2(-clz(hash) - 1) - exp2(-clz(old_hash) - 1);
         return r;
     }
     // NOTE If the key comparison is expensive, then one could first

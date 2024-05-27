@@ -8,7 +8,7 @@
 #include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -58,7 +58,8 @@ handle_inserted(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table);
+        EvictingHashTable__estimate_num_unique(&me->hash_table) /
+        me->hash_table.length;
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -76,7 +77,8 @@ handle_replaced(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table);
+        EvictingHashTable__estimate_num_unique(&me->hash_table) /
+        me->hash_table.length;
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -97,7 +99,8 @@ handle_updated(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table);
+        EvictingHashTable__estimate_num_unique(&me->hash_table) /
+        me->hash_table.length;
     bool r = false;
     uint64_t distance = 0;
     MAYBE_UNUSED(r);

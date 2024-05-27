@@ -5,7 +5,7 @@ lookup_dep = declare_dependency(
             'hash_table.c',
             'parallel_hash_table.c',
             'parallel_list.c',
-            'sampled_hash_table.c',
+            'evicting_hash_table.c',
         ],
         dependencies: [
             common_dep,

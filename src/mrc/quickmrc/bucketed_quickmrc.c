@@ -9,7 +9,7 @@
 
 #include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "math/ratio.h"
 #include "quickmrc/bucketed_quickmrc.h"
 #include "quickmrc/buckets.h"

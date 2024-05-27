@@ -7,10 +7,10 @@
 
 #include "hash/splitmix64.h"
 #include "logger/logger.h"
+#include "lookup/evicting_hash_table.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "lookup/parallel_hash_table.h"
-#include "lookup/sampled_hash_table.h"
 #include "test/mytester.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
