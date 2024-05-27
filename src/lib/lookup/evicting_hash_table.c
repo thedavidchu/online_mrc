@@ -296,11 +296,11 @@ EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
         return 0.0;
     double estimate =
         me->hll_alpha_m * me->length * me->length / me->running_denominator;
-    LOGGER_INFO("\\alpha: %f, length: %zu, denom: %f, estimate: %f",
-                me->hll_alpha_m,
-                me->length,
-                me->running_denominator,
-                estimate);
+    LOGGER_VERBOSE("\\alpha: %f, length: %zu, denominator: %f, estimate: %f",
+                   me->hll_alpha_m,
+                   me->length,
+                   me->running_denominator,
+                   estimate);
     return estimate;
 }
 
