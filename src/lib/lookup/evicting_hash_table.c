@@ -16,6 +16,7 @@
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
+#include "unused/mark_unused.h"
 
 /// Source: https://en.wikipedia.org/wiki/HyperLogLog#Practical_considerations
 static double
@@ -146,6 +147,108 @@ EvictingHashTable__refresh_threshold(struct EvictingHashTable *me)
             max_hash = hash;
     }
     me->global_threshold = max_hash;
+}
+
+/// @brief  Count leading zeros in a uint64_t.
+/// @note   The value of __builtin_clzll(0) is undefined, as per GCC's docs.
+static inline int
+clz(uint64_t x)
+{
+    return x == 0 ? 8 * sizeof(x) : __builtin_clzll(x);
+}
+
+static inline struct SampledTryPutReturn
+insert_new_element(struct EvictingHashTable *me,
+                   KeyType key,
+                   ValueType value,
+                   struct EvictingHashTableNode *incumbent,
+                   Hash64BitType hash)
+{
+    *incumbent = (struct EvictingHashTableNode){.key = key,
+                                                .hash = hash,
+                                                .value = value};
+    ++me->num_inserted;
+    if (me->num_inserted == me->length) {
+        EvictingHashTable__refresh_threshold(me);
+    }
+    me->running_denominator +=
+        exp2(-clz(hash) - 1) - 1 / me->init_sampling_ratio;
+    return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
+                                        .new_hash = hash};
+}
+
+static inline struct SampledTryPutReturn
+replace_incumbent_element(struct EvictingHashTable *me,
+                          KeyType key,
+                          ValueType value,
+                          struct EvictingHashTableNode *incumbent,
+                          Hash64BitType hash)
+{
+    struct SampledTryPutReturn r = (struct SampledTryPutReturn){
+        .status = SAMPLED_REPLACED,
+        .new_hash = hash,
+        .old_key = incumbent->key,
+        .old_hash = incumbent->hash,
+        .old_value = incumbent->value,
+    };
+    uint64_t const old_hash = incumbent->hash;
+    // NOTE Update the incumbent before we do the scan for the maximum
+    //      threshold because we want do not want to "find" that the
+    //      maximum hasn't changed.
+    *incumbent = (struct EvictingHashTableNode){.key = key,
+                                                .hash = hash,
+                                                .value = value};
+    if (old_hash == me->global_threshold) {
+        EvictingHashTable__refresh_threshold(me);
+    }
+    me->running_denominator += exp2(-clz(hash) - 1) - exp2(-clz(old_hash) - 1);
+    return r;
+}
+
+static inline struct SampledTryPutReturn
+update_incumbent_element(struct EvictingHashTable *me,
+                         KeyType key,
+                         ValueType value,
+                         struct EvictingHashTableNode *incumbent,
+                         Hash64BitType hash)
+{
+    UNUSED(me);
+    struct SampledTryPutReturn r = (struct SampledTryPutReturn){
+        .status = SAMPLED_UPDATED,
+        .new_hash = hash,
+        .old_key = key,
+        .old_hash = hash,
+        .old_value = incumbent->value,
+    };
+    incumbent->value = value;
+    return r;
+}
+
+struct SampledTryPutReturn
+EvictingHashTable__try_put(struct EvictingHashTable *me,
+                           KeyType key,
+                           ValueType value)
+{
+    if (me == NULL || me->data == NULL || me->length == 0)
+        return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
+
+    Hash64BitType hash = Hash64bit(key);
+    if (hash > me->global_threshold)
+        return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
+
+    struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
+    if (incumbent->hash == UINT64_MAX) {
+        return insert_new_element(me, key, value, incumbent, hash);
+    }
+    if (hash < incumbent->hash) {
+        return replace_incumbent_element(me, key, value, incumbent, hash);
+    }
+    // NOTE If the key comparison is expensive, then one could first
+    //      compare the hashes. However, in this case, they are not expensive.
+    if (key == incumbent->key) {
+        return update_incumbent_element(me, key, value, incumbent, hash);
+    }
+    return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 }
 
 static void

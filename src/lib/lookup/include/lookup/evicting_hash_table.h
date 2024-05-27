@@ -81,91 +81,19 @@ EvictingHashTable__put_unique(struct EvictingHashTable *me,
 void
 EvictingHashTable__refresh_threshold(struct EvictingHashTable *me);
 
-/// @brief  Count leading zeros in a uint64_t.
-/// @note   The value of __builtin_clzll(0) is undefined, as per GCC's docs.
-static inline int
-clz(uint64_t x)
-{
-    return x == 0 ? 8 * sizeof(x) : __builtin_clzll(x);
-}
-
 /// @brief  Try to put a value into the hash table.
 /// @note   This combines the lookup and put traditionally used by the
 ///         MRC algorithm. I haven't thought too hard about whether all
 ///         other MRC algorithms could similarly combine the lookup and
 ///         put.
 /// @note   Defining this as a `static inline` function improves performance
-///         dramatically. In fact, without it, performance is much worse than
-///         the separate lookup and put. I'm not exactly sure why, but this has
-///         a much more complex return type.
-static inline struct SampledTryPutReturn
+///         dramatically. In fact, without it, performance is much worse
+///         than the separate lookup and put. I'm not exactly sure why, but
+///         this has a much more complex return type.
+struct SampledTryPutReturn
 EvictingHashTable__try_put(struct EvictingHashTable *me,
                            KeyType key,
                            ValueType value);
-
-static inline struct SampledTryPutReturn
-EvictingHashTable__try_put(struct EvictingHashTable *me,
-                           KeyType key,
-                           ValueType value)
-{
-    if (me == NULL || me->data == NULL || me->length == 0)
-        return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
-
-    Hash64BitType hash = Hash64bit(key);
-    if (hash > me->global_threshold)
-        return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
-
-    struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
-    if (incumbent->hash == UINT64_MAX) {
-        *incumbent = (struct EvictingHashTableNode){.key = key,
-                                                    .hash = hash,
-                                                    .value = value};
-        ++me->num_inserted;
-        if (me->num_inserted == me->length) {
-            EvictingHashTable__refresh_threshold(me);
-        }
-        me->running_denominator +=
-            exp2(-clz(hash) - 1) - 1 / me->init_sampling_ratio;
-        return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
-                                            .new_hash = hash};
-    }
-    if (hash < incumbent->hash) {
-        struct SampledTryPutReturn r = (struct SampledTryPutReturn){
-            .status = SAMPLED_REPLACED,
-            .new_hash = hash,
-            .old_key = incumbent->key,
-            .old_hash = incumbent->hash,
-            .old_value = incumbent->value,
-        };
-        uint64_t const old_hash = incumbent->hash;
-        // NOTE Update the incumbent before we do the scan for the maximum
-        //      threshold because we want do not want to "find" that the
-        //      maximum hasn't changed.
-        *incumbent = (struct EvictingHashTableNode){.key = key,
-                                                    .hash = hash,
-                                                    .value = value};
-        if (old_hash == me->global_threshold) {
-            EvictingHashTable__refresh_threshold(me);
-        }
-        me->running_denominator +=
-            exp2(-clz(hash) - 1) - exp2(-clz(old_hash) - 1);
-        return r;
-    }
-    // NOTE If the key comparison is expensive, then one could first
-    //      compare the hashes. However, in this case, they are not expensive.
-    if (key == incumbent->key) {
-        struct SampledTryPutReturn r = (struct SampledTryPutReturn){
-            .status = SAMPLED_UPDATED,
-            .new_hash = hash,
-            .old_key = key,
-            .old_hash = hash,
-            .old_value = incumbent->value,
-        };
-        incumbent->value = value;
-        return r;
-    }
-    return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
-}
 
 double
 EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me);
