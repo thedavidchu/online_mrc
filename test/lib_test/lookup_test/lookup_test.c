@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include "hash/MyMurmurHash3.h"
 #include "hash/splitmix64.h"
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"

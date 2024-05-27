@@ -18,6 +18,8 @@
 #include "types/value_type.h"
 #include "unused/mark_unused.h"
 
+#define HASH_FUNCTION(key) splitmix64_hash(key)
+
 /// Source: https://en.wikipedia.org/wiki/HyperLogLog#Practical_considerations
 static double
 hll_alpha_m(size_t m)
@@ -79,7 +81,7 @@ EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key)
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = splitmix64_hash(key);
+    Hash64BitType hash = HASH_FUNCTION(key);
     if (hash > me->global_threshold)
         return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 
@@ -105,7 +107,7 @@ EvictingHashTable__put_unique(struct EvictingHashTable *me,
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledPutReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = splitmix64_hash(key);
+    Hash64BitType hash = HASH_FUNCTION(key);
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
 
     // HACK Note that the hash value of UINT64_MAX is reserved to mark
@@ -234,7 +236,7 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = Hash64bit(key);
+    Hash64BitType hash = HASH_FUNCTION(key);
     if (hash > me->global_threshold)
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 
