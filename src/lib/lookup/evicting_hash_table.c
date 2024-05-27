@@ -58,6 +58,7 @@ EvictingHashTable__init(struct EvictingHashTable *me,
     *me = (struct EvictingHashTable){
         .data = data,
         .length = length,
+        .init_sampling_ratio = init_sampling_ratio,
         // HACK Set the threshold to some low number to begin
         //      (otherwise, we end up with teething performance issues).
         .global_threshold = ratio_uint64(init_sampling_ratio),

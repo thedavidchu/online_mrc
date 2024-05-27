@@ -22,6 +22,7 @@ struct EvictingHashTableNode {
 struct EvictingHashTable {
     struct EvictingHashTableNode *data;
     size_t length;
+    double init_sampling_ratio;
     Hash64BitType global_threshold;
 
     size_t num_inserted;
@@ -123,7 +124,8 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
         if (me->num_inserted == me->length) {
             EvictingHashTable__refresh_threshold(me);
         }
-        me->running_denominator += exp2(-clz(hash) - 1);
+        me->running_denominator +=
+            exp2(-clz(hash) - 1) - 1 / me->init_sampling_ratio;
         return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
                                             .new_hash = hash};
     }
