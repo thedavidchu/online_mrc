@@ -9,7 +9,7 @@
 
 #include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "math/ratio.h"
 #include "quickmrc/bucketed_quickmrc.h"
 #include "quickmrc/buckets.h"
@@ -29,7 +29,7 @@ BucketedQuickMRC__init(struct BucketedQuickMRC *me,
     if (me == NULL) {
         return false;
     }
-    r = SampledHashTable__init(&me->hash_table, max_size, sampling_ratio);
+    r = EvictingHashTable__init(&me->hash_table, max_size, sampling_ratio);
     if (!r) {
         return false;
     }
@@ -37,12 +37,12 @@ BucketedQuickMRC__init(struct BucketedQuickMRC *me,
                               default_num_buckets,
                               max_bucket_size);
     if (!r) {
-        SampledHashTable__destroy(&me->hash_table);
+        EvictingHashTable__destroy(&me->hash_table);
         return false;
     }
     r = Histogram__init(&me->histogram, histogram_length, 1);
     if (!r) {
-        SampledHashTable__destroy(&me->hash_table);
+        EvictingHashTable__destroy(&me->hash_table);
         QuickMRCBuckets__destroy(&me->buckets);
         return false;
     }
@@ -137,7 +137,7 @@ BucketedQuickMRC__access_item(struct BucketedQuickMRC *me, EntryType entry)
 
     ValueType timestamp = get_epoch(me);
     struct SampledTryPutReturn r =
-        SampledHashTable__try_put(&me->hash_table, entry, timestamp);
+        EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
 
     switch (r.status) {
     case SAMPLED_IGNORED:
@@ -176,7 +176,7 @@ BucketedQuickMRC__destroy(struct BucketedQuickMRC *me)
     if (me == NULL) {
         return;
     }
-    SampledHashTable__destroy(&me->hash_table);
+    EvictingHashTable__destroy(&me->hash_table);
     QuickMRCBuckets__destroy(&me->buckets);
     Histogram__destroy(&me->histogram);
     // The num_buckets is const qualified, so we do memset to sketchily avoid

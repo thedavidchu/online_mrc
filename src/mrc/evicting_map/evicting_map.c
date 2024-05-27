@@ -8,7 +8,7 @@
 #include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -16,10 +16,10 @@
 #include "types/value_type.h"
 #include "unused/mark_unused.h"
 
-#include "bucketed_shards/bucketed_shards.h"
+#include "evicting_map/evicting_map.h"
 
 bool
-BucketedShards__init(struct BucketedShards *me,
+BucketedShards__init(struct EvictingMap *me,
                      const double init_sampling_ratio,
                      const uint64_t num_hash_buckets,
                      const uint64_t histogram_num_bins,
@@ -30,9 +30,9 @@ BucketedShards__init(struct BucketedShards *me,
     bool r = tree__init(&me->tree);
     if (!r)
         goto tree_error;
-    r = SampledHashTable__init(&me->hash_table,
-                               num_hash_buckets,
-                               init_sampling_ratio);
+    r = EvictingHashTable__init(&me->hash_table,
+                                num_hash_buckets,
+                                init_sampling_ratio);
     if (!r)
         goto hash_table_error;
     r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
@@ -42,7 +42,7 @@ BucketedShards__init(struct BucketedShards *me,
     return true;
 
 histogram_error:
-    SampledHashTable__destroy(&me->hash_table);
+    EvictingHashTable__destroy(&me->hash_table);
 hash_table_error:
     tree__destroy(&me->tree);
 tree_error:
@@ -50,7 +50,7 @@ tree_error:
 }
 
 static inline void
-handle_inserted(struct BucketedShards *me,
+handle_inserted(struct EvictingMap *me,
                 struct SampledTryPutReturn s,
                 TimeStampType value)
 {
@@ -58,25 +58,27 @@ handle_inserted(struct BucketedShards *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        SampledHashTable__estimate_num_unique(&me->hash_table);
+        EvictingHashTable__estimate_num_unique(&me->hash_table) /
+        me->hash_table.length;
     bool r = false;
     MAYBE_UNUSED(r);
 
     r = tree__sleator_insert(&me->tree, value);
     assert(r);
-    Histogram__insert_scaled_infinite(&me->histogram, scale);
+    Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
     ++me->current_time_stamp;
 }
 
 static inline void
-handle_replaced(struct BucketedShards *me,
+handle_replaced(struct EvictingMap *me,
                 struct SampledTryPutReturn s,
                 TimeStampType timestamp)
 {
     assert(me != NULL);
 
     const uint64_t scale =
-        SampledHashTable__estimate_num_unique(&me->hash_table);
+        EvictingHashTable__estimate_num_unique(&me->hash_table) /
+        me->hash_table.length;
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -85,19 +87,20 @@ handle_replaced(struct BucketedShards *me,
     r = tree__sleator_insert(&me->tree, timestamp);
     assert(r);
 
-    Histogram__insert_scaled_infinite(&me->histogram, scale);
+    Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
     ++me->current_time_stamp;
 }
 
 static inline void
-handle_updated(struct BucketedShards *me,
+handle_updated(struct EvictingMap *me,
                struct SampledTryPutReturn s,
                TimeStampType timestamp)
 {
     assert(me != NULL);
 
     const uint64_t scale =
-        SampledHashTable__estimate_num_unique(&me->hash_table);
+        EvictingHashTable__estimate_num_unique(&me->hash_table) /
+        me->hash_table.length;
     bool r = false;
     uint64_t distance = 0;
     MAYBE_UNUSED(r);
@@ -108,19 +111,21 @@ handle_updated(struct BucketedShards *me,
     r = tree__sleator_insert(&me->tree, timestamp);
     assert(r);
 
-    Histogram__insert_scaled_finite(&me->histogram, distance, scale);
+    Histogram__insert_scaled_finite(&me->histogram,
+                                    distance,
+                                    scale == 0 ? 1 : scale);
     ++me->current_time_stamp;
 }
 
 void
-BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
+BucketedShards__access_item(struct EvictingMap *me, EntryType entry)
 {
     if (me == NULL)
         return;
 
     ValueType timestamp = me->current_time_stamp;
     struct SampledTryPutReturn r =
-        SampledHashTable__try_put(&me->hash_table, entry, timestamp);
+        EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
 
     switch (r.status) {
     case SAMPLED_IGNORED:
@@ -141,15 +146,15 @@ BucketedShards__access_item(struct BucketedShards *me, EntryType entry)
 }
 
 void
-BucketedShards__refresh_threshold(struct BucketedShards *me)
+BucketedShards__refresh_threshold(struct EvictingMap *me)
 {
     if (me == NULL)
         return;
-    SampledHashTable__refresh_threshold(&me->hash_table);
+    EvictingHashTable__refresh_threshold(&me->hash_table);
 }
 
 void
-BucketedShards__print_histogram_as_json(struct BucketedShards *me)
+BucketedShards__print_histogram_as_json(struct EvictingMap *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -161,13 +166,13 @@ BucketedShards__print_histogram_as_json(struct BucketedShards *me)
 }
 
 void
-BucketedShards__destroy(struct BucketedShards *me)
+BucketedShards__destroy(struct EvictingMap *me)
 {
     if (me == NULL) {
         return;
     }
     tree__destroy(&me->tree);
-    SampledHashTable__destroy(&me->hash_table);
+    EvictingHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
-    *me = (struct BucketedShards){0};
+    *me = (struct EvictingMap){0};
 }

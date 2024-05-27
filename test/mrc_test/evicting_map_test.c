@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "bucketed_shards/bucketed_shards.h"
+#include "evicting_map/evicting_map.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -20,7 +20,7 @@ access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
     struct Olken oracle = {0};
-    struct BucketedShards me = {0};
+    struct EvictingMap me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
@@ -56,7 +56,7 @@ small_exact_trace_test(void)
         6, 10, 1, 10, 2, 6, 2, 7, 8, 8,  6,  0, 7,  3,  1,  1, 2,  10, 3, 10,
         5, 5,  0, 7,  9, 8, 0, 7, 6, 9,  4,  9, 4,  8,  3,  6, 5,  3,  2, 9};
     struct Olken oracle = {0};
-    struct BucketedShards me = {0};
+    struct EvictingMap me = {0};
 
     // The maximum trace length is obviously the number of possible unique items
     // I deliberately underestimate it (it should be 11).
@@ -85,7 +85,7 @@ long_accuracy_trace_test(void)
 {
     struct ZipfianRandom zrng = {0};
     struct Olken oracle = {0};
-    struct BucketedShards me = {0};
+    struct EvictingMap me = {0};
 
     g_assert_true(ZipfianRandom__init(&zrng,
                                       MAX_NUM_UNIQUE_ENTRIES,

@@ -5,12 +5,13 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include "hash/MyMurmurHash3.h"
 #include "hash/splitmix64.h"
 #include "logger/logger.h"
+#include "lookup/evicting_hash_table.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "lookup/parallel_hash_table.h"
-#include "lookup/sampled_hash_table.h"
 #include "test/mytester.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -197,7 +198,7 @@ multi_thread_test(void)
 /// SAMPLED HASH TABLE TEST
 ////////////////////////////////////////////////////////////////////////////////
 static void
-sampled_insert(struct SampledHashTable *me,
+sampled_insert(struct EvictingHashTable *me,
                uint64_t key,
                uint64_t value,
                enum SampledStatus expected_put_status)
@@ -211,23 +212,23 @@ sampled_insert(struct SampledHashTable *me,
                      key,
                      value,
                      expected_put_status);
-        SampledHashTable__print_as_json(me);
+        EvictingHashTable__print_as_json(me);
     }
-    g_assert_cmpint(SampledHashTable__put_unique(me, key, value).status,
+    g_assert_cmpint(EvictingHashTable__put_unique(me, key, value).status,
                     ==,
                     expected_put_status);
 
     // Lookup with expected status
     switch (expected_put_status) {
     case SAMPLED_IGNORED: {
-        struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
+        struct SampledLookupReturn r = EvictingHashTable__lookup(me, key);
         g_assert_cmpuint(r.status, ==, SAMPLED_IGNORED);
         break;
     }
     case SAMPLED_INSERTED: /* Intentional fall through... */
     case SAMPLED_UPDATED:  /* Intentional fall through... */
     case SAMPLED_REPLACED: {
-        struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
+        struct SampledLookupReturn r = EvictingHashTable__lookup(me, key);
         g_assert_cmpuint(r.status, ==, SAMPLED_FOUND);
         g_assert_cmpuint(r.hash, ==, splitmix64_hash(key));
         g_assert_cmpuint(r.timestamp, ==, value);
@@ -243,8 +244,8 @@ sampled_insert(struct SampledHashTable *me,
 bool
 sampled_test(void)
 {
-    struct SampledHashTable me = {0};
-    g_assert_true(SampledHashTable__init(&me, 8, 1.0));
+    struct EvictingHashTable me = {0};
+    g_assert_true(EvictingHashTable__init(&me, 8, 1.0));
 
     // Test inserts
     sampled_insert(&me, 0, 0, SAMPLED_INSERTED);
@@ -272,12 +273,12 @@ sampled_test(void)
     sampled_insert(&me, 9, 1, SAMPLED_UPDATED);
     sampled_insert(&me, 10, 1, SAMPLED_UPDATED);
 
-    SampledHashTable__destroy(&me);
+    EvictingHashTable__destroy(&me);
     return true;
 }
 
 static void
-sampled_try_put(struct SampledHashTable *me,
+sampled_try_put(struct EvictingHashTable *me,
                 uint64_t key,
                 uint64_t value,
                 enum SampledStatus expected_put_status)
@@ -291,23 +292,23 @@ sampled_try_put(struct SampledHashTable *me,
                      key,
                      value,
                      expected_put_status);
-        SampledHashTable__print_as_json(me);
+        EvictingHashTable__print_as_json(me);
     }
-    g_assert_cmpint(SampledHashTable__try_put(me, key, value).status,
+    g_assert_cmpint(EvictingHashTable__try_put(me, key, value).status,
                     ==,
                     expected_put_status);
 
     // Lookup with expected status
     switch (expected_put_status) {
     case SAMPLED_IGNORED: {
-        struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
+        struct SampledLookupReturn r = EvictingHashTable__lookup(me, key);
         g_assert_cmpuint(r.status, ==, SAMPLED_IGNORED);
         break;
     }
     case SAMPLED_INSERTED: /* Intentional fall through... */
     case SAMPLED_UPDATED:  /* Intentional fall through... */
     case SAMPLED_REPLACED: {
-        struct SampledLookupReturn r = SampledHashTable__lookup(me, key);
+        struct SampledLookupReturn r = EvictingHashTable__lookup(me, key);
         g_assert_cmpuint(r.status, ==, SAMPLED_FOUND);
         g_assert_cmpuint(r.hash, ==, splitmix64_hash(key));
         g_assert_cmpuint(r.timestamp, ==, value);
@@ -323,8 +324,8 @@ sampled_try_put(struct SampledHashTable *me,
 static bool
 sampled_try_put_test(void)
 {
-    struct SampledHashTable me = {0};
-    g_assert_true(SampledHashTable__init(&me, 8, 1.0));
+    struct EvictingHashTable me = {0};
+    g_assert_true(EvictingHashTable__init(&me, 8, 1.0));
 
     // Test inserts
     sampled_try_put(&me, 0, 0, SAMPLED_INSERTED);
@@ -352,7 +353,7 @@ sampled_try_put_test(void)
     sampled_try_put(&me, 9, 1, SAMPLED_UPDATED);
     sampled_try_put(&me, 10, 1, SAMPLED_UPDATED);
 
-    SampledHashTable__destroy(&me);
+    EvictingHashTable__destroy(&me);
     return true;
 }
 

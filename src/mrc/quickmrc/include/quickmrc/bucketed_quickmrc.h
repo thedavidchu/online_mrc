@@ -7,12 +7,12 @@
 #include <pthread.h>
 
 #include "histogram/histogram.h"
-#include "lookup/sampled_hash_table.h"
+#include "lookup/evicting_hash_table.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 
 struct BucketedQuickMRC {
-    struct SampledHashTable hash_table;
+    struct EvictingHashTable hash_table;
     struct QuickMRCBuckets buckets;
     struct Histogram histogram;
 

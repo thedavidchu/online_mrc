@@ -131,7 +131,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--oracle", type=str, required=False, help="path to oracle")
     parser.add_argument(
-        "--input", nargs="+", type=str, required=True, help="input path(s)"
+        "--input", nargs="+", type=str, required=False, default=[], help="input path(s)"
     )
     parser.add_argument("--output", type=str, default="mrc.png", help="output path")
     parser.add_argument("--debug", action="store_true")

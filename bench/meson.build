@@ -12,7 +12,7 @@ generate_mrc_exe = executable(
     ],
     dependencies: [
         average_eviction_time_dep,
-        bucketed_shards_dep,
+        evicting_map_dep,
         common_dep,
         fixed_rate_shards_dep,
         fixed_size_shards_dep,

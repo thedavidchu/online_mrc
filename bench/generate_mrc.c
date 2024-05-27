@@ -12,7 +12,7 @@
 
 #include "arrays/array_size.h"
 #include "average_eviction_time/average_eviction_time.h"
-#include "bucketed_shards/bucketed_shards.h"
+#include "evicting_map/evicting_map.h"
 #include "goel_quickmrc/goel_quickmrc.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
@@ -41,7 +41,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,
     MRC_ALGORITHM_QUICKMRC,
     MRC_ALGORITHM_GOEL_QUICKMRC,
-    MRC_ALGORITHM_BUCKETED_SHARDS,
+    MRC_ALGORITHM_EVICTING_MAP,
     MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
 };
 
@@ -55,7 +55,7 @@ static char *algorithm_names[] = {
     "Fixed-Size-SHARDS",
     "QuickMRC",
     "Goel-QuickMRC",
-    "Bucketed-SHARDS",
+    "Evicting-Map",
     "Average-Eviction-Time",
 };
 
@@ -496,8 +496,8 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
                                  GoelQuickMRC__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_bucketed_shards,
-    struct BucketedShards,
+    run_evicting_map,
+    struct EvictingMap,
     me,
     args,
     BucketedShards__init(&me,
@@ -630,9 +630,9 @@ main(int argc, char **argv)
         LOGGER_TRACE("running Ashvin Goel's QuickMRC");
         mrc = run_goel_quickmrc(&trace, args);
         break;
-    case MRC_ALGORITHM_BUCKETED_SHARDS:
-        LOGGER_TRACE("running Bucketed Shards");
-        mrc = run_bucketed_shards(&trace, args);
+    case MRC_ALGORITHM_EVICTING_MAP:
+        LOGGER_TRACE("running Evicting Map");
+        mrc = run_evicting_map(&trace, args);
         break;
     case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
         LOGGER_TRACE("running Average Eviction Time");
