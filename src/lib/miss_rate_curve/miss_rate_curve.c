@@ -69,6 +69,9 @@ MissRateCurve__init_from_histogram(struct MissRateCurve *me,
         histogram->num_bins == 0 || histogram->bin_size == 0) {
         return false;
     }
+    if (histogram->running_sum == 0) {
+        LOGGER_WARN("empty histogram");
+    }
     // NOTE We include 1 past the histogram length to record "false infinities",
     //      i.e. elements past the maximum length of the histogram.
     const uint64_t num_bins = histogram->num_bins + 2;
