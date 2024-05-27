@@ -64,7 +64,10 @@ EvictingHashTable__init(struct EvictingHashTable *me,
         //      (otherwise, we end up with teething performance issues).
         .global_threshold = ratio_uint64(init_sampling_ratio),
         .num_inserted = 0,
-        .running_denominator = length / init_sampling_ratio,
+        // NOTE This is the sum of reciprocals, which is why we are
+        //      multiplying by the init_sampling_ratio rather than
+        //      dividing.
+        .running_denominator = length * init_sampling_ratio,
         .hll_alpha_m = hll_alpha_m(length),
     };
     return true;
@@ -171,8 +174,7 @@ insert_new_element(struct EvictingHashTable *me,
     if (me->num_inserted == me->length) {
         EvictingHashTable__refresh_threshold(me);
     }
-    me->running_denominator +=
-        exp2(-clz(hash) - 1) - 1 / me->init_sampling_ratio;
+    me->running_denominator += exp2(-clz(hash) - 1) - me->init_sampling_ratio;
     return (struct SampledTryPutReturn){.status = SAMPLED_INSERTED,
                                         .new_hash = hash};
 }
