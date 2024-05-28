@@ -118,7 +118,7 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
     fprintf(stream,
             "    --input, -i <input-path>: path to the input ('~/...' may not "
             "work) or 'zipf' (for a randomly generated Zipfian distribution) "
-            "or 'step' (for a step function)\n");
+            "or 'step' (for a step function) or 'two-step' (for two steps)\n");
     fprintf(stream,
             "    --format, -f <input-trace-format>: format for the input "
             "trace, pick ");
@@ -263,7 +263,8 @@ parse_command_line_arguments(int argc, char **argv)
         if (matches_option(argv[i], "--input", "-i")) {
             ++i;
             if (i >= argc) {
-                LOGGER_ERROR("expecting input path (or 'zipf')");
+                LOGGER_ERROR(
+                    "expecting input path (or 'zipf', 'step', 'two-step')");
                 print_help(stdout, &args);
                 exit(-1);
             }
@@ -271,7 +272,8 @@ parse_command_line_arguments(int argc, char **argv)
         } else if (matches_option(argv[i], "--format", "-f")) {
             ++i;
             if (i >= argc) {
-                LOGGER_ERROR("expecting input path (or 'zipf')");
+                LOGGER_ERROR(
+                    "expecting input path (or 'zipf, 'step', 'two-step'')");
                 print_help(stdout, &args);
                 exit(-1);
             }
@@ -335,7 +337,9 @@ parse_command_line_arguments(int argc, char **argv)
         error = true;
     }
     if (args.trace_format == TRACE_FORMAT_INVALID &&
-        strcmp(args.input_path, "zipf") != 0) {
+        strcmp(args.input_path, "zipf") != 0 &&
+        strcmp(args.input_path, "step") &&
+        strcmp(args.input_path, "two-step")) {
         LOGGER_WARN("trace format was not specified, so defaulting to Kia's");
         args.trace_format = TRACE_FORMAT_KIA;
     }
@@ -537,9 +541,13 @@ get_trace(struct CommandLineArguments args)
                                       0.99,
                                       0);
     } else if (strcmp(args.input_path, "step") == 0) {
-        LOGGER_TRACE("Generating artificial step-function trace");
+        LOGGER_TRACE("Generating artificial step function trace");
         return generate_step_trace(args.artificial_trace_length,
                                    args.artificial_trace_length / 10);
+    } else if (strcmp(args.input_path, "two-step") == 0) {
+        LOGGER_TRACE("Generating artificial two-step function trace");
+        return generate_two_step_trace(args.artificial_trace_length,
+                                       args.artificial_trace_length / 10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);
