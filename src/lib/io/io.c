@@ -75,7 +75,7 @@ MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me)
         return false;
     }
     if (me == NULL) {
-        fprintf(stream, "{\"type\": null}");
+        fprintf(stream, "{\"type\": null}\n");
         return false;
     }
     fprintf(stream,

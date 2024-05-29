@@ -95,7 +95,7 @@ void
 Histogram__write_as_json(FILE *stream, struct Histogram *me)
 {
     if (me == NULL) {
-        fprintf(stream, "{\"type\": null}");
+        fprintf(stream, "{\"type\": null}\n");
         return;
     }
     if (me->histogram == NULL) {

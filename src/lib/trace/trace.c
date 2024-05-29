@@ -33,7 +33,7 @@ Trace__write_as_json(FILE *stream, struct Trace const *const me)
         return;
     }
     if (me == NULL) {
-        fprintf(stream, "{\"type\": null}");
+        fprintf(stream, "{\"type\": null}\n");
         return;
     }
     if (me->trace == NULL) {
@@ -44,7 +44,7 @@ Trace__write_as_json(FILE *stream, struct Trace const *const me)
             "{\"type\": \"Trace\", \".length\": %zu, \".trace\": [",
             me->length);
     print_trace_item_array(stream, me);
-    fprintf(stream, "]}");
+    fprintf(stream, "]}\n");
 }
 
 void
