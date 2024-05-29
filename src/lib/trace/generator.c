@@ -77,7 +77,7 @@ generate_two_step_trace(const uint64_t length,
         return (struct Trace){.trace = NULL, .length = 0};
     }
 
-    if (max_num_unique_entries >= length / 2) {
+    if (max_num_unique_entries >= length) {
         LOGGER_WARN(
             "length (%zu) must be greater than twice the desired number of "
             "unique entries (%zu)",
@@ -87,13 +87,13 @@ generate_two_step_trace(const uint64_t length,
 
     for (size_t i = 0; i < length / 2; ++i) {
         trace[i] = (struct TraceItem){
-            .key = i % max_num_unique_entries,
+            .key = i % (max_num_unique_entries / 2),
         };
     }
 
     for (size_t i = length / 2; i < length; ++i) {
         trace[i] = (struct TraceItem){
-            .key = i % (2 * max_num_unique_entries) + length / 2,
+            .key = i % (max_num_unique_entries),
         };
     }
 
