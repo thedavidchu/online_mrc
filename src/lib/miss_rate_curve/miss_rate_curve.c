@@ -447,27 +447,38 @@ MissRateCurve__validate(struct MissRateCurve *me)
 }
 
 void
-MissRateCurve__print_as_json(struct MissRateCurve *me)
+MissRateCurve__write_as_json(FILE *stream, struct MissRateCurve const *const me)
 {
     if (me == NULL) {
-        printf("{\"type\": null}\n");
+        fprintf(stream, "{\"type\": null}\n");
         return;
     }
     if (me->miss_rate == NULL) {
         assert(me->num_bins == 0);
-        printf("{\"type\": \"BasicMissRateCurve\", \"num_bins\": 0, "
-               "\"bin_size\": 0, \"miss_rate\": null}\n");
+        fprintf(stream,
+                "{\"type\": \"BasicMissRateCurve\", \"num_bins\": 0, "
+                "\"bin_size\": 0, \"miss_rate\": null}\n");
         return;
     }
 
-    printf("{\"type\": \"BasicMissRateCurve\", \"num_bins\": %" PRIu64
-           ", \"bin_size\": %" PRIu64 ", \"miss_rate\": [",
-           me->num_bins,
-           me->bin_size);
+    fprintf(stream,
+            "{\"type\": \"BasicMissRateCurve\", \"num_bins\": %" PRIu64
+            ", \"bin_size\": %" PRIu64 ", \"miss_rate\": [",
+            me->num_bins,
+            me->bin_size);
     for (uint64_t i = 0; i < me->num_bins; ++i) {
-        printf("%lf%s", me->miss_rate[i], (i != me->num_bins - 1) ? ", " : "");
+        fprintf(stream,
+                "%lf%s",
+                me->miss_rate[i],
+                (i != me->num_bins - 1) ? ", " : "");
     }
-    printf("]}\n");
+    fprintf(stream, "]}\n");
+}
+
+void
+MissRateCurve__print_as_json(struct MissRateCurve *me)
+{
+    MissRateCurve__write_as_json(stdout, me);
 }
 
 void

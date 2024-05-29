@@ -70,6 +70,10 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
                                    struct MissRateCurve *rhs);
 
 void
+MissRateCurve__write_as_json(FILE *stream,
+                             struct MissRateCurve const *const me);
+
+void
 MissRateCurve__print_as_json(struct MissRateCurve *me);
 
 bool
