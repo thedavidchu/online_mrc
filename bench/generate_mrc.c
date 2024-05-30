@@ -43,6 +43,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_EVICTING_MAP,
     MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
+    MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -57,6 +58,7 @@ static char *algorithm_names[] = {
     "Goel-QuickMRC",
     "Evicting-Map",
     "Average-Eviction-Time",
+    "Their-Average-Eviction-Time",
 };
 
 struct CommandLineArguments {
@@ -531,6 +533,19 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
+                                 struct AverageEvictionTime,
+                                 me,
+                                 args,
+                                 AverageEvictionTime__init(&me,
+                                                           trace->length,
+                                                           1),
+                                 AverageEvictionTime__access_item,
+                                 AverageEvictionTime__post_process,
+                                 &me.histogram,
+                                 AverageEvictionTime__their_to_mrc,
+                                 AverageEvictionTime__destroy)
+
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -648,6 +663,10 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
         LOGGER_TRACE("running Average Eviction Time");
         mrc = run_average_eviction_time(&trace, args);
+        break;
+    case MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME:
+        LOGGER_TRACE("running author's pseudocode Average Eviction Time");
+        mrc = run_their_average_eviction_time(&trace, args);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);

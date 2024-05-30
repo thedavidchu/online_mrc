@@ -220,8 +220,8 @@ CalcMRC(double const *const P, size_t const M, size_t const len)
 }
 
 bool
-AverageEvictionTime__pseudocode_to_mrc(struct MissRateCurve *mrc,
-                                       struct Histogram *hist)
+AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
+                                  struct Histogram *hist)
 {
     double *P = CalcCCDF(hist);
     double *MRC = CalcMRC(P, hist->num_bins, hist->num_bins);

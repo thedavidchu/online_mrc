@@ -46,12 +46,14 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me);
 bool
 AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist);
 
-/// @brief  Follow the pseudocode to convert the MRC to the
+/// @brief  Follow the pseudocode to convert the MRC to the MRC.
+///         Source:
+///         https://dl-acm-org.myaccess.library.utoronto.ca/doi/10.1145/3185751
 /// @note   We eagerly convert to doubles rather than using integers, so
 ///         there may be some decreased accuracy.
 bool
-AverageEvictionTime__pseudocode_to_mrc(struct MissRateCurve *mrc,
-                                       struct Histogram *hist);
+AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
+                                  struct Histogram *hist);
 
 void
 AverageEvictionTime__destroy(struct AverageEvictionTime *me);
