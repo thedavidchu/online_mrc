@@ -81,12 +81,13 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     return true;
 }
 
-/// @brief  Convert the histogram to n * P(t)
+/// @brief  Convert the reuse time histogram to a scaled complement
+///         cumulative distribution function.
 static uint64_t *
-get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
+get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
 {
-    uint64_t *n_times_prob = calloc(num_bins + 1, sizeof(*n_times_prob));
-    if (n_times_prob == NULL) {
+    uint64_t *rt_ccdf = calloc(num_bins + 1, sizeof(*rt_ccdf));
+    if (rt_ccdf == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         return NULL;
     }
@@ -96,39 +97,37 @@ get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
     //      of exactly 1.0. This is because it doesn't add the value from the
     //      first Probability. Additionally, it matches the oracle exactly for
     //      the step-function.
-    n_times_prob[num_bins] = me->infinity;
-    n_times_prob[num_bins - 1] = n_times_prob[num_bins] + me->false_infinity;
+    rt_ccdf[num_bins] = me->infinity;
+    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->false_infinity;
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        n_times_prob[rev_i - 1] = n_times_prob[rev_i] + me->histogram[rev_i];
+        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i];
     }
 #else
-    n_times_prob[num_bins] = me->infinity + me->false_infinity;
-    n_times_prob[num_bins - 1] =
-        n_times_prob[num_bins] + me->histogram[num_bins - 1];
+    rt_ccdf[num_bins] = me->infinity + me->false_infinity;
+    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->histogram[num_bins - 1];
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        n_times_prob[rev_i - 1] =
-            n_times_prob[rev_i] + me->histogram[rev_i - 1];
+        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i - 1];
     }
 #endif
-    return n_times_prob;
+    return rt_ccdf;
 }
 
 static void
 calculate_mrc(struct MissRateCurve *mrc,
               struct Histogram *me,
               size_t const num_bins,
-              uint64_t const *const n_times_prob)
+              uint64_t const *const rt_ccdf)
 {
-    assert(mrc && me && num_bins >= 1 && n_times_prob);
-    uint64_t accum = 0;
+    assert(mrc && me && num_bins >= 1 && rt_ccdf);
+    uint64_t current_sum = 0;
+    uint64_t const total = me->running_sum;
     size_t current_cache_size = 0;
     for (size_t i = 0; i < num_bins; ++i) {
-        accum += n_times_prob[i];
-        if (accum >= current_cache_size * me->running_sum) {
-            mrc->miss_rate[current_cache_size] =
-                (double)n_times_prob[i] / me->running_sum;
+        current_sum += rt_ccdf[i];
+        if ((double)current_sum / total >= current_cache_size) {
+            mrc->miss_rate[current_cache_size] = (double)rt_ccdf[i] / total;
             ++current_cache_size;
         }
     }
@@ -139,30 +138,14 @@ calculate_mrc(struct MissRateCurve *mrc,
     }
 }
 
-/// @brief  Convert a reuse time histogram to a miss rate curve.
-/// @param  me: struct Histogram *
-///             This is the reuse time histogram.
-/// @details    We get the MRC with the following:
-///         Let the following definitions hold:
-///         - MR(c) : Miss Rate for cache size c
-///         - AET(c) : Average Eviction Time for a cache size c
-///         - RT(t) : Reuse time at time t
-///         - P(t) : Probability that the reuse time is greater than time t
-///         - N : Total number of reuse times within the entire reuse histogram
-///         We are given:
-///             [1] MR(c) = P(AET(c))
-///             [2] P(t) = SUM{i=t+1..INF} RT(i) / N
-///             [3] c = SUM{t=0..=AET(c)} P(t)  ...in the discrete case
-///         Therefore, find AET(c) by finding summing up P(0) + P(1) + ...
-///         until you reach c. Do this for every c.
 bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
+AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist)
 {
-    if (mrc == NULL || me == NULL)
+    if (mrc == NULL || hist == NULL)
         return false;
 
-    uint64_t const num_bins = me->num_bins;
-    uint64_t const bin_size = me->bin_size;
+    uint64_t const num_bins = hist->num_bins;
+    uint64_t const bin_size = hist->bin_size;
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
         .num_bins = num_bins,
@@ -174,18 +157,18 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         return false;
     }
 
-    uint64_t *n_times_prob = get_n_times_prob(me, num_bins);
-    if (n_times_prob == NULL) {
+    uint64_t *rt_ccdf = get_scaled_rt_ccdf(hist, num_bins);
+    if (rt_ccdf == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         MissRateCurve__destroy(mrc);
         return NULL;
     }
 
     // Calculate MRC
-    calculate_mrc(mrc, me, num_bins, n_times_prob);
+    calculate_mrc(mrc, hist, num_bins, rt_ccdf);
     assert(MissRateCurve__validate(mrc));
 
-    free(n_times_prob);
+    free(rt_ccdf);
     return true;
 }
 
