@@ -172,6 +172,66 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist)
     return true;
 }
 
+/// @brief  Calculate the Complement-Cumulative Distribution Function
+///         from the reuse time histogram.
+/// Source: https://dl-acm-org.myaccess.library.utoronto.ca/doi/10.1145/3185751
+static double *
+CalcCCDF(struct Histogram const *const rt)
+{
+    assert(rt);
+    size_t const len = rt->num_bins;
+    uint64_t const sum = rt->running_sum;
+
+    assert(len > 0 && sum > 0);
+    double *P = calloc(len, sizeof((*P)));
+    assert(P);
+
+    P[0] = 1.0;
+    for (size_t i = 1; i < len; ++i) {
+        P[i] = P[i - 1] - (double)rt->histogram[i] / sum;
+    }
+    return P;
+}
+
+static double *
+CalcMRC(double const *const P, size_t const M, size_t const len)
+{
+    double integration = 0;
+    size_t t = 0;
+
+    assert(P && len > 0);
+    double *MRC = calloc(M, sizeof((*P)));
+    assert(MRC);
+
+    // NOTE I set MRC[0] = 1.0 by definition; this was not present in
+    //      the original pseudocode, which led to strange-looking MRCs.
+    MRC[0] = 1.0;
+
+    for (size_t c = 1; c < M; ++c) {
+        while (integration < c && t <= len) {
+            integration += P[t];
+            ++t;
+        }
+        MRC[c] = P[t - 1];
+    }
+    return MRC;
+}
+
+bool
+AverageEvictionTime__pseudocode_to_mrc(struct MissRateCurve *mrc,
+                                       struct Histogram *hist)
+{
+    double *P = CalcCCDF(hist);
+    double *MRC = CalcMRC(P, hist->num_bins, hist->num_bins);
+
+    *mrc = (struct MissRateCurve){.miss_rate = MRC,
+                                  .num_bins = hist->num_bins,
+                                  .bin_size = hist->bin_size};
+
+    free(P);
+    return true;
+}
+
 void
 AverageEvictionTime__destroy(struct AverageEvictionTime *me)
 {
