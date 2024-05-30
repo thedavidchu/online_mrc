@@ -394,12 +394,15 @@ cleanup:
         LOGGER_TRACE("Begin post process");                                    \
         ((post_process_func))(&var_name);                                      \
         double t2 = get_wall_time_sec();                                       \
-        LOGGER_INFO("Runtime: %f | Post-Process Time: %f | Total Time: %f",    \
-                    (double)(t1 - t0),                                         \
-                    (double)(t2 - t1),                                         \
-                    (double)(t2 - t0));                                        \
         struct MissRateCurve mrc = {0};                                        \
         ((hist_func))(&mrc, hist);                                             \
+        double t3 = get_wall_time_sec();                                       \
+        LOGGER_INFO("Histogram Time: %f | Post-Process Time: %f | MRC Time: "  \
+                    "%f | Total Time: %f",                                     \
+                    (double)(t1 - t0),                                         \
+                    (double)(t2 - t1),                                         \
+                    (double)(t3 - t2),                                         \
+                    (double)(t3 - t0));                                        \
         LOGGER_TRACE("Wrote histogram");                                       \
         ((destroy_func))(&var_name);                                           \
         LOGGER_TRACE("Destroyed MRC generator object");                        \
