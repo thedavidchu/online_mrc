@@ -83,6 +83,8 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
 
 /// @brief  Convert the reuse time histogram to a scaled complement
 ///         cumulative distribution function.
+/// @note   I 'scale' the reuse time CCDF to remain in the integer domain.
+///         This is supposed to limit numeric errors.
 static uint64_t *
 get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
 {
