@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <glib.h>
 #include <pthread.h>
 
 #include "arrays/array_size.h"
-#include "glib.h"
 #include "histogram/histogram.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"

@@ -49,7 +49,9 @@ AverageEvictionTime__access_item(struct AverageEvictionTime *me,
     struct LookupReturn s = HashTable__lookup(&me->hash_table, entry);
     if (s.success) {
         uint64_t const old_timestamp = s.timestamp;
-        uint64_t const reuse_time = me->current_time_stamp - old_timestamp;
+        // We subtract an extra one so that the reuse_time between two
+        // neighbouring accesses is 0.
+        uint64_t const reuse_time = me->current_time_stamp - old_timestamp - 1;
         if (HashTable__put_unique(&me->hash_table,
                                   entry,
                                   me->current_time_stamp) !=
