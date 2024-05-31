@@ -294,19 +294,39 @@ EvictingHashTable__print_as_json(struct EvictingHashTable *me)
     printf("]}\n");
 }
 
+/// @param  m: uint64_t const
+///             Number of HLL counters.
+/// @param  V: uint64_t const
+///             Number of registers equal to zero. We cannot get an
+///             accurate estimate of the linear count if this V is zero.
+static double
+linear_counting(uint64_t const m, uint64_t const V)
+{
+    assert(m >= 1 && V >= 1);
+    return m * log2((double)m / V);
+}
+
 double
 EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
-    double estimate =
+    double const raw_estimate =
         me->hll_alpha_m * me->length * me->length / me->running_denominator;
-    LOGGER_VERBOSE("\\alpha: %f, length: %zu, denominator: %f, estimate: %f",
-                   me->hll_alpha_m,
-                   me->length,
-                   me->running_denominator,
-                   estimate);
-    return estimate;
+    LOGGER_VERBOSE(
+        "\\alpha: %f, length: %zu, denominator: %f, raw estimate: %f",
+        me->hll_alpha_m,
+        me->length,
+        me->running_denominator,
+        raw_estimate);
+    uint64_t const num_empty = me->length - me->num_inserted;
+    if (raw_estimate < 2.5 * me->length && num_empty != 0) {
+        return linear_counting(me->length, num_empty) / me->init_sampling_ratio;
+    } else {
+        // NOTE We don't bother with the large number approximation
+        //      since I'm using 64 bit hashes.
+        return raw_estimate;
+    }
 }
 
 void
