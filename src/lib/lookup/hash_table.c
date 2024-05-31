@@ -1,7 +1,11 @@
+#include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include <glib.h>
 
+#include "arrays/is_last.h"
+#include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "types/entry_type.h"
@@ -66,6 +70,60 @@ HashTable__put_unique(struct HashTable *me, EntryType key, TimeStampType value)
         g_hash_table_insert(me->hash_table, (gpointer)key, (gpointer)value);
     return r ? LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE
              : LOOKUP_PUTUNIQUE_REPLACE_VALUE;
+}
+
+static void
+write_ghashtable_as_json(FILE *stream,
+                         GHashTable *const hash_table,
+                         bool const new_line)
+{
+    assert(stream != NULL && hash_table != NULL);
+
+    guint size = g_hash_table_size(hash_table);
+    fprintf(stream,
+            "{\"type\": \"GHashTable\", \".size\": %u, \".data\": {",
+            size);
+    GHashTableIter iter = {0};
+    g_hash_table_iter_init(&iter, hash_table);
+    for (size_t i = 0; i < size; ++i) {
+        gpointer key = NULL, value = NULL;
+        gboolean r = g_hash_table_iter_next(&iter, &key, &value);
+        if (!r) {
+            LOGGER_WARN("unexpected early exit from hash table iter");
+            break;
+        }
+        fprintf(stream,
+                "\"%" PRIu64 "\": %" PRIu64,
+                (uint64_t)key,
+                (uint64_t)value);
+        if (!is_last(i, size)) {
+            fprintf(stream, ", ");
+        }
+    }
+    fprintf(stream, "}}");
+
+    if (new_line)
+        fprintf(stream, "\n");
+}
+
+void
+HashTable__write_as_json(FILE *stream, struct HashTable const *const me)
+{
+    if (stream == NULL) {
+        LOGGER_WARN("stream == NULL");
+        return;
+    }
+    if (me == NULL) {
+        fprintf(stream, "{\"type\": null}\n");
+        return;
+    }
+    if (me->hash_table == NULL) {
+        fprintf(stream, "{\"type\": \"HashTable\", \".hash_table\": null}\n");
+        return;
+    }
+    fprintf(stream, "{\"type\": \"HashTable\", \".hash_table\": ");
+    write_ghashtable_as_json(stream, me->hash_table, false);
+    fprintf(stream, "}\n");
 }
 
 void

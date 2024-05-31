@@ -49,7 +49,9 @@ AverageEvictionTime__access_item(struct AverageEvictionTime *me,
     struct LookupReturn s = HashTable__lookup(&me->hash_table, entry);
     if (s.success) {
         uint64_t const old_timestamp = s.timestamp;
-        uint64_t const reuse_time = me->current_time_stamp - old_timestamp;
+        // We subtract an extra one so that the reuse_time between two
+        // neighbouring accesses is 0.
+        uint64_t const reuse_time = me->current_time_stamp - old_timestamp - 1;
         if (HashTable__put_unique(&me->hash_table,
                                   entry,
                                   me->current_time_stamp) !=
@@ -78,19 +80,18 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     // NOTE Do nothing here...
     if (me == NULL)
         return false;
-    write_buffer("aet-hist.bin",
-                 me->histogram.histogram,
-                 me->histogram.num_bins,
-                 sizeof(*me->histogram.histogram));
     return true;
 }
 
-/// @brief  Convert the histogram to n * P(t)
+/// @brief  Convert the reuse time histogram to a scaled complement
+///         cumulative distribution function.
+/// @note   I 'scale' the reuse time CCDF to remain in the integer domain.
+///         This is supposed to limit numeric errors.
 static uint64_t *
-get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
+get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
 {
-    uint64_t *n_times_prob = calloc(num_bins + 1, sizeof(*n_times_prob));
-    if (n_times_prob == NULL) {
+    uint64_t *rt_ccdf = calloc(num_bins + 1, sizeof(*rt_ccdf));
+    if (rt_ccdf == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         return NULL;
     }
@@ -100,44 +101,37 @@ get_n_times_prob(struct Histogram const *const me, size_t const num_bins)
     //      of exactly 1.0. This is because it doesn't add the value from the
     //      first Probability. Additionally, it matches the oracle exactly for
     //      the step-function.
-    n_times_prob[num_bins] = me->infinity;
-    n_times_prob[num_bins - 1] = n_times_prob[num_bins] + me->false_infinity;
+    rt_ccdf[num_bins] = me->infinity;
+    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->false_infinity;
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        n_times_prob[rev_i - 1] = n_times_prob[rev_i] + me->histogram[rev_i];
+        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i];
     }
 #else
-    n_times_prob[num_bins] = me->infinity + me->false_infinity;
-    n_times_prob[num_bins - 1] =
-        n_times_prob[num_bins] + me->histogram[num_bins - 1];
+    rt_ccdf[num_bins] = me->infinity + me->false_infinity;
+    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->histogram[num_bins - 1];
     for (size_t i = 0; i < num_bins - 1; ++i) {
         size_t rev_i = REVERSE_INDEX(i, num_bins);
-        n_times_prob[rev_i - 1] =
-            n_times_prob[rev_i] + me->histogram[rev_i - 1];
+        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i - 1];
     }
 #endif
-    write_buffer("aet-np.bin",
-                 n_times_prob,
-                 num_bins + 1,
-                 sizeof(*n_times_prob));
-
-    return n_times_prob;
+    return rt_ccdf;
 }
 
 static void
 calculate_mrc(struct MissRateCurve *mrc,
               struct Histogram *me,
               size_t const num_bins,
-              uint64_t const *const n_times_prob)
+              uint64_t const *const rt_ccdf)
 {
-    assert(mrc && me && num_bins >= 1 && n_times_prob);
-    uint64_t accum = 0;
+    assert(mrc && me && num_bins >= 1 && rt_ccdf);
+    uint64_t current_sum = 0;
+    uint64_t const total = me->running_sum;
     size_t current_cache_size = 0;
     for (size_t i = 0; i < num_bins; ++i) {
-        accum += n_times_prob[i];
-        if (accum >= current_cache_size * me->running_sum) {
-            mrc->miss_rate[current_cache_size] =
-                (double)n_times_prob[i] / me->running_sum;
+        current_sum += rt_ccdf[i];
+        if ((double)current_sum / total >= current_cache_size) {
+            mrc->miss_rate[current_cache_size] = (double)rt_ccdf[i] / total;
             ++current_cache_size;
         }
     }
@@ -146,20 +140,16 @@ calculate_mrc(struct MissRateCurve *mrc,
     for (size_t i = current_cache_size; i < num_bins; ++i) {
         mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
     }
-    write_buffer("aet-densemrc.bin",
-                 mrc->miss_rate,
-                 num_bins,
-                 sizeof(*mrc->miss_rate));
 }
 
 bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
+AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist)
 {
-    if (mrc == NULL || me == NULL)
+    if (mrc == NULL || hist == NULL)
         return false;
 
-    uint64_t const num_bins = me->num_bins;
-    uint64_t const bin_size = me->bin_size;
+    uint64_t const num_bins = hist->num_bins;
+    uint64_t const bin_size = hist->bin_size;
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
         .num_bins = num_bins,
@@ -171,18 +161,78 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *me)
         return false;
     }
 
-    uint64_t *n_times_prob = get_n_times_prob(me, num_bins);
-    if (n_times_prob == NULL) {
+    uint64_t *rt_ccdf = get_scaled_rt_ccdf(hist, num_bins);
+    if (rt_ccdf == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         MissRateCurve__destroy(mrc);
         return NULL;
     }
 
     // Calculate MRC
-    calculate_mrc(mrc, me, num_bins, n_times_prob);
+    calculate_mrc(mrc, hist, num_bins, rt_ccdf);
     assert(MissRateCurve__validate(mrc));
 
-    free(n_times_prob);
+    free(rt_ccdf);
+    return true;
+}
+
+/// @brief  Calculate the Complement-Cumulative Distribution Function
+///         from the reuse time histogram.
+/// Source: https://dl-acm-org.myaccess.library.utoronto.ca/doi/10.1145/3185751
+static double *
+CalcCCDF(struct Histogram const *const rt)
+{
+    assert(rt);
+    size_t const len = rt->num_bins;
+    uint64_t const sum = rt->running_sum;
+
+    assert(len > 0 && sum > 0);
+    double *P = calloc(len, sizeof((*P)));
+    assert(P);
+
+    P[0] = 1.0;
+    for (size_t i = 1; i < len; ++i) {
+        P[i] = P[i - 1] - (double)rt->histogram[i] / sum;
+    }
+    return P;
+}
+
+static double *
+CalcMRC(double const *const P, size_t const M, size_t const len)
+{
+    double integration = 0;
+    size_t t = 0;
+
+    assert(P && len > 0);
+    double *MRC = calloc(M, sizeof((*P)));
+    assert(MRC);
+
+    // NOTE I set MRC[0] = 1.0 by definition; this was not present in
+    //      the original pseudocode, which led to strange-looking MRCs.
+    MRC[0] = 1.0;
+
+    for (size_t c = 1; c < M; ++c) {
+        while (integration < c && t <= len) {
+            integration += P[t];
+            ++t;
+        }
+        MRC[c] = P[t - 1];
+    }
+    return MRC;
+}
+
+bool
+AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
+                                  struct Histogram *hist)
+{
+    double *P = CalcCCDF(hist);
+    double *MRC = CalcMRC(P, hist->num_bins, hist->num_bins);
+
+    *mrc = (struct MissRateCurve){.miss_rate = MRC,
+                                  .num_bins = hist->num_bins,
+                                  .bin_size = hist->bin_size};
+
+    free(P);
     return true;
 }
 

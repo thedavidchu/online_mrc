@@ -64,3 +64,38 @@ generate_step_trace(const uint64_t length,
 
     return (struct Trace){.trace = trace, .length = length};
 }
+
+struct Trace
+generate_two_step_trace(const uint64_t length,
+                        const uint64_t max_num_unique_entries)
+{
+    struct TraceItem *trace = NULL;
+
+    trace = calloc(length, sizeof(*trace));
+    if (trace == NULL) {
+        LOGGER_ERROR("could not allocate return value");
+        return (struct Trace){.trace = NULL, .length = 0};
+    }
+
+    if (max_num_unique_entries >= length) {
+        LOGGER_WARN(
+            "length (%zu) must be greater than twice the desired number of "
+            "unique entries (%zu)",
+            length,
+            max_num_unique_entries);
+    }
+
+    for (size_t i = 0; i < length / 2; ++i) {
+        trace[i] = (struct TraceItem){
+            .key = i % (max_num_unique_entries / 2),
+        };
+    }
+
+    for (size_t i = length / 2; i < length; ++i) {
+        trace[i] = (struct TraceItem){
+            .key = i % (max_num_unique_entries),
+        };
+    }
+
+    return (struct Trace){.trace = trace, .length = length};
+}

@@ -65,9 +65,18 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
 
 /// @return non-negative mean absolute error, or a negative number (e.g. -1.0)
 ///         on error.
+/// @todo   This function should only compare to the end of the smallest
+///         MRC because otherwise we could get very good accuracy by
+///         predicting an MRC that is slightly greater than the working
+///         set size that stretches to near infinity. Then, the majority
+///         of the comparison will be between the two tails of the MRCs.
 double
 MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
                                    struct MissRateCurve *rhs);
+
+void
+MissRateCurve__write_as_json(FILE *stream,
+                             struct MissRateCurve const *const me);
 
 void
 MissRateCurve__print_as_json(struct MissRateCurve *me);

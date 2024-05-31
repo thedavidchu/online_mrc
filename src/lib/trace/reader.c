@@ -30,16 +30,21 @@ get_bytes_per_trace_item(enum TraceFormat format)
     }
 }
 
+struct TraceItemResult {
+    bool valid;
+    struct TraceItem item;
+};
+
 /// @note   Hehe... bit twiddly hacks.
 /// Source: https://man7.org/linux/man-pages/man3/endian.3.html
-static inline struct TraceItem
+static inline struct TraceItemResult
 construct_trace_item(uint8_t const *const restrict bytes,
                      enum TraceFormat format)
 {
-    struct TraceItem trace = {0};
+    struct TraceItemResult const invalid_result = {.valid = false, .item = {0}};
     if (bytes == NULL) {
         LOGGER_ERROR("got NULL");
-        return trace;
+        return invalid_result;
     }
 
     // We perform memcpy because the bytes may not be aligned, so we cannot do
@@ -48,22 +53,27 @@ construct_trace_item(uint8_t const *const restrict bytes,
     case TRACE_FORMAT_KIA: {
         /* Timestamp at byte 0, Command at byte 8, Key at byte 9, Object size at
          * byte 17, Time-to-live at byte 21 */
+        uint8_t const cmd = bytes[8];
+        struct TraceItem trace = {0};
         memcpy(&trace.key, &bytes[9], sizeof(trace.key));
-        return (struct TraceItem){
-            .key = le64toh(trace.key),
-        };
+        return (struct TraceItemResult){
+            // We want to filter for gets, which have the value 0.
+            .valid = !cmd,
+            .item = (struct TraceItem){.key = le64toh(trace.key)}};
     }
     case TRACE_FORMAT_SARI: {
         /* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
          * byte 16 */
+        struct TraceItem trace = {0};
         memcpy(&trace.key, &bytes[4], sizeof(trace.key));
-        return (struct TraceItem){
-            .key = le64toh(trace.key),
-        };
+        return (struct TraceItemResult){
+            // Sari's format only contains get entries as far as I know
+            .valid = true,
+            .item = (struct TraceItem){.key = le64toh(trace.key)}};
     }
     default:
         LOGGER_ERROR("unrecognized format %d", format);
-        return trace;
+        return invalid_result;
     }
 }
 
@@ -98,10 +108,15 @@ read_trace(char const *const restrict file_name, enum TraceFormat format)
     }
 
     // Rearrange the bytes correctly
+    size_t idx = 0;
     for (size_t i = 0; i < nobj_expected; ++i) {
-        trace[i] =
+        struct TraceItemResult result =
             construct_trace_item(&((uint8_t *)mm.buffer)[bytes_per_obj * i],
                                  format);
+        if (result.valid) {
+            trace[idx] = result.item;
+            ++idx;
+        }
     }
 
     if (!MemoryMap__destroy(&mm)) {
@@ -109,7 +124,7 @@ read_trace(char const *const restrict file_name, enum TraceFormat format)
         goto cleanup;
     }
 
-    return (struct Trace){.trace = trace, .length = nobj_expected};
+    return (struct Trace){.trace = trace, .length = idx};
 
 cleanup:
     MemoryMap__destroy(&mm);

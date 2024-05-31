@@ -130,6 +130,24 @@ bucketed_quickmrc_test_exe = executable(
     ],
 )
 
+average_eviction_time_test_exe = executable(
+    'average_eviction_time_test_exe',
+    'average_eviction_time_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        average_eviction_time_dep,
+        glib_dep,
+        hash_dep,
+        histogram_dep,
+        miss_rate_curve_dep,
+        zipfian_random_dep,
+        olken_dep,
+        trace_dep,
+    ],
+)
+
 test('olken_test', olken_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
 test('mimir_test', mimir_test_exe)
@@ -138,3 +156,4 @@ test('fixed_rate_shards_test', fixed_rate_shards_test_exe)
 test('quickmrc_test', quickmrc_test_exe)
 test('bucketed_shards_test', bucketed_shards_test_exe)
 test('bucketed_quickmrc_test', bucketed_quickmrc_test_exe)
+test('average_eviction_time_test', average_eviction_time_test_exe)

@@ -1,6 +1,6 @@
 #include <assert.h>
-#include <stdbool.h> // bool
-#include <stdint.h>  // uint64_t
+#include <stdbool.h>
+#include <stdint.h> // uint64_t
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -43,17 +43,16 @@ tree_error:
     return false;
 }
 
-void
+bool
 Olken__access_item(struct Olken *me, EntryType entry)
 {
-    bool r = false;
-
     if (me == NULL) {
-        return;
+        return false;
     }
 
     struct LookupReturn found = HashTable__lookup(&me->hash_table, entry);
     if (found.success) {
+        bool r = false;
         uint64_t distance =
             tree__reverse_rank(&me->tree, (KeyType)found.timestamp);
         r = tree__sleator_remove(&me->tree, (KeyType)found.timestamp);
@@ -78,6 +77,8 @@ Olken__access_item(struct Olken *me, EntryType entry)
         ++me->current_time_stamp;
         Histogram__insert_infinite(&me->histogram);
     }
+
+    return true;
 }
 
 void

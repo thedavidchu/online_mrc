@@ -43,6 +43,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_EVICTING_MAP,
     MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
+    MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME,
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -57,6 +58,7 @@ static char *algorithm_names[] = {
     "Goel-QuickMRC",
     "Evicting-Map",
     "Average-Eviction-Time",
+    "Their-Average-Eviction-Time",
 };
 
 struct CommandLineArguments {
@@ -118,7 +120,7 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
     fprintf(stream,
             "    --input, -i <input-path>: path to the input ('~/...' may not "
             "work) or 'zipf' (for a randomly generated Zipfian distribution) "
-            "or 'step' (for a step function)\n");
+            "or 'step' (for a step function) or 'two-step' (for two steps)\n");
     fprintf(stream,
             "    --format, -f <input-trace-format>: format for the input "
             "trace, pick ");
@@ -263,7 +265,8 @@ parse_command_line_arguments(int argc, char **argv)
         if (matches_option(argv[i], "--input", "-i")) {
             ++i;
             if (i >= argc) {
-                LOGGER_ERROR("expecting input path (or 'zipf')");
+                LOGGER_ERROR(
+                    "expecting input path (or 'zipf', 'step', 'two-step')");
                 print_help(stdout, &args);
                 exit(-1);
             }
@@ -271,7 +274,8 @@ parse_command_line_arguments(int argc, char **argv)
         } else if (matches_option(argv[i], "--format", "-f")) {
             ++i;
             if (i >= argc) {
-                LOGGER_ERROR("expecting input path (or 'zipf')");
+                LOGGER_ERROR(
+                    "expecting input path (or 'zipf, 'step', 'two-step'')");
                 print_help(stdout, &args);
                 exit(-1);
             }
@@ -335,7 +339,9 @@ parse_command_line_arguments(int argc, char **argv)
         error = true;
     }
     if (args.trace_format == TRACE_FORMAT_INVALID &&
-        strcmp(args.input_path, "zipf") != 0) {
+        strcmp(args.input_path, "zipf") != 0 &&
+        strcmp(args.input_path, "step") &&
+        strcmp(args.input_path, "two-step")) {
         LOGGER_WARN("trace format was not specified, so defaulting to Kia's");
         args.trace_format = TRACE_FORMAT_KIA;
     }
@@ -390,12 +396,15 @@ cleanup:
         LOGGER_TRACE("Begin post process");                                    \
         ((post_process_func))(&var_name);                                      \
         double t2 = get_wall_time_sec();                                       \
-        LOGGER_INFO("Runtime: %f | Post-Process Time: %f | Total Time: %f",    \
-                    (double)(t1 - t0),                                         \
-                    (double)(t2 - t1),                                         \
-                    (double)(t2 - t0));                                        \
         struct MissRateCurve mrc = {0};                                        \
         ((hist_func))(&mrc, hist);                                             \
+        double t3 = get_wall_time_sec();                                       \
+        LOGGER_INFO("Histogram Time: %f | Post-Process Time: %f | MRC Time: "  \
+                    "%f | Total Time: %f",                                     \
+                    (double)(t1 - t0),                                         \
+                    (double)(t2 - t1),                                         \
+                    (double)(t3 - t2),                                         \
+                    (double)(t3 - t0));                                        \
         LOGGER_TRACE("Wrote histogram");                                       \
         ((destroy_func))(&var_name);                                           \
         LOGGER_TRACE("Destroyed MRC generator object");                        \
@@ -524,6 +533,19 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
+                                 struct AverageEvictionTime,
+                                 me,
+                                 args,
+                                 AverageEvictionTime__init(&me,
+                                                           trace->length,
+                                                           1),
+                                 AverageEvictionTime__access_item,
+                                 AverageEvictionTime__post_process,
+                                 &me.histogram,
+                                 AverageEvictionTime__their_to_mrc,
+                                 AverageEvictionTime__destroy)
+
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -537,9 +559,13 @@ get_trace(struct CommandLineArguments args)
                                       0.99,
                                       0);
     } else if (strcmp(args.input_path, "step") == 0) {
-        LOGGER_TRACE("Generating artificial step-function trace");
+        LOGGER_TRACE("Generating artificial step function trace");
         return generate_step_trace(args.artificial_trace_length,
                                    args.artificial_trace_length / 10);
+    } else if (strcmp(args.input_path, "two-step") == 0) {
+        LOGGER_TRACE("Generating artificial two-step function trace");
+        return generate_two_step_trace(args.artificial_trace_length,
+                                       args.artificial_trace_length / 10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);
@@ -637,6 +663,10 @@ main(int argc, char **argv)
     case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
         LOGGER_TRACE("running Average Eviction Time");
         mrc = run_average_eviction_time(&trace, args);
+        break;
+    case MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME:
+        LOGGER_TRACE("running author's pseudocode Average Eviction Time");
+        mrc = run_their_average_eviction_time(&trace, args);
         break;
     default:
         LOGGER_ERROR("invalid algorithm %d", args.algorithm);
