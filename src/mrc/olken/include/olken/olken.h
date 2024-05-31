@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <glib.h>
@@ -23,7 +24,7 @@ Olken__init(struct Olken *me,
             const uint64_t histogram_num_bins,
             const uint64_t histogram_bin_size);
 
-void
+bool
 Olken__access_item(struct Olken *me, EntryType entry);
 
 static inline void
