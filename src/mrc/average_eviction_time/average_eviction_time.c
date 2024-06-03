@@ -6,6 +6,7 @@
 #include "arrays/reverse_index.h"
 #include "average_eviction_time/average_eviction_time.h"
 #include "histogram/histogram.h"
+#include "invariants/implies.h"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
@@ -83,6 +84,39 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     return true;
 }
 
+/// @note   This version matches the description in the AET paper but it
+///         fails the invariant that the first bin in the MRC should
+///         have a miss rate of exactly 1.0. This is because it doesn't
+///         add the value from the first Probability. However, it
+///         matches the oracle exactly for the step-function.
+static void
+fill_rt_ccdf_faithfully(struct Histogram const *const me,
+                        uint64_t *const rt_ccdf,
+                        size_t const num_bins)
+{
+    assert(implies(num_bins != 0, rt_ccdf != NULL));
+    rt_ccdf[num_bins] = me->infinity;
+    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->false_infinity;
+    for (size_t i = 0; i < num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, num_bins);
+        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i];
+    }
+}
+
+static void
+fill_rt_ccdf_accurately(struct Histogram const *const me,
+                        uint64_t *const rt_ccdf,
+                        size_t const num_bins)
+{
+    assert(implies(num_bins != 0, rt_ccdf != NULL));
+    rt_ccdf[num_bins] = me->infinity + me->false_infinity;
+    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->histogram[num_bins - 1];
+    for (size_t i = 0; i < num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, num_bins);
+        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i - 1];
+    }
+}
+
 /// @brief  Convert the reuse time histogram to a scaled complement
 ///         cumulative distribution function.
 /// @note   I 'scale' the reuse time CCDF to remain in the integer domain.
@@ -95,26 +129,13 @@ get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
         LOGGER_ERROR("could not allocate buffer");
         return NULL;
     }
-#if 0
-    // NOTE This version matches the description in the AET paper but it fails
-    //      the invariant that the first bin in the MRC should have a miss rate
-    //      of exactly 1.0. This is because it doesn't add the value from the
-    //      first Probability. However, it matches the oracle exactly for
-    //      the step-function.
-    rt_ccdf[num_bins] = me->infinity;
-    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->false_infinity;
-    for (size_t i = 0; i < num_bins - 1; ++i) {
-        size_t rev_i = REVERSE_INDEX(i, num_bins);
-        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i];
+    // Fill rt_ccdf either accurately or faithfully to the paper.
+    if (true) {
+        fill_rt_ccdf_accurately(me, rt_ccdf, num_bins);
+    } else {
+        // NOTE This option is deprecated.
+        fill_rt_ccdf_faithfully(me, rt_ccdf, num_bins);
     }
-#else
-    rt_ccdf[num_bins] = me->infinity + me->false_infinity;
-    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->histogram[num_bins - 1];
-    for (size_t i = 0; i < num_bins - 1; ++i) {
-        size_t rev_i = REVERSE_INDEX(i, num_bins);
-        rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i - 1];
-    }
-#endif
     return rt_ccdf;
 }
 
