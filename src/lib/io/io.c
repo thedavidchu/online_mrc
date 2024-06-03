@@ -132,3 +132,12 @@ write_buffer(char const *const file_name,
     }
     return true;
 }
+
+bool
+file_exists(char const *const file_name)
+{
+    // Source:
+    // https://stackoverflow.com/questions/230062/whats-the-best-way-to-check-if-a-file-exists-in-c/230068#230068
+    // NOTE Good if we don't want to create the file.
+    return access(file_name, F_OK) == 0;
+}

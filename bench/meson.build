@@ -18,6 +18,7 @@ generate_mrc_exe = executable(
         fixed_size_shards_dep,
         glib_dep,
         goel_quickmrc_dep,
+        io_dep,
         miss_rate_curve_dep,
         olken_dep,
         quickmrc_dep,
