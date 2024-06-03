@@ -1,9 +1,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "arrays/array_size.h"
 #include "histogram/fractional_histogram.h"
+#include "logger/logger.h"
 #include "mimir/buckets.h"
 #include "mimir/mimir.h"
 #include "mimir/private_buckets.h"
@@ -178,17 +180,61 @@ long_accuracy_trace_test(enum MimirAgingPolicy aging_policy)
     return true;
 }
 
+static void
+run_unit_tests(void)
+{
+    ASSERT_FUNCTION_RETURNS_TRUE(test_mimir_buckets());
+}
+
+static void
+run_rounder_tests(void)
+{
+    ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
+    ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_ROUNDER));
+}
+
+static void
+run_stacker_tests(void)
+{
+    ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
+    ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_STACKER));
+}
+
 int
 main(int argc, char **argv)
 {
-    UNUSED(argc);
-    UNUSED(argv);
-    // Unit tests
-    ASSERT_FUNCTION_RETURNS_TRUE(test_mimir_buckets());
-    // Integration tests
-    ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_ROUNDER));
-    ASSERT_FUNCTION_RETURNS_TRUE(access_same_key_five_times(MIMIR_STACKER));
-    ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_ROUNDER));
-    ASSERT_FUNCTION_RETURNS_TRUE(long_accuracy_trace_test(MIMIR_STACKER));
+    char *policy = NULL;
+    if (argc == 1) {
+        policy = "all";
+    } else if (argc == 2) {
+        policy = argv[1];
+    } else {
+        // We don't count the first argument (i.e. the executable name)
+        // as an argument.
+        LOGGER_ERROR("expected at most 1 argument, got %d", argc - 1);
+        return EXIT_FAILURE;
+    }
+    LOGGER_INFO("policy: %s", policy);
+
+    if (argc == 1 || strcmp(policy, "all") == 0) {
+        LOGGER_INFO("1", policy);
+        run_unit_tests();
+        LOGGER_INFO("2", policy);
+        run_rounder_tests();
+        LOGGER_INFO("3", policy);
+        run_stacker_tests();
+        LOGGER_INFO("4", policy);
+    } else if (strcmp(policy, "rounder") == 0) {
+        run_rounder_tests();
+    } else if (strcmp(policy, "stacker") == 0) {
+        run_stacker_tests();
+    } else if (strcmp(policy, "unit") == 0) {
+        run_unit_tests();
+    } else {
+        LOGGER_ERROR("unrecognized argument '%s', expected 'all', 'rounder', "
+                     "'stacker', or 'unit'.",
+                     policy);
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }

@@ -150,7 +150,14 @@ average_eviction_time_test_exe = executable(
 
 test('olken_test', olken_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
-test('mimir_test', mimir_test_exe)
+
+test('mimir_unit_test', mimir_test_exe, args: ['unit'])
+test('mimir_rounder_test', mimir_test_exe, args: ['rounder'])
+test('mimir_stacker_test', mimir_test_exe, args: ['stacker'])
+if false
+    # This is slow because it's not parallelized.
+    test('mimir_test', mimir_test_exe, args: ['all'])
+endif
 test('parda_fixed_rate_shards_test', parda_fixed_rate_shards_test_exe)
 test('fixed_rate_shards_test', fixed_rate_shards_test_exe)
 test('quickmrc_test', quickmrc_test_exe)
