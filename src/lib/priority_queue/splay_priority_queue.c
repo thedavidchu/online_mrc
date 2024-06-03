@@ -139,7 +139,7 @@ pop_subtree(struct SplayPriorityQueue *me)
 
 bool
 SplayPriorityQueue__init(struct SplayPriorityQueue *me,
-                           const uint64_t max_cardinality)
+                         const uint64_t max_cardinality)
 {
     if (me == NULL || max_cardinality == 0) {
         return false;
@@ -170,13 +170,16 @@ SplayPriorityQueue__init(struct SplayPriorityQueue *me,
 bool
 SplayPriorityQueue__is_full(struct SplayPriorityQueue *me)
 {
+    if (me == NULL) {
+        return true;
+    }
     return me->cardinality == me->max_cardinality;
 }
 
 bool
 SplayPriorityQueue__insert_if_room(struct SplayPriorityQueue *me,
-                                     const Hash64BitType hash,
-                                     const EntryType entry)
+                                   const Hash64BitType hash,
+                                   const EntryType entry)
 {
     struct SubtreeMultimap *new_subtree;
     if (me == NULL || me->num_free_subtrees == 0) {
@@ -238,8 +241,8 @@ SplayPriorityQueue__get_max_hash(struct SplayPriorityQueue *me)
 
 bool
 SplayPriorityQueue__remove(struct SplayPriorityQueue *me,
-                             Hash64BitType largest_hash,
-                             EntryType *entry)
+                           Hash64BitType largest_hash,
+                           EntryType *entry)
 {
     struct SubtreeMultimap *t;
     struct SubtreeMultimap *x;
