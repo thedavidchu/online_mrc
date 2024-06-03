@@ -101,10 +101,13 @@ def read_and_plot_dense_mrc(path: str, label: str, debug: bool):
     plt.plot(dense_mrc, label=label)
 
 
-def read_and_plot_sparse_mrc(path: str, label: str, debug: bool):
+def read_and_plot_sparse_mrc(path: str, label: str, debug: bool, separator: str):
     dt = np.dtype([("index", np.uint64), ("miss-rate", np.float64)])
     with open(path, "rb") as f:
-        sparse_mrc = np.fromfile(f, dtype=dt)
+        if separator == "":
+            sparse_mrc = np.fromfile(f, dtype=dt)
+        else:
+            sparse_mrc = np.loadtxt(f, dtype=dt, delimiter=separator)
     if debug:
         print(sparse_mrc)
     plt.step(sparse_mrc["index"], sparse_mrc["miss-rate"], where="post", label=label)
@@ -112,7 +115,10 @@ def read_and_plot_sparse_mrc(path: str, label: str, debug: bool):
 
 @timing
 def plot_from_path(path: str, *, label: str = None, debug: bool = False):
-    root, ext = os.path.splitext(path)
+    # We take the basename so that we don't print the file path in the
+    # label for the plot.
+    basename = os.path.basename(path)
+    root, ext = os.path.splitext(basename)
 
     # Set the label to the root of the file name if the user hasn't
     # specified a custom label. I do this so then I can label the oracle.
@@ -122,9 +128,13 @@ def plot_from_path(path: str, *, label: str = None, debug: bool = False):
     if ext == ".json":
         plot_miss_rate_curve(path, label, debug)
     elif ext == ".bin":
-        read_and_plot_sparse_mrc(path, label, debug)
+        read_and_plot_sparse_mrc(path, label, debug, separator="")
+    elif ext == ".dat":
+        read_and_plot_sparse_mrc(path, label, debug, separator=",")
     else:
-        raise ValueError(f"unrecognized file type. Expecting {{.json,.bin}}, got {ext}")
+        raise ValueError(
+            f"unrecognized file type for '{path}'. Expecting {{.json,.bin,.dat}}, got {ext}"
+        )
 
 
 def main():
