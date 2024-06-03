@@ -95,11 +95,11 @@ get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
         LOGGER_ERROR("could not allocate buffer");
         return NULL;
     }
-#if 1
+#if 0
     // NOTE This version matches the description in the AET paper but it fails
     //      the invariant that the first bin in the MRC should have a miss rate
     //      of exactly 1.0. This is because it doesn't add the value from the
-    //      first Probability. Additionally, it matches the oracle exactly for
+    //      first Probability. However, it matches the oracle exactly for
     //      the step-function.
     rt_ccdf[num_bins] = me->infinity;
     rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->false_infinity;
