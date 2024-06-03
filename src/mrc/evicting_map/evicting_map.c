@@ -59,8 +59,7 @@ handle_inserted(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table) /
-        me->hash_table.length;
+        EvictingHashTable__estimate_scale_factor(&me->hash_table);
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -78,8 +77,7 @@ handle_replaced(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table) /
-        me->hash_table.length;
+        EvictingHashTable__estimate_scale_factor(&me->hash_table);
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -100,8 +98,7 @@ handle_updated(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table) /
-        me->hash_table.length;
+        EvictingHashTable__estimate_scale_factor(&me->hash_table);
     bool r = false;
     uint64_t distance = 0;
     MAYBE_UNUSED(r);

@@ -306,8 +306,8 @@ linear_counting(uint64_t const m, uint64_t const V)
     return m * log2((double)m / V);
 }
 
-double
-EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
+static inline double
+estimate_num_unique(struct EvictingHashTable const *const me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
@@ -327,6 +327,13 @@ EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
         //      since I'm using 64 bit hashes.
         return raw_estimate;
     }
+}
+
+double
+EvictingHashTable__estimate_scale_factor(
+    struct EvictingHashTable const *const me)
+{
+    return estimate_num_unique(me) / me->length;
 }
 
 void

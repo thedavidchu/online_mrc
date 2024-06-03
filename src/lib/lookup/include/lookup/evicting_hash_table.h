@@ -96,7 +96,8 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
                            ValueType value);
 
 double
-EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me);
+EvictingHashTable__estimate_scale_factor(
+    struct EvictingHashTable const *const me);
 
 void
 EvictingHashTable__print_as_json(struct EvictingHashTable *me);
