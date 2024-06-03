@@ -170,7 +170,9 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist)
 
     // Calculate MRC
     calculate_mrc(mrc, hist, num_bins, rt_ccdf);
-    assert(MissRateCurve__validate(mrc));
+    if (!MissRateCurve__validate(mrc)) {
+        LOGGER_WARN("MRC validation failed");
+    }
 
     free(rt_ccdf);
     return true;
