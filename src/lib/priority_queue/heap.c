@@ -77,12 +77,12 @@ sift_down(struct Heap *const me, size_t const idx)
     Hash64BitType right_child_priority = get_priority_or(me, right_child, 0);
 
     if (left_child_priority >= right_child_priority) {
-        if (left_child_priority >= my_priority) {
+        if (left_child_priority > my_priority) {
             swap(me, idx, left_child);
             sift_down(me, left_child);
         }
     } else {
-        if (right_child_priority >= my_priority) {
+        if (right_child_priority > my_priority) {
             swap(me, idx, right_child);
             sift_down(me, right_child);
         }
