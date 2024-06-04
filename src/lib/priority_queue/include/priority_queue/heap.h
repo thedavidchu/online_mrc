@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "hash/types.h"
 #include "types/entry_type.h"
@@ -21,6 +22,9 @@ struct Heap {
 
 bool
 Heap__validate(struct Heap const *const me);
+
+bool
+Heap__write_as_json(FILE *stream, struct Heap const *const me);
 
 bool
 Heap__init(struct Heap *me, size_t const max_size);

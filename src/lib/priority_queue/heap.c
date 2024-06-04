@@ -265,13 +265,13 @@ Heap__remove(struct Heap *me, Hash64BitType largest_hash, EntryType *entry)
     if (me == NULL || me->length == 0) {
         return false;
     }
-    size_t target = me->length - 1;
-    --(me->length);
 
     if (me->data[0].priority != largest_hash)
         return false;
     *entry = me->data[0].entry;
-    me->data[0] = me->data[target];
+    size_t const last = me->length - 1;
+    me->data[0] = me->data[last];
+    --(me->length);
     sift_down(me, 0);
     return true;
 }
