@@ -1,6 +1,6 @@
-priority_queue_test_exe = executable(
-    'priority_queue_test_exe',
-    'priority_queue_test.c',
+splay_priority_queue_test_exe = executable(
+    'splay_priority_queue_test_exe',
+    'splay_priority_queue_test.c',
     include_directories: [
         mytester_include,
     ],
@@ -8,8 +8,23 @@ priority_queue_test_exe = executable(
         common_dep,
         glib_dep,
         hash_dep,
-        splay_priority_queue_dep,
+        priority_queue_dep,
     ],
 )
 
-test('priority_queue_test', priority_queue_test_exe)
+heap_priority_queue_test_exe = executable(
+    'heap_priority_queue_test_exe',
+    'heap_priority_queue_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        common_dep,
+        glib_dep,
+        hash_dep,
+        priority_queue_dep,
+    ],
+)
+
+test('splay_priority_queue_test', splay_priority_queue_test_exe)
+test('heap_priority_queue_test', heap_priority_queue_test_exe)
