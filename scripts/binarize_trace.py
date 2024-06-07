@@ -35,6 +35,10 @@ def msr_parser(fname: str) -> np.ndarray:
                 ("_workload", str),
                 ("_unknown_0", str),
                 # NOTE  I intentionally misnamed this with a leading underscore.
+                #       I get a warning about having both a dtype and a converter
+                #       for "command", but it works this way (non-trivial getting
+                #       it to work the other way, and I get better performance
+                #       this way too).
                 ("_command", np.uint8),
                 ("key", np.uint64),
                 ("size", np.uint32),
@@ -66,7 +70,7 @@ def parse_file(fname: str, input_format: str):
     return parsed_lines
 
 
-def save_binary(output_file: str, binary: pd.DataFrame, output_format: str):
+def save_binary(output_file: str, output: pd.DataFrame, output_format: str):
     kia_dtype = np.dtype(
         [
             ("timestamp", np.uint64),
@@ -80,13 +84,15 @@ def save_binary(output_file: str, binary: pd.DataFrame, output_format: str):
         raise ValueError(f"got {output_format}, expected {OUTPUT_FORMATS}")
     match output_format:
         case "Kia":
-            output = binary.to_numpy(dtype=kia_dtype)
-            print(output)
-            bytes = output[0].tobytes()
-            print(output[0], bytes)
-            print(len(bytes))
-            output.tofile(output_file)
-            pass
+            # NOTE  I do this manually because the conversion function
+            #       pd.DataFrame.to_numpy() wasn't cooperating.
+            target = np.zeros(shape=len(output), dtype=kia_dtype)
+            target[:]["timestamp"] = output["timestamp"]
+            target[:]["command"] = output["command"]
+            target[:]["key"] = output["key"]
+            target[:]["size"] = output["size"]
+            target[:]["ttl"] = output["ttl"]
+            target.tofile(output_file)
         case "Sari":
             raise NotImplementedError("Sari's format is not currently supported")
         case _:
@@ -102,16 +108,15 @@ def main():
     parser.add_argument("--sort-by-time", action="store_true")
     args = parser.parse_args()
 
-    binaries = []
+    output = []
     for fname in args.input_file:
-        binaries.append(parse_file(fname, args.input_format))
-
-    binary = pd.concat(binaries, ignore_index=True)
+        output.append(parse_file(fname, args.input_format))
+    output = pd.concat(output, ignore_index=True)
 
     if args.sort_by_time:
-        binary.sort_values(by="timestamp", ascending=True)
+        output = output.sort_values(by="timestamp", ascending=True)
 
-    save_binary(args.output_file, binary, args.output_format)
+    save_binary(args.output_file, output, args.output_format)
 
 
 if __name__ == "__main__":
