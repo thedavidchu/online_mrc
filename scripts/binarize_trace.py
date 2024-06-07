@@ -8,15 +8,8 @@ import os
 import numpy as np
 import pandas as pd
 
-kia_dtype = np.dtype(
-    [
-        ("timestamp", np.uint64),
-        ("command", np.uint8),
-        ("key", np.uint64),
-        ("size", np.uint32),
-        ("ttl", np.uint32),
-    ]
-)
+INPUT_FORMATS = ["MSR"]
+OUTPUT_FORMATS = ["Kia"]
 
 
 def msr_parser(fname: str) -> np.ndarray:
@@ -33,21 +26,19 @@ def msr_parser(fname: str) -> np.ndarray:
             "size",
             "_unknown_1",
         ],
-        usecols=[
-            "timestamp",
-            "command",
-            "key",
-            "size",
-        ],
+        usecols=lambda x: not x.startswith("_"),
+        # NOTE  The converter parameter takes precedence over dtype, so
+        #       I do not include the "command" converter in dtype.
         dtype=np.dtype(
             [
                 ("timestamp", np.uint64),
-                ("workload", str),
+                ("_workload", str),
                 ("_unknown_0", str),
-                ("command", np.uint8),  # Note: this is overwritten by the converter
+                # NOTE  I intentionally misnamed this with a leading underscore.
+                ("_command", np.uint8),
                 ("key", np.uint64),
                 ("size", np.uint32),
-                ("_unknwon_1", str),
+                ("_unknown_1", str),
             ]
         ),
         converters={"command": lambda x: 0 if x == "Read" else 1},
@@ -55,12 +46,9 @@ def msr_parser(fname: str) -> np.ndarray:
     )
 
     df["command"] = df["command"].astype(np.uint8)
+    # NOTE There are no TTLs, so we set the TTL to zero
     df["ttl"] = np.zeros_like(df["timestamp"], dtype=np.uint32)
-    print(df, df.dtypes)
     return df
-
-
-INPUT_FORMATS = {"MSR": msr_parser}
 
 
 def parse_file(fname: str, input_format: str):
@@ -68,25 +56,39 @@ def parse_file(fname: str, input_format: str):
         raise ValueError(f"file '{fname}' does not exist")
     if not os.path.isfile(fname):
         raise ValueError(f"file '{fname}' is not a file")
-    parser = INPUT_FORMATS.get(input_format, None)
-    if parser is None:
-        raise ValueError(f"unrecognized input format '{input_format}'")
-    parsed_lines = parser(fname)
+    if input_format not in INPUT_FORMATS:
+        raise ValueError(f"got {input_format}, expected {INPUT_FORMATS}")
+    match input_format:
+        case "MSR":
+            parsed_lines = msr_parser(fname)
+        case _:
+            raise ValueError(f"unrecognized input format: {input_format}")
     return parsed_lines
 
 
 def save_binary(output_file: str, binary: pd.DataFrame, output_format: str):
+    kia_dtype = np.dtype(
+        [
+            ("timestamp", np.uint64),
+            ("command", np.uint8),
+            ("key", np.uint64),
+            ("size", np.uint32),
+            ("ttl", np.uint32),
+        ]
+    )
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError(f"got {output_format}, expected {OUTPUT_FORMATS}")
     match output_format:
         case "Kia":
-            # TODO
             output = binary.to_numpy(dtype=kia_dtype)
+            print(output)
             bytes = output[0].tobytes()
             print(output[0], bytes)
             print(len(bytes))
             output.tofile(output_file)
             pass
         case "Sari":
-            raise ValueError("Sari's format is not currently supported")
+            raise NotImplementedError("Sari's format is not currently supported")
         case _:
             raise ValueError(f"unsupported format '{output_format}'")
 
@@ -94,9 +96,9 @@ def save_binary(output_file: str, binary: pd.DataFrame, output_format: str):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", nargs="+", type=str, required=True)
-    parser.add_argument("--input-format", choices=INPUT_FORMATS.keys(), required=True)
+    parser.add_argument("--input-format", choices=INPUT_FORMATS, required=True)
     parser.add_argument("--output-file", type=str, required=True)
-    parser.add_argument("--output-format", choices=["Kia"])
+    parser.add_argument("--output-format", choices=OUTPUT_FORMATS)
     parser.add_argument("--sort-by-time", action="store_true")
     args = parser.parse_args()
 
