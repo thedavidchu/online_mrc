@@ -11,6 +11,16 @@ import pandas as pd
 INPUT_FORMATS = ["MSR"]
 OUTPUT_FORMATS = ["Kia"]
 
+KIA_DTYPE = np.dtype(
+    [
+        ("timestamp", np.uint64),
+        ("command", np.uint8),
+        ("key", np.uint64),
+        ("size", np.uint32),
+        ("ttl", np.uint32),
+    ]
+)
+
 
 def msr_parser(fname: str) -> np.ndarray:
     df = pd.read_csv(
@@ -55,38 +65,29 @@ def msr_parser(fname: str) -> np.ndarray:
     return df
 
 
-def parse_file(fname: str, input_format: str):
+def parse_file(fname: str, text_format: str):
     if not os.path.exists(fname):
         raise ValueError(f"file '{fname}' does not exist")
     if not os.path.isfile(fname):
         raise ValueError(f"file '{fname}' is not a file")
-    if input_format not in INPUT_FORMATS:
-        raise ValueError(f"got {input_format}, expected {INPUT_FORMATS}")
-    match input_format:
+    if text_format not in INPUT_FORMATS:
+        raise ValueError(f"got {text_format}, expected {INPUT_FORMATS}")
+    match text_format:
         case "MSR":
             parsed_lines = msr_parser(fname)
         case _:
-            raise ValueError(f"unrecognized input format: {input_format}")
+            raise ValueError(f"unrecognized input format: {text_format}")
     return parsed_lines
 
 
-def save_binary(output_file: str, output: pd.DataFrame, output_format: str):
-    kia_dtype = np.dtype(
-        [
-            ("timestamp", np.uint64),
-            ("command", np.uint8),
-            ("key", np.uint64),
-            ("size", np.uint32),
-            ("ttl", np.uint32),
-        ]
-    )
-    if output_format not in OUTPUT_FORMATS:
-        raise ValueError(f"got {output_format}, expected {OUTPUT_FORMATS}")
-    match output_format:
+def save_binary(output_file: str, output: pd.DataFrame, binary_format: str):
+    if binary_format not in OUTPUT_FORMATS:
+        raise ValueError(f"got {binary_format}, expected {OUTPUT_FORMATS}")
+    match binary_format:
         case "Kia":
             # NOTE  I do this manually because the conversion function
             #       pd.DataFrame.to_numpy() wasn't cooperating.
-            target = np.zeros(shape=len(output), dtype=kia_dtype)
+            target = np.zeros(shape=len(output), dtype=KIA_DTYPE)
             target[:]["timestamp"] = output["timestamp"]
             target[:]["command"] = output["command"]
             target[:]["key"] = output["key"]
@@ -96,7 +97,15 @@ def save_binary(output_file: str, output: pd.DataFrame, output_format: str):
         case "Sari":
             raise NotImplementedError("Sari's format is not currently supported")
         case _:
-            raise ValueError(f"unsupported format '{output_format}'")
+            raise ValueError(f"unsupported format '{binary_format}'")
+
+
+def compare_binary(oracle_file: str, test_file: str, binary_format: str):
+    """Compare the results of two binary files."""
+    dtype = {"Kia": KIA_DTYPE}.get(binary_format)
+    oracle = np.fromfile(oracle_file, dtype=dtype)
+    test = np.fromfile(test_file, dtype=dtype)
+    np.testing.assert_array_equal(oracle, test)
 
 
 def main():
@@ -106,6 +115,7 @@ def main():
     parser.add_argument("--output-file", type=str, required=True)
     parser.add_argument("--output-format", choices=OUTPUT_FORMATS)
     parser.add_argument("--sort-by-time", action="store_true")
+    parser.add_argument("--oracle", type=str, default=None)
     args = parser.parse_args()
 
     output = []
@@ -117,6 +127,9 @@ def main():
         output = output.sort_values(by="timestamp", ascending=True)
 
     save_binary(args.output_file, output, args.output_format)
+
+    if args.oracle is not None:
+        compare_binary(args.oracle, args.output_file, args.output_format)
 
 
 if __name__ == "__main__":
