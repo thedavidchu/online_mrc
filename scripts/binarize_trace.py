@@ -37,18 +37,21 @@ def msr_parser(fname: str) -> np.ndarray:
             "timestamp",
             "command",
             "key",
-            # "size",
+            "size",
         ],
         dtype=np.dtype(
             [
                 ("timestamp", np.uint64),
-                ("command", np.uint8),
+                ("workload", str),
+                ("_unknown_0", str),
+                ("command", np.uint8),  # Note: this is overwritten by the converter
                 ("key", np.uint64),
                 ("size", np.uint32),
-                ("ttl", np.uint32),
+                ("_unknwon_1", str),
             ]
         ),
         converters={"command": lambda x: 0 if x == "Read" else 1},
+        on_bad_lines="error",
     )
 
     df["command"] = df["command"].astype(np.uint8)
@@ -72,10 +75,15 @@ def parse_file(fname: str, input_format: str):
     return parsed_lines
 
 
-def save_binary(binary: list[np.ndarray], output_format: str):
+def save_binary(output_file: str, binary: pd.DataFrame, output_format: str):
     match output_format:
         case "Kia":
             # TODO
+            output = binary.to_numpy(dtype=kia_dtype)
+            bytes = output[0].tobytes()
+            print(output[0], bytes)
+            print(len(bytes))
+            output.tofile(output_file)
             pass
         case "Sari":
             raise ValueError("Sari's format is not currently supported")
@@ -87,6 +95,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", nargs="+", type=str, required=True)
     parser.add_argument("--input-format", choices=INPUT_FORMATS.keys(), required=True)
+    parser.add_argument("--output-file", type=str, required=True)
     parser.add_argument("--output-format", choices=["Kia"])
     parser.add_argument("--sort-by-time", action="store_true")
     args = parser.parse_args()
@@ -100,7 +109,7 @@ def main():
     if args.sort_by_time:
         binary.sort_values(by="timestamp", ascending=True)
 
-    save_binary(binary, args.output_format)
+    save_binary(args.output_file, binary, args.output_format)
 
 
 if __name__ == "__main__":
