@@ -13,7 +13,9 @@ trace_test_exe = executable(
 
 # I'm not going to push a random trace to github
 fs = import('fs')
-test_trace = fs.expanduser('~/projects/online_mrc/mydata/src2.bin')
+# HACK  I need this weird back-bending because my version of C's fopen
+#       doesn't support relative paths.
+test_trace = join_paths(meson.current_source_dir(), '../../../data/src2.bin')
 if fs.exists(test_trace)
     test('trace_test', trace_test_exe, args: [test_trace])
 else
