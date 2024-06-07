@@ -27,6 +27,32 @@ This project depends on the following:
 Note: I'm too lazy to write proper header guards; especially since they are so
 fragile if you make them match the path but then move a file around!
 
+Project Structure
+--------------------------------------------------------------------------------
+
+```
+|--bench/               : Benchmarking the {speed,accuracy} performance of
+|                         various algorithms.
+|--data/                : Directory for data.
+|--examples/            : Example usage and scripts.
+|--scripts/             : Directory for simple scripts and examples.
+|--src/
+|  |--lib/              : Common utilities (types and a logger)
+|  `--mrc/              : Miss Rate Curve algorithms
+|
+`--test/
+   |--include/test/     : Testing header library
+   |--lib_test/         : Test general common utilities
+   `--mrc_test/         : Unit tests for our MRC algorithms
+```
+
+You will notice that the `.gitignore` ignores `/mydata/`, `myresults/`, and
+`/myscripts/`. Feel free to use these files in your local repository to house
+your personal data, results, and scripts.
+
+If you create a very useful, generalizable script, feel free to move it to the
+global `/scripts/` directory and share it!
+
 Historic Notes
 --------------------------------------------------------------------------------
 
