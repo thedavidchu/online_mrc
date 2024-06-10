@@ -93,8 +93,9 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
     }
 
     // Record the "histogram" statistics
-    me->stats[me->current_timestamp].reuse_distance = reuse_dist;
-    me->stats[me->current_timestamp].reuse_time = reuse_time;
+    me->stats[me->current_timestamp] =
+        (struct ReuseStatistics){.reuse_distance = reuse_dist,
+                                 .reuse_time = reuse_time};
 
     // Update current state
     ++me->current_timestamp;
