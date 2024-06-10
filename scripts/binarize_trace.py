@@ -1,6 +1,5 @@
-"""Convert a trace into Kia's data type"""
-
 #!/usr/bin/python3
+"""Convert a trace into Kia's data type"""
 
 import argparse
 import os
