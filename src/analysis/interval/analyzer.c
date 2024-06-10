@@ -1,3 +1,12 @@
+/** @brief  Generate a file of reuse distances and reuse times for an MRC.
+ *
+ *  This is useful because we can convert this stream into interval-based
+ *  reuse distance histograms (for MRC generation). We can use the reuse time
+ *  stream to find how many unique elements were accessed in a fixed interval.
+ *
+ *  An idea I would like to explore is whether we can find the number of unique
+ *  accesses within an interval based only on the stream of stack distances.
+ */
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
