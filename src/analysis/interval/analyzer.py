@@ -5,6 +5,7 @@ import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 UINT64_MAX: int = 18446744073709551615
 DTYPE = np.dtype([("reuse_dist", np.uint64), ("reuse_time", np.uint64)])
@@ -39,10 +40,9 @@ def convert_to_miss_rate_curve(array: np.ndarray):
     num_inf = len(array) - len(finite)
     reuse_dist = finite[:]["reuse_dist"]
     hist, edges = np.histogram(reuse_dist, bins=100)
-    mrc = 1 - np.cumsum(hist / len(reuse_dist)) + num_inf / len(array)
-    # NOTE  We have one more edge than we have values, so we simply trim
-    #       the last value off.
-    return edges[:-1], mrc
+    mrc = 1 - np.cumsum(hist / len(array))
+    # NOTE  We set the first element of the MRC to 1.0 by definition.
+    return edges, np.concatenate(([1.0], mrc))
 
 
 def plot_miss_rate_curve(array: np.ndarray, output_path: str):
@@ -52,7 +52,7 @@ def plot_miss_rate_curve(array: np.ndarray, output_path: str):
     plt.xlabel("Number of key-value pairs")
     plt.ylabel("Miss-rate")
     plt.ylim(0, 1.01)
-    plt.plot(edges, mrc)
+    plt.step(edges, mrc, where="post")
     plt.savefig(output_path)
 
 
@@ -82,7 +82,7 @@ def main():
     print(f"Number of accesses: {num_accesses}")
     print(f"Number of unique accesses: {num_unique}")
 
-    for i, c in enumerate(b):
+    for i, c in enumerate(tqdm(b)):
         plot_histogram(c, f"hist-{i}.png")
         plot_miss_rate_curve(c, f"mrc-{i}.png")
 
