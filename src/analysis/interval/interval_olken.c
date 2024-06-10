@@ -83,6 +83,13 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
     } else {
         reuse_dist = SIZE_MAX;
         reuse_time = SIZE_MAX;
+        s = tree__sleator_insert(&me->lru_stack, me->current_timestamp);
+        assert(s && "insert should not fail");
+        q = HashTable__put_unique(&me->reuse_lookup,
+                                  entry,
+                                  me->current_timestamp);
+        assert(q == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
+               "update should insert value");
     }
 
     // Record the "histogram" statistics
@@ -91,7 +98,6 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
 
     // Update current state
     ++me->current_timestamp;
-    HashTable__put_unique(&me->reuse_lookup, entry, me->current_timestamp);
 
     return true;
 }
