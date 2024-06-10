@@ -52,6 +52,8 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
 static gchar *input_path = NULL;
 static gchar *output_path = NULL;
 static gchar *input_format = "Kia";
+// NOTE By setting this to 1.0, we effectively shut off SHARDS.
+static gdouble shards_sampling_rate = 1e0;
 
 static GOptionEntry entries[] = {
     {"input",
@@ -75,6 +77,13 @@ static GOptionEntry entries[] = {
      &input_format,
      "format of the input file, either {Kia,Sari}. Default: Kia",
      "<input-format>"},
+    {"shards-sampling-rate",
+     's',
+     0,
+     G_OPTION_ARG_DOUBLE,
+     &shards_sampling_rate,
+     "SHARDS sampling rate. Default: 1.0. [UNUSED]",
+     "<rate>"},
     G_OPTION_ENTRY_NULL,
 };
 
