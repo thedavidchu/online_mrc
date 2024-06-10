@@ -27,6 +27,7 @@
 bool
 generate_reuse_stats(struct Trace *trace, char const *const fname)
 {
+    LOGGER_TRACE("starting generate_reuse_stats(%p, %s)", trace, fname);
     if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
         LOGGER_ERROR("invalid trace");
         return false;
@@ -39,11 +40,16 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
         return false;
     }
 
+    LOGGER_TRACE("beginning to process trace with length %zu", trace->length);
     for (size_t i = 0; i < trace->length; ++i) {
         IntervalOlken__access_item(&me, trace->trace[i].key);
     }
 
+    LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
+                 me.length,
+                 fname);
     write_buffer(fname, me.stats, me.length, sizeof(*me.stats));
+    LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
     return true;
 }
@@ -126,6 +132,9 @@ main(int argc, char *argv[])
         LOGGER_ERROR("invalid trace format");
         exit(-1);
     }
+    LOGGER_TRACE("beginning to read trace file '%s' with format '%s'",
+                 input_path,
+                 input_format);
     struct Trace trace = read_trace(input_path, format);
     generate_reuse_stats(&trace, output_path);
 
