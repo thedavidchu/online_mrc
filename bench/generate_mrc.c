@@ -78,20 +78,6 @@ struct CommandLineArguments {
     size_t hist_bin_size;
 };
 
-static void
-print_available_trace_formats(FILE *stream)
-{
-    fprintf(stream, "{");
-    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
-    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
-        fprintf(stream, "%s", TRACE_FORMAT_STRINGS[i]);
-        if (i != ARRAY_SIZE(TRACE_FORMAT_STRINGS) - 1) {
-            fprintf(stream, ",");
-        }
-    }
-    fprintf(stream, "}");
-}
-
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
 static void
 print_available_algorithms(FILE *stream)
@@ -230,21 +216,6 @@ print_trace_summary(struct CommandLineArguments const *args,
             trace->length);
 }
 
-static enum TraceFormat
-parse_input_format_string(struct CommandLineArguments const *args, char *str)
-{
-    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
-        if (strcmp(TRACE_FORMAT_STRINGS[i], str) == 0)
-            return (enum TraceFormat)i;
-    }
-    LOGGER_ERROR("unparsable format string: '%s'", str);
-    fprintf(LOGGER_STREAM, "   expected: ");
-    print_available_trace_formats(LOGGER_STREAM);
-    fprintf(LOGGER_STREAM, "\n");
-    print_help(stdout, args);
-    exit(-1);
-}
-
 static enum MRCAlgorithm
 parse_algorithm_string(struct CommandLineArguments const *args, char *str)
 {
@@ -291,7 +262,11 @@ parse_command_line_arguments(int argc, char **argv)
                 print_help(stdout, &args);
                 exit(-1);
             }
-            args.trace_format = parse_input_format_string(&args, argv[i]);
+            args.trace_format = parse_trace_format_string(argv[i]);
+            if (args.trace_format == TRACE_FORMAT_INVALID) {
+                print_help(stdout, &args);
+                exit(-1);
+            }
         } else if (matches_option(argv[i], "--algorithm", "-a")) {
             ++i;
             if (i >= argc) {

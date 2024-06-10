@@ -78,17 +78,6 @@ static GOptionEntry entries[] = {
     G_OPTION_ENTRY_NULL,
 };
 
-static enum TraceFormat
-parse_input_format_string(gchar *format_str)
-{
-    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
-        if (strcmp(TRACE_FORMAT_STRINGS[i], format_str) == 0)
-            return (enum TraceFormat)i;
-    }
-    LOGGER_ERROR("unparsable format string: '%s'", format_str);
-    exit(-1);
-}
-
 static bool
 verify_path(gchar const *const path)
 {
@@ -123,7 +112,11 @@ main(int argc, char *argv[])
         exit(-1);
     }
 
-    enum TraceFormat format = parse_input_format_string(input_format);
+    enum TraceFormat format = parse_trace_format_string(input_format);
+    if (format == TRACE_FORMAT_INVALID) {
+        LOGGER_ERROR("invalid trace format");
+        exit(-1);
+    }
     struct Trace trace = read_trace(input_path, format);
     generate_reuse_stats(&trace, output_path);
 

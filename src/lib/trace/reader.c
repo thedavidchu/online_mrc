@@ -9,6 +9,8 @@
 
 #include <glib.h>
 
+#include "arrays/array_size.h"
+#include "arrays/is_last.h"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "trace/reader.h"
@@ -74,6 +76,34 @@ construct_trace_item(uint8_t const *const restrict bytes,
         LOGGER_ERROR("unrecognized format %d", format);
         return invalid_result;
     }
+}
+
+void
+print_available_trace_formats(FILE *stream)
+{
+    fprintf(stream, "{");
+    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
+    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
+        fprintf(stream, "%s", TRACE_FORMAT_STRINGS[i]);
+        if (!is_last(i, ARRAY_SIZE(TRACE_FORMAT_STRINGS))) {
+            fprintf(stream, ",");
+        }
+    }
+    fprintf(stream, "}");
+}
+
+enum TraceFormat
+parse_trace_format_string(char const *const format_str)
+{
+    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
+        if (strcmp(TRACE_FORMAT_STRINGS[i], format_str) == 0)
+            return (enum TraceFormat)i;
+    }
+    LOGGER_ERROR("unparsable format string: '%s'", format_str);
+    fprintf(LOGGER_STREAM, "   expected: ");
+    print_available_trace_formats(LOGGER_STREAM);
+    fprintf(LOGGER_STREAM, "\n");
+    return TRACE_FORMAT_INVALID;
 }
 
 struct Trace
