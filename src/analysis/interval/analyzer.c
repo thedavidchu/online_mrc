@@ -34,7 +34,7 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
         IntervalOlken__access_item(&me, trace->trace[i].key);
     }
 
-    write_buffer(fname, &me.stats, me.length, sizeof(*me.stats));
+    write_buffer(fname, me.stats, me.length, sizeof(*me.stats));
     IntervalOlken__destroy(&me);
     return true;
 }
