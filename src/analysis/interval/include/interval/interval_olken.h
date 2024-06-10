@@ -16,9 +16,12 @@ struct ReuseStatistics {
 struct IntervalOlken {
     struct HashTable reuse_lookup;
     struct Tree lru_stack;
-    struct ReuseStatistics *stats;
-    size_t length;
     size_t current_timestamp;
+
+    // This is a buffer to collect the reuse statistics (time and distance).
+    struct ReuseStatistics *stats;
+    // The length of the stats.
+    size_t length;
 };
 
 bool
