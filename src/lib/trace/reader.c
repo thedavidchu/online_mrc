@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <endian.h> /* This is Linux specific */
-#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,10 +90,7 @@ read_trace(char const *const restrict file_name, enum TraceFormat format)
 
     struct MemoryMap mm = {0};
     if (!MemoryMap__init(&mm, file_name, "rb")) {
-        LOGGER_ERROR("could not open '%s' with error %d '%s'",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("could not open '%s'", file_name);
         goto cleanup;
     }
 
