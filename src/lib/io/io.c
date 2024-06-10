@@ -120,11 +120,14 @@ write_buffer(char const *const file_name,
 
     size_t nwritten = fwrite(buffer, size, nmemb, fp);
     if (nwritten != nmemb) {
-        LOGGER_WARN("expected to write %zu * %zu bytes, wrote %zu * %zu bytes",
+        LOGGER_WARN("expected to write %zu * %zu bytes, wrote %zu * %zu bytes "
+                    "(error %d: %s)",
                     nmemb,
                     size,
                     nwritten,
-                    size);
+                    size,
+                    errno,
+                    strerror(errno));
     }
 
     if (fclose(fp) != 0) {
