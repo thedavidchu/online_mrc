@@ -33,6 +33,7 @@ analyzer_exe = executable(
         glib_dep,
         interval_olken_dep,
         io_dep,
+        shards_dep,
         trace_dep,
     ],
 )

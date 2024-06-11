@@ -19,9 +19,20 @@
 #include "invariants/implies.h"
 #include "io/io.h"
 #include "logger/logger.h"
+#include "shards/fixed_rate_shards_sampler.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
 #include "unused/mark_unused.h"
+
+#define IS_MAIN_FILE 1
+
+#if IS_MAIN_FILE
+static gchar *input_path = NULL;
+static gchar *output_path = NULL;
+static gchar *input_format = "Kia";
+// NOTE By setting this to 1.0, we effectively shut off SHARDS.
+static gdouble shards_sampling_rate = 1e0;
+#endif
 
 /// @brief  Create record of reuse distances and times.
 bool
@@ -34,15 +45,19 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     }
 
     struct IntervalOlken me = {0};
-    bool r = IntervalOlken__init(&me, trace->length);
+    struct FixedRateShardsSampler sampler = {0};
+    bool r = false;
+    r = IntervalOlken__init(&me, trace->length);
     if (!r) {
         LOGGER_ERROR("bad init");
         return false;
     }
+    r = FixedRateShardsSampler__init(&sampler, shards_sampling_rate, true);
 
     LOGGER_TRACE("beginning to process trace with length %zu", trace->length);
     for (size_t i = 0; i < trace->length; ++i) {
-        IntervalOlken__access_item(&me, trace->trace[i].key);
+        if (FixedRateShardsSampler__sample(&sampler, trace->trace[i].key))
+            IntervalOlken__access_item(&me, trace->trace[i].key);
     }
 
     LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
@@ -54,13 +69,7 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     return true;
 }
 
-#if 1
-static gchar *input_path = NULL;
-static gchar *output_path = NULL;
-static gchar *input_format = "Kia";
-// NOTE By setting this to 1.0, we effectively shut off SHARDS.
-static gdouble shards_sampling_rate = 1e0;
-
+#if IS_MAIN_FILE
 static GOptionEntry entries[] = {
     {"input",
      'i',
