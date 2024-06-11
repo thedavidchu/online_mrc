@@ -42,3 +42,28 @@ fixed_rate_shards_dep = declare_dependency(
         priority_queue_dep,
     ],
 )
+
+fixed_rate_shards_sampler_lib = library(
+    'fixed_rate_shards_sampler_lib',
+    'fixed_rate_shards_sampler.c',
+    include_directories: include_directories('include'),
+    dependencies: [
+        common_dep,
+        glib_dep,
+        olken_dep,
+        hash_dep,
+        histogram_dep,
+        priority_queue_dep,
+        basic_tree_dep,
+        sleator_tree_dep,
+    ],
+)
+
+shards_dep = declare_dependency(
+    link_with: fixed_rate_shards_sampler_lib,
+    dependencies: [
+        fixed_rate_shards_dep,
+        fixed_size_shards_dep,
+    ],
+    include_directories: include_directories('include'),
+)
