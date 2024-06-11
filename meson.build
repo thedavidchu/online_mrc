@@ -46,6 +46,15 @@ if use_gprof
     add_project_link_arguments('-pg', '-no-pie', language: 'c')
 endif
 
+fs = import('fs')
+# Define the test trace
+# HACK  I need this weird back-bending because my version of C's fopen
+#       doesn't support relative paths.
+test_trace = join_paths(meson.current_source_dir(), 'data/src2.bin')
+if not fs.exists(test_trace)
+    warning('could not find file: ' + test_trace)
+endif
+
 subdir('src')
 subdir('test')
 subdir('bench')

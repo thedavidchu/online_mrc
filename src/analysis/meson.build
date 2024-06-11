@@ -36,3 +36,9 @@ analyzer_exe = executable(
         trace_dep,
     ],
 )
+
+test(
+    'analyzer_test',
+    analyzer_exe,
+    args: ['-i', test_trace, '-o', 'output.bin', '-f', 'Kia'],
+)
