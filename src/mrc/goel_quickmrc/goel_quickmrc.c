@@ -164,6 +164,8 @@ GoelQuickMRC__save_sparse_histogram(struct GoelQuickMRC const *const me,
 {
     UNUSED(me);
     UNUSED(path);
+    LOGGER_WARN(
+        "I cheated an didn't actually save the histogram at '%s', path");
     return true;
 }
 
