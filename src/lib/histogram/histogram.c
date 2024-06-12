@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -249,6 +250,59 @@ Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment)
     }
 
     return true;
+}
+
+static bool
+write_index_miss_rate_pair(FILE *fp,
+                           const uint64_t index,
+                           const uint64_t bin_size,
+                           const uint64_t frequency)
+{
+    size_t n = 0;
+    uint64_t scaled_idx = index * bin_size;
+
+    // We want to make sure we're writing the expected sizes out the file.
+    // Otherwise, our reader will be confused. We should write out:
+    // (uint64, float64)
+    assert(sizeof(index) == 8 && sizeof(frequency) == 8 && "unexpected sizes");
+
+    n = fwrite(&scaled_idx, sizeof(scaled_idx), 1, fp);
+    if (n != 1) {
+        LOGGER_ERROR("failed to write scaled index %zu", scaled_idx);
+        return false;
+    }
+    n = fwrite(&frequency, sizeof(frequency), 1, fp);
+    if (n != 1) {
+        LOGGER_ERROR("failed to write object %zu: %g", scaled_idx, frequency);
+        return false;
+    }
+    return true;
+}
+
+bool
+Histogram__save_sparse(struct Histogram const *const me, char const *const path)
+{
+    if (me == NULL || me->histogram == NULL || me->num_bins == 0) {
+        return false;
+    }
+
+    FILE *fp = fopen(path, "wb");
+    // NOTE I am assuming the endianness of the writer and reader will
+    //      be the same.
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        if (me->histogram[i] == 0)
+            continue;
+        if (!write_index_miss_rate_pair(fp, i, me->bin_size, me->histogram[i]))
+            goto cleanup;
+    }
+    // Try to clean up regardless of the outcome of the fwrite(...).
+    if (fclose(fp) != 0)
+        return false;
+    return true;
+
+cleanup:
+    fclose(fp);
+    return false;
 }
 
 bool

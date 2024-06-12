@@ -32,6 +32,7 @@ static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
 static const size_t DEFAULT_HIST_BIN_SIZE = 1;
+static char const *DEFAULT_HISTOGRAM_PATH = NULL;
 
 static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
 
@@ -76,6 +77,7 @@ struct CommandLineArguments {
     char *oracle_path;
 
     size_t hist_bin_size;
+    char *hist_output_path;
 };
 
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
@@ -141,7 +143,15 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "Default: %zu.\n",
             DEFAULT_HIST_BIN_SIZE);
     fprintf(stream,
+            "    --histogram <histogram-output-path>: path to the histogram. "
+            "Default: %s.\n",
+            DEFAULT_HISTOGRAM_PATH ? DEFAULT_ORACLE_PATH : "(null)");
+    fprintf(stream,
             "    --help, -h: print this help message. Overrides all else!\n");
+    fprintf(stream,
+            "N.B. '~/path/to/file' paths are not guaranteed to work. Use "
+            "relative (e.g. '../path/to/file' or './path/to/file') or absolute "
+            "paths (e.g. '/path/to/file')");
 }
 
 static inline bool
@@ -316,6 +326,14 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.hist_bin_size = parse_positive_size(argv[i]);
+        } else if (matches_option(argv[i], "--histogram", "--histogram")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting histogram output path!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.hist_output_path = argv[i];
         } else if (matches_option(argv[i], "--help", "-h")) {
             print_help(stdout, &args);
             exit(0);
@@ -369,7 +387,8 @@ cleanup:
                                          access_func,                          \
                                          post_process_func,                    \
                                          hist,                                 \
-                                         hist_func,                            \
+                                         save_hist_func,                       \
+                                         hist2mrc_func,                        \
                                          destroy_func)                         \
     static struct MissRateCurve func_name(                                     \
         struct Trace const *const trace,                                       \
@@ -392,7 +411,7 @@ cleanup:
         ((post_process_func))(&var_name);                                      \
         double t2 = get_wall_time_sec();                                       \
         struct MissRateCurve mrc = {0};                                        \
-        ((hist_func))(&mrc, hist);                                             \
+        ((hist2mrc_func))(&mrc, hist);                                         \
         double t3 = get_wall_time_sec();                                       \
         LOGGER_INFO("Histogram Time: %f | Post-Process Time: %f | MRC Time: "  \
                     "%f | Total Time: %f",                                     \
@@ -400,7 +419,10 @@ cleanup:
                     (double)(t2 - t1),                                         \
                     (double)(t3 - t2),                                         \
                     (double)(t3 - t0));                                        \
-        LOGGER_TRACE("Wrote histogram");                                       \
+        if (args.hist_output_path != NULL) {                                   \
+            ((save_hist_func))(hist, args.hist_output_path);                   \
+            LOGGER_TRACE("Wrote histogram");                                   \
+        }                                                                      \
         ((destroy_func))(&var_name);                                           \
         LOGGER_TRACE("Destroyed MRC generator object");                        \
         return mrc;                                                            \
@@ -416,6 +438,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  Olken__access_item,
                                  Olken__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  MissRateCurve__init_from_histogram,
                                  Olken__destroy)
 
@@ -432,6 +455,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
 
@@ -448,6 +472,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
 
@@ -464,6 +489,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
     &me.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     FixedSizeShards__destroy)
 
@@ -480,6 +506,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                  QuickMRC__access_item,
                                  QuickMRC__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  MissRateCurve__init_from_histogram,
                                  QuickMRC__destroy)
 
@@ -498,6 +525,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
                                  GoelQuickMRC__access_item,
                                  GoelQuickMRC__post_process,
                                  &me,
+                                 GoelQuickMRC__save_sparse_histogram,
                                  GoelQuickMRC__to_mrc,
                                  GoelQuickMRC__destroy)
 
@@ -514,6 +542,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     BucketedShards__access_item,
     BucketedShards__post_process,
     &me.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     BucketedShards__destroy)
 
@@ -527,6 +556,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
@@ -540,6 +570,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  AverageEvictionTime__their_to_mrc,
                                  AverageEvictionTime__destroy)
 

@@ -54,6 +54,11 @@ Histogram__debug_difference(struct Histogram *me,
 void
 Histogram__write_as_json(FILE *stream, struct Histogram *me);
 
+/// @brief  Save the histogram in a sparse format of <index, frequency>.
+bool
+Histogram__save_sparse(struct Histogram const *const me,
+                       char const *const path);
+
 /// @brief  Write the Histogram as a JSON object to stdout.
 void
 Histogram__print_as_json(struct Histogram *me);
