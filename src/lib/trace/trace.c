@@ -25,6 +25,24 @@ print_trace_item_array(FILE *stream, struct Trace const *const me)
     }
 }
 
+bool
+Trace__init(struct Trace *const me, size_t const length)
+{
+    if (me == NULL) {
+        return false;
+    }
+
+    *me = (struct Trace){.trace = calloc(length, sizeof(*me->trace)),
+                         .length = length};
+    if (me->trace == NULL) {
+        LOGGER_ERROR("could not allocate buffer of size %zu * %zu",
+                     length,
+                     sizeof(*me->trace));
+        *me = (struct Trace){.trace = NULL, .length = 0};
+        return false;
+    }
+    return true;
+}
 void
 Trace__write_as_json(FILE *stream, struct Trace const *const me)
 {

@@ -594,6 +594,11 @@ get_trace(struct CommandLineArguments args)
         LOGGER_TRACE("Generating artificial two-step function trace");
         return generate_two_step_trace(args.artificial_trace_length,
                                        args.artificial_trace_length / 10);
+    } else if (strcmp(args.input_path, "two-distr") == 0) {
+        LOGGER_TRACE("Generating artificial two-distribution function trace");
+        return generate_two_distribution_trace(args.artificial_trace_length,
+                                               args.artificial_trace_length /
+                                                   10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);
