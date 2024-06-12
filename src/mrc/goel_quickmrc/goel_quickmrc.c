@@ -159,6 +159,17 @@ GoelQuickMRC__print_histogram_as_json(struct GoelQuickMRC *me)
 }
 
 bool
+GoelQuickMRC__save_sparse_histogram(struct GoelQuickMRC const *const me,
+                                    char const *const path)
+{
+    UNUSED(me);
+    UNUSED(path);
+    LOGGER_WARN(
+        "I cheated an didn't actually save the histogram at '%s', path");
+    return true;
+}
+
+bool
 GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me)
 {
     if (mrc == NULL || me == NULL || me->cache == NULL)

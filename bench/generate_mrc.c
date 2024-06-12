@@ -31,6 +31,8 @@
 static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
+static const size_t DEFAULT_HIST_BIN_SIZE = 1;
+static char const *DEFAULT_HISTOGRAM_PATH = NULL;
 
 static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
 
@@ -73,21 +75,10 @@ struct CommandLineArguments {
     size_t artificial_trace_length;
 
     char *oracle_path;
-};
 
-static void
-print_available_trace_formats(FILE *stream)
-{
-    fprintf(stream, "{");
-    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
-    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
-        fprintf(stream, "%s", TRACE_FORMAT_STRINGS[i]);
-        if (i != ARRAY_SIZE(TRACE_FORMAT_STRINGS) - 1) {
-            fprintf(stream, ",");
-        }
-    }
-    fprintf(stream, "}");
-}
+    size_t hist_bin_size;
+    char *hist_output_path;
+};
 
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
 static void
@@ -116,7 +107,8 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
     fprintf(stream,
             "Usage: %s --input|-i <input-path> --algorithm|-a <algorithm> "
             "--output|-o <output-path> [--sampling-ratio|-s <ratio>] "
-            "[--number-entries|-n <trace-length>] [--oracle <oracle-path>]\n",
+            "[--number-entries|-n <trace-length>] [--oracle <oracle-path>]"
+            "[--hist-bin-size|-b <bin-size>]\n",
             args->executable);
     fprintf(stream,
             "    --input, -i <input-path>: path to the input ('~/...' may not "
@@ -147,7 +139,19 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "results. Default: %s.\n",
             DEFAULT_ORACLE_PATH ? DEFAULT_ORACLE_PATH : "(null)");
     fprintf(stream,
+            "    --hist-bin-size, -b <bin-size>: the histogram bin size. "
+            "Default: %zu.\n",
+            DEFAULT_HIST_BIN_SIZE);
+    fprintf(stream,
+            "    --histogram <histogram-output-path>: path to the histogram. "
+            "Default: %s.\n",
+            DEFAULT_HISTOGRAM_PATH ? DEFAULT_ORACLE_PATH : "(null)");
+    fprintf(stream,
             "    --help, -h: print this help message. Overrides all else!\n");
+    fprintf(stream,
+            "N.B. '~/path/to/file' paths are not guaranteed to work. Use "
+            "relative (e.g. '../path/to/file' or './path/to/file') or absolute "
+            "paths (e.g. '/path/to/file')");
 }
 
 static inline bool
@@ -196,17 +200,19 @@ parse_positive_double(char const *const str)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    fprintf(stderr,
-            "CommandLineArguments(executable='%s', input_path='%s', "
-            "algorithm='%s', output_path='%s', shards_ratio='%g', "
-            "artifical_trace_length='%zu', oracle_path='%s')\n",
-            args->executable,
-            args->input_path,
-            algorithm_names[args->algorithm],
-            args->output_path,
-            args->shards_sampling_ratio,
-            args->artificial_trace_length,
-            args->oracle_path ? args->oracle_path : "(null)");
+    fprintf(
+        stderr,
+        "CommandLineArguments(executable='%s', input_path='%s', "
+        "algorithm='%s', output_path='%s', shards_ratio='%g', "
+        "artifical_trace_length='%zu', oracle_path='%s', hist_bin_size=%zu)\n",
+        args->executable,
+        args->input_path,
+        algorithm_names[args->algorithm],
+        args->output_path,
+        args->shards_sampling_ratio,
+        args->artificial_trace_length,
+        args->oracle_path ? args->oracle_path : "(null)",
+        args->hist_bin_size);
 }
 
 static void
@@ -218,21 +224,6 @@ print_trace_summary(struct CommandLineArguments const *args,
             args->input_path,
             TRACE_FORMAT_STRINGS[args->trace_format],
             trace->length);
-}
-
-static enum TraceFormat
-parse_input_format_string(struct CommandLineArguments const *args, char *str)
-{
-    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
-        if (strcmp(TRACE_FORMAT_STRINGS[i], str) == 0)
-            return (enum TraceFormat)i;
-    }
-    LOGGER_ERROR("unparsable format string: '%s'", str);
-    fprintf(LOGGER_STREAM, "   expected: ");
-    print_available_trace_formats(LOGGER_STREAM);
-    fprintf(LOGGER_STREAM, "\n");
-    print_help(stdout, args);
-    exit(-1);
 }
 
 static enum MRCAlgorithm
@@ -260,6 +251,7 @@ parse_command_line_arguments(int argc, char **argv)
     // Set defaults
     args.shards_sampling_ratio = DEFAULT_SHARDS_SAMPLING_RATIO;
     args.artificial_trace_length = DEFAULT_ARTIFICIAL_TRACE_LENGTH;
+    args.hist_bin_size = DEFAULT_HIST_BIN_SIZE;
 
     // Set parameters based on user arguments
     for (int i = 1; i < argc; ++i) {
@@ -280,7 +272,11 @@ parse_command_line_arguments(int argc, char **argv)
                 print_help(stdout, &args);
                 exit(-1);
             }
-            args.trace_format = parse_input_format_string(&args, argv[i]);
+            args.trace_format = parse_trace_format_string(argv[i]);
+            if (args.trace_format == TRACE_FORMAT_INVALID) {
+                print_help(stdout, &args);
+                exit(-1);
+            }
         } else if (matches_option(argv[i], "--algorithm", "-a")) {
             ++i;
             if (i >= argc) {
@@ -322,6 +318,22 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.oracle_path = argv[i];
+        } else if (matches_option(argv[i], "--hist-bin-size", "-b")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting histogram bin size!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.hist_bin_size = parse_positive_size(argv[i]);
+        } else if (matches_option(argv[i], "--histogram", "--histogram")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting histogram output path!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.hist_output_path = argv[i];
         } else if (matches_option(argv[i], "--help", "-h")) {
             print_help(stdout, &args);
             exit(0);
@@ -375,7 +387,8 @@ cleanup:
                                          access_func,                          \
                                          post_process_func,                    \
                                          hist,                                 \
-                                         hist_func,                            \
+                                         save_hist_func,                       \
+                                         hist2mrc_func,                        \
                                          destroy_func)                         \
     static struct MissRateCurve func_name(                                     \
         struct Trace const *const trace,                                       \
@@ -398,7 +411,7 @@ cleanup:
         ((post_process_func))(&var_name);                                      \
         double t2 = get_wall_time_sec();                                       \
         struct MissRateCurve mrc = {0};                                        \
-        ((hist_func))(&mrc, hist);                                             \
+        ((hist2mrc_func))(&mrc, hist);                                         \
         double t3 = get_wall_time_sec();                                       \
         LOGGER_INFO("Histogram Time: %f | Post-Process Time: %f | MRC Time: "  \
                     "%f | Total Time: %f",                                     \
@@ -406,7 +419,10 @@ cleanup:
                     (double)(t2 - t1),                                         \
                     (double)(t3 - t2),                                         \
                     (double)(t3 - t0));                                        \
-        LOGGER_TRACE("Wrote histogram");                                       \
+        if (args.hist_output_path != NULL) {                                   \
+            ((save_hist_func))(hist, args.hist_output_path);                   \
+            LOGGER_TRACE("Wrote histogram");                                   \
+        }                                                                      \
         ((destroy_func))(&var_name);                                           \
         LOGGER_TRACE("Destroyed MRC generator object");                        \
         return mrc;                                                            \
@@ -416,10 +432,13 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  struct Olken,
                                  me,
                                  args,
-                                 Olken__init(&me, trace->length, 1),
+                                 Olken__init(&me,
+                                             trace->length,
+                                             args.hist_bin_size),
                                  Olken__access_item,
                                  Olken__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  MissRateCurve__init_from_histogram,
                                  Olken__destroy)
 
@@ -431,11 +450,12 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__init(&me,
                           args.shards_sampling_ratio,
                           trace->length,
-                          1,
+                          args.hist_bin_size,
                           false),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
 
@@ -447,11 +467,12 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__init(&me,
                           args.shards_sampling_ratio,
                           trace->length,
-                          1,
+                          args.hist_bin_size,
                           true),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     FixedRateShards__destroy)
 
@@ -464,10 +485,11 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                           args.shards_sampling_ratio,
                           1 << 13,
                           trace->length,
-                          1),
+                          args.hist_bin_size),
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
     &me.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     FixedSizeShards__destroy)
 
@@ -480,10 +502,11 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                                 1024,
                                                 1 << 8,
                                                 trace->length,
-                                                1),
+                                                args.hist_bin_size),
                                  QuickMRC__access_item,
                                  QuickMRC__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  MissRateCurve__init_from_histogram,
                                  QuickMRC__destroy)
 
@@ -502,6 +525,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
                                  GoelQuickMRC__access_item,
                                  GoelQuickMRC__post_process,
                                  &me,
+                                 GoelQuickMRC__save_sparse_histogram,
                                  GoelQuickMRC__to_mrc,
                                  GoelQuickMRC__destroy)
 
@@ -514,10 +538,11 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                          args.shards_sampling_ratio,
                          1 << 13,
                          trace->length,
-                         1),
+                         args.hist_bin_size),
     BucketedShards__access_item,
     BucketedShards__post_process,
     &me.histogram,
+    Histogram__save_sparse,
     MissRateCurve__init_from_histogram,
     BucketedShards__destroy)
 
@@ -527,10 +552,11 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  args,
                                  AverageEvictionTime__init(&me,
                                                            trace->length,
-                                                           1),
+                                                           args.hist_bin_size),
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
@@ -540,10 +566,11 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
                                  args,
                                  AverageEvictionTime__init(&me,
                                                            trace->length,
-                                                           1),
+                                                           args.hist_bin_size),
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
+                                 Histogram__save_sparse,
                                  AverageEvictionTime__their_to_mrc,
                                  AverageEvictionTime__destroy)
 
@@ -567,6 +594,11 @@ get_trace(struct CommandLineArguments args)
         LOGGER_TRACE("Generating artificial two-step function trace");
         return generate_two_step_trace(args.artificial_trace_length,
                                        args.artificial_trace_length / 10);
+    } else if (strcmp(args.input_path, "two-distr") == 0) {
+        LOGGER_TRACE("Generating artificial two-distribution function trace");
+        return generate_two_distribution_trace(args.artificial_trace_length,
+                                               args.artificial_trace_length /
+                                                   10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
         return read_trace(args.input_path, args.trace_format);

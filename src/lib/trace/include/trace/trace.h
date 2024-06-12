@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,18 +19,16 @@ struct FullTraceItem {
 };
 
 struct Trace {
-    // NOTE I want to mark this as `struct TraceItem const *const restrict` but
-    //      what if we have multiple readers? From the examples I see online,
-    //      `restrict` means that other aliases to the pointer won't _modify_
-    //      this value; but the written contract says aliases won't even exist.
-    //      I defer to the written contract (until I'm convinced that it
-    //      supports my interpretation of the examples).
-    struct TraceItem const *trace;
+    struct TraceItem *trace;
     size_t length;
 };
 
 void
 Trace__write_as_json(FILE *stream, struct Trace const *const me);
+
+/// @brief  Allocate the required memory in the trace.
+bool
+Trace__init(struct Trace *const me, size_t const length);
 
 void
 Trace__destroy(struct Trace *const me);

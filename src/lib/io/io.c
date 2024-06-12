@@ -1,9 +1,7 @@
-#include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -29,34 +27,22 @@ MemoryMap__init(struct MemoryMap *me,
 
     fp = fopen(file_name, modes);
     if (fp == NULL) {
-        LOGGER_ERROR("failed to open file '%s', error %d: %s",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("failed to open file '%s'", file_name);
         return false;
     }
 
     fd = fileno(fp);
     if (fd == -1) {
-        LOGGER_ERROR("failed get file descriptor for '%s', error %d: %s",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("failed get file descriptor for '%s'", file_name);
         fclose(fp);
         return false;
     }
 
     if (fstat(fd, &sb) == -1) {
-        LOGGER_ERROR("failed to get size of file '%s', error %d: %s",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("failed to get size of file '%s'", file_name);
         // We close the file with close since we've transferred ownership to fd.
         if (close(fd) == -1) {
-            LOGGER_ERROR("failed to close '%s' too, error %d: %s",
-                         file_name,
-                         errno,
-                         strerror(errno));
+            LOGGER_ERROR("failed to close '%s' too", file_name);
         }
         return false;
     }
@@ -94,9 +80,7 @@ MemoryMap__destroy(struct MemoryMap *me)
         return false;
     }
     if (close(me->fd) == -1) {
-        LOGGER_ERROR("failed to close file, error %d: %s",
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("failed to close file");
         return false;
     }
     *me = (struct MemoryMap){0};
@@ -111,23 +95,21 @@ write_buffer(char const *const file_name,
 {
     FILE *fp = fopen(file_name, "wb");
     if (fp == NULL) {
-        LOGGER_ERROR("failed to open file '%s', error %d: %s",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("failed to open file '%s'", file_name);
         return false;
     }
 
     size_t nwritten = fwrite(buffer, size, nmemb, fp);
     if (nwritten != nmemb) {
-        LOGGER_WARN("expected to write %zu, wrote %zu", nmemb, nwritten);
+        LOGGER_WARN("expected to write %zu * %zu bytes, wrote %zu * %zu bytes ",
+                    nmemb,
+                    size,
+                    nwritten,
+                    size);
     }
 
     if (fclose(fp) != 0) {
-        LOGGER_ERROR("failed to close file '%s', error %d: %s",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("failed to close file '%s'", file_name);
         return false;
     }
     return true;

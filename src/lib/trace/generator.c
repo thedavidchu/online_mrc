@@ -1,10 +1,34 @@
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 #include "logger/logger.h"
+#include "random/uniform_random.h"
 #include "random/zipfian_random.h"
 #include "trace/generator.h"
 #include "trace/trace.h"
+
+static bool
+validate_args(size_t const length, size_t const max_num_unique_entries)
+{
+    bool ok = true;
+    if (length == 0) {
+        LOGGER_WARN("length == 0");
+        ok = false;
+    }
+    if (max_num_unique_entries == 0) {
+        LOGGER_WARN("max_num_unique_entries == 0");
+        ok = false;
+    }
+    if (max_num_unique_entries > length) {
+        LOGGER_WARN("length (%zu) < max_num_unique_entries (%zu)",
+                    length,
+                    max_num_unique_entries);
+        ok = false;
+    }
+
+    return ok;
+}
 
 struct Trace
 generate_zipfian_trace(const uint64_t length,
@@ -98,4 +122,42 @@ generate_two_step_trace(const uint64_t length,
     }
 
     return (struct Trace){.trace = trace, .length = length};
+}
+
+struct Trace
+generate_two_distribution_trace(const size_t length,
+                                const size_t max_num_unique_entries)
+{
+    struct UniformRandom urnd = {0};
+    bool r = UniformRandom__init(&urnd, 0);
+    if (!r)
+        LOGGER_WARN("failed to init urand");
+
+    struct Trace trace = {0};
+    if (!validate_args(length, max_num_unique_entries)) {
+        LOGGER_ERROR("bad arguments");
+        return trace;
+    }
+    if (!Trace__init(&trace, length)) {
+        LOGGER_ERROR("Trace__init(%p, %zu) failed", &trace, length);
+        return trace;
+    }
+    if (max_num_unique_entries >= length) {
+        LOGGER_WARN(
+            "length (%zu) must be greater than twice the desired number of "
+            "unique entries (%zu)",
+            length,
+            max_num_unique_entries);
+    }
+
+    for (size_t i = 0; i < length; ++i) {
+        if (UniformRandom__next_uint32(&urnd) % 2 == 0) {
+            trace.trace[i].key = (uint64_t)(i % (max_num_unique_entries / 2));
+        } else {
+            trace.trace[i].key = (uint64_t)(i % (max_num_unique_entries / 2) +
+                                            max_num_unique_entries);
+        }
+    }
+
+    return trace;
 }

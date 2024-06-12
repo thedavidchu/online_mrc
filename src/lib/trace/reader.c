@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <endian.h> /* This is Linux specific */
-#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +9,8 @@
 
 #include <glib.h>
 
+#include "arrays/array_size.h"
+#include "arrays/is_last.h"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "trace/reader.h"
@@ -77,6 +78,34 @@ construct_trace_item(uint8_t const *const restrict bytes,
     }
 }
 
+void
+print_available_trace_formats(FILE *stream)
+{
+    fprintf(stream, "{");
+    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
+    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
+        fprintf(stream, "%s", TRACE_FORMAT_STRINGS[i]);
+        if (!is_last(i, ARRAY_SIZE(TRACE_FORMAT_STRINGS))) {
+            fprintf(stream, ",");
+        }
+    }
+    fprintf(stream, "}");
+}
+
+enum TraceFormat
+parse_trace_format_string(char const *const format_str)
+{
+    for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
+        if (strcmp(TRACE_FORMAT_STRINGS[i], format_str) == 0)
+            return (enum TraceFormat)i;
+    }
+    LOGGER_ERROR("unparsable format string: '%s'", format_str);
+    fprintf(LOGGER_STREAM, "   expected: ");
+    print_available_trace_formats(LOGGER_STREAM);
+    fprintf(LOGGER_STREAM, "\n");
+    return TRACE_FORMAT_INVALID;
+}
+
 struct Trace
 read_trace(char const *const restrict file_name, enum TraceFormat format)
 {
@@ -91,10 +120,7 @@ read_trace(char const *const restrict file_name, enum TraceFormat format)
 
     struct MemoryMap mm = {0};
     if (!MemoryMap__init(&mm, file_name, "rb")) {
-        LOGGER_ERROR("could not open '%s' with error %d '%s'",
-                     file_name,
-                     errno,
-                     strerror(errno));
+        LOGGER_ERROR("could not open '%s'", file_name);
         goto cleanup;
     }
 

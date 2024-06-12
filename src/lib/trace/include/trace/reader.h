@@ -27,6 +27,12 @@ enum TraceFormat {
 
 static char const *const TRACE_FORMAT_STRINGS[] = {"INVALID", "Kia", "Sari"};
 
+void
+print_available_trace_formats(FILE *stream);
+
+enum TraceFormat
+parse_trace_format_string(char const *const format_str);
+
 /// @brief  Read the traces formatted by Kia and Sari.
 struct Trace
 read_trace(char const *const restrict file_name, enum TraceFormat format);
