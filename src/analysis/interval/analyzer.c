@@ -60,12 +60,15 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
             IntervalOlken__access_item(&me, trace->trace[i].key);
     }
 
+    size_t const length = sampler.num_entries_processed;
+
     LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
-                 me.length,
+                 length,
                  fname);
-    write_buffer(fname, me.stats, me.length, sizeof(*me.stats));
+    write_buffer(fname, me.stats, length, sizeof(*me.stats));
     LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
+    FixedRateShardsSampler__destroy(&sampler);
     return true;
 }
 
