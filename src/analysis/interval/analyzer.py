@@ -2,6 +2,7 @@
 """Analyze a stream of reuse distances and reuse times."""
 
 import argparse
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,7 +46,7 @@ def convert_to_miss_rate_curve(array: np.ndarray):
     return edges, np.concatenate(([1.0], mrc))
 
 
-def plot_miss_rate_curve(array: np.ndarray, output_path: str):
+def plot_single_miss_rate_curve(array: np.ndarray, output_path: str):
     edges, mrc = convert_to_miss_rate_curve(array)
     plt.figure(figsize=(12, 8), dpi=300)
     plt.title("Miss-Rate Curve")
@@ -56,7 +57,7 @@ def plot_miss_rate_curve(array: np.ndarray, output_path: str):
     plt.savefig(output_path)
 
 
-def plot_histogram(array: np.ndarray, output_path: str):
+def plot_single_histogram(array: np.ndarray, output_path: str):
     finite = filter_infinity(array)
     reuse_dist = finite[:]["reuse_dist"]
     plt.figure(figsize=(12, 8), dpi=300)
@@ -65,6 +66,31 @@ def plot_histogram(array: np.ndarray, output_path: str):
     plt.ylabel("Frequency")
     plt.hist(reuse_dist, bins=100)
     plt.savefig(output_path)
+
+
+def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
+    fig, axs = plt.subplots(ncols=len(arrays), nrows=2)
+    fig.set_size_inches(2 * axs.shape[1], 2 * axs.shape[0])
+    fig.set_dpi(300)
+
+    fig.suptitle("Histogram and MRC")
+    for i, array in enumerate(tqdm(arrays)):
+        finite = filter_infinity(array)
+        reuse_dist = finite[:]["reuse_dist"]
+        edges, mrc = convert_to_miss_rate_curve(array)
+        axs[0, i].hist(reuse_dist, bins=100)
+        axs[1, i].step(edges, mrc, where="post")
+
+        # Format axes
+        axs[0, i].sharey(axs[0, 0])
+        axs[1, i].sharey(axs[1, 0])
+        axs[0, i].sharex(axs[1, i])
+
+    # Save in many formats because I hate losing work!
+    root, ext = os.path.splitext(output_path)
+    fig.savefig(f"{root}.eps", format="eps")
+    fig.savefig(f"{root}.svg", format="svg")
+    fig.savefig(f"{root}.pdf", format="pdf")
 
 
 def main():
@@ -82,9 +108,7 @@ def main():
     print(f"Number of accesses: {num_accesses}")
     print(f"Number of unique accesses: {num_unique}")
 
-    for i, c in enumerate(tqdm(b)):
-        plot_histogram(c, f"hist-{i}.png")
-        plot_miss_rate_curve(c, f"mrc-{i}.png")
+    plot_all_hist_and_mrc(b, "hist-and-mrc.eps")
 
 
 if __name__ == "__main__":
