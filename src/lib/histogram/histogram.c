@@ -344,8 +344,8 @@ Histogram__validate(struct Histogram const *const me)
 }
 
 double
-Histogram__mean_squared_error(struct Histogram const *const lhs,
-                              struct Histogram const *const rhs)
+Histogram__euclidean_error(struct Histogram const *const lhs,
+                           struct Histogram const *const rhs)
 {
     if (lhs == NULL || rhs == NULL) {
         LOGGER_WARN("passed invalid argument");

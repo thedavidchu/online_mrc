@@ -61,7 +61,10 @@ test_histogram(void)
     // NOTE This makes no sense in the context of MRC generation since
     //      the number of infinities must equal the the number of unique
     //      elements used. However, this is not an MRC test, so it's OK!
-    const uint64_t histogram_oracle[] = {9, 9, 12, 9, 4, 8, 15, 9, 6, 8};
+    // NOTE I removed the const from 'histogram_oracle' so that I could
+    //      construct a struct Histogram from it without the compiler
+    //      whining. C's support for const-ness is so rudimentary!
+    uint64_t histogram_oracle[] = {9, 9, 12, 9, 4, 8, 15, 9, 6, 8};
     const uint64_t length_oracle = 10;
     const uint64_t false_infinity_oracle = 11;
     const uint64_t infinity_oracle = 3;
@@ -84,6 +87,16 @@ test_histogram(void)
     ASSERT_TRUE_OR_RETURN_FALSE(hist.running_sum == running_sum_oracle,
                                 "running_sum should match oracle",
                                 &hist);
+    g_assert_cmpfloat(
+        Histogram__euclidean_error(
+            &hist,
+            &(struct Histogram){.histogram = histogram_oracle,
+                                .num_bins = length_oracle,
+                                .bin_size = 1,
+                                .false_infinity = false_infinity_oracle,
+                                .infinity = infinity_oracle}),
+        ==,
+        0.0);
     return true;
 }
 
