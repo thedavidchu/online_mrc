@@ -91,16 +91,21 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
     fig.savefig(f"{root}.eps", format="eps")
     fig.savefig(f"{root}.svg", format="svg")
     fig.savefig(f"{root}.pdf", format="pdf")
+    fig.savefig(f"{root}.png", format="png")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input-file", required=True, type=str, help="input file path")
+    parser.add_argument(
+        "--input-file",
+        required=True,
+        type=str,
+        help="input file path (root is used for output path)",
+    )
     parser.add_argument("--num-intervals", type=int, default=10)
     args = parser.parse_args()
 
     a = np.fromfile(args.input_file, dtype=DTYPE)
-    print(a)
     b = divide_array(a, args.num_intervals)
 
     num_accesses = [len(c) for c in b]
