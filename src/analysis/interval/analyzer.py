@@ -78,6 +78,7 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
         finite = filter_infinity(array)
         reuse_dist = finite[:]["reuse_dist"]
         edges, mrc = convert_to_miss_rate_curve(array)
+        axs[0, i].set_title(f"{i}/{len(arrays)}")
         axs[0, i].hist(reuse_dist, bins=100)
         axs[1, i].step(edges, mrc, where="post")
 
@@ -98,15 +99,27 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input-file",
+        "-i",
         required=True,
         type=str,
         help="input file path (root is used for output path)",
     )
-    parser.add_argument("--num-intervals", type=int, default=10)
+    parser.add_argument("--head", type=int, default=None)
+    parser.add_argument("--num-intervals", "-n", type=int, default=10)
     args = parser.parse_args()
 
     a = np.fromfile(args.input_file, dtype=DTYPE)
     b = divide_array(a, args.num_intervals)
+
+    if args.head is not None:
+        if args.head < 0:
+            print(f"Using last {-args.head} of {len(b)}")
+            b = b[args.head :]
+        else:
+            print(f"Using first {args.head} of {len(b)}")
+            b = b[: args.head]
+    else:
+        print(f"Using all {len(b)}")
 
     num_accesses = [len(c) for c in b]
     num_unique = [count_unique(c) for c in b]
