@@ -105,15 +105,27 @@ static void
 print_help(FILE *stream, struct CommandLineArguments const *args)
 {
     fprintf(stream,
-            "Usage: %s --input|-i <input-path> --algorithm|-a <algorithm> "
-            "--output|-o <output-path> [--sampling-ratio|-s <ratio>] "
-            "[--number-entries|-n <trace-length>] [--oracle <oracle-path>]"
-            "[--hist-bin-size|-b <bin-size>]\n",
+            "Usage:\n"
+            "    %s \\\n"
+            "        --input|-i <input-path> --algorithm|-a <algorithm> "
+            "--output|-o <output-path> \\\n"
+            "        [--sampling-ratio|-s <ratio>] \\\n"
+            "        [--number-entries|-n <trace-length>] \\\n"
+            "        [--oracle <oracle-path>] \\\n"
+            "        [--hist-bin-size|-b <bin-size>] \\\n"
+            "        [--histogram <histogram-path>]\n",
             args->executable);
+    // Help options
+    fprintf(stream, "\nHelp Options:\n");
+    fprintf(stream,
+            "    --help, -h: print this help message. Overrides all else!\n");
+    // Application options
+    fprintf(stream, "\nApplication Options:\n");
     fprintf(stream,
             "    --input, -i <input-path>: path to the input ('~/...' may not "
             "work) or 'zipf' (for a randomly generated Zipfian distribution) "
-            "or 'step' (for a step function) or 'two-step' (for two steps)\n");
+            "or 'step' (for a step function) or 'two-step' (for two steps) or "
+            "'two-distr' (for two distributions)\n");
     fprintf(stream,
             "    --format, -f <input-trace-format>: format for the input "
             "trace, pick ");
@@ -142,12 +154,11 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "    --hist-bin-size, -b <bin-size>: the histogram bin size. "
             "Default: %zu.\n",
             DEFAULT_HIST_BIN_SIZE);
-    fprintf(stream,
-            "    --histogram <histogram-output-path>: path to the histogram. "
-            "Default: %s.\n",
-            DEFAULT_HISTOGRAM_PATH ? DEFAULT_ORACLE_PATH : "(null)");
-    fprintf(stream,
-            "    --help, -h: print this help message. Overrides all else!\n");
+    fprintf(
+        stream,
+        "    --histogram <histogram-output-path>: path to save the histogram. "
+        "Default: %s.\n",
+        DEFAULT_HISTOGRAM_PATH ? DEFAULT_ORACLE_PATH : "(null)");
     fprintf(stream,
             "N.B. '~/path/to/file' paths are not guaranteed to work. Use "
             "relative (e.g. '../path/to/file' or './path/to/file') or absolute "
