@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -7,7 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <glib.h>
+
 #include "histogram/histogram.h"
+#include "invariants/implies.h"
 #include "logger/logger.h"
 
 bool
@@ -337,6 +341,48 @@ Histogram__validate(struct Histogram const *const me)
     }
 
     return true;
+}
+
+double
+Histogram__mean_squared_error(struct Histogram const *const lhs,
+                              struct Histogram const *const rhs)
+{
+    if (lhs == NULL || rhs == NULL) {
+        LOGGER_WARN("passed invalid argument");
+        return -1.0;
+    }
+    if (!implies(lhs->num_bins != 0, lhs->histogram != NULL) ||
+        !implies(rhs->num_bins != 0, rhs->histogram != NULL)) {
+        LOGGER_ERROR("corrupted histogram");
+        return -1.0;
+    }
+    if (lhs->bin_size == 0 || rhs->bin_size == 0) {
+        LOGGER_ERROR("bin_size == 0 in histogram");
+        return -1.0;
+    }
+    if (lhs->num_bins == 0 || rhs->num_bins == 0) {
+        LOGGER_WARN("empty histogram array");
+    }
+
+    double mse = 0.0;
+    for (size_t i = 0; i < MIN(lhs->num_bins, rhs->num_bins); ++i) {
+        double diff = (double)lhs->histogram[i] - rhs->histogram[i];
+        mse += diff * diff;
+    }
+    // For the histogram, after the end of shorter histogram, we assume
+    // the shorter histogram's frequency values would have been zero.
+    for (size_t i = MIN(lhs->num_bins, rhs->num_bins);
+         i < MAX(lhs->num_bins, rhs->num_bins);
+         ++i) {
+        double diff = lhs->num_bins > rhs->num_bins ? lhs->histogram[i]
+                                                    : rhs->histogram[i];
+        mse += diff * diff;
+    }
+    double diff = (double)lhs->false_infinity - rhs->false_infinity;
+    mse += diff * diff;
+    diff = (double)lhs->infinity - rhs->infinity;
+    mse += diff * diff;
+    return sqrt(mse);
 }
 
 void
