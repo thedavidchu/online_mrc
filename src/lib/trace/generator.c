@@ -150,11 +150,16 @@ generate_two_distribution_trace(const size_t length,
             max_num_unique_entries);
     }
 
+    // NOTE You can get some very interesting patterns.
+    //      By setting j = i, k = i: you get a lot of steps of decreasing size.
+    //      By sampling one more than the other or having one distribution with
+    //      more unique entries, you can get two cliffs.
+    size_t j = 0, k = 0;
     for (size_t i = 0; i < length; ++i) {
-        if (UniformRandom__next_uint32(&urnd) % 2 == 0) {
-            trace.trace[i].key = (uint64_t)(i % (max_num_unique_entries / 2));
+        if (UniformRandom__next_uint32(&urnd) % 3 == 0) {
+            trace.trace[i].key = (uint64_t)(j++ % (max_num_unique_entries / 2));
         } else {
-            trace.trace[i].key = (uint64_t)(i % (max_num_unique_entries / 2) +
+            trace.trace[i].key = (uint64_t)(k++ % (max_num_unique_entries / 3) +
                                             max_num_unique_entries);
         }
     }
