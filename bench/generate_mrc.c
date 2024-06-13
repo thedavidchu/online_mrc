@@ -151,7 +151,7 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
     fprintf(stream,
             "N.B. '~/path/to/file' paths are not guaranteed to work. Use "
             "relative (e.g. '../path/to/file' or './path/to/file') or absolute "
-            "paths (e.g. '/path/to/file')");
+            "paths (e.g. '/path/to/file')\n");
 }
 
 static inline bool
