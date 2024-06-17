@@ -75,5 +75,13 @@ double
 Histogram__euclidean_error(struct Histogram const *const lhs,
                            struct Histogram const *const rhs);
 
+/// @brief  Add 'other' histogram into 'me'.
+/// @note   Python uses '__iadd__' to service the '+=' operator. That's
+///         how I arrived at this somewhat cryptic name.
+/// @todo   Add error checking.
+bool
+Histogram__iadd(struct Histogram *const me,
+                struct Histogram const *const other);
+
 void
 Histogram__destroy(struct Histogram *me);

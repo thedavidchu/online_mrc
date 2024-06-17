@@ -385,6 +385,25 @@ Histogram__euclidean_error(struct Histogram const *const lhs,
     return sqrt(mse);
 }
 
+bool
+Histogram__iadd(struct Histogram *const me, struct Histogram const *const other)
+{
+    assert(me != NULL);
+    assert(other != NULL);
+    assert(me->histogram != NULL);
+    assert(other->histogram != NULL);
+    assert(me->bin_size == other->bin_size);
+    assert(me->num_bins == other->num_bins);
+
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        me->histogram[i] += other->histogram[i];
+    }
+    me->false_infinity += other->false_infinity;
+    me->infinity += other->infinity;
+
+    return true;
+}
+
 void
 Histogram__destroy(struct Histogram *me)
 {
