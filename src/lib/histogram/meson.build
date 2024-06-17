@@ -6,6 +6,7 @@ histogram_dep = declare_dependency(
         dependencies: [
             common_dep,
             glib_dep,
+            io_dep,
             math_dep,
         ],
     ),
