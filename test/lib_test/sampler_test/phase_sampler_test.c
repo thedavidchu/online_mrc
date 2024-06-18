@@ -7,7 +7,24 @@
 #include "sampler/phase_sampler.h"
 #include "test/mytester.h"
 
-struct Histogram
+////////////////////////////////////////////////////////////////////////////////
+/// GLOBAL RANDOM NUMBER GENERATOR
+////////////////////////////////////////////////////////////////////////////////
+struct UniformRandom global_urng = {.seed_ = 42};
+
+static uint64_t
+rand_get(void)
+{
+    return UniformRandom__within(&global_urng, 1, 1 << 12);
+}
+
+static void
+rand_reset(void)
+{
+    global_urng.seed_ = 42;
+}
+
+static struct Histogram
 init_random_histogram(uint64_t const seed,
                       uint64_t const num_bins,
                       uint64_t const bin_size)
@@ -43,14 +60,20 @@ test_phase_sampler(void)
     struct PhaseSampler me = {0};
     PhaseSampler__init(&me);
 
+    // I use a random num_bins and bin_size to ensure that it truly is
+    // saving the num_bins and bin_size properly.
+    rand_reset();
     for (size_t i = 0; i < 5; ++i) {
-        struct Histogram hist = init_random_histogram(i, 100, 1000);
+        struct Histogram hist =
+            init_random_histogram(i, rand_get(), rand_get());
         PhaseSampler__change_histogram(&me, &hist);
         Histogram__destroy(&hist);
     }
 
+    rand_reset();
     for (size_t i = 0; i < 5; ++i) {
-        struct Histogram oracle = init_random_histogram(i, 100, 1000);
+        struct Histogram oracle =
+            init_random_histogram(i, rand_get(), rand_get());
         struct Histogram hist = {0};
 
         LOGGER_TRACE("reading from '%s'",
