@@ -44,7 +44,7 @@ UniformRandom__next_uint64(struct UniformRandom *me);
 
 /**
  * In TPCC terminology, from=x, to=y.
- * NOTE both from and to are _inclusive_.
+ * NOTE both from and to are _inclusive_, i.e. in range [x, y].
  */
 uint32_t
 UniformRandom__within(struct UniformRandom *me, uint32_t from, uint32_t to);
