@@ -53,6 +53,9 @@ Histogram__debug_difference(struct Histogram *me,
                             struct Histogram *other,
                             const size_t max_num_mismatch);
 
+void
+Histogram__clear(struct Histogram *const me);
+
 /// @brief  Write the Histogram as a JSON object to an arbitrary stream.
 void
 Histogram__write_as_json(FILE *stream, struct Histogram *me);
