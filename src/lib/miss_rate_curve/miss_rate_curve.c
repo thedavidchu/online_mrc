@@ -369,6 +369,52 @@ MissRateCurve__add_scaled_histogram(struct MissRateCurve *const me,
     return true;
 }
 
+bool
+MissRateCurve__all_close(struct MissRateCurve const *const lhs,
+                         struct MissRateCurve const *const rhs,
+                         double const epsilon)
+{
+    // Standard error checks. To be honest, I'm all over the place with
+    // my error checks. Sometimes, num_bins can be 0, other times, I do
+    // not allow it... I don't even know if I disallow a value of 0 in
+    // the initialization function.
+    if (lhs == NULL || lhs->miss_rate == NULL || lhs->num_bins == 0 ||
+        lhs->bin_size == 0) {
+        LOGGER_ERROR("invalid LHS");
+        return false;
+    }
+    if (rhs == NULL || rhs->miss_rate == NULL || rhs->num_bins == 0 ||
+        rhs->bin_size == 0) {
+        LOGGER_ERROR("invalid RHS");
+        return false;
+    }
+    // These create a much more complex case and it is not worth my time
+    // to handle these corner cases, so I just log the error.
+    if (lhs->num_bins != rhs->num_bins) {
+        LOGGER_ERROR("num_bins should match");
+        return false;
+    }
+    if (lhs->bin_size != rhs->bin_size) {
+        LOGGER_ERROR("bin_size should match");
+        return false;
+    }
+    // Finally, we can get to the main meat of the function. There is so
+    // much boilerplate code!
+    bool ok = true;
+    size_t const num_bins = lhs->num_bins;
+    for (size_t i = 0; i < num_bins; ++i) {
+        if (!doubles_are_close(lhs->miss_rate[i], rhs->miss_rate[i], epsilon)) {
+            LOGGER_WARN("mismatch at index %zu: %g vs %g",
+                        i,
+                        lhs->miss_rate[i],
+                        rhs->miss_rate[i]);
+            ok = false;
+        }
+    }
+
+    return ok;
+}
+
 double
 MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
                                   struct MissRateCurve *rhs)

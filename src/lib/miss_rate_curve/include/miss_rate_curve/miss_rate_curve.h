@@ -74,10 +74,18 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
 
 /// @note   This is useful when trying to average many MRCs without
 ///         needing to load all of the histograms at once.
+/// @note   I am not entirely content with the semantics of this function.
 bool
 MissRateCurve__add_scaled_histogram(struct MissRateCurve *const me,
                                     struct Histogram const *const hist,
                                     double const scale);
+
+/// @brief  Ensure that all values are within some 'epsilon' between two
+///         miss rate curves.
+bool
+MissRateCurve__all_close(struct MissRateCurve const *const lhs,
+                         struct MissRateCurve const *const rhs,
+                         double const epsilon);
 
 /// @return non-negative mean absolute error, or a negative number (e.g. -1.0)
 ///         on error.
