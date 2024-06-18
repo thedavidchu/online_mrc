@@ -18,6 +18,26 @@
 #include "miss_rate_curve/miss_rate_curve.h"
 
 bool
+MissRateCurve__alloc_empty(struct MissRateCurve *const me,
+                           uint64_t const num_mrc_bins,
+                           uint64_t const bin_size)
+{
+    if (me == NULL) {
+        return false;
+    }
+    *me = (struct MissRateCurve){
+        .miss_rate = calloc(num_mrc_bins, sizeof(*me->miss_rate)),
+        .num_bins = num_mrc_bins,
+        .bin_size = bin_size};
+    if (me->miss_rate == NULL) {
+        LOGGER_ERROR("calloc failed");
+        MissRateCurve__destroy(me);
+        return false;
+    }
+    return true;
+}
+
+bool
 MissRateCurve__init_from_fractional_histogram(
     struct MissRateCurve *me,
     struct FractionalHistogram *histogram)
@@ -63,7 +83,7 @@ MissRateCurve__init_from_fractional_histogram(
 
 bool
 MissRateCurve__init_from_histogram(struct MissRateCurve *me,
-                                   struct Histogram *histogram)
+                                   struct Histogram const *const histogram)
 {
     if (me == NULL || histogram == NULL || histogram->histogram == NULL ||
         histogram->num_bins == 0 || histogram->bin_size == 0) {
@@ -322,6 +342,31 @@ MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve const *const me,
 cleanup:
     fclose(fp);
     return false;
+}
+
+bool
+MissRateCurve__add_scaled_histogram(struct MissRateCurve *const me,
+                                    struct Histogram const *const hist,
+                                    double const scale)
+{
+    if (me == NULL || me->miss_rate == NULL) {
+        return false;
+    }
+    if (hist == NULL || hist->histogram == NULL) {
+        return false;
+    }
+
+    struct MissRateCurve my_mrc = {0};
+    MissRateCurve__init_from_histogram(&my_mrc, hist);
+    if (me->num_bins != my_mrc.num_bins || me->bin_size != my_mrc.bin_size) {
+        LOGGER_ERROR("num_bins and bin_size must match");
+        return false;
+    }
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        me->miss_rate[i] += scale * my_mrc.miss_rate[i];
+    }
+    MissRateCurve__destroy(&my_mrc);
+    return true;
 }
 
 double

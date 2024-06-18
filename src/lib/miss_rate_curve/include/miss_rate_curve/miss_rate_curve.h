@@ -14,6 +14,15 @@ struct MissRateCurve {
     uint64_t bin_size;
 };
 
+/// @brief  Allocate an empty MRC. This is not a valid MRC since it does
+///         not start at 1.0.
+/// @note   The MRC has 2 more bins than the histogram and this function
+///         expects the number of MRC bins desired.
+bool
+MissRateCurve__alloc_empty(struct MissRateCurve *const me,
+                           uint64_t const num_mrc_bins,
+                           uint64_t const bin_size);
+
 bool
 MissRateCurve__init_from_fractional_histogram(
     struct MissRateCurve *me,
@@ -21,7 +30,7 @@ MissRateCurve__init_from_fractional_histogram(
 
 bool
 MissRateCurve__init_from_histogram(struct MissRateCurve *me,
-                                   struct Histogram *histogram);
+                                   struct Histogram const *const histogram);
 
 /// NOTE    The arguments are in a terrible order. Sorry.
 bool
@@ -62,6 +71,13 @@ MissRateCurve__write_sparse_binary_to_file(
 double
 MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
                                   struct MissRateCurve *rhs);
+
+/// @note   This is useful when trying to average many MRCs without
+///         needing to load all of the histograms at once.
+bool
+MissRateCurve__add_scaled_histogram(struct MissRateCurve *const me,
+                                    struct Histogram const *const hist,
+                                    double const scale);
 
 /// @return non-negative mean absolute error, or a negative number (e.g. -1.0)
 ///         on error.
