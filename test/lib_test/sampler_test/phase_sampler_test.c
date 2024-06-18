@@ -8,13 +8,15 @@
 #include "test/mytester.h"
 
 struct Histogram
-init_random_histogram(uint64_t const seed)
+init_random_histogram(uint64_t const seed,
+                      uint64_t const num_bins,
+                      uint64_t const bin_size)
 {
+    assert(num_bins >= 1 && bin_size >= 1);
+
     struct UniformRandom urng = {0};
     bool r = UniformRandom__init(&urng, seed);
     assert(r);
-    size_t const num_bins = UniformRandom__within(&urng, 1, 100);
-    assert(1 <= num_bins && num_bins <= 100);
     uint64_t *histogram = calloc(num_bins, sizeof(*histogram));
     assert(histogram != NULL);
 
@@ -25,7 +27,7 @@ init_random_histogram(uint64_t const seed)
     struct Histogram hist = (struct Histogram){
         .histogram = histogram,
         .num_bins = num_bins,
-        .bin_size = UniformRandom__within(&urng, 1, 100),
+        .bin_size = bin_size,
         .false_infinity = UniformRandom__within(&urng, 1, 100),
         .infinity = UniformRandom__within(&urng, 1, 100),
         .running_sum = 0,
@@ -42,13 +44,13 @@ test_phase_sampler(void)
     PhaseSampler__init(&me);
 
     for (size_t i = 0; i < 5; ++i) {
-        struct Histogram hist = init_random_histogram(i);
+        struct Histogram hist = init_random_histogram(i, 100, 1000);
         PhaseSampler__change_histogram(&me, &hist);
         Histogram__destroy(&hist);
     }
 
     for (size_t i = 0; i < 5; ++i) {
-        struct Histogram oracle = init_random_histogram(i);
+        struct Histogram oracle = init_random_histogram(i, 100, 1000);
         struct Histogram hist = {0};
 
         LOGGER_TRACE("reading from '%s'",
