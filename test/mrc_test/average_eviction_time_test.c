@@ -30,7 +30,8 @@ access_same_key_five_times(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(AverageEvictionTime__init(&me,
                                             histogram_oracle.num_bins,
-                                            histogram_oracle.bin_size));
+                                            histogram_oracle.bin_size,
+                                            false));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         g_assert_true(AverageEvictionTime__access_item(&me, entries[i]));
     }
@@ -51,7 +52,7 @@ test_on_step_trace(void)
 
     struct AverageEvictionTime me = {0};
     struct Olken oracle = {0};
-    g_assert_true(AverageEvictionTime__init(&me, 10, 1));
+    g_assert_true(AverageEvictionTime__init(&me, 10, 1, false));
     g_assert_true(Olken__init(&oracle, 10, 1));
 
     for (size_t i = 0; i < trace.length; ++i) {
