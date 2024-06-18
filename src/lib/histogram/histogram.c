@@ -131,6 +131,19 @@ Histogram__calculate_running_sum(struct Histogram *me)
 }
 
 void
+Histogram__clear(struct Histogram *const me)
+{
+    if (me == NULL) {
+        return;
+    }
+
+    memset(me->histogram, 0, me->num_bins * sizeof(*me->histogram));
+    me->false_infinity = 0;
+    me->infinity = 0;
+    me->running_sum = 0;
+}
+
+void
 Histogram__write_as_json(FILE *stream, struct Histogram *me)
 {
     if (me == NULL) {
