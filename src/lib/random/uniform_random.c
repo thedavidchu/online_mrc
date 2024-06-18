@@ -36,7 +36,7 @@ UniformRandom__next_uint32(struct UniformRandom *me)
 }
 
 uint64_t
-UniformRandomuniform_random__next_uint64(struct UniformRandom *me)
+UniformRandom__next_uint64(struct UniformRandom *me)
 {
     return (((uint64_t)UniformRandom__next_uint32(me)) << 32) |
            UniformRandom__next_uint32(me);
