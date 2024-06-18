@@ -13,3 +13,4 @@ subdir('histogram')
 
 # The following relies on the histogram library
 subdir('miss_rate_curve')
+subdir('sampler')

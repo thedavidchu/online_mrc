@@ -42,6 +42,9 @@ Histogram__insert_infinite(struct Histogram *me);
 bool
 Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale);
 
+uint64_t
+Histogram__calculate_running_sum(struct Histogram *me);
+
 bool
 Histogram__exactly_equal(struct Histogram *me, struct Histogram *other);
 

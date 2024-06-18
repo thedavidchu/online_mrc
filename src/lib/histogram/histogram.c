@@ -115,6 +115,21 @@ Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
     return true;
 }
 
+uint64_t
+Histogram__calculate_running_sum(struct Histogram *me)
+{
+    if (me == NULL) {
+        return 0;
+    }
+
+    uint64_t running_sum = 0;
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        running_sum += me->histogram[i];
+    }
+    running_sum += me->false_infinity + me->infinity;
+    return running_sum;
+}
+
 void
 Histogram__write_as_json(FILE *stream, struct Histogram *me)
 {
@@ -427,6 +442,10 @@ Histogram__save_to_file(struct Histogram const *const me,
     }
 
     FILE *fp = fopen(path, "wb");
+    if (fp == NULL) {
+        LOGGER_ERROR("could not open '%s'", path);
+        return false;
+    }
     // NOTE I am assuming the endianness of the writer and reader will
     //      be the same.
     if (!write_metadata(fp, me)) {
