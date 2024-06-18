@@ -18,6 +18,10 @@ init_random_histogram(uint64_t const seed)
     uint64_t *histogram = calloc(num_bins, sizeof(*histogram));
     assert(histogram != NULL);
 
+    for (size_t i = 0; i < num_bins; ++i) {
+        histogram[i] = UniformRandom__next_uint64(&urng);
+    }
+
     struct Histogram hist = (struct Histogram){
         .histogram = histogram,
         .num_bins = num_bins,
