@@ -8,6 +8,7 @@ phase_sampler_lib = library(
         common_dep,
         glib_dep,
         histogram_dep,
+        miss_rate_curve_dep,
     ],
 )
 
@@ -17,5 +18,6 @@ phase_sampler_dep = declare_dependency(
     dependencies: [
         glib_dep,
         histogram_dep,
+        miss_rate_curve_dep,
     ],
 )

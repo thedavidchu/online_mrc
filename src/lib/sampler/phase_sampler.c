@@ -10,6 +10,7 @@
 
 #include "histogram/histogram.h"
 #include "logger/logger.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "sampler/phase_sampler.h"
 #include "unused/mark_unused.h"
 
@@ -84,5 +85,37 @@ PhaseSampler__change_histogram(struct PhaseSampler *const me,
 
     g_ptr_array_add(me->saved_histograms, new_tmp);
 
+    return true;
+}
+
+bool
+PhaseSampler__create_mrc(struct PhaseSampler const *const me,
+                         struct MissRateCurve *const mrc,
+                         uint64_t const num_hist_bins,
+                         uint64_t const bin_size)
+{
+    if (me == NULL || me->saved_histograms == NULL) {
+        return false;
+    }
+    if (me->saved_histograms->len == 0) {
+        LOGGER_ERROR("expected non-zero number of histograms");
+        return false;
+    }
+
+    // We preallocate the MRC simply because it's easier this way.
+    if (!MissRateCurve__alloc_empty(mrc, num_hist_bins + 2, bin_size)) {
+        LOGGER_ERROR("failed to allocate MRC");
+        return false;
+    }
+    for (size_t i = 0; i < me->saved_histograms->len; ++i) {
+        char *hist_path = me->saved_histograms->pdata[i];
+        struct Histogram hist = {0};
+        Histogram__init_from_file(&hist, hist_path);
+        MissRateCurve__add_scaled_histogram(mrc,
+                                            &hist,
+                                            (double)1 /
+                                                me->saved_histograms->len);
+        Histogram__destroy(&hist);
+    }
     return true;
 }
