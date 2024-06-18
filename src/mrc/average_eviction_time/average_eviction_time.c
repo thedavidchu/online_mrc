@@ -14,9 +14,10 @@
 #include "miss_rate_curve/miss_rate_curve.h"
 
 bool
-AverageEvictionTime__init(struct AverageEvictionTime *me,
-                          const uint64_t histogram_num_bins,
-                          const uint64_t histogram_bin_size)
+AverageEvictionTime__init(struct AverageEvictionTime *const me,
+                          uint64_t const histogram_num_bins,
+                          uint64_t const histogram_bin_size,
+                          uint64_t const phase_sampling_epoch)
 {
     bool r = false;
     if (me == NULL || histogram_num_bins < 1 || histogram_bin_size < 1) {

@@ -10,6 +10,7 @@ average_eviction_time_lib = library(
         lookup_dep,
         histogram_dep,
         miss_rate_curve_dep,
+        phase_sampler_dep,
     ],
 )
 
@@ -20,5 +21,6 @@ average_eviction_time_dep = declare_dependency(
         lookup_dep,
         histogram_dep,
         miss_rate_curve_dep,
+        phase_sampler_dep,
     ],
 )
