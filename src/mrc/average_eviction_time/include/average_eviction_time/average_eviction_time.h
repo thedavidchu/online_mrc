@@ -61,7 +61,8 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me);
 ///         Therefore, find AET(c) by finding summing up P(0) + P(1) + ...
 ///         until you reach c. Do this for every c.
 bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist);
+AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
+                            struct MissRateCurve *const mrc);
 
 /// @brief  Follow the pseudocode to convert the MRC to the MRC.
 ///         Source:
@@ -69,8 +70,8 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist);
 /// @note   We eagerly convert to doubles rather than using integers, so
 ///         there may be some decreased accuracy.
 bool
-AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
-                                  struct Histogram *hist);
+AverageEvictionTime__their_to_mrc(struct AverageEvictionTime const *const me,
+                                  struct MissRateCurve *const mrc);
 
 void
 AverageEvictionTime__destroy(struct AverageEvictionTime *me);

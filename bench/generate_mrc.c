@@ -399,7 +399,7 @@ cleanup:
                                          post_process_func,                    \
                                          hist,                                 \
                                          save_hist_func,                       \
-                                         hist2mrc_func,                        \
+                                         to_mrc_func,                          \
                                          destroy_func)                         \
     static struct MissRateCurve func_name(                                     \
         struct Trace const *const trace,                                       \
@@ -422,7 +422,7 @@ cleanup:
         ((post_process_func))(&var_name);                                      \
         double t2 = get_wall_time_sec();                                       \
         struct MissRateCurve mrc = {0};                                        \
-        ((hist2mrc_func))(&mrc, hist);                                         \
+        ((to_mrc_func))(&var_name, &mrc);                                      \
         double t3 = get_wall_time_sec();                                       \
         LOGGER_INFO("Histogram Time: %f | Post-Process Time: %f | MRC Time: "  \
                     "%f | Total Time: %f",                                     \
@@ -450,7 +450,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  Olken__post_process,
                                  &me.histogram,
                                  Histogram__save_sparse,
-                                 MissRateCurve__init_from_histogram,
+                                 Olken__to_mrc,
                                  Olken__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
@@ -467,7 +467,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__post_process,
     &me.olken.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    FixedRateShards__to_mrc,
     FixedRateShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
@@ -484,7 +484,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__post_process,
     &me.olken.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    FixedRateShards__to_mrc,
     FixedRateShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
@@ -501,7 +501,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedSizeShards__post_process,
     &me.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    FixedSizeShards__to_mrc,
     FixedSizeShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
@@ -518,7 +518,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                  QuickMRC__post_process,
                                  &me.histogram,
                                  Histogram__save_sparse,
-                                 MissRateCurve__init_from_histogram,
+                                 QuickMRC__to_mrc,
                                  QuickMRC__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
@@ -554,7 +554,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     BucketedShards__post_process,
     &me.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    EvictingMap__to_mrc,
     BucketedShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
