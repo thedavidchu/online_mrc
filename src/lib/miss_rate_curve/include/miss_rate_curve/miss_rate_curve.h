@@ -76,9 +76,9 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
 ///         needing to load all of the histograms at once.
 /// @note   I am not entirely content with the semantics of this function.
 bool
-MissRateCurve__add_scaled_histogram(struct MissRateCurve *const me,
-                                    struct Histogram const *const hist,
-                                    double const scale);
+MissRateCurve__scaled_iadd(struct MissRateCurve *const me,
+                           struct MissRateCurve const *const other,
+                           double const scale);
 
 /// @brief  Ensure that all values are within some 'epsilon' between two
 ///         miss rate curves.

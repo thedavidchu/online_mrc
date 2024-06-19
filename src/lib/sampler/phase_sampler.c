@@ -94,6 +94,7 @@ PhaseSampler__create_mrc(struct PhaseSampler const *const me,
                          uint64_t const num_hist_bins,
                          uint64_t const bin_size)
 {
+    bool r = false;
     if (me == NULL || me->saved_histograms == NULL) {
         return false;
     }
@@ -110,11 +111,15 @@ PhaseSampler__create_mrc(struct PhaseSampler const *const me,
     for (size_t i = 0; i < me->saved_histograms->len; ++i) {
         char *hist_path = me->saved_histograms->pdata[i];
         struct Histogram hist = {0};
-        Histogram__init_from_file(&hist, hist_path);
-        MissRateCurve__add_scaled_histogram(mrc,
-                                            &hist,
-                                            (double)1 /
-                                                me->saved_histograms->len);
+        r = Histogram__init_from_file(&hist, hist_path);
+        assert(r);
+        struct MissRateCurve my_mrc = {0};
+        r = MissRateCurve__init_from_histogram(&my_mrc, &hist);
+        assert(r);
+        r = MissRateCurve__scaled_iadd(mrc,
+                                       &my_mrc,
+                                       (double)1 / me->saved_histograms->len);
+        assert(r);
         Histogram__destroy(&hist);
     }
     return true;

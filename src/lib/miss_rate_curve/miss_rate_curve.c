@@ -345,27 +345,24 @@ cleanup:
 }
 
 bool
-MissRateCurve__add_scaled_histogram(struct MissRateCurve *const me,
-                                    struct Histogram const *const hist,
-                                    double const scale)
+MissRateCurve__scaled_iadd(struct MissRateCurve *const me,
+                           struct MissRateCurve const *const other,
+                           double const scale)
 {
     if (me == NULL || me->miss_rate == NULL) {
         return false;
     }
-    if (hist == NULL || hist->histogram == NULL) {
+    if (other == NULL || other->miss_rate == NULL) {
         return false;
     }
 
-    struct MissRateCurve my_mrc = {0};
-    MissRateCurve__init_from_histogram(&my_mrc, hist);
-    if (me->num_bins != my_mrc.num_bins || me->bin_size != my_mrc.bin_size) {
+    if (me->num_bins != other->num_bins || me->bin_size != other->bin_size) {
         LOGGER_ERROR("num_bins and bin_size must match");
         return false;
     }
     for (size_t i = 0; i < me->num_bins; ++i) {
-        me->miss_rate[i] += scale * my_mrc.miss_rate[i];
+        me->miss_rate[i] += scale * other->miss_rate[i];
     }
-    MissRateCurve__destroy(&my_mrc);
     return true;
 }
 
