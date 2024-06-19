@@ -461,8 +461,10 @@ subtree__free(struct Subtree *me, size_t const recursion_depth)
     // linked list
     if (me->left_subtree == NULL) {
         free_monoprogenous_subtree(me->right_subtree, recursion_depth + 1);
+        free(me);
     } else if (me->right_subtree == NULL) {
         free_monoprogenous_subtree(me->left_subtree, recursion_depth + 1);
+        free(me);
     } else {
         subtree__free(me->left_subtree, recursion_depth + 1);
         subtree__free(me->right_subtree, recursion_depth + 1);

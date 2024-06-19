@@ -647,11 +647,6 @@ get_oracle_mrc(struct CommandLineArguments const args,
         r = MissRateCurve__write_sparse_binary_to_file(&oracle_mrc,
                                                        args.oracle_path);
         g_assert_true(r);
-        r = MissRateCurve__init_from_sparse_file(&oracle_mrc,
-                                                 args.oracle_path,
-                                                 mrc->num_bins,
-                                                 mrc->bin_size);
-        g_assert_true(r);
         return oracle_mrc;
     }
 }

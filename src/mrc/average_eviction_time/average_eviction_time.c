@@ -271,6 +271,7 @@ AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
         r = MissRateCurve__scaled_iadd(mrc, &my_mrc, scale);
         assert(r);
         Histogram__destroy(&hist);
+        MissRateCurve__destroy(&my_mrc);
     }
 
     // Add contribution from current histograms
@@ -280,6 +281,7 @@ AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
     // We decrease the scale because the current histogram may not be "full".
     r = MissRateCurve__scaled_iadd(mrc, &my_mrc, scale * current_fullness);
     assert(r);
+    MissRateCurve__destroy(&my_mrc);
 
     return true;
 }
@@ -363,6 +365,8 @@ AverageEvictionTime__destroy(struct AverageEvictionTime *me)
         return;
     HashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
+    if (me->use_phase_sampling)
+        PhaseSampler__destroy(&me->phase_sampler);
     *me = (struct AverageEvictionTime){0};
     return;
 }
