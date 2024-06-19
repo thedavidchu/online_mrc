@@ -200,35 +200,12 @@ calculate_mrc(struct MissRateCurve const *const mrc,
     }
 }
 
-// static bool
-// convert_aet_to_mrc(struct AverageEvictionTime const *const me,
-//                    struct MissRateCurve *const mrc)
-// {
-//     if (me == NULL || mrc == NULL)
-//         return false;
-
-//     if (!me->use_phase_sampling) {
-//         return AverageEvictionTime__to_mrc(mrc, &me->histogram);
-//     }
-
-//     // NOTE I am lazy, so I weigh the final epoch the same as all the
-//     //      others despite the fact it may only be 'half full'.
-//     //      This is obviously a TODO!
-//     PhaseSampler__change_histogram(&me->phase_sampler, &me->histogram);
-//     Histogram__clear(&me->histogram);
-//     return PhaseSampler__create_mrc(&me->phase_sampler,
-//                                     mrc,
-//                                     me->histogram.num_bins,
-//                                     me->histogram.bin_size);
-// }
-
-bool
-AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
-                            struct MissRateCurve *const mrc)
+static bool
+convert_hist_to_mrc(struct Histogram const *const hist,
+                    struct MissRateCurve *const mrc)
 {
-    if (mrc == NULL || me == NULL)
+    if (hist == NULL || hist->histogram == NULL || mrc == NULL)
         return false;
-    struct Histogram const *const hist = &me->histogram;
 
     uint64_t const num_bins = hist->num_bins;
     uint64_t const bin_size = hist->bin_size;
@@ -257,6 +234,53 @@ AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
     }
 
     free(rt_ccdf);
+    return true;
+}
+
+bool
+AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
+                            struct MissRateCurve *const mrc)
+{
+    bool r = false;
+    if (mrc == NULL || me == NULL)
+        return false;
+
+    if (!me->use_phase_sampling)
+        return convert_hist_to_mrc(&me->histogram, mrc);
+
+    assert(me->phase_sampler.saved_histograms->len != 0);
+    double current_fullness =
+        (double)me->histogram.running_sum / me->phase_sampling_epoch;
+    double scale =
+        1 / (me->phase_sampler.saved_histograms->len + current_fullness);
+    // We preallocate the MRC simply because it's easier this way.
+    if (!MissRateCurve__alloc_empty(mrc,
+                                    me->histogram.num_bins + 2,
+                                    me->histogram.bin_size)) {
+        LOGGER_ERROR("failed to allocate MRC");
+        return false;
+    }
+    for (size_t i = 0; i < me->phase_sampler.saved_histograms->len; ++i) {
+        char *hist_path = me->phase_sampler.saved_histograms->pdata[i];
+        struct Histogram hist = {0};
+        r = Histogram__init_from_file(&hist, hist_path);
+        assert(r);
+        struct MissRateCurve my_mrc = {0};
+        r = convert_hist_to_mrc(&hist, &my_mrc);
+        assert(r);
+        r = MissRateCurve__scaled_iadd(mrc, &my_mrc, scale);
+        assert(r);
+        Histogram__destroy(&hist);
+    }
+
+    // Add contribution from current histograms
+    struct MissRateCurve my_mrc = {0};
+    r = convert_hist_to_mrc(&me->histogram, &my_mrc);
+    assert(r);
+    // We decrease the scale because the current histogram may not be "full".
+    r = MissRateCurve__scaled_iadd(mrc, &my_mrc, scale * current_fullness);
+    assert(r);
+
     return true;
 }
 
@@ -305,13 +329,13 @@ CalcMRC(double const *const P, size_t const M, size_t const len)
     return MRC;
 }
 
-bool
-AverageEvictionTime__their_to_mrc(struct AverageEvictionTime const *const me,
-                                  struct MissRateCurve *const mrc)
+/// @note   This uses the AET author's pseudocode.
+static bool
+convert_hist_to_mrc_their_way(struct Histogram const *const hist,
+                              struct MissRateCurve *const mrc)
 {
     // TODO Add error checking
-    assert(me != NULL && mrc != NULL);
-    struct Histogram const *const hist = &me->histogram;
+    assert(hist != NULL && mrc != NULL);
     double *P = CalcCCDF(hist);
     double *MRC = CalcMRC(P, hist->num_bins, hist->num_bins);
 
@@ -321,6 +345,15 @@ AverageEvictionTime__their_to_mrc(struct AverageEvictionTime const *const me,
 
     free(P);
     return true;
+}
+
+bool
+AverageEvictionTime__their_to_mrc(struct AverageEvictionTime const *const me,
+                                  struct MissRateCurve *const mrc)
+{
+    if (me->use_phase_sampling)
+        LOGGER_WARN("phase sampling not supported here!");
+    return convert_hist_to_mrc_their_way(&me->histogram, mrc);
 }
 
 void
