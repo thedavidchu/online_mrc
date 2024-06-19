@@ -8,6 +8,7 @@
 
 #include "histogram/histogram.h"
 #include "lookup/hash_table.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 #include "unused/mark_unused.h"
@@ -44,6 +45,10 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry);
 
 void
 QuickMRC__post_process(struct QuickMRC *me);
+
+bool
+QuickMRC__to_mrc(struct QuickMRC const *const me,
+                 struct MissRateCurve *const mrc);
 
 void
 QuickMRC__print_histogram_as_json(struct QuickMRC *me);

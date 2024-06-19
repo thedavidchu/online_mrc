@@ -9,6 +9,7 @@ fixed_size_shards_dep = declare_dependency(
             glib_dep,
             histogram_dep,
             hash_dep,
+            miss_rate_curve_dep,
             sleator_tree_dep,
             priority_queue_dep,
         ],
@@ -17,6 +18,7 @@ fixed_size_shards_dep = declare_dependency(
     dependencies: [
         priority_queue_dep,
         hash_dep,
+        miss_rate_curve_dep,
     ],
 )
 
@@ -32,12 +34,14 @@ fixed_rate_shards_dep = declare_dependency(
             hash_dep,
             histogram_dep,
             priority_queue_dep,
+            miss_rate_curve_dep,
             basic_tree_dep,
             sleator_tree_dep,
         ],
     ),
     include_directories: include_directories('include'),
     dependencies: [
+        miss_rate_curve_dep,
         olken_dep,
         priority_queue_dep,
     ],

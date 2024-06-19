@@ -4,6 +4,7 @@
 
 #include "hash/types.h"
 #include "histogram/histogram.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "priority_queue/splay_priority_queue.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
@@ -34,11 +35,12 @@ FixedSizeShards__init(struct FixedSizeShards *me,
 void
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);
 
-static inline void
-FixedSizeShards__post_process(struct FixedSizeShards *me)
-{
-    UNUSED(me);
-}
+void
+FixedSizeShards__post_process(struct FixedSizeShards *me);
+
+bool
+FixedSizeShards__to_mrc(struct FixedSizeShards const *const me,
+                        struct MissRateCurve *const mrc);
 
 void
 FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me);

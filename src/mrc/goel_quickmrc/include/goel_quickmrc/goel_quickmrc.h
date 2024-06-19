@@ -45,7 +45,8 @@ GoelQuickMRC__save_sparse_histogram(struct GoelQuickMRC const *const me,
                                     char const *const path);
 
 bool
-GoelQuickMRC__to_mrc(struct MissRateCurve *mrc, struct GoelQuickMRC *me);
+GoelQuickMRC__to_mrc(struct GoelQuickMRC const *const me,
+                     struct MissRateCurve *const mrc);
 
 void
 GoelQuickMRC__destroy(struct GoelQuickMRC *me);

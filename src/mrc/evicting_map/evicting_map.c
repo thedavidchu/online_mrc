@@ -9,6 +9,7 @@
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -153,6 +154,19 @@ BucketedShards__refresh_threshold(struct EvictingMap *me)
     EvictingHashTable__refresh_threshold(&me->hash_table);
 }
 
+bool
+BucketedShards__post_process(struct EvictingMap *me)
+{
+    UNUSED(me);
+    return true;
+}
+
+bool
+EvictingMap__to_mrc(struct EvictingMap const *const me,
+                    struct MissRateCurve *const mrc)
+{
+    return MissRateCurve__init_from_histogram(mrc, &me->histogram);
+}
 void
 BucketedShards__print_histogram_as_json(struct EvictingMap *me)
 {
