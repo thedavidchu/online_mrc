@@ -11,6 +11,7 @@
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -115,6 +116,13 @@ QuickMRC__post_process(struct QuickMRC *me)
     if (!r) {
         LOGGER_WARN("error in adjusting buckets");
     }
+}
+
+bool
+QuickMRC__to_mrc(struct QuickMRC const *const me,
+                 struct MissRateCurve *const mrc)
+{
+    return MissRateCurve__init_from_histogram(mrc, &me->histogram);
 }
 
 void

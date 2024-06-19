@@ -7,6 +7,7 @@
 #include "histogram/histogram.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
@@ -79,6 +80,19 @@ Olken__access_item(struct Olken *me, EntryType entry)
     }
 
     return true;
+}
+
+bool
+Olken__post_process(struct Olken *me)
+{
+    UNUSED(me);
+    return true;
+}
+
+bool
+Olken__to_mrc(struct Olken const *const me, struct MissRateCurve *const mrc)
+{
+    return MissRateCurve__init_from_histogram(mrc, &me->histogram);
 }
 
 void

@@ -4,6 +4,7 @@
 
 #include "histogram/histogram.h"
 #include "lookup/evicting_hash_table.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -29,11 +30,12 @@ BucketedShards__access_item(struct EvictingMap *me, EntryType entry);
 void
 BucketedShards__refresh_threshold(struct EvictingMap *me);
 
-static inline void
-BucketedShards__post_process(struct EvictingMap *me)
-{
-    UNUSED(me);
-}
+bool
+BucketedShards__post_process(struct EvictingMap *me);
+
+bool
+EvictingMap__to_mrc(struct EvictingMap const *const me,
+                    struct MissRateCurve *const mrc);
 
 void
 BucketedShards__print_histogram_as_json(struct EvictingMap *me);

@@ -1,7 +1,9 @@
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include <glib.h>
+#include <string.h>
 
 #include "histogram/fractional_histogram.h"
 #include "histogram/histogram.h"
@@ -61,7 +63,10 @@ test_histogram(void)
     // NOTE This makes no sense in the context of MRC generation since
     //      the number of infinities must equal the the number of unique
     //      elements used. However, this is not an MRC test, so it's OK!
-    const uint64_t histogram_oracle[] = {9, 9, 12, 9, 4, 8, 15, 9, 6, 8};
+    // NOTE I removed the const from 'histogram_oracle' so that I could
+    //      construct a struct Histogram from it without the compiler
+    //      whining. C's support for const-ness is so rudimentary!
+    uint64_t histogram_oracle[] = {9, 9, 12, 9, 4, 8, 15, 9, 6, 8};
     const uint64_t length_oracle = 10;
     const uint64_t false_infinity_oracle = 11;
     const uint64_t infinity_oracle = 3;
@@ -84,6 +89,16 @@ test_histogram(void)
     ASSERT_TRUE_OR_RETURN_FALSE(hist.running_sum == running_sum_oracle,
                                 "running_sum should match oracle",
                                 &hist);
+    g_assert_cmpfloat(
+        Histogram__euclidean_error(
+            &hist,
+            &(struct Histogram){.histogram = histogram_oracle,
+                                .num_bins = length_oracle,
+                                .bin_size = 1,
+                                .false_infinity = false_infinity_oracle,
+                                .infinity = infinity_oracle}),
+        ==,
+        0.0);
     return true;
 }
 
@@ -159,6 +174,41 @@ test_fractional_histogram(void)
     return true;
 }
 
+static bool
+test_histogram_save(void)
+{
+    uint64_t histogram[100] = {0};
+    struct Histogram a = {
+        .histogram = histogram,
+        .num_bins = 100,
+        .bin_size = 10,
+        .false_infinity = 200,
+        .infinity = 300,
+        .running_sum = 400,
+    };
+    struct Histogram b = {0};
+
+    memcpy(histogram, random_values_0_to_11, sizeof(random_values_0_to_11));
+    bool r = false;
+    r = Histogram__save_to_file(&a, "histogram_test.bin");
+    g_assert_true(r);
+    r = Histogram__init_from_file(&b, "histogram_test.bin");
+    g_assert_true(r);
+
+    g_assert_cmpuint(a.num_bins, ==, b.num_bins);
+    g_assert_cmpuint(a.bin_size, ==, b.bin_size);
+    g_assert_cmpuint(a.false_infinity, ==, b.false_infinity);
+    g_assert_cmpuint(a.infinity, ==, b.infinity);
+    g_assert_cmpuint(a.running_sum, ==, b.running_sum);
+
+    for (size_t i = 0; i < a.num_bins; ++i) {
+        g_assert_cmpuint(a.histogram[i], ==, b.histogram[i]);
+    }
+
+    Histogram__destroy(&b);
+    return true;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -167,5 +217,6 @@ main(int argc, char **argv)
     ASSERT_FUNCTION_RETURNS_TRUE(test_histogram());
     ASSERT_FUNCTION_RETURNS_TRUE(test_binned_histogram());
     ASSERT_FUNCTION_RETURNS_TRUE(test_fractional_histogram());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_histogram_save());
     return 0;
 }

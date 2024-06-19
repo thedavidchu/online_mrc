@@ -10,6 +10,7 @@ olken_dep = declare_dependency(
             glib_dep,
             hash_dep,
             lookup_dep,
+            miss_rate_curve_dep,
         ],
     ),
     include_directories: include_directories('include'),
@@ -19,5 +20,6 @@ olken_dep = declare_dependency(
         glib_dep,
         tree_dep,
         lookup_dep,
+        miss_rate_curve_dep,
     ],
 )

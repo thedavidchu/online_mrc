@@ -12,11 +12,13 @@
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
+#include "sampler/phase_sampler.h"
 
 bool
-AverageEvictionTime__init(struct AverageEvictionTime *me,
-                          const uint64_t histogram_num_bins,
-                          const uint64_t histogram_bin_size)
+AverageEvictionTime__init(struct AverageEvictionTime *const me,
+                          uint64_t const histogram_num_bins,
+                          uint64_t const histogram_bin_size,
+                          uint64_t const phase_sampling_epoch)
 {
     bool r = false;
     if (me == NULL || histogram_num_bins < 1 || histogram_bin_size < 1) {
@@ -34,10 +36,29 @@ AverageEvictionTime__init(struct AverageEvictionTime *me,
         goto cleanup;
     }
     me->current_time_stamp = 0;
+
+    if (phase_sampling_epoch == 0) {
+        me->use_phase_sampling = false;
+        me->phase_sampling_epoch = 0;
+        me->phase_sampler = (struct PhaseSampler){0};
+    } else {
+        me->use_phase_sampling = true;
+        me->phase_sampling_epoch = phase_sampling_epoch;
+        me->phase_sampler = (struct PhaseSampler){0};
+        r = PhaseSampler__init(&me->phase_sampler);
+        // NOTE I don't know if this is the error handling pathway we
+        //      want. Honestly, I haven't thought particularly hard
+        //      about this.
+        if (!r) {
+            LOGGER_ERROR("failed to init phase sampler");
+            goto cleanup;
+        }
+    }
     return true;
 cleanup:
     HashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
+    PhaseSampler__destroy(&me->phase_sampler);
     return false;
 }
 
@@ -47,6 +68,17 @@ AverageEvictionTime__access_item(struct AverageEvictionTime *me,
 {
     if (me == NULL)
         return false;
+
+    if (me->use_phase_sampling &&
+        (me->current_time_stamp + 1) % me->phase_sampling_epoch == 0) {
+        // We add the plus-one because we want to save the epoch on the
+        // last entry in the epoch, not the first.
+        // TODO This should actually compare the new histogram to the old
+        //      histogram. This strategy will save a lot of memory.
+        PhaseSampler__change_histogram(&me->phase_sampler, &me->histogram);
+        Histogram__clear(&me->histogram);
+    }
+
     struct LookupReturn s = HashTable__lookup(&me->hash_table, entry);
     if (s.success) {
         uint64_t const old_timestamp = s.timestamp;
@@ -81,6 +113,10 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
     // NOTE Do nothing here...
     if (me == NULL)
         return false;
+
+    // HACK Well, semantically this doesn't make sense, but this is the
+    //      last function where we get access to the AverageEvictionTime
+    //      structure.
     return true;
 }
 
@@ -134,14 +170,15 @@ get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
         fill_rt_ccdf_accurately(me, rt_ccdf, num_bins);
     } else {
         // NOTE This option is deprecated.
+        LOGGER_WARN("DEPRECATED OPTION AS OF 2024 June 3!!!");
         fill_rt_ccdf_faithfully(me, rt_ccdf, num_bins);
     }
     return rt_ccdf;
 }
 
 static void
-calculate_mrc(struct MissRateCurve *mrc,
-              struct Histogram *me,
+calculate_mrc(struct MissRateCurve const *const mrc,
+              struct Histogram const *const me,
               size_t const num_bins,
               uint64_t const *const rt_ccdf)
 {
@@ -163,13 +200,14 @@ calculate_mrc(struct MissRateCurve *mrc,
     }
 }
 
-bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist)
+static bool
+convert_hist_to_mrc(struct Histogram const *const hist,
+                    struct MissRateCurve *const mrc)
 {
-    if (mrc == NULL || hist == NULL)
+    if (hist == NULL || hist->histogram == NULL || mrc == NULL)
         return false;
 
-    uint64_t const num_bins = hist->num_bins;
+    uint64_t const num_bins = hist->num_bins + 2;
     uint64_t const bin_size = hist->bin_size;
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
@@ -196,6 +234,55 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist)
     }
 
     free(rt_ccdf);
+    return true;
+}
+
+bool
+AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
+                            struct MissRateCurve *const mrc)
+{
+    bool r = false;
+    if (mrc == NULL || me == NULL)
+        return false;
+
+    if (!me->use_phase_sampling)
+        return convert_hist_to_mrc(&me->histogram, mrc);
+
+    assert(me->phase_sampler.saved_histograms->len != 0);
+    double current_fullness =
+        (double)me->histogram.running_sum / me->phase_sampling_epoch;
+    double scale =
+        1 / (me->phase_sampler.saved_histograms->len + current_fullness);
+    // We preallocate the MRC simply because it's easier this way.
+    if (!MissRateCurve__alloc_empty(mrc,
+                                    me->histogram.num_bins + 2,
+                                    me->histogram.bin_size)) {
+        LOGGER_ERROR("failed to allocate MRC");
+        return false;
+    }
+    for (size_t i = 0; i < me->phase_sampler.saved_histograms->len; ++i) {
+        char *hist_path = me->phase_sampler.saved_histograms->pdata[i];
+        struct Histogram hist = {0};
+        r = Histogram__init_from_file(&hist, hist_path);
+        assert(r);
+        struct MissRateCurve my_mrc = {0};
+        r = convert_hist_to_mrc(&hist, &my_mrc);
+        assert(r);
+        r = MissRateCurve__scaled_iadd(mrc, &my_mrc, scale);
+        assert(r);
+        Histogram__destroy(&hist);
+        MissRateCurve__destroy(&my_mrc);
+    }
+
+    // Add contribution from current histograms
+    struct MissRateCurve my_mrc = {0};
+    r = convert_hist_to_mrc(&me->histogram, &my_mrc);
+    assert(r);
+    // We decrease the scale because the current histogram may not be "full".
+    r = MissRateCurve__scaled_iadd(mrc, &my_mrc, scale * current_fullness);
+    assert(r);
+    MissRateCurve__destroy(&my_mrc);
+
     return true;
 }
 
@@ -244,10 +331,13 @@ CalcMRC(double const *const P, size_t const M, size_t const len)
     return MRC;
 }
 
-bool
-AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
-                                  struct Histogram *hist)
+/// @note   This uses the AET author's pseudocode.
+static bool
+convert_hist_to_mrc_their_way(struct Histogram const *const hist,
+                              struct MissRateCurve *const mrc)
 {
+    // TODO Add error checking
+    assert(hist != NULL && mrc != NULL);
     double *P = CalcCCDF(hist);
     double *MRC = CalcMRC(P, hist->num_bins, hist->num_bins);
 
@@ -259,6 +349,15 @@ AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
     return true;
 }
 
+bool
+AverageEvictionTime__their_to_mrc(struct AverageEvictionTime const *const me,
+                                  struct MissRateCurve *const mrc)
+{
+    if (me->use_phase_sampling)
+        LOGGER_WARN("phase sampling not supported here!");
+    return convert_hist_to_mrc_their_way(&me->histogram, mrc);
+}
+
 void
 AverageEvictionTime__destroy(struct AverageEvictionTime *me)
 {
@@ -266,6 +365,8 @@ AverageEvictionTime__destroy(struct AverageEvictionTime *me)
         return;
     HashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
+    if (me->use_phase_sampling)
+        PhaseSampler__destroy(&me->phase_sampler);
     *me = (struct AverageEvictionTime){0};
     return;
 }

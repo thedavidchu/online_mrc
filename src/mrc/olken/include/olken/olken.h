@@ -7,6 +7,7 @@
 
 #include "histogram/histogram.h"
 #include "lookup/hash_table.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
@@ -27,11 +28,11 @@ Olken__init(struct Olken *me,
 bool
 Olken__access_item(struct Olken *me, EntryType entry);
 
-static inline void
-Olken__post_process(struct Olken *me)
-{
-    UNUSED(me);
-}
+bool
+Olken__post_process(struct Olken *me);
+
+bool
+Olken__to_mrc(struct Olken const *const me, struct MissRateCurve *const mrc);
 
 void
 Olken__print_histogram_as_json(struct Olken *me);

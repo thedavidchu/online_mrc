@@ -8,6 +8,7 @@
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "math/positive_ceiling_divide.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -159,6 +160,19 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
         ++me->current_time_stamp;
         Histogram__insert_scaled_infinite(&me->histogram, me->scale);
     }
+}
+
+void
+FixedSizeShards__post_process(struct FixedSizeShards *me)
+{
+    UNUSED(me);
+}
+
+bool
+FixedSizeShards__to_mrc(struct FixedSizeShards const *const me,
+                        struct MissRateCurve *const mrc)
+{
+    return MissRateCurve__init_from_histogram(mrc, &me->histogram);
 }
 
 void

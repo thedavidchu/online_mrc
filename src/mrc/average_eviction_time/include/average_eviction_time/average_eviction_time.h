@@ -7,18 +7,35 @@
 #include "histogram/histogram.h"
 #include "lookup/hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
+#include "sampler/phase_sampler.h"
 #include "types/entry_type.h"
 
 struct AverageEvictionTime {
     struct HashTable hash_table;
     struct Histogram histogram;
     uint64_t current_time_stamp;
+
+    // Phase sampling
+    bool use_phase_sampling;
+    uint64_t phase_sampling_epoch;
+    struct PhaseSampler phase_sampler;
 };
 
+/// @param  phase_sampling_epoch : uint64_t const
+///         This is the length of each phase sampling epoch. To not use
+///         phase sampling, set this to 0. Admittedly, this is a
+///         confusing convention. I know you didn't sign up for an
+///         essay, but I think Rust's enum types show intent much
+///         better. An optimization on top of this would be if one could
+///         specify what part of the range is not used so that the enum
+///         type could be made to fit entirely within a single integral
+///         value. Wow, that's the longest comment I've written about
+///         probably the least significant thing. QED.
 bool
-AverageEvictionTime__init(struct AverageEvictionTime *me,
-                          const uint64_t histogram_num_bins,
-                          const uint64_t histogram_bin_size);
+AverageEvictionTime__init(struct AverageEvictionTime *const me,
+                          uint64_t const histogram_num_bins,
+                          uint64_t const histogram_bin_size,
+                          uint64_t const phase_sampling_epoch);
 
 bool
 AverageEvictionTime__access_item(struct AverageEvictionTime *me,
@@ -44,7 +61,8 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me);
 ///         Therefore, find AET(c) by finding summing up P(0) + P(1) + ...
 ///         until you reach c. Do this for every c.
 bool
-AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist);
+AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
+                            struct MissRateCurve *const mrc);
 
 /// @brief  Follow the pseudocode to convert the MRC to the MRC.
 ///         Source:
@@ -52,8 +70,8 @@ AverageEvictionTime__to_mrc(struct MissRateCurve *mrc, struct Histogram *hist);
 /// @note   We eagerly convert to doubles rather than using integers, so
 ///         there may be some decreased accuracy.
 bool
-AverageEvictionTime__their_to_mrc(struct MissRateCurve *mrc,
-                                  struct Histogram *hist);
+AverageEvictionTime__their_to_mrc(struct AverageEvictionTime const *const me,
+                                  struct MissRateCurve *const mrc);
 
 void
 AverageEvictionTime__destroy(struct AverageEvictionTime *me);

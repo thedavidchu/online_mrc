@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "types/entry_type.h"
 
@@ -44,6 +45,10 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);
 
 void
 FixedRateShards__post_process(struct FixedRateShards *me);
+
+bool
+FixedRateShards__to_mrc(struct FixedRateShards const *const me,
+                        struct MissRateCurve *const mrc);
 
 void
 FixedRateShards__print_histogram_as_json(struct FixedRateShards *me);

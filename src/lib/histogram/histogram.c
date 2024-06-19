@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -7,8 +8,36 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <glib.h>
+
 #include "histogram/histogram.h"
+#include "invariants/implies.h"
+#include "io/io.h"
 #include "logger/logger.h"
+
+static bool
+init_histogram(struct Histogram *const me,
+               uint64_t const num_bins,
+               uint64_t const bin_size,
+               uint64_t const false_infinity,
+               uint64_t const infinity,
+               uint64_t const running_sum)
+{
+    assert(me != NULL);
+
+    // Assume it is either NULL or an uninitialized address!
+    me->histogram = (uint64_t *)calloc(num_bins, sizeof(uint64_t));
+    if (me->histogram == NULL) {
+        return false;
+    }
+    me->num_bins = num_bins;
+    me->bin_size = bin_size;
+    me->false_infinity = false_infinity;
+    me->infinity = infinity;
+    me->running_sum = running_sum;
+
+    return true;
+}
 
 bool
 Histogram__init(struct Histogram *me,
@@ -18,16 +47,10 @@ Histogram__init(struct Histogram *me,
     if (me == NULL || num_bins == 0) {
         return false;
     }
-    // Assume it is either NULL or an uninitialized address!
-    me->histogram = (uint64_t *)calloc(num_bins, sizeof(uint64_t));
-    if (me->histogram == NULL) {
+    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0)) {
+        LOGGER_ERROR("failed to init histogram");
         return false;
     }
-    me->num_bins = num_bins;
-    me->bin_size = bin_size;
-    me->infinity = 0;
-    me->false_infinity = 0;
-    me->running_sum = 0;
     return true;
 }
 
@@ -90,6 +113,34 @@ Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
     me->infinity += scale;
     me->running_sum += scale;
     return true;
+}
+
+uint64_t
+Histogram__calculate_running_sum(struct Histogram *me)
+{
+    if (me == NULL) {
+        return 0;
+    }
+
+    uint64_t running_sum = 0;
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        running_sum += me->histogram[i];
+    }
+    running_sum += me->false_infinity + me->infinity;
+    return running_sum;
+}
+
+void
+Histogram__clear(struct Histogram *const me)
+{
+    if (me == NULL) {
+        return;
+    }
+
+    memset(me->histogram, 0, me->num_bins * sizeof(*me->histogram));
+    me->false_infinity = 0;
+    me->infinity = 0;
+    me->running_sum = 0;
 }
 
 void
@@ -252,6 +303,50 @@ Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment)
     return true;
 }
 
+/// @brief  Write the metadata required to recreate the histogram.
+/// @note   This must follow the same conventions as 'read_metadata'.
+static bool
+write_metadata(FILE *fp, struct Histogram const *const me)
+{
+    unsigned long r = 0;
+    assert(fp != NULL && me != NULL);
+
+    r = fwrite(&me->num_bins, sizeof(me->num_bins), 1, fp);
+    assert(r == 1);
+    r = fwrite(&me->bin_size, sizeof(me->bin_size), 1, fp);
+    assert(r == 1);
+    r = fwrite(&me->false_infinity, sizeof(me->false_infinity), 1, fp);
+    assert(r == 1);
+    r = fwrite(&me->infinity, sizeof(me->infinity), 1, fp);
+    assert(r == 1);
+    r = fwrite(&me->running_sum, sizeof(me->running_sum), 1, fp);
+    assert(r == 1);
+
+    return true;
+}
+
+/// @brief  Read the metadata required to recreate the histogram.
+/// @note   This must follow the same conventions as 'write_metadata'.
+static bool
+read_metadata(FILE *fp, struct Histogram *const me)
+{
+    size_t r = 0;
+    assert(fp != NULL && me != NULL);
+
+    r = fread(&me->num_bins, sizeof(me->num_bins), 1, fp);
+    assert(r == 1);
+    r = fread(&me->bin_size, sizeof(me->bin_size), 1, fp);
+    assert(r == 1);
+    r = fread(&me->false_infinity, sizeof(me->false_infinity), 1, fp);
+    assert(r == 1);
+    r = fread(&me->infinity, sizeof(me->infinity), 1, fp);
+    assert(r == 1);
+    r = fread(&me->running_sum, sizeof(me->running_sum), 1, fp);
+    assert(r == 1);
+
+    return true;
+}
+
 static bool
 write_index_miss_rate_pair(FILE *fp,
                            const uint64_t index,
@@ -279,6 +374,56 @@ write_index_miss_rate_pair(FILE *fp,
     return true;
 }
 
+static bool
+write_sparse_histogram(FILE *fp, struct Histogram const *const me)
+{
+    assert(fp != NULL && me != NULL && me->histogram != NULL &&
+           me->num_bins != 0 && me->bin_size != 0);
+    // NOTE I am assuming the endianness of the writer and reader will
+    //      be the same.
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        if (me->histogram[i] == 0)
+            continue;
+        if (!write_index_miss_rate_pair(fp,
+                                        i,
+                                        me->bin_size,
+                                        me->histogram[i])) {
+
+            LOGGER_ERROR("failed to write histogram");
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool
+read_sparse_histogram(FILE *fp, struct Histogram *const me)
+{
+    assert(fp != NULL && me != NULL && me->histogram != NULL &&
+           me->num_bins != 0 && me->bin_size != 0);
+    // NOTE I am assuming the endianness of the writer and reader will
+    //      be the same.
+    while (true) {
+        size_t r = 0;
+        uint64_t index = 0;
+        uint64_t frequency = 0;
+
+        r = fread(&index, sizeof(index), 1, fp);
+        // HACK This isn't very nice code, sorry.
+        if (r != 1) {
+            assert(r == 0);
+            return true;
+        }
+        r = fread(&frequency, sizeof(frequency), 1, fp);
+        assert(r);
+
+        assert(index % me->bin_size == 0);
+        assert(index / me->bin_size < me->num_bins);
+        me->histogram[index / me->bin_size] = frequency;
+    }
+    return true;
+}
+
 bool
 Histogram__save_sparse(struct Histogram const *const me, char const *const path)
 {
@@ -287,13 +432,9 @@ Histogram__save_sparse(struct Histogram const *const me, char const *const path)
     }
 
     FILE *fp = fopen(path, "wb");
-    // NOTE I am assuming the endianness of the writer and reader will
-    //      be the same.
-    for (size_t i = 0; i < me->num_bins; ++i) {
-        if (me->histogram[i] == 0)
-            continue;
-        if (!write_index_miss_rate_pair(fp, i, me->bin_size, me->histogram[i]))
-            goto cleanup;
+    if (!write_sparse_histogram(fp, me)) {
+        LOGGER_ERROR("failed to write histogram");
+        goto cleanup;
     }
     // Try to clean up regardless of the outcome of the fwrite(...).
     if (fclose(fp) != 0)
@@ -302,6 +443,75 @@ Histogram__save_sparse(struct Histogram const *const me, char const *const path)
 
 cleanup:
     fclose(fp);
+    return false;
+}
+
+bool
+Histogram__save_to_file(struct Histogram const *const me,
+                        char const *const path)
+{
+    if (me == NULL || me->histogram == NULL || me->num_bins == 0) {
+        return false;
+    }
+
+    FILE *fp = fopen(path, "wb");
+    if (fp == NULL) {
+        LOGGER_ERROR("could not open '%s'", path);
+        return false;
+    }
+    // NOTE I am assuming the endianness of the writer and reader will
+    //      be the same.
+    if (!write_metadata(fp, me)) {
+        LOGGER_ERROR("failed to write metadata");
+        goto cleanup;
+    }
+    if (!write_sparse_histogram(fp, me)) {
+        LOGGER_ERROR("failed to write histogram");
+        goto cleanup;
+    }
+    // Try to clean up regardless of the outcome of the fwrite(...).
+    if (fclose(fp) != 0) {
+        LOGGER_ERROR("failed to cleanup");
+        return false;
+    }
+    return true;
+
+cleanup:
+    fclose(fp);
+    return false;
+}
+
+/// @brief  Read the full histogram from a file.
+bool
+Histogram__init_from_file(struct Histogram *const me, char const *const path)
+{
+    FILE *fp = fopen(path, "rb");
+    if (fp == NULL) {
+        LOGGER_ERROR("fopen failed");
+        goto cleanup;
+    }
+
+    if (!read_metadata(fp, me)) {
+        LOGGER_ERROR("failed to read metadata");
+        goto cleanup;
+    }
+    if (!init_histogram(me,
+                        me->num_bins,
+                        me->bin_size,
+                        me->false_infinity,
+                        me->infinity,
+                        me->running_sum)) {
+        LOGGER_ERROR("init failed");
+        goto cleanup;
+    }
+    if (!read_sparse_histogram(fp, me)) {
+        LOGGER_ERROR("failed to read histogram");
+        goto cleanup;
+    }
+
+    return true;
+cleanup:
+    Histogram__destroy(me);
     return false;
 }
 
@@ -335,6 +545,67 @@ Histogram__validate(struct Histogram const *const me)
                      me->running_sum);
         return false;
     }
+
+    return true;
+}
+
+double
+Histogram__euclidean_error(struct Histogram const *const lhs,
+                           struct Histogram const *const rhs)
+{
+    if (lhs == NULL || rhs == NULL) {
+        LOGGER_WARN("passed invalid argument");
+        return -1.0;
+    }
+    if (!implies(lhs->num_bins != 0, lhs->histogram != NULL) ||
+        !implies(rhs->num_bins != 0, rhs->histogram != NULL)) {
+        LOGGER_ERROR("corrupted histogram");
+        return -1.0;
+    }
+    if (lhs->bin_size == 0 || rhs->bin_size == 0) {
+        LOGGER_ERROR("bin_size == 0 in histogram");
+        return -1.0;
+    }
+    if (lhs->num_bins == 0 || rhs->num_bins == 0) {
+        LOGGER_WARN("empty histogram array");
+    }
+
+    double mse = 0.0;
+    for (size_t i = 0; i < MIN(lhs->num_bins, rhs->num_bins); ++i) {
+        double diff = (double)lhs->histogram[i] - rhs->histogram[i];
+        mse += diff * diff;
+    }
+    // For the histogram, after the end of shorter histogram, we assume
+    // the shorter histogram's frequency values would have been zero.
+    for (size_t i = MIN(lhs->num_bins, rhs->num_bins);
+         i < MAX(lhs->num_bins, rhs->num_bins);
+         ++i) {
+        double diff = lhs->num_bins > rhs->num_bins ? lhs->histogram[i]
+                                                    : rhs->histogram[i];
+        mse += diff * diff;
+    }
+    double diff = (double)lhs->false_infinity - rhs->false_infinity;
+    mse += diff * diff;
+    diff = (double)lhs->infinity - rhs->infinity;
+    mse += diff * diff;
+    return sqrt(mse);
+}
+
+bool
+Histogram__iadd(struct Histogram *const me, struct Histogram const *const other)
+{
+    assert(me != NULL);
+    assert(other != NULL);
+    assert(me->histogram != NULL);
+    assert(other->histogram != NULL);
+    assert(me->bin_size == other->bin_size);
+    assert(me->num_bins == other->num_bins);
+
+    for (size_t i = 0; i < me->num_bins; ++i) {
+        me->histogram[i] += other->histogram[i];
+    }
+    me->false_infinity += other->false_infinity;
+    me->infinity += other->infinity;
 
     return true;
 }

@@ -399,7 +399,7 @@ cleanup:
                                          post_process_func,                    \
                                          hist,                                 \
                                          save_hist_func,                       \
-                                         hist2mrc_func,                        \
+                                         to_mrc_func,                          \
                                          destroy_func)                         \
     static struct MissRateCurve func_name(                                     \
         struct Trace const *const trace,                                       \
@@ -422,7 +422,7 @@ cleanup:
         ((post_process_func))(&var_name);                                      \
         double t2 = get_wall_time_sec();                                       \
         struct MissRateCurve mrc = {0};                                        \
-        ((hist2mrc_func))(&mrc, hist);                                         \
+        ((to_mrc_func))(&var_name, &mrc);                                      \
         double t3 = get_wall_time_sec();                                       \
         LOGGER_INFO("Histogram Time: %f | Post-Process Time: %f | MRC Time: "  \
                     "%f | Total Time: %f",                                     \
@@ -450,7 +450,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  Olken__post_process,
                                  &me.histogram,
                                  Histogram__save_sparse,
-                                 MissRateCurve__init_from_histogram,
+                                 Olken__to_mrc,
                                  Olken__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
@@ -467,7 +467,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__post_process,
     &me.olken.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    FixedRateShards__to_mrc,
     FixedRateShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
@@ -484,7 +484,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__post_process,
     &me.olken.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    FixedRateShards__to_mrc,
     FixedRateShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
@@ -501,7 +501,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedSizeShards__post_process,
     &me.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    FixedSizeShards__to_mrc,
     FixedSizeShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
@@ -518,7 +518,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                  QuickMRC__post_process,
                                  &me.histogram,
                                  Histogram__save_sparse,
-                                 MissRateCurve__init_from_histogram,
+                                 QuickMRC__to_mrc,
                                  QuickMRC__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
@@ -554,7 +554,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     BucketedShards__post_process,
     &me.histogram,
     Histogram__save_sparse,
-    MissRateCurve__init_from_histogram,
+    EvictingMap__to_mrc,
     BucketedShards__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
@@ -563,7 +563,8 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  args,
                                  AverageEvictionTime__init(&me,
                                                            trace->length,
-                                                           args.hist_bin_size),
+                                                           args.hist_bin_size,
+                                                           trace->length / 100),
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
@@ -571,19 +572,18 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
-                                 struct AverageEvictionTime,
-                                 me,
-                                 args,
-                                 AverageEvictionTime__init(&me,
-                                                           trace->length,
-                                                           args.hist_bin_size),
-                                 AverageEvictionTime__access_item,
-                                 AverageEvictionTime__post_process,
-                                 &me.histogram,
-                                 Histogram__save_sparse,
-                                 AverageEvictionTime__their_to_mrc,
-                                 AverageEvictionTime__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_their_average_eviction_time,
+    struct AverageEvictionTime,
+    me,
+    args,
+    AverageEvictionTime__init(&me, trace->length, args.hist_bin_size, false),
+    AverageEvictionTime__access_item,
+    AverageEvictionTime__post_process,
+    &me.histogram,
+    Histogram__save_sparse,
+    AverageEvictionTime__their_to_mrc,
+    AverageEvictionTime__destroy)
 
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
@@ -646,11 +646,6 @@ get_oracle_mrc(struct CommandLineArguments const args,
         oracle_mrc = run_olken(trace, args);
         r = MissRateCurve__write_sparse_binary_to_file(&oracle_mrc,
                                                        args.oracle_path);
-        g_assert_true(r);
-        r = MissRateCurve__init_from_sparse_file(&oracle_mrc,
-                                                 args.oracle_path,
-                                                 mrc->num_bins,
-                                                 mrc->bin_size);
         g_assert_true(r);
         return oracle_mrc;
     }

@@ -11,6 +11,7 @@
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "math/ratio.h"
+#include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "shards/fixed_rate_shards.h"
 #include "tree/basic_tree.h"
@@ -115,6 +116,13 @@ FixedRateShards__post_process(struct FixedRateShards *me)
     if (!r) {
         LOGGER_WARN("error in adjusting buckets");
     }
+}
+
+bool
+FixedRateShards__to_mrc(struct FixedRateShards const *const me,
+                        struct MissRateCurve *const mrc)
+{
+    return MissRateCurve__init_from_histogram(mrc, &me->olken.histogram);
 }
 
 void

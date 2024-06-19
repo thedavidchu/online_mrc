@@ -10,6 +10,7 @@ evicting_map_dep = declare_dependency(
             glib_dep,
             hash_dep,
             lookup_dep,
+            miss_rate_curve_dep,
         ],
     ),
     include_directories: include_directories('include'),

@@ -19,6 +19,7 @@ quickmrc_dep = declare_dependency(
             hash_dep,
             quickmrc_buckets_dep,
             lookup_dep,
+            miss_rate_curve_dep,
         ],
     ),
     dependencies: [
