@@ -557,18 +557,20 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     EvictingMap__to_mrc,
     BucketedShards__destroy)
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_average_eviction_time,
-    struct AverageEvictionTime,
-    me,
-    args,
-    AverageEvictionTime__init(&me, trace->length, args.hist_bin_size, false),
-    AverageEvictionTime__access_item,
-    AverageEvictionTime__post_process,
-    &me.histogram,
-    Histogram__save_sparse,
-    AverageEvictionTime__to_mrc,
-    AverageEvictionTime__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
+                                 struct AverageEvictionTime,
+                                 me,
+                                 args,
+                                 AverageEvictionTime__init(&me,
+                                                           trace->length,
+                                                           args.hist_bin_size,
+                                                           trace->length / 100),
+                                 AverageEvictionTime__access_item,
+                                 AverageEvictionTime__post_process,
+                                 &me.histogram,
+                                 Histogram__save_sparse,
+                                 AverageEvictionTime__to_mrc,
+                                 AverageEvictionTime__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_their_average_eviction_time,

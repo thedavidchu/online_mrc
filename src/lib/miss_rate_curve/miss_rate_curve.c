@@ -357,7 +357,12 @@ MissRateCurve__scaled_iadd(struct MissRateCurve *const me,
     }
 
     if (me->num_bins != other->num_bins || me->bin_size != other->bin_size) {
-        LOGGER_ERROR("num_bins and bin_size must match");
+        LOGGER_ERROR(
+            "num_bins (%zu vs %zu) and bin_size (%zu vs %zu) must match",
+            me->num_bins,
+            other->num_bins,
+            me->bin_size,
+            other->bin_size);
         return false;
     }
     for (size_t i = 0; i < me->num_bins; ++i) {

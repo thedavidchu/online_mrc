@@ -207,7 +207,7 @@ convert_hist_to_mrc(struct Histogram const *const hist,
     if (hist == NULL || hist->histogram == NULL || mrc == NULL)
         return false;
 
-    uint64_t const num_bins = hist->num_bins;
+    uint64_t const num_bins = hist->num_bins + 2;
     uint64_t const bin_size = hist->bin_size;
     *mrc = (struct MissRateCurve){
         .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
