@@ -26,7 +26,7 @@ init_histogram(struct Histogram *const me,
     assert(me != NULL);
 
     // Assume it is either NULL or an uninitialized address!
-    me->histogram = (uint64_t *)calloc(num_bins, sizeof(uint64_t));
+    me->histogram = calloc(num_bins, sizeof(*me->histogram));
     if (me->histogram == NULL) {
         return false;
     }
