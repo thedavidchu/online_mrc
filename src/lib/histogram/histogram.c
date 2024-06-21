@@ -26,7 +26,7 @@ init_histogram(struct Histogram *const me,
     assert(me != NULL);
 
     // Assume it is either NULL or an uninitialized address!
-    me->histogram = (uint64_t *)calloc(num_bins, sizeof(uint64_t));
+    me->histogram = calloc(num_bins, sizeof(*me->histogram));
     if (me->histogram == NULL) {
         return false;
     }
@@ -509,8 +509,14 @@ Histogram__init_from_file(struct Histogram *const me, char const *const path)
         goto cleanup;
     }
 
+    if (fclose(fp) != 0) {
+        LOGGER_ERROR("could not close '%s'", path);
+        return false;
+    }
+
     return true;
 cleanup:
+    fclose(fp);
     Histogram__destroy(me);
     return false;
 }

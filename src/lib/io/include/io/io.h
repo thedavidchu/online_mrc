@@ -8,6 +8,7 @@ struct MemoryMap {
     void *buffer;
     size_t num_bytes;
     int fd;
+    FILE *fp;
 };
 
 bool

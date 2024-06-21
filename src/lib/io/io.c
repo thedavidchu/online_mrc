@@ -48,8 +48,10 @@ MemoryMap__init(struct MemoryMap *me,
     }
 
     buffer = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    *me =
-        (struct MemoryMap){.buffer = buffer, .num_bytes = sb.st_size, .fd = fd};
+    *me = (struct MemoryMap){.buffer = buffer,
+                             .num_bytes = sb.st_size,
+                             .fd = fd,
+                             .fp = fp};
     return true;
 }
 
@@ -66,10 +68,11 @@ MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me)
     }
     fprintf(stream,
             "{\"type\": \"MemoryMap\", \".buffer\": %p, \".num_bytes\": %zu, "
-            "\".fd\": %d}\n",
+            "\".fd\": %d, \".fp\": %p}\n",
             me->buffer,
             me->num_bytes,
-            me->fd);
+            me->fd,
+            (void *)me->fp);
     return;
 }
 
@@ -79,7 +82,9 @@ MemoryMap__destroy(struct MemoryMap *me)
     if (me == NULL || me->fd == -1) {
         return false;
     }
-    if (close(me->fd) == -1) {
+    // NOTE I close the fp versus the fd because otherwise there is a
+    //      memory leak.
+    if (fclose(me->fp) == EOF) {
         LOGGER_ERROR("failed to close file");
         return false;
     }
@@ -115,11 +120,22 @@ write_buffer(char const *const file_name,
     return true;
 }
 
+/// @brief  Check whether a file exists.
+/// @note   I add a lot of complicated machinery to save and restore the
+///         old errno because having the file not exist is almost
+///         expected (sometimes).
 bool
 file_exists(char const *const file_name)
 {
+    int const prev_errno = errno;
+    errno = 0;
     // Source:
     // https://stackoverflow.com/questions/230062/whats-the-best-way-to-check-if-a-file-exists-in-c/230068#230068
     // NOTE Good if we don't want to create the file.
-    return access(file_name, F_OK) == 0;
+    bool const r = access(file_name, F_OK) == 0;
+    if (errno) {
+        LOGGER_TRACE("access(\"%s\", F_OK) raised error", file_name);
+    }
+    errno = prev_errno;
+    return r;
 }

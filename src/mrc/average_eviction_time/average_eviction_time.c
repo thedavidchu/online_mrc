@@ -127,28 +127,27 @@ AverageEvictionTime__post_process(struct AverageEvictionTime *me)
 ///         matches the oracle exactly for the step-function.
 static void
 fill_rt_ccdf_faithfully(struct Histogram const *const me,
-                        uint64_t *const rt_ccdf,
-                        size_t const num_bins)
+                        uint64_t *const rt_ccdf)
 {
-    assert(implies(num_bins != 0, rt_ccdf != NULL));
-    rt_ccdf[num_bins] = me->infinity;
-    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->false_infinity;
-    for (size_t i = 0; i < num_bins - 1; ++i) {
-        size_t rev_i = REVERSE_INDEX(i, num_bins);
+    assert(me != NULL && rt_ccdf != NULL);
+    rt_ccdf[me->num_bins] = me->infinity;
+    rt_ccdf[me->num_bins - 1] = rt_ccdf[me->num_bins] + me->false_infinity;
+    for (size_t i = 0; i < me->num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, me->num_bins);
         rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i];
     }
 }
 
 static void
 fill_rt_ccdf_accurately(struct Histogram const *const me,
-                        uint64_t *const rt_ccdf,
-                        size_t const num_bins)
+                        uint64_t *const rt_ccdf)
 {
-    assert(implies(num_bins != 0, rt_ccdf != NULL));
-    rt_ccdf[num_bins] = me->infinity + me->false_infinity;
-    rt_ccdf[num_bins - 1] = rt_ccdf[num_bins] + me->histogram[num_bins - 1];
-    for (size_t i = 0; i < num_bins - 1; ++i) {
-        size_t rev_i = REVERSE_INDEX(i, num_bins);
+    assert(implies(me->num_bins != 0, rt_ccdf != NULL));
+    rt_ccdf[me->num_bins] = me->infinity + me->false_infinity;
+    rt_ccdf[me->num_bins - 1] =
+        rt_ccdf[me->num_bins] + me->histogram[me->num_bins - 1];
+    for (size_t i = 0; i < me->num_bins - 1; ++i) {
+        size_t rev_i = REVERSE_INDEX(i, me->num_bins);
         rt_ccdf[rev_i - 1] = rt_ccdf[rev_i] + me->histogram[rev_i - 1];
     }
 }
@@ -158,20 +157,20 @@ fill_rt_ccdf_accurately(struct Histogram const *const me,
 /// @note   I 'scale' the reuse time CCDF to remain in the integer domain.
 ///         This is supposed to limit numeric errors.
 static uint64_t *
-get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
+get_scaled_rt_ccdf(struct Histogram const *const me)
 {
-    uint64_t *rt_ccdf = calloc(num_bins + 1, sizeof(*rt_ccdf));
+    uint64_t *rt_ccdf = calloc(me->num_bins + 1, sizeof(*rt_ccdf));
     if (rt_ccdf == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         return NULL;
     }
     // Fill rt_ccdf either accurately or faithfully to the paper.
     if (true) {
-        fill_rt_ccdf_accurately(me, rt_ccdf, num_bins);
+        fill_rt_ccdf_accurately(me, rt_ccdf);
     } else {
         // NOTE This option is deprecated.
         LOGGER_WARN("DEPRECATED OPTION AS OF 2024 June 3!!!");
-        fill_rt_ccdf_faithfully(me, rt_ccdf, num_bins);
+        fill_rt_ccdf_faithfully(me, rt_ccdf);
     }
     return rt_ccdf;
 }
@@ -179,14 +178,13 @@ get_scaled_rt_ccdf(struct Histogram const *const me, size_t const num_bins)
 static void
 calculate_mrc(struct MissRateCurve const *const mrc,
               struct Histogram const *const me,
-              size_t const num_bins,
               uint64_t const *const rt_ccdf)
 {
-    assert(mrc && me && num_bins >= 1 && rt_ccdf);
+    assert(mrc && me && me->num_bins >= 1 && rt_ccdf);
     uint64_t current_sum = 0;
     uint64_t const total = me->running_sum;
     size_t current_cache_size = 0;
-    for (size_t i = 0; i < num_bins; ++i) {
+    for (size_t i = 0; i < me->num_bins; ++i) {
         current_sum += rt_ccdf[i];
         if ((double)current_sum / total >= current_cache_size) {
             mrc->miss_rate[current_cache_size] = (double)rt_ccdf[i] / total;
@@ -195,7 +193,7 @@ calculate_mrc(struct MissRateCurve const *const mrc,
     }
 
     // Set the rest of the MRC to the final value
-    for (size_t i = current_cache_size; i < num_bins; ++i) {
+    for (size_t i = current_cache_size; i < me->num_bins; ++i) {
         mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
     }
 }
@@ -207,11 +205,11 @@ convert_hist_to_mrc(struct Histogram const *const hist,
     if (hist == NULL || hist->histogram == NULL || mrc == NULL)
         return false;
 
-    uint64_t const num_bins = hist->num_bins + 2;
+    uint64_t const num_mrc_bins = hist->num_bins + 2;
     uint64_t const bin_size = hist->bin_size;
     *mrc = (struct MissRateCurve){
-        .miss_rate = calloc(num_bins + 1, sizeof(*mrc->miss_rate)),
-        .num_bins = num_bins,
+        .miss_rate = calloc(num_mrc_bins, sizeof(*mrc->miss_rate)),
+        .num_bins = num_mrc_bins,
         .bin_size = bin_size,
     };
 
@@ -220,7 +218,7 @@ convert_hist_to_mrc(struct Histogram const *const hist,
         return false;
     }
 
-    uint64_t *rt_ccdf = get_scaled_rt_ccdf(hist, num_bins);
+    uint64_t *rt_ccdf = get_scaled_rt_ccdf(hist);
     if (rt_ccdf == NULL) {
         LOGGER_ERROR("could not allocate buffer");
         MissRateCurve__destroy(mrc);
@@ -228,7 +226,7 @@ convert_hist_to_mrc(struct Histogram const *const hist,
     }
 
     // Calculate MRC
-    calculate_mrc(mrc, hist, num_bins, rt_ccdf);
+    calculate_mrc(mrc, hist, rt_ccdf);
     if (!MissRateCurve__validate(mrc)) {
         LOGGER_WARN("MRC validation failed");
     }
@@ -322,7 +320,10 @@ CalcMRC(double const *const P, size_t const M, size_t const len)
     MRC[0] = 1.0;
 
     for (size_t c = 1; c < M; ++c) {
-        while (integration < c && t <= len) {
+        // NOTE The AET paper says that that t <= len, but in their for
+        //      loops from 1 to N, I suspect they are iterating and
+        //      including N.
+        while (integration < c && t < len) {
             integration += P[t];
             ++t;
         }
