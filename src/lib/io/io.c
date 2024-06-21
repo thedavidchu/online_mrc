@@ -48,8 +48,10 @@ MemoryMap__init(struct MemoryMap *me,
     }
 
     buffer = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    *me =
-        (struct MemoryMap){.buffer = buffer, .num_bytes = sb.st_size, .fd = fd};
+    *me = (struct MemoryMap){.buffer = buffer,
+                             .num_bytes = sb.st_size,
+                             .fd = fd,
+                             .fp = fp};
     return true;
 }
 
@@ -66,10 +68,11 @@ MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me)
     }
     fprintf(stream,
             "{\"type\": \"MemoryMap\", \".buffer\": %p, \".num_bytes\": %zu, "
-            "\".fd\": %d}\n",
+            "\".fd\": %d, \".fp\": %p}\n",
             me->buffer,
             me->num_bytes,
-            me->fd);
+            me->fd,
+            (void *)me->fp);
     return;
 }
 
@@ -79,7 +82,9 @@ MemoryMap__destroy(struct MemoryMap *me)
     if (me == NULL || me->fd == -1) {
         return false;
     }
-    if (close(me->fd) == -1) {
+    // NOTE I close the fp versus the fd because otherwise there is a
+    //      memory leak.
+    if (fclose(me->fp) == EOF) {
         LOGGER_ERROR("failed to close file");
         return false;
     }

@@ -509,8 +509,14 @@ Histogram__init_from_file(struct Histogram *const me, char const *const path)
         goto cleanup;
     }
 
+    if (fclose(fp) != 0) {
+        LOGGER_ERROR("could not close '%s'", path);
+        return false;
+    }
+
     return true;
 cleanup:
+    fclose(fp);
     Histogram__destroy(me);
     return false;
 }

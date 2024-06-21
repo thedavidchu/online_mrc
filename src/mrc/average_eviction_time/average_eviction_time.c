@@ -320,7 +320,10 @@ CalcMRC(double const *const P, size_t const M, size_t const len)
     MRC[0] = 1.0;
 
     for (size_t c = 1; c < M; ++c) {
-        while (integration < c && t <= len) {
+        // NOTE The AET paper says that that t <= len, but in their for
+        //      loops from 1 to N, I suspect they are iterating and
+        //      including N.
+        while (integration < c && t < len) {
             integration += P[t];
             ++t;
         }
