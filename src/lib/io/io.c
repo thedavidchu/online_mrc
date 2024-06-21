@@ -115,11 +115,22 @@ write_buffer(char const *const file_name,
     return true;
 }
 
+/// @brief  Check whether a file exists.
+/// @note   I add a lot of complicated machinery to save and restore the
+///         old errno because having the file not exist is almost
+///         expected (sometimes).
 bool
 file_exists(char const *const file_name)
 {
+    int const prev_errno = errno;
+    errno = 0;
     // Source:
     // https://stackoverflow.com/questions/230062/whats-the-best-way-to-check-if-a-file-exists-in-c/230068#230068
     // NOTE Good if we don't want to create the file.
-    return access(file_name, F_OK) == 0;
+    bool const r = access(file_name, F_OK) == 0;
+    if (errno) {
+        LOGGER_TRACE("access(\"%s\", F_OK) raised error", file_name);
+    }
+    errno = prev_errno;
+    return r;
 }
