@@ -10,12 +10,6 @@
 #include "lookup/lookup.h"
 #include "types/entry_type.h"
 
-static gboolean
-entry_compare(gconstpointer a, gconstpointer b)
-{
-    return (a == b) ? TRUE : FALSE;
-}
-
 static inline bool
 gboolean_to_bool(const gboolean b)
 {
@@ -29,11 +23,13 @@ HashTable__init(struct HashTable *me)
 {
     if (me == NULL)
         return false;
-    // NOTE Using the g_direct_hash function means that we need to pass our
+    // NOTE Using the 'g_direct_hash' function means that we need to pass our
     //      entries as pointers to the hash table. It also means we cannot
     //      destroy the values at the pointers, because the pointers are our
     //      actual values!
-    me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
+    // NOTE By passing 'NULL' instead of 'g_direct_equal', we save a function
+    //      call, as per the documentation.
+    me->hash_table = g_hash_table_new(g_direct_hash, NULL);
     if (me->hash_table == NULL)
         return false;
     return true;
