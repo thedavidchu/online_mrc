@@ -193,7 +193,7 @@ calculate_mrc(struct MissRateCurve const *const mrc,
     }
 
     // Set the rest of the MRC to the final value
-    for (size_t i = current_cache_size; i < me->num_bins; ++i) {
+    for (size_t i = current_cache_size; i < mrc->num_bins; ++i) {
         mrc->miss_rate[i] = mrc->miss_rate[current_cache_size - 1];
     }
 }
