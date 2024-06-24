@@ -9,6 +9,7 @@
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
 #include "lookup/hash_table.h"
+#include "random/uniform_random.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 
@@ -60,11 +61,26 @@ test_hyperloglog_accuracy(char const *const fpath,
 }
 
 static bool
+test_hyperloglog_accuracy_on_uniform(void)
+{
+    struct UniformRandom urng = {0};
+
+    g_assert_true(UniformRandom__init(&urng, rng_seed));
+
+    test_hyperloglog_accuracy("uniform_hyperloglog_cardinalities.bin",
+                              (uint64_t(*)(void *))UniformRandom__next_uint64,
+                              &urng);
+
+    UniformRandom__destroy(&urng);
+    return true;
+}
+
+static bool
 test_hyperloglog_accuracy_on_zipfian(void)
 {
     struct ZipfianRandom zrng = {0};
 
-    g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, 0));
+    g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, rng_seed));
 
     test_hyperloglog_accuracy("zipfian_hyperloglog_cardinalities.bin",
                               (uint64_t(*)(void *))ZipfianRandom__next,
@@ -77,6 +93,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
 int
 main(void)
 {
+    ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_uniform());
     ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_zipfian());
     return 0;
 }
