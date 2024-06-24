@@ -19,6 +19,7 @@ lookup_dep = declare_dependency(
     dependencies: [
         common_dep,
         glib_dep,
+        hash_dep,
         math_dep,
         thread_dep,
     ],
