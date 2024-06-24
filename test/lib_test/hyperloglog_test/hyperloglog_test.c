@@ -15,7 +15,7 @@
 #include "trace/reader.h"
 
 uint64_t const rng_seed = 42;
-size_t const trace_length = 1 << 20;
+size_t const artificial_trace_length = 1 << 20;
 
 static bool
 test_hyperloglog_accuracy(char const *const fpath,
@@ -28,10 +28,10 @@ test_hyperloglog_accuracy(char const *const fpath,
     g_assert_true(HashTable__init(&ht));
     g_assert_true(EvictingHashTable__init(&eht, 1 << 13, 1.0));
 
-    size_t *estimates = calloc(trace_length, 2 * sizeof(*estimates));
+    size_t *estimates = calloc(artificial_trace_length, 2 * sizeof(*estimates));
     assert(estimates);
 
-    for (size_t i = 0; i < trace_length; ++i) {
+    for (size_t i = 0; i < artificial_trace_length; ++i) {
         uint64_t const x = f_next(data);
         HashTable__put_unique(&ht, x, 0);
         EvictingHashTable__try_put(&eht, x, 0);
@@ -45,8 +45,10 @@ test_hyperloglog_accuracy(char const *const fpath,
 
     FILE *fp = fopen(fpath, "wb");
     assert(fp);
-    if (fwrite(estimates, 2 * sizeof(*estimates), trace_length, fp) !=
-        trace_length) {
+    if (fwrite(estimates,
+               2 * sizeof(*estimates),
+               artificial_trace_length,
+               fp) != artificial_trace_length) {
         LOGGER_ERROR("incorrect number of elements written");
         return false;
     }
