@@ -115,7 +115,7 @@ FixedSizeShardsSampler__insert(struct FixedSizeShardsSampler *me,
 }
 
 uint64_t
-FixedRateShardsSampler__estimate_cardinality(struct FixedSizeShardsSampler *me)
+FixedSizeShardsSampler__estimate_cardinality(struct FixedSizeShardsSampler *me)
 {
     return me->pq.cardinality * me->scale;
 }

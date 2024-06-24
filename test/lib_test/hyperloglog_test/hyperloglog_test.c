@@ -9,14 +9,18 @@
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
 #include "lookup/hash_table.h"
+#include "lookup/lookup.h"
 #include "random/uniform_random.h"
 #include "random/zipfian_random.h"
+#include "shards/fixed_rate_shards_sampler.h"
 #include "shards/fixed_size_shards_sampler.h"
 #include "test/mytester.h"
 #include "trace/reader.h"
 
 uint64_t const rng_seed = 42;
 size_t const artificial_trace_length = 1 << 20;
+double const init_sampling_rate = 1e0;
+size_t const max_size = 1 << 13;
 
 static bool
 test_hyperloglog_accuracy(char const *const fpath,
@@ -25,29 +29,39 @@ test_hyperloglog_accuracy(char const *const fpath,
 {
     struct HashTable ht = {0};
     struct EvictingHashTable eht = {0};
+    struct FixedSizeShardsSampler fs = {0};
 
     g_assert_true(HashTable__init(&ht));
-    g_assert_true(EvictingHashTable__init(&eht, 1 << 13, 1.0));
+    g_assert_true(EvictingHashTable__init(&eht, max_size, init_sampling_rate));
+    g_assert_true(
+        FixedSizeShardsSampler__init(&fs, init_sampling_rate, max_size, false));
 
-    size_t *estimates = calloc(artificial_trace_length, 2 * sizeof(*estimates));
+    size_t *estimates = calloc(artificial_trace_length, 3 * sizeof(*estimates));
     assert(estimates);
 
     for (size_t i = 0; i < artificial_trace_length; ++i) {
+        enum PutUniqueStatus s = LOOKUP_PUTUNIQUE_ERROR;
         uint64_t const x = f_next(data);
-        HashTable__put_unique(&ht, x, 0);
+        s = HashTable__put_unique(&ht, x, 0);
         EvictingHashTable__try_put(&eht, x, 0);
+        if (s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
+            FixedSizeShardsSampler__sample(&fs, x)) {
+            FixedSizeShardsSampler__insert(&fs, x, NULL, NULL);
+        }
 
         size_t ht_size = g_hash_table_size(ht.hash_table);
         size_t eht_size =
             EvictingHashTable__estimate_scale_factor(&eht) * eht.length;
-        estimates[2 * i + 0] = ht_size;
-        estimates[2 * i + 1] = eht_size;
+        size_t fs_size = FixedSizeShardsSampler__estimate_cardinality(&fs);
+        estimates[3 * i + 0] = ht_size;
+        estimates[3 * i + 1] = eht_size;
+        estimates[3 * i + 2] = fs_size;
     }
 
     FILE *fp = fopen(fpath, "wb");
     assert(fp);
     if (fwrite(estimates,
-               2 * sizeof(*estimates),
+               3 * sizeof(*estimates),
                artificial_trace_length,
                fp) != artificial_trace_length) {
         LOGGER_ERROR("incorrect number of elements written");
@@ -61,6 +75,7 @@ test_hyperloglog_accuracy(char const *const fpath,
 
     HashTable__destroy(&ht);
     EvictingHashTable__destroy(&eht);
+    FixedSizeShardsSampler__destroy(&fs);
     return true;
 }
 

@@ -57,4 +57,4 @@ FixedSizeShardsSampler__insert(struct FixedSizeShardsSampler *me,
 ///             2. Full: it's actually identical. We are capped at a
 ///             certain number of elements, but our scale increases!
 uint64_t
-FixedRateShardsSampler__estimate_cardinality(struct FixedSizeShardsSampler *me);
+FixedSizeShardsSampler__estimate_cardinality(struct FixedSizeShardsSampler *me);
