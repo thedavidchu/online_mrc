@@ -6,11 +6,12 @@ hyperloglog_test_exe = executable(
     ],
     dependencies: [
         common_dep,
+        glib_dep,
         lookup_dep,
+        trace_dep,
         uniform_random_dep,
         zipfian_random_dep,
-        glib_dep,
     ],
 )
 
-test('hyperloglog_test', hyperloglog_test_exe)
+test('hyperloglog_test', hyperloglog_test_exe, args: [test_trace])

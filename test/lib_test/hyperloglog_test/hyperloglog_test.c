@@ -12,6 +12,7 @@
 #include "random/uniform_random.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
+#include "trace/reader.h"
 
 uint64_t const rng_seed = 42;
 size_t const trace_length = 1 << 20;
@@ -60,6 +61,33 @@ test_hyperloglog_accuracy(char const *const fpath,
     return true;
 }
 
+static uint64_t
+next_trace_item(struct Trace *trace)
+{
+    static size_t i;
+
+    if (i >= trace->length) {
+        i = 0;
+    }
+
+    return trace->trace[i++].key;
+}
+
+static bool
+test_hyperloglog_accuracy_on_trace(char const *const trace_path,
+                                   enum TraceFormat trace_format)
+{
+    struct Trace trace = read_trace(trace_path, trace_format);
+    assert(trace.trace != NULL && trace.length != 0);
+
+    test_hyperloglog_accuracy("trace_hyperloglog_cardinalities.bin",
+                              (uint64_t(*)(void *))next_trace_item,
+                              &trace);
+
+    Trace__destroy(&trace);
+    return true;
+}
+
 static bool
 test_hyperloglog_accuracy_on_uniform(void)
 {
@@ -91,8 +119,14 @@ test_hyperloglog_accuracy_on_zipfian(void)
 }
 
 int
-main(void)
+main(int argc, char *argv[])
 {
+    g_assert_true(argc == 1 || argc == 2);
+    if (argc == 2) {
+        char const *const trace_path = argv[1];
+        ASSERT_FUNCTION_RETURNS_TRUE(
+            test_hyperloglog_accuracy_on_trace(trace_path, TRACE_FORMAT_KIA));
+    }
     ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_uniform());
     ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_zipfian());
     return 0;
