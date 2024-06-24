@@ -29,7 +29,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
     size_t *estimates = calloc(trace_length, 2 * sizeof(*estimates));
     assert(estimates);
 
-    for (size_t i = 0; i < 1 << 20; ++i) {
+    for (size_t i = 0; i < trace_length; ++i) {
         uint64_t const x = ZipfianRandom__next(&zrng);
         HashTable__put_unique(&ht, x, 0);
         EvictingHashTable__put_unique(&eht, x, 0);
