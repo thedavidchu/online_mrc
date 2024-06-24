@@ -16,13 +16,13 @@ uint64_t const rng_seed = 42;
 size_t const trace_length = 1 << 20;
 
 static bool
-test_hyperloglog_accuracy_on_zipfian(void)
+test_hyperloglog_accuracy(char const *const fpath,
+                          uint64_t (*f_next)(void *),
+                          void *data)
 {
-    struct ZipfianRandom zrng = {0};
     struct HashTable ht = {0};
     struct EvictingHashTable eht = {0};
 
-    g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, 0));
     g_assert_true(HashTable__init(&ht));
     g_assert_true(EvictingHashTable__init(&eht, 1 << 13, 1.0));
 
@@ -30,7 +30,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
     assert(estimates);
 
     for (size_t i = 0; i < trace_length; ++i) {
-        uint64_t const x = ZipfianRandom__next(&zrng);
+        uint64_t const x = f_next(data);
         HashTable__put_unique(&ht, x, 0);
         EvictingHashTable__try_put(&eht, x, 0);
 
@@ -41,7 +41,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
         estimates[2 * i + 1] = eht_size;
     }
 
-    FILE *fp = fopen("true_vs_estimated_cardinalities.bin", "wb");
+    FILE *fp = fopen(fpath, "wb");
     assert(fp);
     if (fwrite(estimates, 2 * sizeof(*estimates), trace_length, fp) !=
         trace_length) {
@@ -52,10 +52,25 @@ test_hyperloglog_accuracy_on_zipfian(void)
         LOGGER_ERROR("couldn't close");
         return false;
     }
+    free(estimates);
 
-    ZipfianRandom__destroy(&zrng);
     HashTable__destroy(&ht);
     EvictingHashTable__destroy(&eht);
+    return true;
+}
+
+static bool
+test_hyperloglog_accuracy_on_zipfian(void)
+{
+    struct ZipfianRandom zrng = {0};
+
+    g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, 0));
+
+    test_hyperloglog_accuracy("zipfian_hyperloglog_cardinalities.bin",
+                              (uint64_t(*)(void *))ZipfianRandom__next,
+                              &zrng);
+
+    ZipfianRandom__destroy(&zrng);
     return true;
 }
 
