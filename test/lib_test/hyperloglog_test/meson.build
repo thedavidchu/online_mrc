@@ -8,6 +8,7 @@ hyperloglog_test_exe = executable(
         common_dep,
         glib_dep,
         lookup_dep,
+        shards_dep,
         trace_dep,
         uniform_random_dep,
         zipfian_random_dep,

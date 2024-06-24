@@ -11,6 +11,7 @@
 #include "lookup/hash_table.h"
 #include "random/uniform_random.h"
 #include "random/zipfian_random.h"
+#include "shards/fixed_size_shards_sampler.h"
 #include "test/mytester.h"
 #include "trace/reader.h"
 
