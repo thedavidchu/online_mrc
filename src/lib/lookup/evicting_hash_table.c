@@ -111,6 +111,10 @@ EvictingHashTable__put_unique(struct EvictingHashTable *me,
     Hash64BitType hash = HASH_FUNCTION(key);
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
 
+    ++me->num_inserted;
+    if (me->num_inserted == me->length) {
+        EvictingHashTable__refresh_threshold(me);
+    }
     // HACK Note that the hash value of UINT64_MAX is reserved to mark
     //      the bucket as "invalid" (i.e. no valid element has been inserted).
     if (incumbent->hash == UINT64_MAX) {
@@ -303,7 +307,7 @@ static double
 linear_counting(uint64_t const m, uint64_t const V)
 {
     assert(m >= 1 && V >= 1);
-    return m * log2((double)m / V);
+    return m * log((double)m / V);
 }
 
 static inline double

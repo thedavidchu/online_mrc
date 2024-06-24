@@ -32,7 +32,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
     for (size_t i = 0; i < trace_length; ++i) {
         uint64_t const x = ZipfianRandom__next(&zrng);
         HashTable__put_unique(&ht, x, 0);
-        EvictingHashTable__put_unique(&eht, x, 0);
+        EvictingHashTable__try_put(&eht, x, 0);
 
         size_t ht_size = g_hash_table_size(ht.hash_table);
         size_t eht_size =
