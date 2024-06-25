@@ -5,7 +5,7 @@
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
-#include "priority_queue/splay_priority_queue.h"
+#include "priority_queue/heap.h"
 #include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 
@@ -20,7 +20,7 @@ FixedSizeShardsSampler__init(struct FixedSizeShardsSampler *const me,
         LOGGER_WARN("bad input");
         return false;
     }
-    if (!SplayPriorityQueue__init(&me->pq, max_size)) {
+    if (!Heap__init(&me->pq, max_size)) {
         LOGGER_WARN("failed to initialize priority queue");
         goto cleanup;
     }
@@ -38,7 +38,7 @@ FixedSizeShardsSampler__init(struct FixedSizeShardsSampler *const me,
     };
     return true;
 cleanup:
-    SplayPriorityQueue__destroy(&me->pq);
+    Heap__destroy(&me->pq);
     return false;
 }
 
@@ -48,7 +48,7 @@ FixedSizeShardsSampler__destroy(struct FixedSizeShardsSampler *const me)
     if (me == NULL) {
         return;
     }
-    SplayPriorityQueue__destroy(&me->pq);
+    Heap__destroy(&me->pq);
     *me = (struct FixedSizeShardsSampler){0};
 }
 
@@ -62,8 +62,8 @@ make_room(struct FixedSizeShardsSampler *me,
     if (me == NULL) {
         return;
     }
-    Hash64BitType max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
-    while (SplayPriorityQueue__remove(&me->pq, max_hash, &entry)) {
+    Hash64BitType max_hash = Heap__get_max_hash(&me->pq);
+    while (Heap__remove(&me->pq, max_hash, &entry)) {
         // This is where one would remove the entry/time-stamp from the
         // hash table and tree.
         if (eviction_hook != NULL) {
@@ -72,7 +72,7 @@ make_room(struct FixedSizeShardsSampler *me,
     }
     // No more elements with the old max_hash. Now we can update the new
     //  sampling_ratio, threshold, and scale!
-    max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
+    max_hash = Heap__get_max_hash(&me->pq);
     // NOTE Converting UINT64_MAX from uint64_t to double causes the
     //      value to be rounded from 18446744073709551615 to
     //      18446744073709551616. By explicitly casting the UINT64_MAX
@@ -105,10 +105,10 @@ FixedSizeShardsSampler__insert(struct FixedSizeShardsSampler *me,
                                void (*eviction_hook)(void *data, EntryType key),
                                void *eviction_data)
 {
-    if (SplayPriorityQueue__is_full(&me->pq)) {
+    if (Heap__is_full(&me->pq)) {
         make_room(me, eviction_hook, eviction_data);
     }
-    if (!SplayPriorityQueue__insert_if_room(&me->pq, Hash64bit(entry), entry)) {
+    if (!Heap__insert_if_room(&me->pq, Hash64bit(entry), entry)) {
         return false;
     }
     return true;
@@ -117,5 +117,5 @@ FixedSizeShardsSampler__insert(struct FixedSizeShardsSampler *me,
 uint64_t
 FixedSizeShardsSampler__estimate_cardinality(struct FixedSizeShardsSampler *me)
 {
-    return me->pq.cardinality * me->scale;
+    return me->pq.length * me->scale;
 }

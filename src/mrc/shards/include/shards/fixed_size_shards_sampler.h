@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "priority_queue/splay_priority_queue.h"
+#include "priority_queue/heap.h"
 #include "types/entry_type.h"
 
 struct FixedSizeShardsSampler {
@@ -12,7 +12,7 @@ struct FixedSizeShardsSampler {
     uint64_t scale;
 
     // Fixed-Size SHARDS
-    struct SplayPriorityQueue pq;
+    struct Heap pq;
 
     // SHARDS Adjustment Parameters -- not supported yet!
     bool adjustment;
