@@ -18,27 +18,27 @@ struct EvictingMap {
 };
 
 bool
-BucketedShards__init(struct EvictingMap *me,
-                     const double init_sampling_ratio,
-                     const uint64_t num_hash_buckets,
-                     const uint64_t histogram_num_bins,
-                     const uint64_t histogram_bin_size);
+EvictingMap__init(struct EvictingMap *me,
+                  const double init_sampling_ratio,
+                  const uint64_t num_hash_buckets,
+                  const uint64_t histogram_num_bins,
+                  const uint64_t histogram_bin_size);
 
 void
-BucketedShards__access_item(struct EvictingMap *me, EntryType entry);
+EvictingMap__access_item(struct EvictingMap *me, EntryType entry);
 
 void
-BucketedShards__refresh_threshold(struct EvictingMap *me);
+EvictingMap__refresh_threshold(struct EvictingMap *me);
 
 bool
-BucketedShards__post_process(struct EvictingMap *me);
+EvictingMap__post_process(struct EvictingMap *me);
 
 bool
 EvictingMap__to_mrc(struct EvictingMap const *const me,
                     struct MissRateCurve *const mrc);
 
 void
-BucketedShards__print_histogram_as_json(struct EvictingMap *me);
+EvictingMap__print_histogram_as_json(struct EvictingMap *me);
 
 void
-BucketedShards__destroy(struct EvictingMap *me);
+EvictingMap__destroy(struct EvictingMap *me);

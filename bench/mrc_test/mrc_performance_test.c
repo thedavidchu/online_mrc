@@ -109,9 +109,9 @@ test_all(void)
     PERFORMANCE_TEST(
         struct EvictingMap,
         me,
-        BucketedShards__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
-        BucketedShards__access_item,
-        BucketedShards__destroy);
+        EvictingMap__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
+        EvictingMap__access_item,
+        EvictingMap__destroy);
 }
 
 static void
@@ -172,9 +172,9 @@ test_sampling(void)
     PERFORMANCE_TEST(
         struct EvictingMap,
         me,
-        BucketedShards__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
-        BucketedShards__access_item,
-        BucketedShards__destroy);
+        EvictingMap__init(&me, 1e-3, 1 << 13, hist_num_bins, hist_bin_size),
+        EvictingMap__access_item,
+        EvictingMap__destroy);
 #endif
 }
 
