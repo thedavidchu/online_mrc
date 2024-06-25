@@ -324,7 +324,11 @@ estimate_num_unique(struct EvictingHashTable const *const me)
         me->running_denominator,
         raw_estimate);
     uint64_t const num_empty = me->length - me->num_inserted;
-    if (raw_estimate < 2.5 * me->length && num_empty != 0) {
+    // NOTE Because of the initial SHARDS sampling we are performing, we
+    //      need to account for this when deciding whether to use
+    //      linear counting or the hyperloglog.
+    if (raw_estimate * me->init_sampling_ratio < 2.5 * me->length &&
+        num_empty != 0) {
         return linear_counting(me->length, num_empty) / me->init_sampling_ratio;
     } else {
         // NOTE We don't bother with the large number approximation
