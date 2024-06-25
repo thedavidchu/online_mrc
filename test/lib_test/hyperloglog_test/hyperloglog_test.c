@@ -19,7 +19,7 @@
 
 uint64_t const rng_seed = 42;
 size_t const artificial_trace_length = 1 << 20;
-double const init_sampling_rate = 1e0;
+double const init_sampling_rate = 1e-1;
 size_t const max_size = 1 << 13;
 
 static bool
