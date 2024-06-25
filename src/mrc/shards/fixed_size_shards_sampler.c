@@ -89,10 +89,10 @@ bool
 FixedSizeShardsSampler__sample(struct FixedSizeShardsSampler *me,
                                EntryType entry)
 {
+    ++me->num_entries_seen;
     // Skip items above the threshold. Note that we accept items that are equal
     // to the threshold because the maximum hash is the threshold.
     if (Hash64bit((uint64_t)entry) > me->threshold) {
-        ++me->num_entries_seen;
         return false;
     }
     ++me->num_entries_processed;
