@@ -32,7 +32,7 @@ static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
 static const size_t DEFAULT_HIST_NUM_BINS = 1 << 20;
-static const size_t DEFAULT_HIST_BIN_SIZE = 1 << 10;
+static const size_t DEFAULT_HIST_BIN_SIZE = 1;
 static char const *DEFAULT_HISTOGRAM_PATH = NULL;
 
 static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
