@@ -612,16 +612,16 @@ Histogram__euclidean_error(struct Histogram const *const lhs,
 {
     if (lhs == NULL || rhs == NULL) {
         LOGGER_WARN("passed invalid argument");
-        return -1.0;
+        return INFINITY;
     }
     if (!implies(lhs->num_bins != 0, lhs->histogram != NULL) ||
         !implies(rhs->num_bins != 0, rhs->histogram != NULL)) {
         LOGGER_ERROR("corrupted histogram");
-        return -1.0;
+        return INFINITY;
     }
     if (lhs->bin_size == 0 || rhs->bin_size == 0) {
         LOGGER_ERROR("bin_size == 0 in histogram");
-        return -1.0;
+        return INFINITY;
     }
     if (lhs->num_bins == 0 || rhs->num_bins == 0) {
         LOGGER_WARN("empty histogram array");

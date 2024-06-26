@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <float.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -426,15 +427,18 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
     }
     // Correctness assertions
     if (lhs->miss_rate == NULL && lhs->num_bins != 0) {
-        return -1.0;
+        return INFINITY;
     }
     if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
-        return -1.0;
+        return INFINITY;
     }
     if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
         lhs->bin_size != rhs->bin_size) {
-        LOGGER_ERROR("cannot compare MRCs with different bin sizes");
-        return -1.0;
+        LOGGER_ERROR(
+            "cannot compare MRCs with different bin sizes (%zu vs %zu)",
+            lhs->bin_size,
+            rhs->bin_size);
+        return INFINITY;
     }
 
     const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
@@ -465,15 +469,15 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
     }
     // Correctness assertions
     if (lhs->miss_rate == NULL && lhs->num_bins != 0) {
-        return -1.0;
+        return INFINITY;
     }
     if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
-        return -1.0;
+        return INFINITY;
     }
     if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
         lhs->bin_size != rhs->bin_size) {
         LOGGER_ERROR("cannot compare MRCs with different bin sizes");
-        return -1.0;
+        return INFINITY;
     }
 
     const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
