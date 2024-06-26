@@ -165,6 +165,7 @@ MissRateCurve__init_from_file(struct MissRateCurve *me,
                               const uint64_t num_bins,
                               const uint64_t bin_size)
 {
+    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
     if (me == NULL || file_name == NULL) {
         return false;
     }
@@ -222,6 +223,7 @@ MissRateCurve__init_from_sparse_file(struct MissRateCurve *me,
                                      const uint64_t num_bins,
                                      const uint64_t bin_size)
 {
+    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
     if (me == NULL || file_name == NULL) {
         return false;
     }
@@ -270,6 +272,7 @@ bool
 MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
                                     char const *restrict const file_name)
 {
+    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
     if (me == NULL || me->miss_rate == NULL) {
         return false;
     }
@@ -316,6 +319,7 @@ bool
 MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve const *const me,
                                            char const *restrict const file_name)
 {
+    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
     if (me == NULL || me->miss_rate == NULL || me->num_bins == 0) {
         return false;
     }

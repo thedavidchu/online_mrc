@@ -477,6 +477,7 @@ read_sparse_histogram(FILE *fp, struct Histogram *const me)
 bool
 Histogram__save_sparse(struct Histogram const *const me, char const *const path)
 {
+    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFORMATION!");
     if (me == NULL || me->histogram == NULL || me->num_bins == 0) {
         return false;
     }
