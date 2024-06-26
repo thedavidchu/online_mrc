@@ -31,7 +31,8 @@
 static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
-static const size_t DEFAULT_HIST_BIN_SIZE = 1;
+static const size_t DEFAULT_HIST_NUM_BINS = 1 << 20;
+static const size_t DEFAULT_HIST_BIN_SIZE = 1 << 10;
 static char const *DEFAULT_HISTOGRAM_PATH = NULL;
 
 static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
@@ -76,6 +77,7 @@ struct CommandLineArguments {
 
     char *oracle_path;
 
+    size_t hist_num_bins;
     size_t hist_bin_size;
     char *hist_output_path;
 };
@@ -151,6 +153,9 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "results. Default: %s.\n",
             DEFAULT_ORACLE_PATH ? DEFAULT_ORACLE_PATH : "(null)");
     fprintf(stream,
+            "    --hist-num-size, -l <num-bins>: the number of histogram bins. "
+            "Default: <CEIL(trace-length / bin-size)>.\n");
+    fprintf(stream,
             "    --hist-bin-size, -b <bin-size>: the histogram bin size. "
             "Default: %zu.\n",
             DEFAULT_HIST_BIN_SIZE);
@@ -211,19 +216,20 @@ parse_positive_double(char const *const str)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    fprintf(
-        stderr,
-        "CommandLineArguments(executable='%s', input_path='%s', "
-        "algorithm='%s', output_path='%s', shards_ratio='%g', "
-        "artifical_trace_length='%zu', oracle_path='%s', hist_bin_size=%zu)\n",
-        args->executable,
-        args->input_path,
-        algorithm_names[args->algorithm],
-        args->output_path,
-        args->shards_sampling_ratio,
-        args->artificial_trace_length,
-        args->oracle_path ? args->oracle_path : "(null)",
-        args->hist_bin_size);
+    fprintf(stderr,
+            "CommandLineArguments(executable='%s', input_path='%s', "
+            "algorithm='%s', output_path='%s', shards_ratio='%g', "
+            "artifical_trace_length='%zu', oracle_path='%s', "
+            "hist_num_bins=%zu, hist_bin_size=%zu)\n",
+            args->executable,
+            args->input_path,
+            algorithm_names[args->algorithm],
+            args->output_path,
+            args->shards_sampling_ratio,
+            args->artificial_trace_length,
+            args->oracle_path ? args->oracle_path : "(null)",
+            args->hist_num_bins,
+            args->hist_bin_size);
 }
 
 static void
@@ -262,6 +268,7 @@ parse_command_line_arguments(int argc, char **argv)
     // Set defaults
     args.shards_sampling_ratio = DEFAULT_SHARDS_SAMPLING_RATIO;
     args.artificial_trace_length = DEFAULT_ARTIFICIAL_TRACE_LENGTH;
+    args.hist_num_bins = DEFAULT_HIST_NUM_BINS;
     args.hist_bin_size = DEFAULT_HIST_BIN_SIZE;
 
     // Set parameters based on user arguments
@@ -337,6 +344,14 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.hist_bin_size = parse_positive_size(argv[i]);
+        } else if (matches_option(argv[i], "--hist-num-bins", "-l")) {
+            ++i;
+            if (i >= argc) {
+                LOGGER_ERROR("expecting number of histogram bins!");
+                print_help(stdout, &args);
+                exit(-1);
+            }
+            args.hist_num_bins = parse_positive_size(argv[i]);
         } else if (matches_option(argv[i], "--histogram", "--histogram")) {
             ++i;
             if (i >= argc) {
@@ -444,7 +459,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  me,
                                  args,
                                  Olken__init(&me,
-                                             trace->length,
+                                             args.hist_num_bins,
                                              args.hist_bin_size),
                                  Olken__access_item,
                                  Olken__post_process,
@@ -460,7 +475,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     args,
     FixedRateShards__init(&me,
                           args.shards_sampling_ratio,
-                          trace->length,
+                          args.hist_num_bins,
                           args.hist_bin_size,
                           false),
     FixedRateShards__access_item,
@@ -477,7 +492,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     args,
     FixedRateShards__init(&me,
                           args.shards_sampling_ratio,
-                          trace->length,
+                          args.hist_num_bins,
                           args.hist_bin_size,
                           true),
     FixedRateShards__access_item,
@@ -495,7 +510,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedSizeShards__init(&me,
                           args.shards_sampling_ratio,
                           1 << 13,
-                          trace->length,
+                          args.hist_num_bins,
                           args.hist_bin_size),
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
@@ -512,7 +527,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                                 args.shards_sampling_ratio,
                                                 1024,
                                                 1 << 8,
-                                                trace->length,
+                                                args.hist_num_bins,
                                                 args.hist_bin_size),
                                  QuickMRC__access_item,
                                  QuickMRC__post_process,
@@ -547,7 +562,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_evicting_map,
                                  EvictingMap__init(&me,
                                                    args.shards_sampling_ratio,
                                                    1 << 13,
-                                                   trace->length,
+                                                   args.hist_num_bins,
                                                    args.hist_bin_size),
                                  EvictingMap__access_item,
                                  EvictingMap__post_process,
@@ -561,7 +576,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  me,
                                  args,
                                  AverageEvictionTime__init(&me,
-                                                           trace->length,
+                                                           args.hist_num_bins,
                                                            args.hist_bin_size,
                                                            trace->length / 100),
                                  AverageEvictionTime__access_item,
@@ -571,18 +586,20 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(
-    run_their_average_eviction_time,
-    struct AverageEvictionTime,
-    me,
-    args,
-    AverageEvictionTime__init(&me, trace->length, args.hist_bin_size, false),
-    AverageEvictionTime__access_item,
-    AverageEvictionTime__post_process,
-    &me.histogram,
-    Histogram__save_sparse,
-    AverageEvictionTime__their_to_mrc,
-    AverageEvictionTime__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
+                                 struct AverageEvictionTime,
+                                 me,
+                                 args,
+                                 AverageEvictionTime__init(&me,
+                                                           args.hist_num_bins,
+                                                           args.hist_bin_size,
+                                                           false),
+                                 AverageEvictionTime__access_item,
+                                 AverageEvictionTime__post_process,
+                                 &me.histogram,
+                                 Histogram__save_sparse,
+                                 AverageEvictionTime__their_to_mrc,
+                                 AverageEvictionTime__destroy)
 
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
