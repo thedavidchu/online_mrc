@@ -33,7 +33,7 @@ test_heap_priority_queue(void)
     g_assert_false(Heap__insert_if_room(&pq, (Hash64BitType)10, (EntryType)10));
 
     // Get maximum
-    Hash64BitType hash = Heap__get_max_hash(&pq);
+    Hash64BitType hash = Heap__get_max_key(&pq);
     g_assert_cmpuint(hash, ==, 9);
 
     // Remove maximum
@@ -48,13 +48,13 @@ test_heap_priority_queue(void)
     g_assert_false(Heap__is_full(&pq));
     g_assert_true(Heap__insert_if_room(&pq, hash, entry));
     EntryType entry_0, entry_1;
-    hash = Heap__get_max_hash(&pq);
+    hash = Heap__get_max_key(&pq);
     g_assert_cmpuint(hash, ==, 8);
     g_assert_true(Heap__remove(&pq, hash, &entry_0));
-    hash = Heap__get_max_hash(&pq);
+    hash = Heap__get_max_key(&pq);
     g_assert_cmpuint(hash, ==, 8);
     g_assert_true(Heap__remove(&pq, hash, &entry_1));
-    hash = Heap__get_max_hash(&pq);
+    hash = Heap__get_max_key(&pq);
     g_assert_cmpuint(hash, ==, 7);
     g_assert_true((entry_0 == 8 && entry_1 == 9) ||
                   (entry_0 == 9 && entry_1 == 8));
@@ -62,13 +62,13 @@ test_heap_priority_queue(void)
     for (uint64_t i = 0; i < 7; ++i) {
         Hash64BitType expected_max_hash = 7 - i;
         g_assert_false(Heap__is_full(&pq));
-        hash = Heap__get_max_hash(&pq);
+        hash = Heap__get_max_key(&pq);
         g_assert_cmpuint(hash, ==, expected_max_hash);
         // Remove
         g_assert_true(Heap__remove(&pq, expected_max_hash, &entry));
         g_assert_cmpuint(entry, ==, (EntryType)expected_max_hash);
         // Try another removal that should fail
-        hash = Heap__get_max_hash(&pq);
+        hash = Heap__get_max_key(&pq);
         g_assert_cmpuint(hash, ==, expected_max_hash - 1);
         g_assert_false(Heap__remove(&pq, expected_max_hash, &entry));
     }

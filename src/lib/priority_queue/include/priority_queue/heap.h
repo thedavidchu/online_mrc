@@ -1,3 +1,7 @@
+/** @brief  This file implements a maximum-priority-heap, whereby the
+ *          element with the maximum key (i.e. priority) is stored at
+ *          the top of the heap.
+ */
 #pragma once
 
 #include <stdbool.h>
@@ -5,12 +9,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "hash/types.h"
-#include "types/entry_type.h"
+#include "types/key_type.h"
+#include "types/value_type.h"
 
 struct HeapItem {
-    Hash64BitType priority;
-    EntryType entry;
+    KeyType key;
+    ValueType value;
 };
 
 /// @brief  A binary heap with the maximum priority as the root.
@@ -34,14 +38,14 @@ Heap__is_full(struct Heap const *const me);
 
 bool
 Heap__insert_if_room(struct Heap *const me,
-                     const Hash64BitType hash,
-                     const EntryType entry);
+                     const KeyType hash,
+                     const ValueType entry);
 
-Hash64BitType
-Heap__get_max_hash(struct Heap *me);
+KeyType
+Heap__get_max_key(struct Heap *me);
 
 bool
-Heap__remove(struct Heap *me, Hash64BitType largest_hash, EntryType *entry);
+Heap__remove(struct Heap *me, KeyType largest_key, ValueType *value_return);
 
 void
 Heap__destroy(struct Heap *me);

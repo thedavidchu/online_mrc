@@ -62,7 +62,7 @@ make_room(struct FixedSizeShardsSampler *me,
     if (me == NULL) {
         return;
     }
-    Hash64BitType max_hash = Heap__get_max_hash(&me->pq);
+    Hash64BitType max_hash = Heap__get_max_key(&me->pq);
     while (Heap__remove(&me->pq, max_hash, &entry)) {
         // This is where one would remove the entry/time-stamp from the
         // hash table and tree.
@@ -72,7 +72,7 @@ make_room(struct FixedSizeShardsSampler *me,
     }
     // No more elements with the old max_hash. Now we can update the new
     //  sampling_ratio, threshold, and scale!
-    max_hash = Heap__get_max_hash(&me->pq);
+    max_hash = Heap__get_max_key(&me->pq);
     // NOTE Converting UINT64_MAX from uint64_t to double causes the
     //      value to be rounded from 18446744073709551615 to
     //      18446744073709551616. By explicitly casting the UINT64_MAX
