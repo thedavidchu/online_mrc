@@ -6,6 +6,7 @@ file_lib = library(
     include_directories: file_inc,
     dependencies: [
         common_dep,
+        glib_dep,
     ],
 )
 
