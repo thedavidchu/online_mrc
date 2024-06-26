@@ -18,6 +18,11 @@ struct Histogram {
     /// We have not seen this before
     uint64_t infinity;
     uint64_t running_sum;
+
+    // When we get a finite element larger than the current maximum,
+    // double the range of our histogram by merging neighbouring buckets
+    // until we can fit the element!
+    bool allow_merging;
 };
 
 bool

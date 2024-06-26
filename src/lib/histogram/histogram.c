@@ -15,13 +15,16 @@
 #include "io/io.h"
 #include "logger/logger.h"
 
+static bool const ALLOW_MERGING = true;
+
 static bool
 init_histogram(struct Histogram *const me,
                uint64_t const num_bins,
                uint64_t const bin_size,
                uint64_t const false_infinity,
                uint64_t const infinity,
-               uint64_t const running_sum)
+               uint64_t const running_sum,
+               bool const allow_merging)
 {
     assert(me != NULL);
 
@@ -35,6 +38,7 @@ init_histogram(struct Histogram *const me,
     me->false_infinity = false_infinity;
     me->infinity = infinity;
     me->running_sum = running_sum;
+    me->allow_merging = allow_merging;
 
     return true;
 }
@@ -47,11 +51,41 @@ Histogram__init(struct Histogram *me,
     if (me == NULL || num_bins == 0) {
         return false;
     }
-    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0)) {
+    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0, ALLOW_MERGING)) {
         LOGGER_ERROR("failed to init histogram");
         return false;
     }
     return true;
+}
+
+/// @brief  Double the size of each buckets to increase the histogram
+///         range.
+/// @note   I stole the logic from Ashvin's QuickMRC histogram
+///         implementation.
+static void
+double_bin_size(struct Histogram *const me)
+{
+    assert(me);
+    for (size_t i = 0; i < me->num_bins; i += 2) {
+        me->histogram[i / 2] = me->histogram[i] + me->histogram[i + 1];
+    }
+    // NOTE This could be done more efficiently with a 'memset' but I am
+    //      officially lazy (i.e. smart) and just copied Ashvin's
+    //      implementation from his QuickMRC repo.
+    for (size_t i = me->num_bins / 2; i < me->num_bins; ++i) {
+        me->histogram[i] = 0;
+    }
+    me->bin_size = 2 * me->bin_size;
+}
+
+static bool
+fits_in_histogram(struct Histogram const *const me,
+                  uint64_t const index,
+                  uint64_t const horizontal_scale)
+{
+    assert(me);
+    uint64_t const scaled_index = horizontal_scale * index;
+    return scaled_index < me->num_bins * me->bin_size;
 }
 
 bool
@@ -60,9 +94,18 @@ Histogram__insert_finite(struct Histogram *me, const uint64_t index)
     if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
+
+    // Optionally expand the range of the histogram. I admittedly did a
+    // small micro-optimization of sticking the 'me->allow_merging' at
+    // the front because this variable has less entropy (i.e. changes
+    // less) so the branch predictor should benefit from having this
+    // first.
+    while (me->allow_merging && !fits_in_histogram(me, index, 1)) {
+        double_bin_size(me);
+    }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
-    if (index < me->num_bins * me->bin_size) {
+    if (fits_in_histogram(me, index, 1)) {
         ++me->histogram[index / me->bin_size];
         ++me->running_sum;
     } else {
@@ -77,13 +120,21 @@ Histogram__insert_scaled_finite(struct Histogram *me,
                                 const uint64_t index,
                                 const uint64_t scale)
 {
-    const uint64_t scaled_index = scale * index;
     if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
+    // Optionally expand the range of the histogram. I admittedly did a
+    // small micro-optimization of sticking the 'me->allow_merging' at
+    // the front because this variable has less entropy (i.e. changes
+    // less) so the branch predictor should benefit from having this
+    // first.
+    while (me->allow_merging && !fits_in_histogram(me, index, scale)) {
+        double_bin_size(me);
+    }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
-    if (scaled_index < me->num_bins * me->bin_size) {
+    if (fits_in_histogram(me, index, scale)) {
+        uint64_t const scaled_index = scale * index;
         me->histogram[scaled_index / me->bin_size] += scale;
         me->running_sum += scale;
     } else {
