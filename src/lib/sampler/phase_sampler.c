@@ -65,7 +65,7 @@ create_temporary_file_path(size_t const id)
     //      the function 'g_string_new_take'.
     gchar *cwd = g_get_current_dir();
     GString *tmp_name = g_string_new(NULL);
-    g_string_append_printf(tmp_name, ".tmp-histogram-%zu.bin", id);
+    g_string_append_printf(tmp_name, "./.tmp-histogram-%zu.bin", id);
     gchar *path = g_build_path("/", cwd, tmp_name->str, NULL);
 
     free(cwd);

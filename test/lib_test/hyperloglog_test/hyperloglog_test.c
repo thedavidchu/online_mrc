@@ -98,7 +98,7 @@ test_hyperloglog_accuracy_on_trace(char const *const trace_path,
     struct Trace trace = read_trace(trace_path, trace_format);
     assert(trace.trace != NULL && trace.length != 0);
 
-    test_hyperloglog_accuracy("trace_hyperloglog_cardinalities.bin",
+    test_hyperloglog_accuracy("./trace_hyperloglog_cardinalities.bin",
                               (uint64_t(*)(void *))next_trace_item,
                               &trace);
 
@@ -113,7 +113,7 @@ test_hyperloglog_accuracy_on_uniform(void)
 
     g_assert_true(UniformRandom__init(&urng, rng_seed));
 
-    test_hyperloglog_accuracy("uniform_hyperloglog_cardinalities.bin",
+    test_hyperloglog_accuracy("./uniform_hyperloglog_cardinalities.bin",
                               (uint64_t(*)(void *))UniformRandom__next_uint64,
                               &urng);
 
@@ -128,7 +128,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
 
     g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, rng_seed));
 
-    test_hyperloglog_accuracy("zipfian_hyperloglog_cardinalities.bin",
+    test_hyperloglog_accuracy("./zipfian_hyperloglog_cardinalities.bin",
                               (uint64_t(*)(void *))ZipfianRandom__next,
                               &zrng);
 

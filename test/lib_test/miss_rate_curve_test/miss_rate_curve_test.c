@@ -78,25 +78,26 @@ test_miss_rate_curve_from_histogram(struct Histogram *hist)
     g_assert_true(MissRateCurve__validate(&mrc));
 
     // Test the serialization/deserialization
-    g_assert_true(MissRateCurve__write_binary_to_file(&mrc, "mrc.bin"));
+    g_assert_true(MissRateCurve__write_binary_to_file(&mrc, "./mrc.bin"));
     g_assert_true(MissRateCurve__init_from_file(&mrc_from_file,
-                                                "mrc.bin",
+                                                "./mrc.bin",
                                                 mrc.num_bins,
                                                 1));
     g_assert_true(MissRateCurve__validate(&mrc_from_file));
     g_assert_true(exact_match(&mrc, &mrc_from_file));
     MissRateCurve__destroy(&mrc_from_file);
-    g_assert_cmpint(remove("mrc.bin"), ==, 0);
+    g_assert_cmpint(remove("./mrc.bin"), ==, 0);
 
     // Test the serialization/deserialization with sparsity
-    g_assert_true(MissRateCurve__write_sparse_binary_to_file(&mrc, "mrc.bin"));
+    g_assert_true(
+        MissRateCurve__write_sparse_binary_to_file(&mrc, "./mrc.bin"));
     g_assert_true(MissRateCurve__init_from_sparse_file(&mrc_from_file,
-                                                       "mrc.bin",
+                                                       "./mrc.bin",
                                                        mrc.num_bins,
                                                        1));
     g_assert_true(MissRateCurve__validate(&mrc_from_file));
     g_assert_true(exact_match(&mrc, &mrc_from_file));
-    g_assert_cmpint(remove("mrc.bin"), ==, 0);
+    g_assert_cmpint(remove("./mrc.bin"), ==, 0);
 
     // Test the MSE function
     g_assert_true(MissRateCurve__mean_squared_error(&mrc, &mrc_from_file) ==
