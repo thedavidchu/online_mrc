@@ -15,9 +15,9 @@
 #include <glib.h>
 
 #include "arrays/array_size.h"
+#include "file/file.h"
 #include "interval/interval_olken.h"
 #include "invariants/implies.h"
-#include "io/io.h"
 #include "logger/logger.h"
 #include "shards/fixed_rate_shards_sampler.h"
 #include "trace/reader.h"

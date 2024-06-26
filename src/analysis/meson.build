@@ -7,7 +7,7 @@ interval_olken_lib = library(
     dependencies: [
         basic_tree_dep,
         common_dep,
-        io_dep,
+        file_dep,
         lookup_dep,
         sleator_tree_dep,
         trace_dep,
@@ -32,7 +32,7 @@ analyzer_exe = executable(
         common_dep,
         glib_dep,
         interval_olken_dep,
-        io_dep,
+        file_dep,
         shards_dep,
         trace_dep,
     ],

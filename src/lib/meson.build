@@ -1,4 +1,5 @@
 subdir('common_headers')
+subdir('file')
 subdir('hash')
 subdir('lookup')
 subdir('hyperloglog')
