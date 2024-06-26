@@ -31,7 +31,10 @@ Olken__init(struct Olken *me,
     if (!r) {
         goto hash_table_error;
     }
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
+    r = Histogram__init(&me->histogram,
+                        histogram_num_bins,
+                        histogram_bin_size,
+                        false);
     if (!r) {
         goto histogram_error;
     }

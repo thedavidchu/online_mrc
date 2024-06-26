@@ -42,7 +42,10 @@ QuickMRC__init(struct QuickMRC *me,
         HashTable__destroy(&me->hash_table);
         return false;
     }
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
+    r = Histogram__init(&me->histogram,
+                        histogram_num_bins,
+                        histogram_bin_size,
+                        false);
     if (!r) {
         HashTable__destroy(&me->hash_table);
         QuickMRCBuckets__destroy(&me->buckets);

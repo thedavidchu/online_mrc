@@ -40,7 +40,7 @@ BucketedQuickMRC__init(struct BucketedQuickMRC *me,
         EvictingHashTable__destroy(&me->hash_table);
         return false;
     }
-    r = Histogram__init(&me->histogram, histogram_length, 1);
+    r = Histogram__init(&me->histogram, histogram_length, 1, false);
     if (!r) {
         EvictingHashTable__destroy(&me->hash_table);
         QuickMRCBuckets__destroy(&me->buckets);

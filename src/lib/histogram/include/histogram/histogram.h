@@ -28,7 +28,8 @@ struct Histogram {
 bool
 Histogram__init(struct Histogram *me,
                 const uint64_t num_bins,
-                const uint64_t bin_size);
+                const uint64_t bin_size,
+                bool const allow_merging);
 
 bool
 Histogram__insert_finite(struct Histogram *me, const uint64_t index);

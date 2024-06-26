@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include <glib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "histogram/fractional_histogram.h"
@@ -39,7 +40,7 @@ test_histogram(void)
 {
     struct Histogram hist = {0};
 
-    bool r = Histogram__init(&hist, 10, 1);
+    bool r = Histogram__init(&hist, 10, 1, false);
     if (!r) {
         return false;
     }
@@ -106,7 +107,7 @@ static bool
 test_binned_histogram(void)
 {
     struct Histogram hist = {0};
-    g_assert_true(Histogram__init(&hist, 10, 2));
+    g_assert_true(Histogram__init(&hist, 10, 2, false));
 
     for (uint64_t i = 0; i < 100; ++i) {
         g_assert_true(
@@ -194,6 +195,9 @@ test_histogram_save(void)
     g_assert_true(r);
     r = Histogram__init_from_file(&b, "histogram_test.bin");
     g_assert_true(r);
+
+    // Cleanup files!
+    g_assert_cmpint(remove("histogram_test.bin"), ==, 0);
 
     g_assert_cmpuint(a.num_bins, ==, b.num_bins);
     g_assert_cmpuint(a.bin_size, ==, b.bin_size);

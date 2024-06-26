@@ -36,7 +36,10 @@ EvictingMap__init(struct EvictingMap *me,
                                 init_sampling_ratio);
     if (!r)
         goto hash_table_error;
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
+    r = Histogram__init(&me->histogram,
+                        histogram_num_bins,
+                        histogram_bin_size,
+                        false);
     if (!r)
         goto histogram_error;
     me->current_time_stamp = 0;

@@ -15,8 +15,6 @@
 #include "io/io.h"
 #include "logger/logger.h"
 
-static bool const ALLOW_MERGING = true;
-
 static bool
 init_histogram(struct Histogram *const me,
                uint64_t const num_bins,
@@ -46,12 +44,13 @@ init_histogram(struct Histogram *const me,
 bool
 Histogram__init(struct Histogram *me,
                 const uint64_t num_bins,
-                const uint64_t bin_size)
+                const uint64_t bin_size,
+                bool const allow_merging)
 {
     if (me == NULL || num_bins == 0) {
         return false;
     }
-    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0, ALLOW_MERGING)) {
+    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0, allow_merging)) {
         LOGGER_ERROR("failed to init histogram");
         return false;
     }
@@ -551,7 +550,8 @@ Histogram__init_from_file(struct Histogram *const me, char const *const path)
                         me->bin_size,
                         me->false_infinity,
                         me->infinity,
-                        me->running_sum)) {
+                        me->running_sum,
+                        false)) {
         LOGGER_ERROR("init failed");
         goto cleanup;
     }
