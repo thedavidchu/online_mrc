@@ -1,24 +1,20 @@
 #pragma once
-#include <glib.h>
+#include <stdbool.h>
 #include <stdint.h>
 
-#include "hash/types.h"
+#include <glib.h>
+
 #include "histogram/histogram.h"
 #include "miss_rate_curve/miss_rate_curve.h"
-#include "priority_queue/splay_priority_queue.h"
-#include "tree/types.h"
+#include "olken/olken.h"
+#include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
 struct FixedSizeShards {
-    struct Tree tree;
-    GHashTable *hash_table;
-    struct Histogram histogram;
-    struct SplayPriorityQueue pq;
-    TimeStampType current_time_stamp;
-    Hash64BitType threshold;
-    uint64_t scale;
+    struct Olken olken;
+    struct FixedSizeShardsSampler sampler;
 };
 
 /// @brief  Initialize the fixed-size SHARDS data structure.
@@ -32,7 +28,7 @@ FixedSizeShards__init(struct FixedSizeShards *me,
                       const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size);
 
-void
+bool
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);
 
 void

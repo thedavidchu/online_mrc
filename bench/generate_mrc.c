@@ -499,7 +499,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
                           args.hist_bin_size),
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
-    &me.histogram,
+    &me.olken.histogram,
     Histogram__save_sparse,
     FixedSizeShards__to_mrc,
     FixedSizeShards__destroy)

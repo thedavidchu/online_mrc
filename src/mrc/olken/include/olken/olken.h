@@ -29,6 +29,17 @@ bool
 Olken__access_item(struct Olken *me, EntryType entry);
 
 bool
+Olken__remove_item(struct Olken *me, EntryType entry);
+
+/// @return Return the stack distance of an existing item or uint64::MAX
+///         upon an error.
+uint64_t
+Olken__update_stack(struct Olken *me, EntryType entry, TimeStampType timestamp);
+
+bool
+Olken__insert_stack(struct Olken *me, EntryType entry);
+
+bool
 Olken__post_process(struct Olken *me);
 
 bool
