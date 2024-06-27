@@ -52,7 +52,7 @@ test_hyperloglog_accuracy(char const *const fpath,
         size_t ht_size = g_hash_table_size(ht.hash_table);
         // NOTE It's just math that this is the cardinality estimate.
         size_t eht_size =
-            EvictingHashTable__estimate_scale_factor(&eht) * eht.length;
+            EvictingHashTable__estimate_scale_factor(&eht) * eht.num_inserted;
         size_t fs_size = FixedSizeShardsSampler__estimate_cardinality(&fs);
         estimates[3 * i + 0] = ht_size;
         estimates[3 * i + 1] = eht_size;
