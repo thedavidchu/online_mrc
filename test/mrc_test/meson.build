@@ -21,7 +21,7 @@ fixed_size_shards_test_exe = executable(
         hash_dep,
         miss_rate_curve_dep,
         glib_dep,
-        fixed_size_shards_dep,
+        shards_dep,
         olken_dep,
         zipfian_random_dep,
     ],
@@ -86,7 +86,7 @@ fixed_rate_shards_test_exe = executable(
     dependencies: [
         glib_dep,
         parda_fixed_rate_shards_dep,
-        fixed_rate_shards_dep,
+        shards_dep,
         hash_dep,
         histogram_dep,
         miss_rate_curve_dep,
@@ -104,7 +104,7 @@ bucketed_shards_test_exe = executable(
     dependencies: [
         glib_dep,
         evicting_map_dep,
-        fixed_rate_shards_dep,
+        shards_dep,
         hash_dep,
         histogram_dep,
         miss_rate_curve_dep,

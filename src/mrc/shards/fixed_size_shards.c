@@ -7,53 +7,15 @@
 #include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
+#include "lookup/hash_table.h"
+#include "lookup/lookup.h"
 #include "math/positive_ceiling_divide.h"
 #include "miss_rate_curve/miss_rate_curve.h"
-#include "tree/basic_tree.h"
-#include "tree/sleator_tree.h"
+#include "olken/olken.h"
+#include "shards/fixed_size_shards.h"
+#include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
-
-#include "shards/fixed_size_shards.h"
-
-static gboolean
-entry_compare(gconstpointer a, gconstpointer b)
-{
-    return (a == b) ? TRUE : FALSE;
-}
-
-static void
-make_room(struct FixedSizeShards *me)
-{
-    bool r = false;
-    gboolean found = FALSE;
-    EntryType entry = 0;
-    TimeStampType time_stamp = 0;
-
-    if (me == NULL || me->hash_table == NULL) {
-        return;
-    }
-    Hash64BitType max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
-    while (true) {
-        r = SplayPriorityQueue__remove(&me->pq, max_hash, &entry);
-        if (!r) { // No more elements with the old max_hash
-            // Update the new threshold and scale
-            max_hash = SplayPriorityQueue__get_max_hash(&me->pq);
-            me->threshold = max_hash;
-            me->scale = UINT64_MAX / max_hash;
-            break;
-        }
-        // Remove the entry/time-stamp from the hash table and tree
-        found = g_hash_table_lookup_extended(me->hash_table,
-                                             (gconstpointer)entry,
-                                             NULL,
-                                             (gpointer *)&time_stamp);
-        assert(found == TRUE && "hash table should contain the entry");
-        r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
-        assert(r && "remove should not fail");
-        g_hash_table_remove(me->hash_table, (gconstpointer)entry);
-    }
-}
 
 bool
 FixedSizeShards__init(struct FixedSizeShards *me,
@@ -62,104 +24,74 @@ FixedSizeShards__init(struct FixedSizeShards *me,
                       const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size)
 {
-    bool r = false;
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
         1.0 < starting_sampling_ratio || max_size == 0) {
         LOGGER_WARN("bad input");
         return false;
     }
 
-    r = tree__init(&me->tree);
-    if (!r) {
-        LOGGER_WARN("failed to initialize tree");
+    if (!Olken__init(&me->olken, histogram_num_bins, histogram_bin_size)) {
+        LOGGER_WARN("failed to initialize Olken");
+        goto cleanup;
+    }
+    if (!FixedSizeShardsSampler__init(&me->sampler,
+                                      starting_sampling_ratio,
+                                      max_size,
+                                      false)) {
+        LOGGER_WARN("failed to initialize fixed-size SHARDS sampler");
         goto cleanup;
     }
 
-    me->hash_table = g_hash_table_new(g_direct_hash, entry_compare);
-    if (me->hash_table == NULL) {
-        LOGGER_WARN("failed to initialize hash table");
-        goto cleanup;
-    }
-
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
-    if (!r) {
-        LOGGER_WARN("failed to initialize histogram");
-        goto cleanup;
-    }
-
-    r = SplayPriorityQueue__init(&me->pq, max_size);
-    if (!r) {
-        LOGGER_WARN("failed to initialize priority queue");
-        goto cleanup;
-    }
-    me->current_time_stamp = 0;
-    me->scale = 1 / starting_sampling_ratio;
-    // HACK We cast this to a `long double` because otherwise, the
-    //      compiler does: ((double)UINT64_MAX), which rounds it up too
-    //      high. This then causes the value to wrap around when we try
-    //      to cast it back to a uint64_t.
-    //
-    // TODO(dchu)   Check other cases where we multiply UINT64_MAX by a
-    //              double to make sure there can't be overflow.
-    me->threshold = (long double)UINT64_MAX * starting_sampling_ratio;
     return true;
 
 cleanup:
-    tree__destroy(&me->tree);
-    if (me->hash_table != NULL) {
-        g_hash_table_destroy(me->hash_table);
-    }
-    Histogram__destroy(&me->histogram);
+    Olken__destroy(&me->olken);
+    FixedSizeShardsSampler__destroy(&me->sampler);
     return false;
 }
 
-void
+static void
+evict_item(void *eviction_data, EntryType entry)
+{
+    Olken__remove_item(eviction_data, entry);
+}
+
+bool
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 {
-    bool r = false;
-    gboolean found = FALSE;
-    TimeStampType time_stamp = 0;
-
     // NOTE I use the nullness of the hash table as a proxy for whether this
     //      data structure has been initialized.
-    if (me == NULL || me->hash_table == NULL) {
-        return;
+    if (me == NULL) {
+        return false;
     }
 
-    // Skip items above the threshold. Note that we accept items that are equal
-    // to the threshold because the maximum hash is the threshold.
-    if (Hash64bit((uint64_t)entry) > me->threshold) {
-        return;
+    if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
+        return false;
     }
 
-    found = g_hash_table_lookup_extended(me->hash_table,
-                                         (gconstpointer)entry,
-                                         NULL,
-                                         (gpointer *)&time_stamp);
-    if (found == TRUE) {
-        uint64_t distance = tree__reverse_rank(&me->tree, (KeyType)time_stamp);
-        r = tree__sleator_remove(&me->tree, (KeyType)time_stamp);
-        assert(r && "remove should not fail");
-        r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        g_hash_table_replace(me->hash_table,
-                             (gpointer)entry,
-                             (gpointer)me->current_time_stamp);
-        ++me->current_time_stamp;
-        Histogram__insert_scaled_finite(&me->histogram, distance, me->scale);
-    } else {
-        if (SplayPriorityQueue__is_full(&me->pq)) {
-            make_room(me);
+    struct LookupReturn r = HashTable__lookup(&me->olken.hash_table, entry);
+    if (r.success) {
+        uint64_t distance = Olken__update_stack(&me->olken, entry, r.timestamp);
+        if (distance == UINT64_MAX) {
+            return false;
         }
-        SplayPriorityQueue__insert_if_room(&me->pq,
-                                           Hash64bit((uint64_t)entry),
-                                           entry);
-        g_hash_table_insert(me->hash_table,
-                            (gpointer)entry,
-                            (gpointer)me->current_time_stamp);
-        tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        ++me->current_time_stamp;
-        Histogram__insert_scaled_infinite(&me->histogram, me->scale);
+        Histogram__insert_scaled_finite(&me->olken.histogram,
+                                        distance,
+                                        me->sampler.scale);
+    } else {
+        if (!FixedSizeShardsSampler__insert(&me->sampler,
+                                            entry,
+                                            evict_item,
+                                            &me->olken)) {
+            return false;
+        }
+        if (!Olken__insert_stack(&me->olken, entry)) {
+            return false;
+        }
+        Histogram__insert_scaled_infinite(&me->olken.histogram,
+                                          me->sampler.scale);
     }
+    return true;
 }
 
 void
@@ -172,7 +104,7 @@ bool
 FixedSizeShards__to_mrc(struct FixedSizeShards const *const me,
                         struct MissRateCurve *const mrc)
 {
-    return MissRateCurve__init_from_histogram(mrc, &me->histogram);
+    return Olken__to_mrc(&me->olken, mrc);
 }
 
 void
@@ -184,15 +116,13 @@ FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me)
         Histogram__print_as_json(NULL);
         return;
     }
-    Histogram__print_as_json(&me->histogram);
+    Histogram__print_as_json(&me->olken.histogram);
 }
 
 void
 FixedSizeShards__destroy(struct FixedSizeShards *me)
 {
-    tree__destroy(&me->tree);
-    g_hash_table_destroy(me->hash_table);
-    Histogram__destroy(&me->histogram);
-    SplayPriorityQueue__destroy(&me->pq);
+    Olken__destroy(&me->olken);
+    FixedSizeShardsSampler__destroy(&me->sampler);
     *me = (struct FixedSizeShards){0};
 }

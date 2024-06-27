@@ -39,7 +39,8 @@ access_same_key_five_times(void)
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
-    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(
+        Histogram__exactly_equal(&me.olken.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }
@@ -79,7 +80,8 @@ small_exact_trace_test(void)
     }
     FixedSizeShards__print_histogram_as_json(&me);
     Histogram__print_as_json(&histogram_oracle);
-    g_assert_true(Histogram__exactly_equal(&me.histogram, &histogram_oracle));
+    g_assert_true(
+        Histogram__exactly_equal(&me.olken.histogram, &histogram_oracle));
     FixedSizeShards__destroy(&me);
     return true;
 }
@@ -107,7 +109,7 @@ long_accuracy_trace_test(void)
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
-    MissRateCurve__init_from_histogram(&mrc, &me.histogram);
+    MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
     g_assert_cmpfloat(mse, <=, 0.005);

@@ -111,6 +111,10 @@ EvictingHashTable__put_unique(struct EvictingHashTable *me,
     Hash64BitType hash = HASH_FUNCTION(key);
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
 
+    ++me->num_inserted;
+    if (me->num_inserted == me->length) {
+        EvictingHashTable__refresh_threshold(me);
+    }
     // HACK Note that the hash value of UINT64_MAX is reserved to mark
     //      the bucket as "invalid" (i.e. no valid element has been inserted).
     if (incumbent->hash == UINT64_MAX) {
@@ -294,19 +298,50 @@ EvictingHashTable__print_as_json(struct EvictingHashTable *me)
     printf("]}\n");
 }
 
-double
-EvictingHashTable__estimate_num_unique(struct EvictingHashTable *me)
+/// @param  m: uint64_t const
+///             Number of HLL counters.
+/// @param  V: uint64_t const
+///             Number of registers equal to zero. We cannot get an
+///             accurate estimate of the linear count if this V is zero.
+static double
+linear_counting(uint64_t const m, uint64_t const V)
+{
+    assert(m >= 1 && V >= 1);
+    return m * log((double)m / V);
+}
+
+static inline double
+estimate_num_unique(struct EvictingHashTable const *const me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
-    double estimate =
+    double const raw_estimate =
         me->hll_alpha_m * me->length * me->length / me->running_denominator;
-    LOGGER_VERBOSE("\\alpha: %f, length: %zu, denominator: %f, estimate: %f",
-                   me->hll_alpha_m,
-                   me->length,
-                   me->running_denominator,
-                   estimate);
-    return estimate;
+    LOGGER_VERBOSE(
+        "\\alpha: %f, length: %zu, denominator: %f, raw estimate: %f",
+        me->hll_alpha_m,
+        me->length,
+        me->running_denominator,
+        raw_estimate);
+    uint64_t const num_empty = me->length - me->num_inserted;
+    // NOTE Because of the initial SHARDS sampling we are performing, we
+    //      need to account for this when deciding whether to use
+    //      linear counting or the hyperloglog.
+    if (raw_estimate * me->init_sampling_ratio < 2.5 * me->length &&
+        num_empty != 0) {
+        return linear_counting(me->length, num_empty) / me->init_sampling_ratio;
+    } else {
+        // NOTE We don't bother with the large number approximation
+        //      since I'm using 64 bit hashes.
+        return raw_estimate;
+    }
+}
+
+double
+EvictingHashTable__estimate_scale_factor(
+    struct EvictingHashTable const *const me)
+{
+    return estimate_num_unique(me) / me->length;
 }
 
 void

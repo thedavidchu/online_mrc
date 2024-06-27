@@ -12,6 +12,8 @@
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "tree/types.h"
+#include "types/entry_type.h"
+#include "types/time_stamp_type.h"
 
 bool
 Olken__init(struct Olken *me,
@@ -29,7 +31,10 @@ Olken__init(struct Olken *me,
     if (!r) {
         goto hash_table_error;
     }
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
+    r = Histogram__init(&me->histogram,
+                        histogram_num_bins,
+                        histogram_bin_size,
+                        false);
     if (!r) {
         goto histogram_error;
     }
@@ -45,6 +50,56 @@ tree_error:
 }
 
 bool
+Olken__remove_item(struct Olken *me, EntryType entry)
+{
+    struct LookupReturn r = HashTable__remove(&me->hash_table, entry);
+    if (!r.success) {
+        return false;
+    }
+    return tree__sleator_remove(&me->tree, r.timestamp);
+}
+
+/// @return Return the stack distance of an existing item or uint64::MAX
+///         upon an error.
+uint64_t
+Olken__update_stack(struct Olken *me, EntryType entry, TimeStampType timestamp)
+{
+    if (me == NULL) {
+        return UINT64_MAX;
+    }
+    uint64_t distance = tree__reverse_rank(&me->tree, timestamp);
+    if (!tree__sleator_remove(&me->tree, timestamp)) {
+        return UINT64_MAX;
+    }
+    if (!tree__sleator_insert(&me->tree, me->current_time_stamp)) {
+        return UINT64_MAX;
+    }
+    if (HashTable__put_unique(&me->hash_table, entry, me->current_time_stamp) !=
+        LOOKUP_PUTUNIQUE_REPLACE_VALUE) {
+        return UINT64_MAX;
+    }
+    ++me->current_time_stamp;
+    return distance;
+}
+
+bool
+Olken__insert_stack(struct Olken *me, EntryType entry)
+{
+    if (me == NULL) {
+        return false;
+    }
+    if (HashTable__put_unique(&me->hash_table, entry, me->current_time_stamp) !=
+        LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
+        return false;
+    }
+    if (!tree__sleator_insert(&me->tree, me->current_time_stamp)) {
+        return false;
+    }
+    ++me->current_time_stamp;
+    return true;
+}
+
+bool
 Olken__access_item(struct Olken *me, EntryType entry)
 {
     if (me == NULL) {
@@ -53,29 +108,16 @@ Olken__access_item(struct Olken *me, EntryType entry)
 
     struct LookupReturn found = HashTable__lookup(&me->hash_table, entry);
     if (found.success) {
-        bool r = false;
-        uint64_t distance =
-            tree__reverse_rank(&me->tree, (KeyType)found.timestamp);
-        r = tree__sleator_remove(&me->tree, (KeyType)found.timestamp);
-        assert(r && "remove should not fail");
-        r = tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        assert(r && "insert should not fail");
-        enum PutUniqueStatus s = HashTable__put_unique(&me->hash_table,
-                                                       entry,
-                                                       me->current_time_stamp);
-        assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
-               "update should replace value");
-        ++me->current_time_stamp;
+        uint64_t distance = Olken__update_stack(me, entry, found.timestamp);
+        if (distance == UINT64_MAX) {
+            return false;
+        }
         // TODO(dchu): Maybe record the infinite distances for Parda!
         Histogram__insert_finite(&me->histogram, distance);
     } else {
-        enum PutUniqueStatus s = HashTable__put_unique(&me->hash_table,
-                                                       entry,
-                                                       me->current_time_stamp);
-        assert(s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
-               "update should insert key/value");
-        tree__sleator_insert(&me->tree, (KeyType)me->current_time_stamp);
-        ++me->current_time_stamp;
+        if (!Olken__insert_stack(me, entry)) {
+            return false;
+        }
         Histogram__insert_infinite(&me->histogram);
     }
 
@@ -99,8 +141,9 @@ void
 Olken__print_histogram_as_json(struct Olken *me)
 {
     if (me == NULL) {
-        // Just pass on the NULL value and let the histogram deal with it. Maybe
-        // this isn't very smart and will confuse future-me? Oh well!
+        // Just pass on the NULL value and let the histogram deal
+        // with it. Maybe this isn't very smart and will confuse
+        // future-me? Oh well!
         Histogram__print_as_json(NULL);
         return;
     }

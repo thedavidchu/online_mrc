@@ -9,6 +9,7 @@
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "types/entry_type.h"
+#include "types/time_stamp_type.h"
 
 static inline bool
 gboolean_to_bool(const gboolean b)
@@ -66,6 +67,21 @@ HashTable__put_unique(struct HashTable *me, EntryType key, TimeStampType value)
         g_hash_table_insert(me->hash_table, (gpointer)key, (gpointer)value);
     return r ? LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE
              : LOOKUP_PUTUNIQUE_REPLACE_VALUE;
+}
+
+struct LookupReturn
+HashTable__remove(struct HashTable *const me, EntryType const key)
+{
+    if (me == NULL || me->hash_table == NULL)
+        return (struct LookupReturn){.success = false, .timestamp = 0};
+
+    gpointer stolen_value = NULL;
+    gboolean r = g_hash_table_steal_extended(me->hash_table,
+                                             (gconstpointer)key,
+                                             NULL,
+                                             &stolen_value);
+    return (struct LookupReturn){.success = gboolean_to_bool(r),
+                                 .timestamp = (TimeStampType)stolen_value};
 }
 
 static void

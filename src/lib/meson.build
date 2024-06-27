@@ -1,6 +1,8 @@
 subdir('common_headers')
+subdir('file')
 subdir('hash')
 subdir('lookup')
+subdir('hyperloglog')
 subdir('io')
 subdir('priority_queue')
 subdir('random')

@@ -30,7 +30,10 @@ AverageEvictionTime__init(struct AverageEvictionTime *const me,
         LOGGER_ERROR("failed to init hash table");
         goto cleanup;
     }
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
+    r = Histogram__init(&me->histogram,
+                        histogram_num_bins,
+                        histogram_bin_size,
+                        false);
     if (!r) {
         LOGGER_ERROR("failed to init histogram");
         goto cleanup;

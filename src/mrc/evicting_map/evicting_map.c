@@ -20,11 +20,11 @@
 #include "evicting_map/evicting_map.h"
 
 bool
-BucketedShards__init(struct EvictingMap *me,
-                     const double init_sampling_ratio,
-                     const uint64_t num_hash_buckets,
-                     const uint64_t histogram_num_bins,
-                     const uint64_t histogram_bin_size)
+EvictingMap__init(struct EvictingMap *me,
+                  const double init_sampling_ratio,
+                  const uint64_t num_hash_buckets,
+                  const uint64_t histogram_num_bins,
+                  const uint64_t histogram_bin_size)
 {
     if (me == NULL)
         return false;
@@ -36,7 +36,10 @@ BucketedShards__init(struct EvictingMap *me,
                                 init_sampling_ratio);
     if (!r)
         goto hash_table_error;
-    r = Histogram__init(&me->histogram, histogram_num_bins, histogram_bin_size);
+    r = Histogram__init(&me->histogram,
+                        histogram_num_bins,
+                        histogram_bin_size,
+                        false);
     if (!r)
         goto histogram_error;
     me->current_time_stamp = 0;
@@ -59,8 +62,7 @@ handle_inserted(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table) /
-        me->hash_table.length;
+        EvictingHashTable__estimate_scale_factor(&me->hash_table);
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -78,8 +80,7 @@ handle_replaced(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table) /
-        me->hash_table.length;
+        EvictingHashTable__estimate_scale_factor(&me->hash_table);
     bool r = false;
     MAYBE_UNUSED(r);
 
@@ -100,8 +101,7 @@ handle_updated(struct EvictingMap *me,
     assert(me != NULL);
 
     const uint64_t scale =
-        EvictingHashTable__estimate_num_unique(&me->hash_table) /
-        me->hash_table.length;
+        EvictingHashTable__estimate_scale_factor(&me->hash_table);
     bool r = false;
     uint64_t distance = 0;
     MAYBE_UNUSED(r);
@@ -119,7 +119,7 @@ handle_updated(struct EvictingMap *me,
 }
 
 void
-BucketedShards__access_item(struct EvictingMap *me, EntryType entry)
+EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
 {
     if (me == NULL)
         return;
@@ -147,7 +147,7 @@ BucketedShards__access_item(struct EvictingMap *me, EntryType entry)
 }
 
 void
-BucketedShards__refresh_threshold(struct EvictingMap *me)
+EvictingMap__refresh_threshold(struct EvictingMap *me)
 {
     if (me == NULL)
         return;
@@ -155,7 +155,7 @@ BucketedShards__refresh_threshold(struct EvictingMap *me)
 }
 
 bool
-BucketedShards__post_process(struct EvictingMap *me)
+EvictingMap__post_process(struct EvictingMap *me)
 {
     UNUSED(me);
     return true;
@@ -168,7 +168,7 @@ EvictingMap__to_mrc(struct EvictingMap const *const me,
     return MissRateCurve__init_from_histogram(mrc, &me->histogram);
 }
 void
-BucketedShards__print_histogram_as_json(struct EvictingMap *me)
+EvictingMap__print_histogram_as_json(struct EvictingMap *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -180,7 +180,7 @@ BucketedShards__print_histogram_as_json(struct EvictingMap *me)
 }
 
 void
-BucketedShards__destroy(struct EvictingMap *me)
+EvictingMap__destroy(struct EvictingMap *me)
 {
     if (me == NULL) {
         return;

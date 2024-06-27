@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -10,6 +11,20 @@
 #include "invariants/implies.h"
 #include "logger/logger.h"
 #include "priority_queue/heap.h"
+// NOTE I realized that I can actually sort-of mimic generics by using a
+//      generic 'KeyType' and use the build system to connect me to
+//      different 'KeyTypes'. This sounds like a convoluted mess that
+//      will bite me in the future, but until then, YAY!
+#include "types/key_type.h"
+
+/// @brief  Returns if lhs is greater than rhs.
+/// @note   I define a greater-than function so that it is easy to
+///         refactor this into a min-heap.
+static inline bool
+gt(KeyType const lhs, KeyType const rhs)
+{
+    return lhs > rhs;
+}
 
 static inline size_t
 get_right_child(size_t const i)
@@ -30,13 +45,13 @@ get_parent(size_t const i)
 }
 
 /// @brief  Get the priority of an index or return the default value.
-static inline Hash64BitType
+static inline KeyType
 get_priority_or(struct Heap const *const me,
                 size_t const idx,
-                Hash64BitType const otherwise)
+                KeyType const otherwise)
 {
     assert(me && me->data);
-    return idx < me->length ? me->data[idx].priority : otherwise;
+    return idx < me->length ? me->data[idx].key : otherwise;
 }
 
 static inline void
@@ -54,7 +69,7 @@ sift_up(struct Heap *const me, size_t const idx)
     assert(me);
     if (idx == 0)
         return;
-    if (me->data[idx].priority <= me->data[get_parent(idx)].priority)
+    if (me->data[idx].key <= me->data[get_parent(idx)].key)
         return;
     swap(me, idx, get_parent(idx));
     sift_up(me, get_parent(idx));
@@ -69,20 +84,23 @@ sift_down(struct Heap *const me, size_t const idx)
     assert(me);
     if (idx >= me->length - 1)
         return;
-    Hash64BitType my_priority = get_priority_or(me, idx, 0);
+    KeyType my_priority = get_priority_or(me, idx, 0);
     // We may either have: 2 children, a left child, or no children.
     size_t const left_child = get_left_child(idx);
     size_t const right_child = get_right_child(idx);
-    Hash64BitType left_child_priority = get_priority_or(me, left_child, 0);
-    Hash64BitType right_child_priority = get_priority_or(me, right_child, 0);
+    KeyType left_child_priority = get_priority_or(me, left_child, 0);
+    KeyType right_child_priority = get_priority_or(me, right_child, 0);
 
-    if (left_child_priority >= right_child_priority) {
-        if (left_child_priority > my_priority) {
+    // NOTE I bias toward searching the right size (if they are equal)
+    //      simply because I want to use the 'gt()' function in the
+    //      simplist way possible.
+    if (gt(left_child_priority, right_child_priority)) {
+        if (gt(left_child_priority, my_priority)) {
             swap(me, idx, left_child);
             sift_down(me, left_child);
         }
     } else {
-        if (right_child_priority > my_priority) {
+        if (gt(right_child_priority, my_priority)) {
             swap(me, idx, right_child);
             sift_down(me, right_child);
         }
@@ -98,12 +116,11 @@ validate_max_heap_property(struct Heap const *const me)
 
     bool ok = true;
     for (size_t i = 0; i < me->length; ++i) {
-        Hash64BitType my_priority = get_priority_or(me, i, 0);
-        Hash64BitType left_priority = get_priority_or(me, get_left_child(i), 0);
-        Hash64BitType right_priority =
-            get_priority_or(me, get_right_child(i), 0);
+        KeyType my_priority = get_priority_or(me, i, 0);
+        KeyType left_priority = get_priority_or(me, get_left_child(i), 0);
+        KeyType right_priority = get_priority_or(me, get_right_child(i), 0);
 
-        if (my_priority < left_priority) {
+        if (!gt(my_priority, left_priority)) {
             LOGGER_ERROR(
                 "at position %zu, my priority (%" PRIu64
                 ") must be greater than left child's priority (%" PRIu64 ")",
@@ -112,7 +129,7 @@ validate_max_heap_property(struct Heap const *const me)
                 left_priority);
             ok = false;
         }
-        if (my_priority < right_priority) {
+        if (!gt(my_priority, right_priority)) {
             LOGGER_ERROR(
                 "at position %zu, my priority (%" PRIu64
                 ") must be greater than right child's priority (%" PRIu64 ")",
@@ -165,9 +182,9 @@ write_heap_item(FILE *stream, struct HeapItem item)
 {
     assert(stream != NULL);
     fprintf(stream,
-            "{\".priority\": %" PRIu64 ", \".entry\": %" PRIu64 "}",
-            item.priority,
-            item.entry);
+            "{\".key\": %" PRIu64 ", \".value\": %" PRIu64 "}",
+            item.key,
+            item.value);
 }
 
 bool
@@ -233,8 +250,8 @@ Heap__is_full(struct Heap const *const me)
 
 bool
 Heap__insert_if_room(struct Heap *const me,
-                     const Hash64BitType hash,
-                     const EntryType entry)
+                     const KeyType key,
+                     const ValueType value)
 {
     if (me == NULL || Heap__is_full(me)) {
         return false;
@@ -243,32 +260,32 @@ Heap__insert_if_room(struct Heap *const me,
     size_t target = me->length;
     ++(me->length);
 
-    me->data[target] = (struct HeapItem){.priority = hash, .entry = entry};
+    me->data[target] = (struct HeapItem){.key = key, .value = value};
     sift_up(me, target);
     return true;
 }
 
-Hash64BitType
-Heap__get_max_hash(struct Heap *me)
+KeyType
+Heap__get_max_key(struct Heap *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0) {
         assert(validate_metadata(me));
         return 0;
     }
 
-    return me->data[0].priority;
+    return me->data[0].key;
 }
 
 bool
-Heap__remove(struct Heap *me, Hash64BitType largest_hash, EntryType *entry)
+Heap__remove(struct Heap *me, KeyType largest_key, ValueType *value_return)
 {
     if (me == NULL || me->length == 0) {
         return false;
     }
 
-    if (me->data[0].priority != largest_hash)
+    if (me->data[0].key != largest_key)
         return false;
-    *entry = me->data[0].entry;
+    *value_return = me->data[0].value;
     size_t const last = me->length - 1;
     me->data[0] = me->data[last];
     --(me->length);

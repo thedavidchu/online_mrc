@@ -24,11 +24,11 @@ access_same_key_five_times(void)
 
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
-    g_assert_true(BucketedShards__init(&me, 1.0, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
+    g_assert_true(EvictingMap__init(&me, 1.0, MAX_NUM_UNIQUE_ENTRIES, 1, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
-        BucketedShards__access_item(&me, entry);
+        EvictingMap__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
@@ -38,7 +38,7 @@ access_same_key_five_times(void)
     g_assert_cmpfloat(mse, <=, 0.07);
 
     Olken__destroy(&oracle);
-    BucketedShards__destroy(&me);
+    EvictingMap__destroy(&me);
     return true;
 }
 
@@ -61,12 +61,12 @@ small_exact_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     // I deliberately underestimate it (it should be 11).
     g_assert_true(Olken__init(&oracle, 10, 1));
-    g_assert_true(BucketedShards__init(&me, 1.0, 1024, 10, 1));
+    g_assert_true(EvictingMap__init(&me, 1.0, 1024, 10, 1));
 
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         uint64_t entry = entries[i];
         Olken__access_item(&oracle, entry);
-        BucketedShards__access_item(&me, entry);
+        EvictingMap__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
@@ -76,7 +76,7 @@ small_exact_trace_test(void)
     g_assert_cmpfloat(mse, <=, 0.17);
 
     Olken__destroy(&oracle);
-    BucketedShards__destroy(&me);
+    EvictingMap__destroy(&me);
     return true;
 }
 
@@ -94,12 +94,12 @@ long_accuracy_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(Olken__init(&oracle, MAX_NUM_UNIQUE_ENTRIES, 1));
     g_assert_true(
-        BucketedShards__init(&me, 1.0, 1 << 12, MAX_NUM_UNIQUE_ENTRIES, 1));
+        EvictingMap__init(&me, 1.0, 1 << 12, MAX_NUM_UNIQUE_ENTRIES, 1));
 
     for (uint64_t i = 0; i < TRACE_LENGTH; ++i) {
         uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
-        BucketedShards__access_item(&me, entry);
+        EvictingMap__access_item(&me, entry);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);
@@ -110,7 +110,7 @@ long_accuracy_trace_test(void)
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
-    BucketedShards__destroy(&me);
+    EvictingMap__destroy(&me);
     return true;
 }
 
