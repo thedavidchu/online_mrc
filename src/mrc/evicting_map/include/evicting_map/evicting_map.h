@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "histogram/histogram.h"
@@ -15,6 +16,13 @@ struct EvictingMap {
     struct EvictingHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
+
+    // These statistics are for analysis
+    size_t num_entries_seen;
+    size_t num_entries_processed;
+    size_t num_inserts;
+    size_t num_replaces;
+    size_t num_updates;
 };
 
 bool
