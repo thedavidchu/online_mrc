@@ -43,6 +43,14 @@ EvictingMap__init(struct EvictingMap *me,
     if (!r)
         goto histogram_error;
     me->current_time_stamp = 0;
+
+    // NOTE These are for analysis
+    me->num_entries_seen = 0;
+    me->num_entries_processed = 0;
+    me->num_inserts = 0;
+    me->num_replaces = 0;
+    me->num_updates = 0;
+
     return true;
 
 histogram_error:
@@ -128,17 +136,24 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
 
+    ++me->num_entries_seen;
     switch (r.status) {
     case SAMPLED_IGNORED:
         /* Do no work -- this is like SHARDS */
         break;
     case SAMPLED_INSERTED:
+        ++me->num_entries_processed;
+        ++me->num_inserts;
         handle_inserted(me, r, timestamp);
         break;
     case SAMPLED_REPLACED:
+        ++me->num_entries_processed;
+        ++me->num_replaces;
         handle_replaced(me, r, timestamp);
         break;
     case SAMPLED_UPDATED:
+        ++me->num_entries_processed;
+        ++me->num_updates;
         handle_updated(me, r, timestamp);
         break;
     default:
