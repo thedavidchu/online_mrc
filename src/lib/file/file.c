@@ -59,18 +59,23 @@ file_exists(char const *const file_name)
 }
 
 char *
-get_absolute_path(char const *const relative_path)
+get_absolute_path(char const *const path)
 {
-    if (!relative_path || strcmp(relative_path, "")) {
+    if (!path || strcmp(path, "") == 0) {
         return NULL;
     }
 
-    switch (relative_path[0]) {
+    switch (path[0]) {
     // NOTE We promise that the caller must free the return value, so we
     //      duplicate the string so that it can be freed by the caller.
-    case '/':
+    case '/': {
         // NOTE The 'strdup' function is not necessarily in standard C.
-        return strdup(relative_path);
+        char *abs_path = strdup(path);
+        if (!abs_path) {
+            LOGGER_ERROR("error duplicating '%s'", path);
+        }
+        return abs_path;
+    }
     case '~': {
         // NOTE I was going to use 'wordexp()' to evaluate the relative
         //      path, but I decided that it is vulnerable to code
@@ -78,21 +83,25 @@ get_absolute_path(char const *const relative_path)
         //      (especially not future-David) from using this vulnerable
         //      code!!!
         gchar const *home = g_get_home_dir();
-        gchar *path = g_build_path("/", home, &relative_path[1], NULL);
-        return path;
+        char const *non_tilde_path = strlen(path) == 1 ? "" : &path[2];
+        gchar *abs_path = g_canonicalize_filename(non_tilde_path, home);
+        return abs_path;
     }
     // NOTE This is the case for both './...' and '../...' paths. I will
     //      not support paths that don't start with './', '../', '~/',
     //      or '/' for now.
     case '.': {
         gchar *cwd = g_get_current_dir();
-        gchar *path = g_build_path("/", cwd, relative_path, NULL);
+        gchar *abs_path = g_canonicalize_filename(path, cwd);
         free(cwd);
-        return path;
+        return abs_path;
     }
     default:
-        LOGGER_ERROR("paths must start with './', '../', '~/', or '/'. "
-                     "This option is deprecated!");
+        LOGGER_ERROR(
+            "paths must start with './', '../', '~/', or '/'. "
+            "This option is deprecated! Your path '%s' starts with '%c'",
+            path,
+            path[0]);
         return NULL;
     }
 }

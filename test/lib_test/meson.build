@@ -1,3 +1,4 @@
+subdir('file_test')
 subdir('hash_test')
 subdir('histogram_test')
 subdir('hyperloglog_test')
