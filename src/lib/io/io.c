@@ -79,7 +79,7 @@ MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me)
 bool
 MemoryMap__destroy(struct MemoryMap *me)
 {
-    if (me == NULL || me->fd == -1) {
+    if (me == NULL || me->fp == NULL) {
         return false;
     }
     // NOTE I close the fp versus the fd because otherwise there is a
