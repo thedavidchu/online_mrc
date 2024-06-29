@@ -341,7 +341,7 @@ double
 EvictingHashTable__estimate_scale_factor(
     struct EvictingHashTable const *const me)
 {
-    return estimate_num_unique(me) / me->length;
+    return estimate_num_unique(me) / me->num_inserted;
 }
 
 void
