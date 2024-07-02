@@ -65,7 +65,9 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
                  length,
                  fname);
-    write_buffer(fname, me.stats, length, sizeof(*me.stats));
+    if (!IntervalOlken__write_results(&me, fname)) {
+        LOGGER_ERROR("failed to write results to '%s'", fname);
+    }
     LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
     FixedRateShardsSampler__destroy(&sampler);
