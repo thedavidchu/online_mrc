@@ -1,3 +1,7 @@
+/** @brief  Test the cardinalities of the hyperloglogs.
+ *  @note   Yes, I know the way I clean up the files in the end is a
+ *          complete hack.
+ */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,16 +16,62 @@
 #include "lookup/lookup.h"
 #include "random/uniform_random.h"
 #include "random/zipfian_random.h"
-#include "shards/fixed_rate_shards_sampler.h"
 #include "shards/fixed_size_shards_sampler.h"
 #include "test/mytester.h"
 #include "trace/reader.h"
 
-uint64_t const rng_seed = 42;
-size_t const artificial_trace_length = 1 << 20;
-double const init_sampling_rate = 1e0;
-size_t const max_size = 1 << 13;
+static uint64_t rng_seed = 42;
+static size_t artificial_trace_length = 1 << 20;
+static double init_sampling_rate = 1e0;
+static size_t max_size = 1 << 13;
 
+static bool run_zipfian = false;
+static bool run_uniform = false;
+static char *trace_path = NULL;
+// When cleanup is enable, we delete all the files we generate from this
+// test.
+static bool cleanup = false;
+
+static char const *const TRACE_OUTPUT_PATH =
+    "./trace_hyperloglog_cardinalities.bin";
+static char const *const UNIFORM_OUTPUT_PATH =
+    "./uniform_hyperloglog_cardinalities.bin";
+static char const *const ZIPFIAN_OUTPUT_PATH =
+    "./zipfian_hyperloglog_cardinalities.bin";
+
+static GOptionEntry entries[] = {
+    {"zipfian",
+     'z',
+     0,
+     G_OPTION_ARG_NONE,
+     &run_zipfian,
+     "Run the test case with a Zipfian random trace",
+     NULL},
+    {"uniform",
+     'u',
+     0,
+     G_OPTION_ARG_NONE,
+     &run_uniform,
+     "Run the test case with a Uniform random trace",
+     NULL},
+    {"trace",
+     't',
+     0,
+     G_OPTION_ARG_FILENAME,
+     &trace_path,
+     "Path to the input trace",
+     NULL},
+    {"cleanup",
+     0,
+     0,
+     G_OPTION_ARG_NONE,
+     &cleanup,
+     "Cleanup the output files",
+     NULL},
+    G_OPTION_ENTRY_NULL,
+};
+
+/// @brief  Test the cardinality estimation of various techniques.
 static bool
 test_hyperloglog_accuracy(char const *const fpath,
                           uint64_t (*f_next)(void *),
@@ -59,18 +109,20 @@ test_hyperloglog_accuracy(char const *const fpath,
         estimates[3 * i + 2] = fs_size;
     }
 
-    FILE *fp = fopen(fpath, "wb");
-    assert(fp);
-    if (fwrite(estimates,
-               3 * sizeof(*estimates),
-               artificial_trace_length,
-               fp) != artificial_trace_length) {
-        LOGGER_ERROR("incorrect number of elements written");
-        return false;
-    }
-    if (fclose(fp) != 0) {
-        LOGGER_ERROR("couldn't close");
-        return false;
+    if (fpath != NULL) {
+        FILE *fp = fopen(fpath, "wb");
+        assert(fp);
+        if (fwrite(estimates,
+                   3 * sizeof(*estimates),
+                   artificial_trace_length,
+                   fp) != artificial_trace_length) {
+            LOGGER_ERROR("incorrect number of elements written");
+            return false;
+        }
+        if (fclose(fp) != 0) {
+            LOGGER_ERROR("couldn't close");
+            return false;
+        }
     }
     free(estimates);
 
@@ -99,7 +151,7 @@ test_hyperloglog_accuracy_on_trace(char const *const trace_path,
     struct Trace trace = read_trace(trace_path, trace_format);
     assert(trace.trace != NULL && trace.length != 0);
 
-    test_hyperloglog_accuracy("./trace_hyperloglog_cardinalities.bin",
+    test_hyperloglog_accuracy(TRACE_OUTPUT_PATH,
                               (uint64_t(*)(void *))next_trace_item,
                               &trace);
 
@@ -114,7 +166,7 @@ test_hyperloglog_accuracy_on_uniform(void)
 
     g_assert_true(UniformRandom__init(&urng, rng_seed));
 
-    test_hyperloglog_accuracy("./uniform_hyperloglog_cardinalities.bin",
+    test_hyperloglog_accuracy(UNIFORM_OUTPUT_PATH,
                               (uint64_t(*)(void *))UniformRandom__next_uint64,
                               &urng);
 
@@ -129,7 +181,7 @@ test_hyperloglog_accuracy_on_zipfian(void)
 
     g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, rng_seed));
 
-    test_hyperloglog_accuracy("./zipfian_hyperloglog_cardinalities.bin",
+    test_hyperloglog_accuracy(ZIPFIAN_OUTPUT_PATH,
                               (uint64_t(*)(void *))ZipfianRandom__next,
                               &zrng);
 
@@ -140,13 +192,34 @@ test_hyperloglog_accuracy_on_zipfian(void)
 int
 main(int argc, char *argv[])
 {
-    g_assert_true(argc == 1 || argc == 2);
-    if (argc == 2) {
-        char const *const trace_path = argv[1];
+    GError *error = NULL;
+    GOptionContext *context;
+    context = g_option_context_new("- test cardinality estimates");
+    g_option_context_add_main_entries(context, entries, NULL);
+    if (!g_option_context_parse(context, &argc, &argv, &error)) {
+        g_print("option parsing failed: %s\n", error->message);
+        exit(1);
+    }
+
+    if (trace_path != NULL) {
         ASSERT_FUNCTION_RETURNS_TRUE(
             test_hyperloglog_accuracy_on_trace(trace_path, TRACE_FORMAT_KIA));
+        if (cleanup && remove(TRACE_OUTPUT_PATH) != 0) {
+            LOGGER_ERROR("failed to remove '%s'", TRACE_OUTPUT_PATH);
+        }
     }
-    ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_uniform());
-    ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_zipfian());
+    if (run_uniform) {
+        ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_uniform());
+        if (cleanup && remove(UNIFORM_OUTPUT_PATH) != 0) {
+            LOGGER_ERROR("failed to remove '%s'", UNIFORM_OUTPUT_PATH);
+        }
+    }
+    if (run_zipfian) {
+        ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_zipfian());
+        if (cleanup && remove(ZIPFIAN_OUTPUT_PATH) != 0) {
+            LOGGER_ERROR("failed to remove '%s'", ZIPFIAN_OUTPUT_PATH);
+        }
+    }
+
     return 0;
 }

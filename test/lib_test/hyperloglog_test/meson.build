@@ -15,4 +15,8 @@ hyperloglog_test_exe = executable(
     ],
 )
 
-test('hyperloglog_test', hyperloglog_test_exe, args: [test_trace])
+test(
+    'hyperloglog_test',
+    hyperloglog_test_exe,
+    args: ['-t', test_trace, '-u', '-z', '--cleanup'],
+)
