@@ -1,5 +1,3 @@
-#pragma once
-
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -7,7 +5,10 @@
 #include <stdlib.h>
 
 #include "file/file.h"
+#include "histogram/histogram.h"
 #include "interval/interval_statistics.h"
+#include "invariants/implies.h"
+#include "logger/logger.h"
 
 bool
 IntervalStatistics__init(struct IntervalStatistics *const me,
@@ -83,4 +84,33 @@ IntervalStatistics__destroy(struct IntervalStatistics *const me)
     }
     free(me->stats);
     *me = (struct IntervalStatistics){0};
+}
+
+bool
+IntervalStatistics__to_histogram(struct IntervalStatistics const *const me,
+                                 struct Histogram *const hist,
+                                 uint64_t const num_bins,
+                                 uint64_t const bin_size)
+{
+    if (me == NULL || hist == NULL) {
+        return false;
+    }
+    if (!implies(me->length != 0, me->stats != NULL)) {
+        LOGGER_ERROR("inconsistent state");
+        return false;
+    }
+
+    if (!Histogram__init(hist, num_bins, bin_size, false)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < me->length; ++i) {
+        uint64_t reuse_dist = me->stats[i].reuse_distance;
+        if (reuse_dist == UINT64_MAX) {
+            Histogram__insert_infinite(hist);
+        } else {
+            Histogram__insert_finite(hist, reuse_dist);
+        }
+    }
+    return true;
 }

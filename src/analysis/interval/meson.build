@@ -5,6 +5,7 @@ interval_statistics_lib = library(
     'interval_statistics.c',
     include_directories: interval_inc,
     dependencies: [
+        histogram_dep,
         file_dep,
     ],
 )
@@ -27,7 +28,23 @@ interval_dep = declare_dependency(
         interval_statistics_lib,
     ],
     include_directories: interval_inc,
-    dependencies: [],
+    dependencies: [
+        histogram_dep,
+    ],
+)
+
+interval_test_exe = executable(
+    'interval_test_exe',
+    'interval_test.c',
+    include_directories: interval_inc,
+    dependencies: [
+        common_dep,
+        glib_dep,
+        interval_dep,
+        file_dep,
+        shards_dep,
+        trace_dep,
+    ],
 )
 
 interval_analyzer_exe = executable(
@@ -43,6 +60,8 @@ interval_analyzer_exe = executable(
         trace_dep,
     ],
 )
+
+test('interval_test', interval_test_exe, args: [test_trace])
 
 test(
     'interval_analyzer_test',
