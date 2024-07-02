@@ -14,15 +14,12 @@
 
 #include <glib.h>
 
-#include "arrays/array_size.h"
-#include "file/file.h"
 #include "interval/interval_olken.h"
 #include "invariants/implies.h"
 #include "logger/logger.h"
 #include "shards/fixed_rate_shards_sampler.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
-#include "unused/mark_unused.h"
 
 #define IS_MAIN_FILE 1
 

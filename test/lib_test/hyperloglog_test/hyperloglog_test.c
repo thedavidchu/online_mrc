@@ -20,10 +20,10 @@
 #include "test/mytester.h"
 #include "trace/reader.h"
 
-static uint64_t rng_seed = 42;
-static size_t artificial_trace_length = 1 << 20;
-static double init_sampling_rate = 1e0;
-static size_t max_size = 1 << 13;
+static uint64_t const rng_seed = 42;
+static size_t const artificial_trace_length = 1 << 20;
+static double const init_sampling_rate = 1e0;
+static size_t const max_size = 1 << 13;
 
 static bool run_zipfian = false;
 static bool run_uniform = false;
