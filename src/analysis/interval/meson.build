@@ -66,5 +66,5 @@ test('interval_test', interval_test_exe, args: [test_trace])
 test(
     'interval_analyzer_test',
     interval_analyzer_exe,
-    args: ['-i', test_trace, '-o', 'output.bin', '-f', 'Kia'],
+    args: ['-i', test_trace, '-o', 'output.bin', '-f', 'Kia', '--cleanup'],
 )

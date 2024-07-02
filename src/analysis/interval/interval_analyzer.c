@@ -32,6 +32,7 @@ static gchar *output_path = NULL;
 static gchar *input_format = "Kia";
 // NOTE By setting this to 1.0, we effectively shut off SHARDS.
 static gdouble shards_sampling_rate = 1e0;
+static gboolean cleanup = false;
 #endif
 
 /// @brief  Create record of reuse distances and times.
@@ -67,6 +68,9 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
                  fname);
     if (!IntervalOlken__write_results(&me, fname)) {
         LOGGER_ERROR("failed to write results to '%s'", fname);
+    }
+    if (cleanup && remove(fname) != 0) {
+        LOGGER_ERROR("failed to remove '%s'", fname);
     }
     LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
@@ -104,6 +108,13 @@ static GOptionEntry entries[] = {
      &shards_sampling_rate,
      "SHARDS sampling rate. Default: 1.0. [UNUSED]",
      "<rate>"},
+    {"cleanup",
+     0,
+     0,
+     G_OPTION_ARG_NONE,
+     &cleanup,
+     "cleanup the generated files",
+     NULL},
     G_OPTION_ENTRY_NULL,
 };
 
