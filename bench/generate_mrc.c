@@ -31,9 +31,11 @@
 static const size_t DEFAULT_ARTIFICIAL_TRACE_LENGTH = 1 << 20;
 static const double DEFAULT_SHARDS_SAMPLING_RATIO = 1e-3;
 static char *DEFAULT_ORACLE_PATH = NULL;
+static char *DEFAULT_OUTPUT_PATH = "mrc.bin";
 static const size_t DEFAULT_HIST_NUM_BINS = 1 << 20;
 static const size_t DEFAULT_HIST_BIN_SIZE = 1;
 static char const *DEFAULT_HISTOGRAM_PATH = NULL;
+static bool const DEFAULT_CLEANUP_MODE = false;
 
 static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
 
@@ -80,6 +82,8 @@ struct CommandLineArguments {
     size_t hist_num_bins;
     size_t hist_bin_size;
     char *hist_output_path;
+
+    bool cleanup;
 };
 
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
@@ -138,7 +142,8 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
     fprintf(stream, "\n");
     fprintf(stream,
             "    --output, -o <output-path>: path to the output file ('~/...' "
-            "may not work)\n");
+            "may not work). Default: '%s'\n",
+            DEFAULT_OUTPUT_PATH);
     fprintf(stream,
             "    --sampling-ratio, -s <ratio in (0.0, 1.0]>: ratio of for "
             "SHARDS (must pick a SHARDS algorithm). Default: %g.\n",
@@ -164,6 +169,9 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
         "    --histogram <histogram-output-path>: path to save the histogram. "
         "Default: %s.\n",
         DEFAULT_HISTOGRAM_PATH ? DEFAULT_ORACLE_PATH : "(null)");
+    fprintf(stream,
+            "    --cleanup: cleanup all generated files. Default: %s.\n",
+            bool_to_string(DEFAULT_CLEANUP_MODE));
     fprintf(stream,
             "N.B. '~/path/to/file' paths are not guaranteed to work. Use "
             "relative (e.g. '../path/to/file' or './path/to/file') or absolute "
@@ -220,7 +228,7 @@ print_command_line_arguments(struct CommandLineArguments const *args)
             "CommandLineArguments(executable='%s', input_path='%s', "
             "algorithm='%s', output_path='%s', shards_ratio='%g', "
             "artifical_trace_length='%zu', oracle_path='%s', "
-            "hist_num_bins=%zu, hist_bin_size=%zu)\n",
+            "hist_num_bins=%zu, hist_bin_size=%zu, cleanup=%s)\n",
             args->executable,
             args->input_path,
             algorithm_names[args->algorithm],
@@ -229,7 +237,8 @@ print_command_line_arguments(struct CommandLineArguments const *args)
             args->artificial_trace_length,
             args->oracle_path ? args->oracle_path : "(null)",
             args->hist_num_bins,
-            args->hist_bin_size);
+            args->hist_bin_size,
+            bool_to_string(args->cleanup));
 }
 
 static void
@@ -360,6 +369,9 @@ parse_command_line_arguments(int argc, char **argv)
                 exit(-1);
             }
             args.hist_output_path = argv[i];
+        } else if (matches_option(argv[i], "--cleanup", "--cleanup")) {
+            ++i;
+            args.cleanup = true;
         } else if (matches_option(argv[i], "--help", "-h")) {
             print_help(stdout, &args);
             exit(0);
@@ -749,6 +761,11 @@ main(int argc, char **argv)
     g_assert_true(
         MissRateCurve__write_sparse_binary_to_file(&mrc, args.output_path));
     LOGGER_TRACE("Wrote out sparse MRC to '%s'", args.output_path);
+    // NOTE This takes advantage of C's short-circuiting booleans.
+    //      I find this idiom cleaner than nested if-statements.
+    if (args.cleanup && remove(args.output_path) != 0) {
+        LOGGER_ERROR("could not remove file '%s'", args.output_path);
+    }
     MissRateCurve__destroy(&mrc);
     LOGGER_TRACE("Destroyed MRC object");
     Trace__destroy(&trace);
