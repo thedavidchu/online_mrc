@@ -34,6 +34,7 @@ test(
         '-n', '10000',
         '-a', 'Olken',
         '-o', 'olken-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -44,6 +45,7 @@ test(
         '-n', '10000',
         '-a', 'Fixed-Rate-SHARDS',
         '-o', 'fixed-rate-shards-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -54,6 +56,7 @@ test(
         '-n', '10000',
         '-a', 'Fixed-Rate-SHARDS-Adj',
         '-o', 'fixed-rate-shards-adj-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -65,6 +68,7 @@ test(
         '-a', 'Fixed-Size-SHARDS',
         '-s', '0.1',
         '-o', 'fixed-size-shards-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -76,6 +80,7 @@ test(
         '-a', 'QuickMRC',
         '-s', '1.0',
         '-o', 'quickmrc-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -87,6 +92,7 @@ test(
         '-a', 'Goel-QuickMRC',
         '-s', '1.0',
         '-o', 'goel-quickmrc-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -98,6 +104,7 @@ test(
         '-a', 'Evicting-Map',
         '-s', '0.1',
         '-o', 'evicting-map-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -108,6 +115,7 @@ test(
         '-n', '10000',
         '-a', 'Average-Eviction-Time',
         '-o', 'aet-mrc.bin',
+        '--cleanup',
     ],
 )
 test(
@@ -118,5 +126,6 @@ test(
         '-n', '10000',
         '-a', 'Their-Average-Eviction-Time',
         '-o', 'their-aet-mrc.bin',
+        '--cleanup',
     ],
 )
