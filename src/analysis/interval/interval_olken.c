@@ -23,7 +23,7 @@ IntervalOlken__init(struct IntervalOlken *me, size_t const length)
         LOGGER_ERROR("failed to initialize Olken");
         goto cleanup;
     }
-    if (!ReuseStatistics__init(&me->stats, length)) {
+    if (!IntervalStatistics__init(&me->stats, length)) {
         goto cleanup;
     }
     return true;
@@ -36,7 +36,7 @@ void
 IntervalOlken__destroy(struct IntervalOlken *me)
 {
     Olken__destroy(&me->olken);
-    ReuseStatistics__destroy(&me->stats);
+    IntervalStatistics__destroy(&me->stats);
     *me = (struct IntervalOlken){0};
 }
 
@@ -64,7 +64,7 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
         }
     }
     // Insert reuse_dist and reuse_time statistics.
-    if (!ReuseStatistics__append(&me->stats, reuse_dist, reuse_time)) {
+    if (!IntervalStatistics__append(&me->stats, reuse_dist, reuse_time)) {
         return false;
     }
     return true;
@@ -73,5 +73,5 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
 bool
 IntervalOlken__write_results(struct IntervalOlken *me, char const *const path)
 {
-    return ReuseStatistics__save(&me->stats, path);
+    return IntervalStatistics__save(&me->stats, path);
 }

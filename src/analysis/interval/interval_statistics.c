@@ -10,13 +10,13 @@
 #include "interval/interval_statistics.h"
 
 bool
-ReuseStatistics__init(struct ReuseStatistics *const me,
-                      size_t const init_capacity)
+IntervalStatistics__init(struct IntervalStatistics *const me,
+                         size_t const init_capacity)
 {
     if (me == NULL || init_capacity == 0) {
         return false;
     }
-    *me = (struct ReuseStatistics){
+    *me = (struct IntervalStatistics){
         .stats = calloc(init_capacity, sizeof(*me->stats)),
         .length = 0,
         .capacity = init_capacity};
@@ -24,25 +24,25 @@ ReuseStatistics__init(struct ReuseStatistics *const me,
 }
 
 static bool
-resize(struct ReuseStatistics *const me)
+resize(struct IntervalStatistics *const me)
 {
     assert(me && me->capacity != 0);
     size_t const new_cap = me->capacity * 1.25;
-    struct ReuseStatisticsItem *new_stats =
+    struct IntervalStatisticsItem *new_stats =
         realloc(me->stats, new_cap * sizeof(*me->stats));
     if (new_stats == NULL) {
         return false;
     }
-    *me = (struct ReuseStatistics){.stats = new_stats,
-                                   .capacity = new_cap,
-                                   .length = me->length};
+    *me = (struct IntervalStatistics){.stats = new_stats,
+                                      .capacity = new_cap,
+                                      .length = me->length};
     return true;
 }
 
 bool
-ReuseStatistics__append(struct ReuseStatistics *const me,
-                        uint64_t const reuse_distance,
-                        uint64_t const reuse_time)
+IntervalStatistics__append(struct IntervalStatistics *const me,
+                           uint64_t const reuse_distance,
+                           uint64_t const reuse_time)
 {
     if (me == NULL) {
         return false;
@@ -58,15 +58,15 @@ ReuseStatistics__append(struct ReuseStatistics *const me,
     //      means. It's a common idiom in C but I prefer to be clear
     //      even if I must be more verbose.
     me->stats[me->length] =
-        (struct ReuseStatisticsItem){.reuse_distance = reuse_distance,
-                                     .reuse_time = reuse_time};
+        (struct IntervalStatisticsItem){.reuse_distance = reuse_distance,
+                                        .reuse_time = reuse_time};
     ++me->length;
     return true;
 }
 
 bool
-ReuseStatistics__save(struct ReuseStatistics const *const me,
-                      char const *const path)
+IntervalStatistics__save(struct IntervalStatistics const *const me,
+                         char const *const path)
 {
     if (me == NULL || path == NULL) {
         return false;
@@ -76,11 +76,11 @@ ReuseStatistics__save(struct ReuseStatistics const *const me,
 }
 
 void
-ReuseStatistics__destroy(struct ReuseStatistics *const me)
+IntervalStatistics__destroy(struct IntervalStatistics *const me)
 {
     if (me == NULL) {
         return;
     }
     free(me->stats);
-    *me = (struct ReuseStatistics){0};
+    *me = (struct IntervalStatistics){0};
 }

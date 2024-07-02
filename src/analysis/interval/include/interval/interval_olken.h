@@ -8,7 +8,7 @@
 
 struct IntervalOlken {
     struct Olken olken;
-    struct ReuseStatistics stats;
+    struct IntervalStatistics stats;
 };
 
 bool
