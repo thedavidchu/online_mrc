@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 UINT64_MAX: int = 18446744073709551615
-DTYPE = np.dtype([("reuse_dist", np.uint64), ("reuse_time", np.uint64)])
+DTYPE = np.dtype([("reuse_dist", np.float64), ("reuse_time", np.float64)])
 
 
 def divide_array(array: np.ndarray, subdivisions: int):
@@ -31,7 +31,7 @@ def count_unique(array: np.ndarray):
 def filter_infinity(array: np.ndarray):
     # We assume that an infinite reuse distance occurs iff there is an
     # infinite reuse time as well.
-    finite = array[:]["reuse_dist"] != UINT64_MAX
+    finite = array[:]["reuse_dist"] != np.inf
     return array[finite]
 
 
