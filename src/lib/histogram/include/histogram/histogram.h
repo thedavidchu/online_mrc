@@ -5,6 +5,18 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/// @brief  When we have an element that doesn't fit in the histogram,
+///         we have multiple options of resolution.
+///         1. Allow overflow (and record this as a 'false infinity')
+///         2. Merge the buckets to increase the bin size
+///         3. Reallocate the buffer so that it is larger
+///             (N.B. we must zero out the newly allocated space!)
+enum HistogramMode {
+    HistogramMode__allow_overflow,
+    HistogramMode__merge_bins,
+    HistogramMode__realloc,
+};
+
 /// @brief  Track (potentially scaled) equal-sized values by frequency.
 /// @note   I assume no overflow in any of these values!
 struct Histogram {
