@@ -162,24 +162,7 @@ stretch_histogram_if_necessary(struct Histogram *const me,
 bool
 Histogram__insert_finite(struct Histogram *me, const uint64_t index)
 {
-    if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
-        return false;
-    }
-
-    if (!stretch_histogram_if_necessary(me, index, 1)) {
-        LOGGER_ERROR("stretch failed");
-        return false;
-    }
-    // NOTE I think it's clearer to have more code in the if-blocks than to
-    //      spread it around. The optimizing compiler should remove it.
-    if (fits_in_histogram(me, index, 1)) {
-        ++me->histogram[index / me->bin_size];
-        ++me->running_sum;
-    } else {
-        ++me->false_infinity;
-        ++me->running_sum;
-    }
-    return true;
+    return Histogram__insert_scaled_finite(me, index, 1);
 }
 
 bool
@@ -210,12 +193,7 @@ Histogram__insert_scaled_finite(struct Histogram *me,
 bool
 Histogram__insert_infinite(struct Histogram *me)
 {
-    if (me == NULL || me->histogram == NULL) {
-        return false;
-    }
-    ++me->infinity;
-    ++me->running_sum;
-    return true;
+    return Histogram__insert_scaled_infinite(me, 1);
 }
 
 bool
