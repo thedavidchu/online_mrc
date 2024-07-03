@@ -9,6 +9,7 @@
 #include "histogram/fractional_histogram.h"
 #include "histogram/histogram.h"
 
+#include "logger/logger.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
 
@@ -213,6 +214,94 @@ test_histogram_save(void)
     return true;
 }
 
+static bool
+test_histogram_with_false_infinity_on_outofbounds(void)
+{
+    struct Histogram me = {0};
+    if (!Histogram__init(&me, 1, 1, HistogramOutOfBoundsMode__allow_overflow)) {
+        LOGGER_ERROR("failed init");
+        return false;
+    }
+    Histogram__insert_scaled_infinite(&me, 13);
+    for (size_t i = 0; i < 100; ++i) {
+        Histogram__insert_scaled_finite(&me, i, 7);
+    }
+
+    g_assert_cmpuint(me.num_bins, ==, 1);
+    g_assert_cmpuint(me.bin_size, ==, 1);
+    g_assert_cmpuint(me.infinity, ==, 13);
+    g_assert_cmpuint(me.running_sum, ==, 13 + 7 * 100);
+    g_assert_cmpuint(me.false_infinity, ==, 7 * 99);
+    g_assert_cmpint(me.out_of_bounds_mode,
+                    ==,
+                    HistogramOutOfBoundsMode__allow_overflow);
+    g_assert_cmpuint(me.histogram[0], ==, 7);
+    return true;
+}
+
+static bool
+test_histogram_with_merge_on_outofbounds(void)
+{
+    struct Histogram me = {0};
+    if (!Histogram__init(&me, 10, 1, HistogramOutOfBoundsMode__merge_bins)) {
+        LOGGER_ERROR("failed init");
+        return false;
+    }
+    Histogram__insert_scaled_infinite(&me, 13);
+    for (size_t i = 0; i < 100; ++i) {
+        Histogram__insert_scaled_finite(&me, i, 10);
+    }
+
+    g_assert_cmpuint(me.num_bins, ==, 10);
+    g_assert_cmpuint(me.bin_size, ==, 1 << 7);
+    g_assert_cmpuint(me.infinity, ==, 13);
+    g_assert_cmpuint(me.running_sum, ==, 13 + 10 * 100);
+    g_assert_cmpuint(me.false_infinity, ==, 0);
+    g_assert_cmpint(me.out_of_bounds_mode,
+                    ==,
+                    HistogramOutOfBoundsMode__merge_bins);
+    // NOTE This weird spacing is because each bucket is 128 spaces wide but the
+    //      multiplicative scale is base-10.
+    g_assert_cmpuint(me.histogram[0], ==, 130);
+    g_assert_cmpuint(me.histogram[1], ==, 130);
+    g_assert_cmpuint(me.histogram[2], ==, 130);
+    g_assert_cmpuint(me.histogram[3], ==, 130);
+    g_assert_cmpuint(me.histogram[4], ==, 120);
+    g_assert_cmpuint(me.histogram[5], ==, 130);
+    g_assert_cmpuint(me.histogram[6], ==, 130);
+    g_assert_cmpuint(me.histogram[7], ==, 100);
+    g_assert_cmpuint(me.histogram[8], ==, 0);
+    g_assert_cmpuint(me.histogram[9], ==, 0);
+    return true;
+}
+
+static bool
+test_histogram_with_realloc_on_outofbounds(void)
+{
+    struct Histogram me = {0};
+    if (!Histogram__init(&me, 1, 3, HistogramOutOfBoundsMode__realloc)) {
+        LOGGER_ERROR("failed init");
+        return false;
+    }
+    Histogram__insert_scaled_infinite(&me, 13);
+    for (size_t i = 0; i < 100; ++i) {
+        Histogram__insert_scaled_finite(&me, i, 3);
+    }
+
+    g_assert_cmpuint(me.num_bins, ==, 100);
+    g_assert_cmpuint(me.bin_size, ==, 3);
+    g_assert_cmpuint(me.infinity, ==, 13);
+    g_assert_cmpuint(me.running_sum, ==, 13 + 3 * 100);
+    g_assert_cmpuint(me.false_infinity, ==, 0);
+    g_assert_cmpint(me.out_of_bounds_mode,
+                    ==,
+                    HistogramOutOfBoundsMode__realloc);
+    for (size_t i = 0; i < 100; ++i) {
+        g_assert_cmpuint(me.histogram[i], ==, 3);
+    }
+    return true;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -222,5 +311,9 @@ main(int argc, char **argv)
     ASSERT_FUNCTION_RETURNS_TRUE(test_binned_histogram());
     ASSERT_FUNCTION_RETURNS_TRUE(test_fractional_histogram());
     ASSERT_FUNCTION_RETURNS_TRUE(test_histogram_save());
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        test_histogram_with_false_infinity_on_outofbounds());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_histogram_with_merge_on_outofbounds());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_histogram_with_realloc_on_outofbounds());
     return 0;
 }
