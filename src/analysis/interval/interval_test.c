@@ -8,7 +8,7 @@
 
 #include "histogram/histogram.h"
 #include "interval/interval_olken.h"
-#include "interval/interval_statistics.h"
+#include "interval_statistics/interval_statistics.h"
 #include "invariants/implies.h"
 #include "logger/logger.h"
 #include "olken/olken.h"

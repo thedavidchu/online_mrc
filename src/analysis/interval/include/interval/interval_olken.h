@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interval/interval_statistics.h"
+#include "interval_statistics/interval_statistics.h"
 #include "olken/olken.h"
 
 struct IntervalOlken {

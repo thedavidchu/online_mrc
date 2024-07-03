@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "interval/interval_olken.h"
-#include "interval/interval_statistics.h"
+#include "interval_statistics/interval_statistics.h"
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"

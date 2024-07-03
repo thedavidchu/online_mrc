@@ -1,15 +1,5 @@
 interval_inc = include_directories('include')
 
-interval_statistics_lib = library(
-    'interval_statistics_lib',
-    'interval_statistics.c',
-    include_directories: interval_inc,
-    dependencies: [
-        histogram_dep,
-        file_dep,
-    ],
-)
-
 interval_olken_lib = library(
     'interval_olken_lib',
     'interval_olken.c',
@@ -17,6 +7,7 @@ interval_olken_lib = library(
     dependencies: [
         common_dep,
         file_dep,
+        interval_statistics_dep,
         olken_dep,
         trace_dep,
     ],
@@ -25,11 +16,10 @@ interval_olken_lib = library(
 interval_dep = declare_dependency(
     link_with: [
         interval_olken_lib,
-        interval_statistics_lib,
     ],
     include_directories: interval_inc,
     dependencies: [
-        histogram_dep,
+        interval_statistics_dep,
     ],
 )
 
