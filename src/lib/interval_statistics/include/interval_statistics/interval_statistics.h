@@ -10,6 +10,9 @@
 ///         1<<53 without loss of precision (i.e. more than 1<<48, which
 ///         is the size of the virtual address space). For this reason,
 ///         we don't actually lose any precision!
+/// @note   I use 'INFINITY' to represent an element that has never been
+///         seen before an 'NAN' to represent an element that is not
+///         sampled.
 struct IntervalStatisticsItem {
     double reuse_distance;
     double reuse_time;
