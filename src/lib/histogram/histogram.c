@@ -14,6 +14,7 @@
 #include "invariants/implies.h"
 #include "io/io.h"
 #include "logger/logger.h"
+#include "math/positive_ceiling_divide.h"
 
 static bool
 init_histogram(struct Histogram *const me,
@@ -22,7 +23,7 @@ init_histogram(struct Histogram *const me,
                uint64_t const false_infinity,
                uint64_t const infinity,
                uint64_t const running_sum,
-               bool const allow_merging)
+               enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     assert(me != NULL);
 
@@ -36,7 +37,7 @@ init_histogram(struct Histogram *const me,
     me->false_infinity = false_infinity;
     me->infinity = infinity;
     me->running_sum = running_sum;
-    me->allow_merging = allow_merging;
+    me->out_of_bounds_mode = out_of_bounds_mode;
 
     return true;
 }
@@ -45,12 +46,12 @@ bool
 Histogram__init(struct Histogram *me,
                 size_t const num_bins,
                 size_t const bin_size,
-                bool const allow_merging)
+                enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     if (me == NULL || num_bins == 0) {
         return false;
     }
-    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0, allow_merging)) {
+    if (!init_histogram(me, num_bins, bin_size, 0, 0, 0, out_of_bounds_mode)) {
         LOGGER_ERROR("failed to init histogram");
         return false;
     }
@@ -87,6 +88,77 @@ fits_in_histogram(struct Histogram const *const me,
     return scaled_index < me->num_bins * me->bin_size;
 }
 
+static bool
+merge_bins(struct Histogram *const me,
+           uint64_t const index,
+           uint64_t const horizontal_scale)
+{
+    assert(me);
+    // NOTE This could be a do-while loop because in the only place we
+    //      call this, we've already checked that the value doesn't fit
+    //      in the histogram. I prefer to be explicit and clear.
+    // NOTE I was thinking that in a well-behaved histogram, this
+    //      should only happen once at a time. However, this isn't
+    //      true. If we have a very tiny histogram array and access
+    //      many new elements, then it will remain small until we
+    //      suddenly access a very distantly used element.
+    while (!fits_in_histogram(me, index, horizontal_scale)) {
+        double_bin_size(me);
+    }
+    return true;
+}
+
+static bool
+alloc_more_histogram(struct Histogram *const me,
+                     uint64_t const index,
+                     uint64_t const horizontal_scale)
+{
+    assert(me && !fits_in_histogram(me, index, horizontal_scale));
+
+    // NOTE We must be able to accomodate a value of
+    //      'index * horizontal_scale', which means we should add 1.
+    size_t const new_num_bins =
+        POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
+    uint64_t *new_histogram =
+        realloc(me->histogram, new_num_bins * sizeof(*me->histogram));
+    if (new_histogram == NULL) {
+        LOGGER_ERROR("unable to reallocate!");
+        return false;
+    }
+    // Zero the indices that have not been set.
+    memset(&new_histogram[me->num_bins],
+           0,
+           (new_num_bins - me->num_bins) * sizeof(*new_histogram));
+    me->histogram = new_histogram;
+    me->num_bins = new_num_bins;
+    return true;
+}
+
+/// @note   I use the term 'stretch' because I want it to encompass the
+///         'allocate' and 'merge' operations. It isn't a great term.
+static bool
+stretch_histogram_if_necessary(struct Histogram *const me,
+                               uint64_t const index,
+                               uint64_t const horizontal_scale)
+{
+    // NOTE This should be the common case!
+    if (fits_in_histogram(me, index, horizontal_scale)) {
+        return true;
+    }
+
+    // NOTE This is a low entropy decision.
+    switch (me->out_of_bounds_mode) {
+    case HistogramOutOfBoundsMode__allow_overflow:
+        return true;
+    case HistogramOutOfBoundsMode__merge_bins:
+        return merge_bins(me, index, horizontal_scale);
+    case HistogramOutOfBoundsMode__realloc:
+        return alloc_more_histogram(me, index, horizontal_scale);
+    default:
+        return true;
+    }
+}
+
 bool
 Histogram__insert_finite(struct Histogram *me, const uint64_t index)
 {
@@ -94,13 +166,9 @@ Histogram__insert_finite(struct Histogram *me, const uint64_t index)
         return false;
     }
 
-    // Optionally expand the range of the histogram. I admittedly did a
-    // small micro-optimization of sticking the 'me->allow_merging' at
-    // the front because this variable has less entropy (i.e. changes
-    // less) so the branch predictor should benefit from having this
-    // first.
-    while (me->allow_merging && !fits_in_histogram(me, index, 1)) {
-        double_bin_size(me);
+    if (!stretch_histogram_if_necessary(me, index, 1)) {
+        LOGGER_ERROR("stretch failed");
+        return false;
     }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
@@ -122,13 +190,9 @@ Histogram__insert_scaled_finite(struct Histogram *me,
     if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
         return false;
     }
-    // Optionally expand the range of the histogram. I admittedly did a
-    // small micro-optimization of sticking the 'me->allow_merging' at
-    // the front because this variable has less entropy (i.e. changes
-    // less) so the branch predictor should benefit from having this
-    // first.
-    while (me->allow_merging && !fits_in_histogram(me, index, scale)) {
-        double_bin_size(me);
+    if (!stretch_histogram_if_necessary(me, index, scale)) {
+        LOGGER_ERROR("stretch failed");
+        return false;
     }
     // NOTE I think it's clearer to have more code in the if-blocks than to
     //      spread it around. The optimizing compiler should remove it.
