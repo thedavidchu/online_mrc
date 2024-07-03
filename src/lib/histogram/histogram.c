@@ -17,8 +17,8 @@
 
 static bool
 init_histogram(struct Histogram *const me,
-               uint64_t const num_bins,
-               uint64_t const bin_size,
+               size_t const num_bins,
+               size_t const bin_size,
                uint64_t const false_infinity,
                uint64_t const infinity,
                uint64_t const running_sum,
@@ -43,8 +43,8 @@ init_histogram(struct Histogram *const me,
 
 bool
 Histogram__init(struct Histogram *me,
-                const uint64_t num_bins,
-                const uint64_t bin_size,
+                size_t const num_bins,
+                size_t const bin_size,
                 bool const allow_merging)
 {
     if (me == NULL || num_bins == 0) {

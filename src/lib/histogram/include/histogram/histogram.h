@@ -5,14 +5,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/// @brief  This histogram tracks (potentially scaled) equal-sized values.
+/// @brief  Track (potentially scaled) equal-sized values by frequency.
 /// @note   I assume no overflow in any of these values!
 struct Histogram {
     uint64_t *histogram;
     /// Number of bins in the histogram
-    uint64_t num_bins;
+    size_t num_bins;
     // Size of each bin
-    uint64_t bin_size;
+    size_t bin_size;
     /// We have seen this before, but we do not track stacks this large
     uint64_t false_infinity;
     /// We have not seen this before
@@ -27,8 +27,8 @@ struct Histogram {
 
 bool
 Histogram__init(struct Histogram *me,
-                const uint64_t num_bins,
-                const uint64_t bin_size,
+                size_t const num_bins,
+                size_t const bin_size,
                 bool const allow_merging);
 
 bool
