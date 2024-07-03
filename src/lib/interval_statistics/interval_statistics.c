@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -42,8 +44,8 @@ resize(struct IntervalStatistics *const me)
 
 bool
 IntervalStatistics__append(struct IntervalStatistics *const me,
-                           uint64_t const reuse_distance,
-                           uint64_t const reuse_time)
+                           double const reuse_distance,
+                           double const reuse_time)
 {
     if (me == NULL) {
         return false;
@@ -89,8 +91,8 @@ IntervalStatistics__destroy(struct IntervalStatistics *const me)
 bool
 IntervalStatistics__to_histogram(struct IntervalStatistics const *const me,
                                  struct Histogram *const hist,
-                                 uint64_t const num_bins,
-                                 uint64_t const bin_size)
+                                 size_t const num_bins,
+                                 size_t const bin_size)
 {
     if (me == NULL || hist == NULL) {
         return false;

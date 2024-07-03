@@ -6,10 +6,13 @@
 
 #include "histogram/histogram.h"
 
-/// @note   A reuse_{distance,time} of UINT64_MAX is the same as infinite.
+/// @note   I am safe to use a 'double' here because it can represent
+///         1<<53 without loss of precision (i.e. more than 1<<48, which
+///         is the size of the virtual address space). For this reason,
+///         we don't actually lose any precision!
 struct IntervalStatisticsItem {
-    uint64_t reuse_distance;
-    uint64_t reuse_time;
+    double reuse_distance;
+    double reuse_time;
 };
 
 struct IntervalStatistics {
@@ -29,8 +32,8 @@ IntervalStatistics__destroy(struct IntervalStatistics *const me);
 
 bool
 IntervalStatistics__append(struct IntervalStatistics *const me,
-                           uint64_t const reuse_distance,
-                           uint64_t const reuse_time);
+                           double const reuse_distance,
+                           double const reuse_time);
 
 bool
 IntervalStatistics__save(struct IntervalStatistics const *const me,
@@ -39,5 +42,5 @@ IntervalStatistics__save(struct IntervalStatistics const *const me,
 bool
 IntervalStatistics__to_histogram(struct IntervalStatistics const *const me,
                                  struct Histogram *const hist,
-                                 uint64_t const num_bins,
-                                 uint64_t const bin_size);
+                                 size_t const num_bins,
+                                 size_t const bin_size);
