@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "hash/splitmix64.h"
-#include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
@@ -28,19 +26,16 @@ EvictingMap__init(struct EvictingMap *me,
 {
     if (me == NULL)
         return false;
-    bool r = tree__init(&me->tree);
-    if (!r)
+    if (!tree__init(&me->tree))
         goto tree_error;
-    r = EvictingHashTable__init(&me->hash_table,
-                                num_hash_buckets,
-                                init_sampling_ratio);
-    if (!r)
+    if (!EvictingHashTable__init(&me->hash_table,
+                                 num_hash_buckets,
+                                 init_sampling_ratio))
         goto hash_table_error;
-    r = Histogram__init(&me->histogram,
-                        histogram_num_bins,
-                        histogram_bin_size,
-                        false);
-    if (!r)
+    if (!Histogram__init(&me->histogram,
+                         histogram_num_bins,
+                         histogram_bin_size,
+                         false))
         goto histogram_error;
     me->current_time_stamp = 0;
     return true;
