@@ -22,7 +22,7 @@ sudo apt upgrade
 sudo apt install python3 python3-pip python3-setuptools \
                        python3-wheel ninja-build meson
 sudo apt install python3-numpy python3-matplotlib python3-tqdm
-sudo apt install pkgconfig libglib2.0-dev
+sudo apt install pkg-config libglib2.0-dev
 
 # Build Meson
 meson setup build
