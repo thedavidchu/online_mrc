@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-UINT64_MAX: int = 18446744073709551615
 DTYPE = np.dtype([("reuse_dist", np.float64), ("reuse_time", np.float64)])
 
 
@@ -28,17 +27,17 @@ def count_unique(array: np.ndarray):
     return np.count_nonzero(is_first_access)
 
 
-def filter_infinity(array: np.ndarray):
+def filter_finite(array: np.ndarray):
     # We assume that an infinite reuse distance occurs iff there is an
     # infinite reuse time as well.
-    finite = array[:]["reuse_dist"] != np.inf
+    finite = np.isfinite(array[:]["reuse_dist"])
     return array[finite]
 
 
 def convert_to_miss_rate_curve(array: np.ndarray):
     """Convert an array into a miss rate curve."""
-    finite = filter_infinity(array)
-    num_inf = len(array) - len(finite)
+    finite = filter_finite(array)
+    num_inf = np.isinf(array[:]["reuse_dist"]).sum()
     reuse_dist = finite[:]["reuse_dist"]
     hist, edges = np.histogram(reuse_dist, bins=100)
     mrc = 1 - np.cumsum(hist / len(array))
@@ -58,7 +57,7 @@ def plot_single_miss_rate_curve(array: np.ndarray, output_path: str):
 
 
 def plot_single_histogram(array: np.ndarray, output_path: str):
-    finite = filter_infinity(array)
+    finite = filter_finite(array)
     reuse_dist = finite[:]["reuse_dist"]
     plt.figure(figsize=(12, 8), dpi=300)
     plt.title("Histogram")
@@ -75,7 +74,7 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
 
     fig.suptitle("Histogram and MRC")
     for i, array in enumerate(tqdm(arrays)):
-        finite = filter_infinity(array)
+        finite = filter_finite(array)
         reuse_dist = finite[:]["reuse_dist"]
         edges, mrc = convert_to_miss_rate_curve(array)
         axs[0, i].set_title(f"{i}/{len(arrays)}")
@@ -104,7 +103,12 @@ def main():
         type=str,
         help="input file path (root is used for output path)",
     )
-    parser.add_argument("--head", type=int, default=None)
+    parser.add_argument(
+        "--head",
+        type=int,
+        default=None,
+        help="use the first (last) <head> (-<tail>) entries only",
+    )
     parser.add_argument("--num-intervals", "-n", type=int, default=10)
     args = parser.parse_args()
 
