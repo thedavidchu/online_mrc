@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -43,7 +44,7 @@ IntervalOlken__destroy(struct IntervalOlken *me)
 bool
 IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
 {
-    size_t reuse_dist = 0, reuse_time = 0;
+    double reuse_dist = 0, reuse_time = 0;
 
     if (me == NULL) {
         return false;
@@ -51,14 +52,22 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
 
     struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
     if (found.success) {
-        reuse_time = me->olken.current_time_stamp - found.timestamp - 1;
-        reuse_dist = Olken__update_stack(&me->olken, entry, found.timestamp);
+        uint64_t rt = me->olken.current_time_stamp - found.timestamp - 1;
+        uint64_t rd = Olken__update_stack(&me->olken, entry, found.timestamp);
         if (reuse_dist == UINT64_MAX) {
             return false;
         }
+        if (rt > (uint64_t)1 << 53) {
+            LOGGER_WARN("losing precision on reuse time %g", rt);
+        }
+        if (rd > (uint64_t)1 << 53) {
+            LOGGER_WARN("losing precision on reuse distance %g", rd);
+        }
+        reuse_time = (double)rt;
+        reuse_dist = (double)rd;
     } else {
-        reuse_dist = SIZE_MAX;
-        reuse_time = SIZE_MAX;
+        reuse_dist = INFINITY;
+        reuse_time = INFINITY;
         if (!Olken__insert_stack(&me->olken, entry)) {
             return false;
         }

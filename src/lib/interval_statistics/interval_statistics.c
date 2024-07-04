@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -107,11 +106,16 @@ IntervalStatistics__to_histogram(struct IntervalStatistics const *const me,
     }
 
     for (size_t i = 0; i < me->length; ++i) {
-        uint64_t reuse_dist = me->stats[i].reuse_distance;
-        if (reuse_dist == UINT64_MAX) {
+        double reuse_dist = me->stats[i].reuse_distance;
+        if (isnan(reuse_dist)) {
+            // NOTE NAN represents a non-sampled value.
+        } else if (isinf(reuse_dist)) {
             Histogram__insert_infinite(hist);
         } else {
-            Histogram__insert_finite(hist, reuse_dist);
+            if (reuse_dist > (uint64_t)1 << 53) {
+                LOGGER_WARN("lost precision on reuse distance %g", reuse_dist);
+            }
+            Histogram__insert_finite(hist, (uint64_t)reuse_dist);
         }
     }
     return true;

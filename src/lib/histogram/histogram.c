@@ -293,11 +293,27 @@ Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
         return false;
     }
 
-    if (me->num_bins != other->num_bins || me->bin_size != other->bin_size ||
-        me->false_infinity != other->false_infinity ||
+    if (me->num_bins != other->num_bins || me->bin_size != other->bin_size) {
+        LOGGER_DEBUG("Histograms differ in metadata (.num_bins: %zu vs %zu, "
+                     ".bin_size: %zu vs %zu",
+                     me->num_bins,
+                     other->num_bins,
+                     me->bin_size,
+                     other->bin_size);
+        return false;
+    }
+    if (me->false_infinity != other->false_infinity ||
         me->infinity != other->infinity ||
         me->running_sum != other->running_sum) {
-        LOGGER_DEBUG("Histograms differ in metadata");
+        LOGGER_DEBUG("Histograms differ in non-histogram values ("
+                     ".false_infinity: %zu vs %zu, .infinity: %zu vs %zu, "
+                     ".running_sum: %zu vs %zu)",
+                     me->false_infinity,
+                     other->false_infinity,
+                     me->infinity,
+                     other->infinity,
+                     me->running_sum,
+                     other->running_sum);
         return false;
     }
     // NOTE I do not account for overflow; I believe overflow is impossible

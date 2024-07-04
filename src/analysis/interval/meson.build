@@ -8,6 +8,7 @@ interval_olken_lib = library(
         common_dep,
         file_dep,
         interval_statistics_dep,
+        math_dep,
         olken_dep,
         trace_dep,
     ],

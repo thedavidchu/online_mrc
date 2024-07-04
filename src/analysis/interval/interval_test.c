@@ -31,9 +31,11 @@ test_interval_olken(struct Trace *trace)
     size_t const hist_bin_size = 1;
 
     if (!Olken__init(&olken, hist_num_bins, hist_bin_size)) {
+        LOGGER_ERROR("failed to init Olken");
         return false;
     }
     if (!IntervalOlken__init(&me, trace->length)) {
+        LOGGER_ERROR("failed to init interval Olken");
         return false;
     }
     for (size_t i = 0; i < trace->length; ++i) {
@@ -47,11 +49,13 @@ test_interval_olken(struct Trace *trace)
                                           &hist,
                                           hist_num_bins,
                                           hist_bin_size)) {
+        LOGGER_ERROR("failed to convert to histogram");
         return false;
     }
 
     // Test for equality
     if (!Histogram__exactly_equal(&olken.histogram, &hist)) {
+        LOGGER_ERROR("histograms not equal");
         return false;
     }
 
