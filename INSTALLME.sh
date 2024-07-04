@@ -24,6 +24,9 @@ sudo apt install python3 python3-pip python3-setuptools \
 sudo apt install python3-numpy python3-matplotlib python3-tqdm
 sudo apt install pkg-config libglib2.0-dev
 
+# Install environment niceties
+sudo apt install clang-format clangd
+
 # Build Meson
 meson setup build
 cd build
