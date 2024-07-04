@@ -117,8 +117,11 @@ alloc_more_histogram(struct Histogram *const me,
 
     // NOTE We must be able to accomodate a value of
     //      'index * horizontal_scale', which means we should add 1.
+    //      Next, we want to amortize the allocation, so I overestimate
+    //      by a small factor (I chose 2 just because then I don't have
+    //      the complication of multiplying an integer by a float).
     size_t const new_num_bins =
-        POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
+        2 * POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
     uint64_t *new_histogram =
         realloc(me->histogram, new_num_bins * sizeof(*me->histogram));
     if (new_histogram == NULL) {

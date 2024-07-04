@@ -288,7 +288,9 @@ test_histogram_with_realloc_on_outofbounds(void)
         Histogram__insert_scaled_finite(&me, i, 3);
     }
 
-    g_assert_cmpuint(me.num_bins, ==, 100);
+    // NOTE We double the number of bins that we actually need on resize
+    //      because of amortized runtime analysis. c.f. ECE358 lol <3
+    g_assert_cmpuint(me.num_bins, ==, 190);
     g_assert_cmpuint(me.bin_size, ==, 3);
     g_assert_cmpuint(me.infinity, ==, 13);
     g_assert_cmpuint(me.running_sum, ==, 13 + 3 * 100);
