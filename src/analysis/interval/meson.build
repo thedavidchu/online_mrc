@@ -49,6 +49,8 @@ interval_analyzer_exe = executable(
         file_dep,
         shards_dep,
         trace_dep,
+        # Test with evicting map to debug
+        evicting_map_dep,
     ],
 )
 

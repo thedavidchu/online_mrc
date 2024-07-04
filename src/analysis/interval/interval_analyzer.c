@@ -15,11 +15,18 @@
 #include <glib.h>
 
 #include "interval/interval_olken.h"
+#include "interval_statistics/interval_statistics.h"
 #include "invariants/implies.h"
 #include "logger/logger.h"
 #include "shards/fixed_rate_shards_sampler.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
+#include "types/entry_type.h"
+
+#ifndef INTERVAL_STATISTICS
+#define INTERVAL_STATISTICS
+#endif
+#include "evicting_map/evicting_map.h"
 
 #define IS_MAIN_FILE 1
 
@@ -44,21 +51,33 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
 
     struct IntervalOlken me = {0};
     struct FixedRateShardsSampler sampler = {0};
-    bool r = false;
-    r = IntervalOlken__init(&me, trace->length);
-    if (!r) {
+    struct EvictingMap emap = {0};
+    if (!IntervalOlken__init(&me, trace->length) ||
+        !FixedRateShardsSampler__init(&sampler, shards_sampling_rate, true)) {
         LOGGER_ERROR("bad init");
         return false;
     }
-    r = FixedRateShardsSampler__init(&sampler, shards_sampling_rate, true);
+    if (!EvictingMap__init(&emap, 1e-1, 1 << 13, trace->length, 1)) {
+        LOGGER_ERROR("bad init");
+        return false;
+    }
 
     LOGGER_TRACE("beginning to process trace with length %zu", trace->length);
     for (size_t i = 0; i < trace->length; ++i) {
-        if (FixedRateShardsSampler__sample(&sampler, trace->trace[i].key))
-            IntervalOlken__access_item(&me, trace->trace[i].key);
+        EntryType const entry = trace->trace[i].key;
+        if (FixedRateShardsSampler__sample(&sampler, entry))
+            IntervalOlken__access_item(&me, entry);
+        EvictingMap__access_item(&emap, entry);
     }
 
     size_t const length = sampler.num_entries_processed;
+
+    // Save emap
+    LOGGER_TRACE("write to 'emap-istats.bin'");
+    IntervalStatistics__save(&emap.istats, "emap-istats.bin");
+    if (cleanup && remove("emap-istats.bin") != 0) {
+        LOGGER_ERROR("failed to remove emap-istats.bin");
+    }
 
     LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
                  length,
@@ -72,6 +91,7 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
     FixedRateShardsSampler__destroy(&sampler);
+    EvictingMap__destroy(&emap);
     return true;
 }
 
