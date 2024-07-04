@@ -14,6 +14,7 @@
 
 #include <glib.h>
 
+#include "file/file.h"
 #include "interval/interval_olken.h"
 #include "interval_statistics/interval_statistics.h"
 #include "invariants/implies.h"
@@ -28,22 +29,157 @@
 #endif
 #include "evicting_map/evicting_map.h"
 
-#define IS_MAIN_FILE 1
+struct CommandLineArguments {
+    // Path to the input trace.
+    char *input_path;
+    // Input format.
+    enum TraceFormat format;
 
-#if IS_MAIN_FILE
-static gchar *input_path = NULL;
-static gchar *output_path = NULL;
-static gchar *input_format = "Kia";
-// NOTE By setting this to 1.0, we effectively shut off SHARDS.
-static gdouble shards_sampling_rate = 1e0;
-static gboolean cleanup = false;
-#endif
+    char *output_path;
+    char *fr_shards_output_path;
+    char *fs_shards_output_path;
+    char *emap_output_path;
+
+    double fr_shards_sampling_rate;
+    double fs_shards_sampling_rate;
+
+    bool cleanup;
+};
+
+static bool
+parse_command_line_arguments(struct CommandLineArguments *const args,
+                             int argc,
+                             char *argv[])
+{
+
+    char *const DEFAULT_INPUT_PATH = NULL;
+    enum TraceFormat const DEFAULT_INPUT_FORMAT = TRACE_FORMAT_KIA;
+
+    char *const DEFAULT_OLKEN_OUTPUT_PATH = NULL;
+    char *const DEFAULT_FIXED_RATE_SHARDS_OUTPUT_PATH = NULL;
+    char *const DEFAULT_FIXED_SIZE_SHARDS_OUTPUT_PATH = NULL;
+    char *const DEFAULT_EVICTING_MAP_OUTPUT_PATH = NULL;
+
+    double const DEFAULT_FIXED_RATE_SHARDS_SAMPLING_RATE = 1e-1;
+    double const DEFAULT_FIXED_SIZE_SHARDS_SAMPLING_RATE = 1e-3;
+
+    bool const DEFAULT_CLEANUP_MODE = false;
+
+    *args = (struct CommandLineArguments){
+        .input_path = DEFAULT_INPUT_PATH,
+        .format = DEFAULT_INPUT_FORMAT,
+        .output_path = DEFAULT_OLKEN_OUTPUT_PATH,
+        .fr_shards_output_path = DEFAULT_FIXED_RATE_SHARDS_OUTPUT_PATH,
+        .fs_shards_output_path = DEFAULT_FIXED_SIZE_SHARDS_OUTPUT_PATH,
+        .emap_output_path = DEFAULT_EVICTING_MAP_OUTPUT_PATH,
+        .fr_shards_sampling_rate = DEFAULT_FIXED_RATE_SHARDS_SAMPLING_RATE,
+        .fs_shards_sampling_rate = DEFAULT_FIXED_SIZE_SHARDS_SAMPLING_RATE,
+        .cleanup = DEFAULT_CLEANUP_MODE,
+    };
+
+    char *trace_format_str = NULL;
+
+    GOptionEntry entries[] = {
+        {"input",
+         'i',
+         0,
+         G_OPTION_ARG_FILENAME,
+         &args->input_path,
+         "input path to the trace",
+         "<input-path>"},
+        {"format",
+         'f',
+         0,
+         G_OPTION_ARG_STRING,
+         &trace_format_str,
+         "format of the input file, either {Kia,Sari}. Default: Kia",
+         "<input-format>"},
+        {"output",
+         'o',
+         0,
+         G_OPTION_ARG_FILENAME,
+         &args->output_path,
+         "Olken's output path to the interval-based histogram",
+         "<olken-output-path>"},
+        {"fr-output",
+         'r',
+         0,
+         G_OPTION_ARG_FILENAME,
+         &args->fr_shards_output_path,
+         "fixed-rate SHARDS output path",
+         "<fixed-rate-shards-output-path>"},
+        {"fs-output",
+         's',
+         0,
+         G_OPTION_ARG_FILENAME,
+         &args->fs_shards_output_path,
+         "fixed-size SHARDS output path",
+         "<fixed-size-shards-output-path>"},
+        {"evicting-map-output",
+         'e',
+         0,
+         G_OPTION_ARG_FILENAME,
+         &args->emap_output_path,
+         "evicting map output path",
+         "<evicting-map-output-path>"},
+        {"fr-sampling-rate",
+         0,
+         0,
+         G_OPTION_ARG_DOUBLE,
+         &args->fr_shards_sampling_rate,
+         "fixed-rate SHARDS sampling rate. Default: 1e-3.",
+         "<fixed-rate-shards-sampling-rate>"},
+        {"fs-sampling-rate",
+         0,
+         0,
+         G_OPTION_ARG_DOUBLE,
+         &args->fs_shards_sampling_rate,
+         "fixed-size SHARDS sampling rate. Default: 1e-3.",
+         "<fixed-size-shards-sampling-rate>"},
+        {"cleanup",
+         0,
+         0,
+         G_OPTION_ARG_NONE,
+         &args->cleanup,
+         "cleanup the generated files",
+         NULL},
+        G_OPTION_ENTRY_NULL,
+    };
+
+    GError *error = NULL;
+    GOptionContext *context;
+    context = g_option_context_new("- analyze MRC in intervals");
+    g_option_context_add_main_entries(context, entries, NULL);
+    if (!g_option_context_parse(context, &argc, &argv, &error)) {
+        g_print("option parsing failed: %s\n", error->message);
+        exit(1);
+    }
+
+    bool is_error = false;
+    if (!file_exists(args->input_path)) {
+        LOGGER_ERROR("input path '%s' DNE", args->input_path);
+        is_error = true;
+    }
+    if (trace_format_str != NULL &&
+        !parse_trace_format_string(trace_format_str)) {
+        LOGGER_ERROR("invalid trace format '%s'", trace_format_str);
+        is_error = true;
+    }
+    if (is_error) {
+        gchar *help_msg = g_option_context_get_help(context, FALSE, NULL);
+        g_print("%s", help_msg);
+        free(help_msg);
+        exit(-1);
+    }
+    return true;
+}
 
 /// @brief  Create record of reuse distances and times.
 bool
-generate_reuse_stats(struct Trace *trace, char const *const fname)
+generate_reuse_stats(struct Trace *trace,
+                     struct CommandLineArguments const *const args)
 {
-    LOGGER_TRACE("starting generate_reuse_stats(%p, %s)", trace, fname);
+    LOGGER_TRACE("starting generate_reuse_stats(...)");
     if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
         LOGGER_ERROR("invalid trace");
         return false;
@@ -53,7 +189,9 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     struct FixedRateShardsSampler sampler = {0};
     struct EvictingMap emap = {0};
     if (!IntervalOlken__init(&me, trace->length) ||
-        !FixedRateShardsSampler__init(&sampler, shards_sampling_rate, true)) {
+        !FixedRateShardsSampler__init(&sampler,
+                                      args->fr_shards_sampling_rate,
+                                      true)) {
         LOGGER_ERROR("bad init");
         return false;
     }
@@ -75,18 +213,18 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     // Save emap
     LOGGER_TRACE("write to 'emap-istats.bin'");
     IntervalStatistics__save(&emap.istats, "emap-istats.bin");
-    if (cleanup && remove("emap-istats.bin") != 0) {
+    if (args->cleanup && remove("emap-istats.bin") != 0) {
         LOGGER_ERROR("failed to remove emap-istats.bin");
     }
 
     LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
                  length,
-                 fname);
-    if (!IntervalOlken__write_results(&me, fname)) {
-        LOGGER_ERROR("failed to write results to '%s'", fname);
+                 args->output_path);
+    if (!IntervalOlken__write_results(&me, args->output_path)) {
+        LOGGER_ERROR("failed to write results to '%s'", args->output_path);
     }
-    if (cleanup && remove(fname) != 0) {
-        LOGGER_ERROR("failed to remove '%s'", fname);
+    if (args->cleanup && remove(args->output_path) != 0) {
+        LOGGER_ERROR("failed to remove '%s'", args->output_path);
     }
     LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
@@ -95,91 +233,24 @@ generate_reuse_stats(struct Trace *trace, char const *const fname)
     return true;
 }
 
-#if IS_MAIN_FILE
-static GOptionEntry entries[] = {
-    {"input",
-     'i',
-     0,
-     G_OPTION_ARG_FILENAME,
-     &input_path,
-     "input path to the trace",
-     "<input-path>"},
-    {"output",
-     'o',
-     0,
-     G_OPTION_ARG_FILENAME,
-     &output_path,
-     "output path to the interval-based histogram",
-     "<output-path>"},
-    {"format",
-     'f',
-     0,
-     G_OPTION_ARG_STRING,
-     &input_format,
-     "format of the input file, either {Kia,Sari}. Default: Kia",
-     "<input-format>"},
-    {"shards-sampling-rate",
-     's',
-     0,
-     G_OPTION_ARG_DOUBLE,
-     &shards_sampling_rate,
-     "SHARDS sampling rate. Default: 1.0. [UNUSED]",
-     "<rate>"},
-    {"cleanup",
-     0,
-     0,
-     G_OPTION_ARG_NONE,
-     &cleanup,
-     "cleanup the generated files",
-     NULL},
-    G_OPTION_ENTRY_NULL,
-};
-
-static bool
-verify_path(gchar const *const path)
-{
-    return path != NULL;
-}
-
 int
 main(int argc, char *argv[])
 {
-    GError *error = NULL;
-    GOptionContext *context;
-    context = g_option_context_new("- analyze MRC in intervals");
-    g_option_context_add_main_entries(context, entries, NULL);
-    if (!g_option_context_parse(context, &argc, &argv, &error)) {
-        g_print("option parsing failed: %s\n", error->message);
-        exit(1);
+    struct CommandLineArguments args = {0};
+    if (!parse_command_line_arguments(&args, argc, argv)) {
+        LOGGER_ERROR("unable to parse command line arguments");
+        return EXIT_FAILURE;
     }
-
-    bool is_error = false;
-    if (!verify_path(input_path)) {
-        LOGGER_ERROR("invalid input path");
-        is_error = true;
-    }
-    if (!verify_path(output_path)) {
-        LOGGER_ERROR("invalid output path");
-        is_error = true;
-    }
-    if (is_error) {
-        gchar *help_msg = g_option_context_get_help(context, FALSE, NULL);
-        g_print("%s", help_msg);
-        free(help_msg);
-        exit(-1);
-    }
-
-    enum TraceFormat format = parse_trace_format_string(input_format);
+    enum TraceFormat format = args.format;
     if (format == TRACE_FORMAT_INVALID) {
         LOGGER_ERROR("invalid trace format");
         exit(-1);
     }
     LOGGER_TRACE("beginning to read trace file '%s' with format '%s'",
-                 input_path,
-                 input_format);
-    struct Trace trace = read_trace(input_path, format);
-    generate_reuse_stats(&trace, output_path);
+                 args.input_path,
+                 TRACE_FORMAT_STRINGS[args.format]);
+    struct Trace trace = read_trace(args.input_path, args.format);
+    generate_reuse_stats(&trace, &args);
 
     return 0;
 }
-#endif
