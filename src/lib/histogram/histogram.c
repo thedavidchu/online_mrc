@@ -120,13 +120,30 @@ alloc_more_histogram(struct Histogram *const me,
     //      Next, we want to amortize the allocation, so I overestimate
     //      by a small factor (I chose 2 just because then I don't have
     //      the complication of multiplying an integer by a float).
-    size_t const new_num_bins =
+    size_t new_num_bins =
         2 * POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
     uint64_t *new_histogram =
         realloc(me->histogram, new_num_bins * sizeof(*me->histogram));
+    // NOTE This error handling code is for large traces with many unique
+    //      elements. Admittedly it is a bit confusing because we have
+    //      variables being changed inside this if-statement.
     if (new_histogram == NULL) {
-        LOGGER_ERROR("unable to reallocate!");
-        return false;
+        LOGGER_WARN(
+            "unable to reallocate %zu histogram bins. We'll try reducing the "
+            "number of bins allocated (but we'll lose the amortized runtime "
+            "efficiency)!",
+            new_num_bins);
+        // NOTE This is half the number of bins as we previously tried to
+        //      allocate!
+        new_num_bins =
+            POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
+        new_histogram =
+            realloc(me->histogram, new_num_bins * sizeof(*me->histogram));
+        if (new_histogram == NULL) {
+            LOGGER_ERROR("unable to reallocate %zu histogram bins!",
+                         new_num_bins);
+            return false;
+        }
     }
     // Zero the indices that have not been set.
     memset(&new_histogram[me->num_bins],
