@@ -29,7 +29,12 @@ static bool
 resize(struct IntervalStatistics *const me)
 {
     assert(me && me->capacity != 0);
-    size_t const new_cap = me->capacity * 1.25;
+    // NOTE Naively incrementing a capacity of 1 will simply yield 1
+    //      because of rounding. We want it to round up to 2.
+    size_t const new_cap = ceil(me->capacity * 1.25);
+    LOGGER_TRACE("resizing interval statistics buffer from %zu to %zu",
+                 me->capacity,
+                 new_cap);
     struct IntervalStatisticsItem *new_stats =
         realloc(me->stats, new_cap * sizeof(*me->stats));
     if (new_stats == NULL) {
@@ -50,10 +55,12 @@ IntervalStatistics__append(struct IntervalStatistics *const me,
         return false;
     }
     if (me->length >= me->capacity) {
+        LOGGER_TRACE("resizing interval statistics buffer");
         if (!resize(me)) {
             return false;
         }
     }
+    assert(me->length < me->capacity && "resize failed");
 
     // NOTE Yes, I know I could do "me->stats[me->length++]" but many
     //      inexperienced C programmers would not understand what this
