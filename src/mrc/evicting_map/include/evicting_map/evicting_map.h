@@ -10,11 +10,18 @@
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
+#ifdef INTERVAL_STATISTICS
+#include "interval_statistics/interval_statistics.h"
+#endif
+
 struct EvictingMap {
     struct Tree tree;
     struct EvictingHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
+#ifdef INTERVAL_STATISTICS
+    struct IntervalStatistics istats;
+#endif
 };
 
 bool

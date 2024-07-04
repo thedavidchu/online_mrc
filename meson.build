@@ -46,6 +46,8 @@ if use_gprof
     add_project_link_arguments('-pg', '-no-pie', language: 'c')
 endif
 
+add_project_arguments('-DINTERVAL_STATISTICS', language: 'c')
+
 fs = import('fs')
 # Define the test trace
 # HACK  I need this weird back-bending because my version of C's fopen

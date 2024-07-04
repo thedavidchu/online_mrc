@@ -1,10 +1,12 @@
 #include <assert.h>
+#include <math.h>
 #include <stdbool.h> // bool
 #include <stdint.h>  // uint64_t
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#include "interval_statistics/interval_statistics.h"
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -27,27 +29,30 @@ EvictingMap__init(struct EvictingMap *me,
     if (me == NULL)
         return false;
     if (!tree__init(&me->tree))
-        goto tree_error;
+        goto cleanup;
     if (!EvictingHashTable__init(&me->hash_table,
                                  num_hash_buckets,
                                  init_sampling_ratio))
-        goto hash_table_error;
+        goto cleanup;
     if (!Histogram__init(&me->histogram,
                          histogram_num_bins,
                          histogram_bin_size,
                          false))
-        goto histogram_error;
+        goto cleanup;
+#ifdef INTERVAL_STATISTICS
+    if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
+        goto cleanup;
+    }
+#endif
     me->current_time_stamp = 0;
     return true;
 
-histogram_error:
-    EvictingHashTable__destroy(&me->hash_table);
-hash_table_error:
-    tree__destroy(&me->tree);
-tree_error:
+cleanup:
+    EvictingMap__destroy(me);
     return false;
 }
 
+/// @brief  Insert a new element into the hash table without eviction.
 static inline void
 handle_inserted(struct EvictingMap *me,
                 struct SampledTryPutReturn s,
@@ -67,6 +72,8 @@ handle_inserted(struct EvictingMap *me,
     ++me->current_time_stamp;
 }
 
+/// @brief  Insert a new element into the hash table but replace an old
+///         element.
 static inline void
 handle_replaced(struct EvictingMap *me,
                 struct SampledTryPutReturn s,
@@ -88,6 +95,7 @@ handle_replaced(struct EvictingMap *me,
     ++me->current_time_stamp;
 }
 
+/// @brief  Update an existing element in the hash table.
 static inline void
 handle_updated(struct EvictingMap *me,
                struct SampledTryPutReturn s,
@@ -110,6 +118,11 @@ handle_updated(struct EvictingMap *me,
     Histogram__insert_scaled_finite(&me->histogram,
                                     distance,
                                     scale == 0 ? 1 : scale);
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append(&me->istats,
+                               (double)distance,
+                               (double)me->current_time_stamp - timestamp - 1);
+#endif
     ++me->current_time_stamp;
 }
 
@@ -125,15 +138,26 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
 
     switch (r.status) {
     case SAMPLED_IGNORED:
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append(&me->istats, NAN, NAN);
+#endif
         /* Do no work -- this is like SHARDS */
         break;
     case SAMPLED_INSERTED:
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append(&me->istats, INFINITY, INFINITY);
+#endif
         handle_inserted(me, r, timestamp);
         break;
     case SAMPLED_REPLACED:
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append(&me->istats, INFINITY, INFINITY);
+#endif
         handle_replaced(me, r, timestamp);
         break;
     case SAMPLED_UPDATED:
+        // NOTE The interval statistics are handled in the 'handle_updated'
+        //      function! I know this is asymetrical and ugly, sorry.
         handle_updated(me, r, timestamp);
         break;
     default:
@@ -183,5 +207,8 @@ EvictingMap__destroy(struct EvictingMap *me)
     tree__destroy(&me->tree);
     EvictingHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__destroy(&me->istats);
+#endif
     *me = (struct EvictingMap){0};
 }
