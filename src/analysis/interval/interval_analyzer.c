@@ -176,10 +176,10 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
 
 /// @brief  Create record of reuse distances and times.
 bool
-generate_reuse_stats(struct Trace *trace,
-                     struct CommandLineArguments const *const args)
+generate_olken_reuse_stats(struct Trace *trace,
+                           struct CommandLineArguments const *const args)
 {
-    LOGGER_TRACE("starting generate_reuse_stats(...)");
+    LOGGER_TRACE("starting generate_olken_reuse_stats(...)");
     if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
         LOGGER_ERROR("invalid trace");
         return false;
@@ -187,15 +187,10 @@ generate_reuse_stats(struct Trace *trace,
 
     struct IntervalOlken me = {0};
     struct FixedRateShardsSampler sampler = {0};
-    struct EvictingMap emap = {0};
     if (!IntervalOlken__init(&me, trace->length) ||
         !FixedRateShardsSampler__init(&sampler,
                                       args->fr_shards_sampling_rate,
                                       true)) {
-        LOGGER_ERROR("bad init");
-        return false;
-    }
-    if (!EvictingMap__init(&emap, 1e-1, 1 << 13, trace->length, 1)) {
         LOGGER_ERROR("bad init");
         return false;
     }
@@ -205,17 +200,9 @@ generate_reuse_stats(struct Trace *trace,
         EntryType const entry = trace->trace[i].key;
         if (FixedRateShardsSampler__sample(&sampler, entry))
             IntervalOlken__access_item(&me, entry);
-        EvictingMap__access_item(&emap, entry);
     }
 
     size_t const length = sampler.num_entries_processed;
-
-    // Save emap
-    LOGGER_TRACE("write to 'emap-istats.bin'");
-    IntervalStatistics__save(&emap.istats, "emap-istats.bin");
-    if (args->cleanup && remove("emap-istats.bin") != 0) {
-        LOGGER_ERROR("failed to remove emap-istats.bin");
-    }
 
     LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
                  length,
@@ -229,6 +216,38 @@ generate_reuse_stats(struct Trace *trace,
     LOGGER_TRACE("phew, finished writing the buffer!");
     IntervalOlken__destroy(&me);
     FixedRateShardsSampler__destroy(&sampler);
+    return true;
+}
+
+bool
+generate_emap_reuse_stats(struct Trace *trace,
+                          struct CommandLineArguments const *const args)
+{
+    LOGGER_TRACE("starting generate_emap_reuse_stats(...)");
+    if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
+        LOGGER_ERROR("invalid trace");
+        return false;
+    }
+
+    struct EvictingMap emap = {0};
+    if (!EvictingMap__init(&emap, 1e-1, 1 << 13, trace->length, 1)) {
+        LOGGER_ERROR("bad init");
+        return false;
+    }
+
+    LOGGER_TRACE("beginning to process trace with length %zu", trace->length);
+    for (size_t i = 0; i < trace->length; ++i) {
+        EntryType const entry = trace->trace[i].key;
+        EvictingMap__access_item(&emap, entry);
+    }
+
+    // Save emap
+    LOGGER_TRACE("write to '%s'", args->emap_output_path);
+    IntervalStatistics__save(&emap.istats, args->emap_output_path);
+    LOGGER_TRACE("phew, finished writing the buffer!");
+    if (args->cleanup && remove(args->emap_output_path) != 0) {
+        LOGGER_ERROR("failed to remove '%s'", args->emap_output_path);
+    }
     EvictingMap__destroy(&emap);
     return true;
 }
@@ -250,7 +269,7 @@ main(int argc, char *argv[])
                  args.input_path,
                  TRACE_FORMAT_STRINGS[args.format]);
     struct Trace trace = read_trace(args.input_path, args.format);
-    generate_reuse_stats(&trace, &args);
+    generate_olken_reuse_stats(&trace, &args);
 
     return 0;
 }
