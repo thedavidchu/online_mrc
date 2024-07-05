@@ -141,19 +141,19 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     switch (r.status) {
     case SAMPLED_IGNORED:
 #ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append(&me->istats, NAN, NAN);
+        IntervalStatistics__append_unsampled(&me->istats);
 #endif
         /* Do no work -- this is like SHARDS */
         break;
     case SAMPLED_INSERTED:
 #ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append(&me->istats, INFINITY, INFINITY);
+        IntervalStatistics__append_infinity(&me->istats);
 #endif
         handle_inserted(me, r, timestamp);
         break;
     case SAMPLED_REPLACED:
 #ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append(&me->istats, INFINITY, INFINITY);
+        IntervalStatistics__append_infinity(&me->istats);
 #endif
         handle_replaced(me, r, timestamp);
         break;
