@@ -176,6 +176,25 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
     return true;
 }
 
+/// @param  cleanup: bool
+///         immediately remove the file we just created. Alternatively,
+///         I could just not save it in the first place, but I want to
+///         test everything.
+static void
+save_interval_statistics(struct IntervalStatistics const *const istats,
+                         char const *const output_path,
+                         bool const cleanup)
+{
+    LOGGER_TRACE("begin writing buffer with length %zu", istats->length);
+    if (!IntervalStatistics__save(istats, output_path)) {
+        LOGGER_ERROR("failed to write results to '%s'", output_path);
+    }
+    if (cleanup && remove(output_path) != 0) {
+        LOGGER_ERROR("failed to remove '%s'", output_path);
+    }
+    LOGGER_TRACE("finish writing buffer");
+}
+
 /// @brief  Create record of reuse distances and times.
 bool
 generate_olken_reuse_stats(struct Trace *trace,
@@ -186,38 +205,25 @@ generate_olken_reuse_stats(struct Trace *trace,
         LOGGER_ERROR("invalid trace");
         return false;
     }
-
-    struct IntervalOlken me = {0};
-    struct FixedRateShardsSampler sampler = {0};
-    if (!IntervalOlken__init(&me, trace->length) ||
-        !FixedRateShardsSampler__init(&sampler,
-                                      args->fr_shards_sampling_rate,
-                                      true)) {
-        LOGGER_ERROR("bad init");
+    if (args == NULL) {
+        LOGGER_ERROR("bad args");
         return false;
     }
 
-    LOGGER_TRACE("beginning to process trace with length %zu", trace->length);
+    struct IntervalOlken me = {0};
+    if (!IntervalOlken__init(&me, trace->length)) {
+        LOGGER_ERROR("bad initialization");
+        return false;
+    }
+
+    LOGGER_TRACE("begin processing trace with length %zu", trace->length);
     for (size_t i = 0; i < trace->length; ++i) {
         EntryType const entry = trace->trace[i].key;
-        if (FixedRateShardsSampler__sample(&sampler, entry))
-            IntervalOlken__access_item(&me, entry);
+        IntervalOlken__access_item(&me, entry);
     }
-
-    size_t const length = sampler.num_entries_processed;
-
-    LOGGER_TRACE("beginning to write buffer of length %zu to '%s'",
-                 length,
-                 args->output_path);
-    if (!IntervalOlken__write_results(&me, args->output_path)) {
-        LOGGER_ERROR("failed to write results to '%s'", args->output_path);
-    }
-    if (args->cleanup && remove(args->output_path) != 0) {
-        LOGGER_ERROR("failed to remove '%s'", args->output_path);
-    }
-    LOGGER_TRACE("phew, finished writing the buffer!");
+    LOGGER_TRACE("finish processing trace");
+    save_interval_statistics(&me.stats, args->output_path, args->cleanup);
     IntervalOlken__destroy(&me);
-    FixedRateShardsSampler__destroy(&sampler);
     return true;
 }
 
@@ -230,27 +236,29 @@ generate_emap_reuse_stats(struct Trace *trace,
         LOGGER_ERROR("invalid trace");
         return false;
     }
-
-    struct EvictingMap emap = {0};
-    if (!EvictingMap__init(&emap, 1e-1, 1 << 13, trace->length, 1)) {
-        LOGGER_ERROR("bad init");
+    if (args == NULL) {
+        LOGGER_ERROR("bad args");
         return false;
     }
 
-    LOGGER_TRACE("beginning to process trace with length %zu", trace->length);
-    for (size_t i = 0; i < trace->length; ++i) {
-        EntryType const entry = trace->trace[i].key;
-        EvictingMap__access_item(&emap, entry);
+    struct EvictingMap me = {0};
+    if (!EvictingMap__init(&me,
+                           args->fs_shards_sampling_rate,
+                           1 << 13,
+                           trace->length,
+                           1)) {
+        LOGGER_ERROR("bad initialization");
+        return false;
     }
 
-    // Save emap
-    LOGGER_TRACE("write to '%s'", args->emap_output_path);
-    IntervalStatistics__save(&emap.istats, args->emap_output_path);
-    LOGGER_TRACE("phew, finished writing the buffer!");
-    if (args->cleanup && remove(args->emap_output_path) != 0) {
-        LOGGER_ERROR("failed to remove '%s'", args->emap_output_path);
+    LOGGER_TRACE("begin processing trace with length %zu", trace->length);
+    for (size_t i = 0; i < trace->length; ++i) {
+        EntryType const entry = trace->trace[i].key;
+        EvictingMap__access_item(&me, entry);
     }
-    EvictingMap__destroy(&emap);
+    LOGGER_TRACE("finish processing trace");
+    save_interval_statistics(&me.istats, args->emap_output_path, args->cleanup);
+    EvictingMap__destroy(&me);
     return true;
 }
 
@@ -261,6 +269,10 @@ generate_fr_shards_reuse_stats(struct Trace *trace,
     LOGGER_TRACE("starting generate_fr_shards_reuse_stats(...)");
     if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
         LOGGER_ERROR("invalid trace");
+        return false;
+    }
+    if (args == NULL) {
+        LOGGER_ERROR("bad args");
         return false;
     }
 
@@ -282,17 +294,9 @@ generate_fr_shards_reuse_stats(struct Trace *trace,
         FixedRateShards__access_item(&me, entry);
     }
     LOGGER_TRACE("finish processing trace");
-
-    LOGGER_TRACE("begin writing buffer with length %zu", me.istats.length);
-    if (!IntervalStatistics__save(&me.istats, args->fr_shards_output_path)) {
-        LOGGER_ERROR("failed to write results to '%s'",
-                     args->fr_shards_output_path);
-    }
-    if (args->cleanup && remove(args->fr_shards_output_path) != 0) {
-        LOGGER_ERROR("failed to remove '%s'", args->fr_shards_output_path);
-    }
-    LOGGER_TRACE("finish writing buffer");
-
+    save_interval_statistics(&me.istats,
+                             args->fr_shards_output_path,
+                             args->cleanup);
     FixedRateShards__destroy(&me);
     return true;
 }
@@ -304,6 +308,10 @@ generate_fs_shards_reuse_stats(struct Trace *trace,
     LOGGER_TRACE("starting generate_fs_shards_reuse_stats(...)");
     if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
         LOGGER_ERROR("invalid trace");
+        return false;
+    }
+    if (args == NULL) {
+        LOGGER_ERROR("bad args");
         return false;
     }
 
@@ -325,17 +333,9 @@ generate_fs_shards_reuse_stats(struct Trace *trace,
         FixedSizeShards__access_item(&me, entry);
     }
     LOGGER_TRACE("finish processing trace");
-
-    LOGGER_TRACE("begin writing buffer with length %zu", me.istats.length);
-    if (!IntervalStatistics__save(&me.istats, args->fs_shards_output_path)) {
-        LOGGER_ERROR("failed to write results to '%s'",
-                     args->fs_shards_output_path);
-    }
-    if (args->cleanup && remove(args->fs_shards_output_path) != 0) {
-        LOGGER_ERROR("failed to remove '%s'", args->fs_shards_output_path);
-    }
-    LOGGER_TRACE("finish writing buffer");
-
+    save_interval_statistics(&me.istats,
+                             args->fs_shards_output_path,
+                             args->cleanup);
     FixedSizeShards__destroy(&me);
     return true;
 }
