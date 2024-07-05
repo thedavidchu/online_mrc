@@ -6,6 +6,9 @@
 
 #include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
+#ifdef INTERVAL_STATISTICS
+#include "interval_statistics/interval_statistics.h"
+#endif
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
@@ -41,12 +44,14 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         LOGGER_WARN("failed to initialize fixed-size SHARDS sampler");
         goto cleanup;
     }
-
+#ifdef INTERVAL_STATISTICS
+    if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
+        goto cleanup;
+    }
+#endif
     return true;
-
 cleanup:
-    Olken__destroy(&me->olken);
-    FixedSizeShardsSampler__destroy(&me->sampler);
+    FixedSizeShards__destroy(me);
     return false;
 }
 
@@ -66,6 +71,9 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     }
 
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append_unsampled(&me->istats);
+#endif
         return false;
     }
 
@@ -75,6 +83,12 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
         if (distance == UINT64_MAX) {
             return false;
         }
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append(&me->istats,
+                                   distance,
+                                   me->olken.current_time_stamp - r.timestamp -
+                                       1);
+#endif
         Histogram__insert_scaled_finite(&me->olken.histogram,
                                         distance,
                                         me->sampler.scale);
@@ -88,6 +102,9 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
         if (!Olken__insert_stack(&me->olken, entry)) {
             return false;
         }
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append_infinity(&me->istats);
+#endif
         Histogram__insert_scaled_infinite(&me->olken.histogram,
                                           me->sampler.scale);
     }
@@ -124,5 +141,8 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
 {
     Olken__destroy(&me->olken);
     FixedSizeShardsSampler__destroy(&me->sampler);
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__destroy(&me->istats);
+#endif
     *me = (struct FixedSizeShards){0};
 }

@@ -5,31 +5,47 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/// @brief  This histogram tracks (potentially scaled) equal-sized values.
+/// @brief  When we have an element that doesn't fit in the histogram,
+///         we have multiple options of resolution.
+///         1. Allow overflow (and record this as a 'false infinity')
+///             This reduces the precision of overflowed values.
+///         2. Merge the buckets to increase the bin size
+///             This reduces the precision of all values.
+///         3. Reallocate the buffer so that it is larger
+///             (N.B. we must zero out the newly allocated space!)
+///             This maintains the precision at the expense of larger
+///             storage overheads.
+enum HistogramOutOfBoundsMode {
+    HistogramOutOfBoundsMode__allow_overflow,
+    // When we get a finite element larger than the current maximum,
+    // double the range of our histogram by merging neighbouring buckets
+    // until we can fit the element!
+    HistogramOutOfBoundsMode__merge_bins,
+    HistogramOutOfBoundsMode__realloc,
+};
+
+/// @brief  Track (potentially scaled) equal-sized values by frequency.
 /// @note   I assume no overflow in any of these values!
 struct Histogram {
     uint64_t *histogram;
     /// Number of bins in the histogram
-    uint64_t num_bins;
+    size_t num_bins;
     // Size of each bin
-    uint64_t bin_size;
+    size_t bin_size;
     /// We have seen this before, but we do not track stacks this large
     uint64_t false_infinity;
     /// We have not seen this before
     uint64_t infinity;
     uint64_t running_sum;
 
-    // When we get a finite element larger than the current maximum,
-    // double the range of our histogram by merging neighbouring buckets
-    // until we can fit the element!
-    bool allow_merging;
+    enum HistogramOutOfBoundsMode out_of_bounds_mode;
 };
 
 bool
 Histogram__init(struct Histogram *me,
-                const uint64_t num_bins,
-                const uint64_t bin_size,
-                bool const allow_merging);
+                size_t const num_bins,
+                size_t const bin_size,
+                enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
 bool
 Histogram__insert_finite(struct Histogram *me, const uint64_t index);

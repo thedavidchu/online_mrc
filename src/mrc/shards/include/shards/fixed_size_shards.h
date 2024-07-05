@@ -5,6 +5,9 @@
 #include <glib.h>
 
 #include "histogram/histogram.h"
+#ifdef INTERVAL_STATISTICS
+#include "interval_statistics/interval_statistics.h"
+#endif
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "shards/fixed_size_shards_sampler.h"
@@ -15,6 +18,7 @@
 struct FixedSizeShards {
     struct Olken olken;
     struct FixedSizeShardsSampler sampler;
+    struct IntervalStatistics istats;
 };
 
 /// @brief  Initialize the fixed-size SHARDS data structure.

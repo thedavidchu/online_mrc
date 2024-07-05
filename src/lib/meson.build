@@ -14,6 +14,7 @@ subdir('tree')
 subdir('histogram')
 
 # The following relies on the histogram library
+subdir('interval_statistics')
 subdir('miss_rate_curve')
 
 # Relies on 'histogram' and 'miss_rate_curve' libraries

@@ -1,104 +1,86 @@
-#include <assert.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "interval/interval_olken.h"
+#include "interval_statistics/interval_statistics.h"
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
-#include "tree/basic_tree.h"
-#include "tree/sleator_tree.h"
-#include "types/entry_type.h"
+#include "olken/olken.h"
 
 bool
 IntervalOlken__init(struct IntervalOlken *me, size_t const length)
 {
-    bool r = false;
     if (me == NULL) {
         LOGGER_ERROR("invalid me");
         return false;
     }
-
-    r = HashTable__init(&me->reuse_lookup);
-    if (!r) {
-        LOGGER_ERROR("bad reuse hash table");
+    // NOTE I set the number of bins and bin size to 1 because I was
+    //      lazy and made values of 0 return an error.
+    if (!Olken__init(&me->olken, 1, 1)) {
+        LOGGER_ERROR("failed to initialize Olken");
         goto cleanup;
     }
-    r = tree__init(&me->lru_stack);
-    if (!r) {
-        LOGGER_ERROR("bad tree");
+    if (!IntervalStatistics__init(&me->stats, length)) {
         goto cleanup;
     }
-    me->stats = calloc(length, sizeof(*me->stats));
-    if (me->stats == NULL) {
-        LOGGER_ERROR("bad calloc");
-        goto cleanup;
-    }
-    me->length = length;
-    me->current_timestamp = 0;
-
     return true;
 cleanup:
-    HashTable__destroy(&me->reuse_lookup);
-    tree__destroy(&me->lru_stack);
-    free(me->stats);
+    IntervalOlken__destroy(me);
     return false;
 }
 
 void
 IntervalOlken__destroy(struct IntervalOlken *me)
 {
-    HashTable__destroy(&me->reuse_lookup);
-    tree__destroy(&me->lru_stack);
-    free(me->stats);
+    Olken__destroy(&me->olken);
+    IntervalStatistics__destroy(&me->stats);
     *me = (struct IntervalOlken){0};
 }
 
 bool
 IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
 {
-    bool s = false;
-    enum PutUniqueStatus q = LOOKUP_PUTUNIQUE_ERROR;
-    size_t reuse_dist = 0, reuse_time = 0;
+    double reuse_dist = 0, reuse_time = 0;
 
     if (me == NULL) {
         return false;
     }
 
-    struct LookupReturn r = HashTable__lookup(&me->reuse_lookup, entry);
-    if (r.success) {
-        reuse_dist = tree__reverse_rank(&me->lru_stack, r.timestamp);
-        s = tree__sleator_remove(&me->lru_stack, r.timestamp);
-        assert(s && "remove should not fail");
-        s = tree__sleator_insert(&me->lru_stack, me->current_timestamp);
-        assert(s && "insert should not fail");
-        reuse_time = me->current_timestamp - r.timestamp - 1;
-        q = HashTable__put_unique(&me->reuse_lookup,
-                                  entry,
-                                  me->current_timestamp);
-        assert(q == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
-               "update should replace value");
+    struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
+    if (found.success) {
+        uint64_t rt = me->olken.current_time_stamp - found.timestamp - 1;
+        uint64_t rd = Olken__update_stack(&me->olken, entry, found.timestamp);
+        if (reuse_dist == UINT64_MAX) {
+            return false;
+        }
+        if (rt > (uint64_t)1 << 53) {
+            LOGGER_WARN("losing precision on reuse time %g", rt);
+        }
+        if (rd > (uint64_t)1 << 53) {
+            LOGGER_WARN("losing precision on reuse distance %g", rd);
+        }
+        reuse_time = (double)rt;
+        reuse_dist = (double)rd;
     } else {
-        reuse_dist = SIZE_MAX;
-        reuse_time = SIZE_MAX;
-        s = tree__sleator_insert(&me->lru_stack, me->current_timestamp);
-        assert(s && "insert should not fail");
-        q = HashTable__put_unique(&me->reuse_lookup,
-                                  entry,
-                                  me->current_timestamp);
-        assert(q == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
-               "update should insert value");
+        reuse_dist = INFINITY;
+        reuse_time = INFINITY;
+        if (!Olken__insert_stack(&me->olken, entry)) {
+            return false;
+        }
     }
-
-    // Record the "histogram" statistics
-    me->stats[me->current_timestamp] =
-        (struct ReuseStatistics){.reuse_distance = reuse_dist,
-                                 .reuse_time = reuse_time};
-
-    // Update current state
-    ++me->current_timestamp;
-
+    // Insert reuse_dist and reuse_time statistics.
+    if (!IntervalStatistics__append(&me->stats, reuse_dist, reuse_time)) {
+        return false;
+    }
     return true;
+}
+
+bool
+IntervalOlken__write_results(struct IntervalOlken *me, char const *const path)
+{
+    return IntervalStatistics__save(&me->stats, path);
 }

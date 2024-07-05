@@ -7,6 +7,10 @@
 #include "olken/olken.h"
 #include "types/entry_type.h"
 
+#ifdef INTERVAL_STATISTICS
+#include "interval_statistics/interval_statistics.h"
+#endif
+
 struct FixedRateShards {
     struct Olken olken;
     // I cannot const qualify this because I need to set it and it is
@@ -25,6 +29,10 @@ struct FixedRateShards {
     bool adjustment;
     uint64_t num_entries_seen;
     uint64_t num_entries_processed;
+
+#ifdef INTERVAL_STATISTICS
+    struct IntervalStatistics istats;
+#endif
 };
 
 /// @brief  Initialize the structures needed for fixed-size SHARDS.

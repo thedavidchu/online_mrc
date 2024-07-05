@@ -95,6 +95,8 @@ print_available_trace_formats(FILE *stream)
 enum TraceFormat
 parse_trace_format_string(char const *const format_str)
 {
+    if (format_str == NULL)
+        return TRACE_FORMAT_INVALID;
     for (size_t i = 1; i < ARRAY_SIZE(TRACE_FORMAT_STRINGS); ++i) {
         if (strcmp(TRACE_FORMAT_STRINGS[i], format_str) == 0)
             return (enum TraceFormat)i;

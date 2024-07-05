@@ -45,6 +45,8 @@ fixed_size_shards_lib = library(
         olken_dep,
         sleator_tree_dep,
         priority_queue_dep,
+        # These are part of the interval statistics
+        interval_statistics_dep,
     ],
 )
 
@@ -62,6 +64,8 @@ fixed_rate_shards_lib = library(
         miss_rate_curve_dep,
         basic_tree_dep,
         sleator_tree_dep,
+        # These are part of the interval statistics
+        interval_statistics_dep,
     ],
 )
 
@@ -78,6 +82,8 @@ shards_dep = declare_dependency(
         histogram_dep,
         olken_dep,
         priority_queue_dep,
+        # These are part of the interval statistics
+        interval_statistics_dep,
     ],
     include_directories: include_directories('include'),
 )

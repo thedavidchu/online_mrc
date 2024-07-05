@@ -11,6 +11,8 @@ evicting_map_dep = declare_dependency(
             hash_dep,
             lookup_dep,
             miss_rate_curve_dep,
+            # These are part of the interval statistics
+            interval_statistics_dep,
         ],
     ),
     include_directories: include_directories('include'),
@@ -20,5 +22,7 @@ evicting_map_dep = declare_dependency(
         glib_dep,
         tree_dep,
         lookup_dep,
+        # These are part of the interval statistics
+        interval_statistics_dep,
     ],
 )
