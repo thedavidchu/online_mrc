@@ -28,6 +28,8 @@
 #define INTERVAL_STATISTICS
 #endif
 #include "evicting_map/evicting_map.h"
+#include "shards/fixed_rate_shards.h"
+#include "shards/fixed_size_shards.h"
 
 struct CommandLineArguments {
     // Path to the input trace.
@@ -252,6 +254,91 @@ generate_emap_reuse_stats(struct Trace *trace,
     return true;
 }
 
+bool
+generate_fr_shards_reuse_stats(struct Trace *trace,
+                               struct CommandLineArguments const *const args)
+{
+    LOGGER_TRACE("starting generate_fr_shards_reuse_stats(...)");
+    if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
+        LOGGER_ERROR("invalid trace");
+        return false;
+    }
+
+    struct FixedRateShards me = {0};
+    // NOTE The adjustment doesn't work on the intervals because it is
+    //      only performed at the end!
+    if (!FixedRateShards__init(&me,
+                               args->fr_shards_sampling_rate,
+                               trace->length,
+                               1,
+                               true)) {
+        LOGGER_ERROR("bad initialization");
+        return false;
+    }
+
+    LOGGER_TRACE("begin processing trace with length %zu", trace->length);
+    for (size_t i = 0; i < trace->length; ++i) {
+        EntryType const entry = trace->trace[i].key;
+        FixedRateShards__access_item(&me, entry);
+    }
+    LOGGER_TRACE("finish processing trace");
+
+    LOGGER_TRACE("begin writing buffer with length %zu", me.istats.length);
+    if (!IntervalStatistics__save(&me.istats, args->fr_shards_output_path)) {
+        LOGGER_ERROR("failed to write results to '%s'",
+                     args->fr_shards_output_path);
+    }
+    if (args->cleanup && remove(args->fr_shards_output_path) != 0) {
+        LOGGER_ERROR("failed to remove '%s'", args->fr_shards_output_path);
+    }
+    LOGGER_TRACE("finish writing buffer");
+
+    FixedRateShards__destroy(&me);
+    return true;
+}
+
+bool
+generate_fs_shards_reuse_stats(struct Trace *trace,
+                               struct CommandLineArguments const *const args)
+{
+    LOGGER_TRACE("starting generate_fs_shards_reuse_stats(...)");
+    if (trace == NULL || !implies(trace->length != 0, trace->trace != NULL)) {
+        LOGGER_ERROR("invalid trace");
+        return false;
+    }
+
+    struct FixedSizeShards me = {0};
+    // NOTE The adjustment doesn't work on the intervals because it is
+    //      only performed at the end!
+    if (!FixedSizeShards__init(&me,
+                               args->fs_shards_sampling_rate,
+                               trace->length,
+                               1,
+                               true)) {
+        LOGGER_ERROR("bad initialization");
+        return false;
+    }
+
+    LOGGER_TRACE("begin processing trace with length %zu", trace->length);
+    for (size_t i = 0; i < trace->length; ++i) {
+        EntryType const entry = trace->trace[i].key;
+        FixedSizeShards__access_item(&me, entry);
+    }
+    LOGGER_TRACE("finish processing trace");
+
+    LOGGER_TRACE("begin writing buffer with length %zu", me.istats.length);
+    if (!IntervalStatistics__save(&me.istats, args->fs_shards_output_path)) {
+        LOGGER_ERROR("failed to write results to '%s'",
+                     args->fs_shards_output_path);
+    }
+    if (args->cleanup && remove(args->fs_shards_output_path) != 0) {
+        LOGGER_ERROR("failed to remove '%s'", args->fs_shards_output_path);
+    }
+    LOGGER_TRACE("finish writing buffer");
+
+    FixedSizeShards__destroy(&me);
+    return true;
+}
 int
 main(int argc, char *argv[])
 {
@@ -277,8 +364,10 @@ main(int argc, char *argv[])
         generate_emap_reuse_stats(&trace, &args);
     }
     if (args.fr_shards_output_path) {
+        generate_fr_shards_reuse_stats(&trace, &args);
     }
     if (args.fs_shards_output_path) {
+        generate_fs_shards_reuse_stats(&trace, &args);
     }
     return 0;
 }
