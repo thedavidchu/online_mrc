@@ -7,6 +7,9 @@
 #include "hash/MyMurmurHash3.h"
 #include "hash/types.h"
 #include "histogram/histogram.h"
+#ifdef INTERVAL_STATISTICS
+#include "interval_statistics/interval_statistics.h"
+#endif
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
@@ -33,6 +36,11 @@ FixedRateShards__init(struct FixedRateShards *me,
     bool r = Olken__init(&me->olken, histogram_num_bins, histogram_bin_size);
     if (!r)
         return false;
+#ifdef INTERVAL_STATISTICS
+    if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
+        goto cleanup;
+    }
+#endif
     me->sampling_ratio = sampling_ratio;
     me->threshold = ratio_uint64(sampling_ratio);
     me->scale = 1 / sampling_ratio;
@@ -41,6 +49,9 @@ FixedRateShards__init(struct FixedRateShards *me,
     me->num_entries_seen = 0;
     me->num_entries_processed = 0;
     return true;
+cleanup:
+    FixedRateShards__destroy(me);
+    return false;
 }
 
 void
@@ -57,8 +68,12 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
     // NOTE Taking the modulo of the hash by 1 << 24 reduces the accuracy
     //      significantly. I tried dividing the threshold by 1 << 24 and also
     //      leaving the threshold alone. Neither worked to improve accuracy.
-    if (hash > me->threshold)
+    if (hash > me->threshold) {
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append_unsampled(&me->istats);
+#endif
         return;
+    }
     ++me->num_entries_processed;
 
     struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
@@ -76,6 +91,12 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                                   me->olken.current_time_stamp);
         assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
                "update should replace value");
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append(&me->istats,
+                                   distance,
+                                   me->olken.current_time_stamp -
+                                       found.timestamp - 1);
+#endif
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
         Histogram__insert_scaled_finite(&me->olken.histogram,
@@ -90,6 +111,9 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                "update should insert key/value");
         tree__sleator_insert(&me->olken.tree,
                              (KeyType)me->olken.current_time_stamp);
+#ifdef INTERVAL_STATISTICS
+        IntervalStatistics__append_infinity(&me->istats);
+#endif
         ++me->olken.current_time_stamp;
         Histogram__insert_scaled_infinite(&me->olken.histogram, me->scale);
     }
@@ -135,5 +159,8 @@ void
 FixedRateShards__destroy(struct FixedRateShards *me)
 {
     Olken__destroy(&me->olken);
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__destroy(&me->istats);
+#endif
     *me = (struct FixedRateShards){0};
 }
