@@ -269,10 +269,16 @@ main(int argc, char *argv[])
                  args.input_path,
                  TRACE_FORMAT_STRINGS[args.format]);
     struct Trace trace = read_trace(args.input_path, args.format);
-    if (args.output_path)
-        generate_olken_reuse_stats(&trace, &args);
-    if (args.emap_output_path)
-        generate_emap_reuse_stats(&trace, &args);
 
+    if (args.output_path) {
+        generate_olken_reuse_stats(&trace, &args);
+    }
+    if (args.emap_output_path) {
+        generate_emap_reuse_stats(&trace, &args);
+    }
+    if (args.fr_shards_output_path) {
+    }
+    if (args.fs_shards_output_path) {
+    }
     return 0;
 }
