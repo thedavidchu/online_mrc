@@ -60,8 +60,8 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
     char *const DEFAULT_FIXED_SIZE_SHARDS_OUTPUT_PATH = NULL;
     char *const DEFAULT_EVICTING_MAP_OUTPUT_PATH = NULL;
 
-    double const DEFAULT_FIXED_RATE_SHARDS_SAMPLING_RATE = 1e-1;
-    double const DEFAULT_FIXED_SIZE_SHARDS_SAMPLING_RATE = 1e-3;
+    double const DEFAULT_FIXED_RATE_SHARDS_SAMPLING_RATE = 1e-3;
+    double const DEFAULT_FIXED_SIZE_SHARDS_SAMPLING_RATE = 1e-1;
 
     bool const DEFAULT_CLEANUP_MODE = false;
 
@@ -134,7 +134,7 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
          0,
          G_OPTION_ARG_DOUBLE,
          &args->fs_shards_sampling_rate,
-         "fixed-size SHARDS sampling rate. Default: 1e-3.",
+         "fixed-size SHARDS sampling rate. Default: 1e-1.",
          "<fixed-size-shards-sampling-rate>"},
         {"cleanup",
          0,
