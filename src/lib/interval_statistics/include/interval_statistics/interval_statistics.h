@@ -38,6 +38,16 @@ IntervalStatistics__append(struct IntervalStatistics *const me,
                            double const reuse_distance,
                            double const reuse_time);
 
+/// @note   This function simply exists to we wrap the <math.h> file
+///         so users don't need to build with the math dependency.
+bool
+IntervalStatistics__append_unsampled(struct IntervalStatistics *const me);
+
+/// @note   This function simply exists to we wrap the <math.h> file
+///         so users don't need to build with the math dependency.
+bool
+IntervalStatistics__append_infinity(struct IntervalStatistics *const me);
+
 bool
 IntervalStatistics__save(struct IntervalStatistics const *const me,
                          char const *const path);

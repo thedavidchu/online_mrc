@@ -74,6 +74,18 @@ IntervalStatistics__append(struct IntervalStatistics *const me,
 }
 
 bool
+IntervalStatistics__append_unsampled(struct IntervalStatistics *const me)
+{
+    return IntervalStatistics__append(me, NAN, NAN);
+}
+
+bool
+IntervalStatistics__append_infinity(struct IntervalStatistics *const me)
+{
+    return IntervalStatistics__append(me, INFINITY, INFINITY);
+}
+
+bool
 IntervalStatistics__save(struct IntervalStatistics const *const me,
                          char const *const path)
 {
