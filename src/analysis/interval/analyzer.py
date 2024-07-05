@@ -115,15 +115,16 @@ def main():
     a = np.fromfile(args.input_file, dtype=DTYPE)
     b = divide_array(a, args.num_intervals)
 
+    print(f"Processing {args.input_file} file")
     if args.head is not None:
         if args.head < 0:
-            print(f"Using last {-args.head} of {len(b)}")
+            print(f"Using last {-args.head} of {len(b)} intervals")
             b = b[args.head :]
         else:
-            print(f"Using first {args.head} of {len(b)}")
+            print(f"Using first {args.head} of {len(b)} intervals")
             b = b[: args.head]
     else:
-        print(f"Using all {len(b)}")
+        print(f"Using all {len(b)} intervals")
 
     num_accesses = [len(c) for c in b]
     num_unique = [count_unique(c) for c in b]
