@@ -6,7 +6,9 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
+#endif
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
