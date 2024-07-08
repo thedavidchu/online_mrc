@@ -54,6 +54,24 @@ cleanup:
     return false;
 }
 
+/// @brief  Do no work (besides simple book-keeping).
+static inline void
+handle_ignored(struct EvictingMap *me,
+               struct SampledTryPutReturn s,
+               TimeStampType value)
+{
+    UNUSED(s);
+    UNUSED(value);
+    assert(me != NULL);
+
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append_unsampled(&me->istats);
+#endif
+    // NOTE We increment the current_time_stamp to be consistent
+    //      with Olken during our interval analysis.
+    ++me->current_time_stamp;
+}
+
 /// @brief  Insert a new element into the hash table without eviction.
 static inline void
 handle_inserted(struct EvictingMap *me,
@@ -71,6 +89,9 @@ handle_inserted(struct EvictingMap *me,
     r = tree__sleator_insert(&me->tree, value);
     assert(r);
     Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append_infinity(&me->istats);
+#endif
     ++me->current_time_stamp;
 }
 
@@ -94,6 +115,9 @@ handle_replaced(struct EvictingMap *me,
     assert(r);
 
     Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append_infinity(&me->istats);
+#endif
     ++me->current_time_stamp;
 }
 
@@ -122,7 +146,7 @@ handle_updated(struct EvictingMap *me,
                                     scale == 0 ? 1 : scale);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__append(&me->istats,
-                               (double)distance,
+                               (double)distance * (scale == 0 ? 1 : scale),
                                (double)me->current_time_stamp - timestamp - 1);
 #endif
     ++me->current_time_stamp;
@@ -133,33 +157,21 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
 {
     if (me == NULL)
         return;
-
     ValueType timestamp = me->current_time_stamp;
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
-
     switch (r.status) {
     case SAMPLED_IGNORED:
-#ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append_unsampled(&me->istats);
-#endif
         /* Do no work -- this is like SHARDS */
+        handle_ignored(me, r, timestamp);
         break;
     case SAMPLED_INSERTED:
-#ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append_infinity(&me->istats);
-#endif
         handle_inserted(me, r, timestamp);
         break;
     case SAMPLED_REPLACED:
-#ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append_infinity(&me->istats);
-#endif
         handle_replaced(me, r, timestamp);
         break;
     case SAMPLED_UPDATED:
-        // NOTE The interval statistics are handled in the 'handle_updated'
-        //      function! I know this is asymetrical and ugly, sorry.
         handle_updated(me, r, timestamp);
         break;
     default:
