@@ -39,10 +39,10 @@ def convert_to_miss_rate_curve(array: np.ndarray):
     finite = filter_finite(array)
     num_inf = np.isinf(array[:]["reuse_dist"]).sum()
     reuse_dist = finite[:]["reuse_dist"]
-    hist, edges = np.histogram(reuse_dist, bins=100)
+    hist, cache_sizes = np.histogram(reuse_dist, bins=100)
     mrc = 1 - np.cumsum(hist / len(array))
     # NOTE  We set the first element of the MRC to 1.0 by definition.
-    return edges, np.concatenate(([1.0], mrc))
+    return cache_sizes, np.concatenate(([1.0], mrc))
 
 
 def plot_single_miss_rate_curve(array: np.ndarray, output_path: str):
@@ -65,6 +65,47 @@ def plot_single_histogram(array: np.ndarray, output_path: str):
     plt.ylabel("Frequency")
     plt.hist(reuse_dist, bins=100)
     plt.savefig(output_path)
+
+
+def get_max_wss(mrcs: list[tuple[np.ndarray, np.ndarray]]) -> int:
+    cache_sizes = [cache_sizes[-1] for cache_sizes, _ in mrcs]
+    max_wss = max(cache_sizes)
+    return max_wss
+
+
+def get_mr_at_c(cache_sizes: np.ndarray, miss_rates: np.ndarray, c: int) -> int:
+    # NOTE  This is pretty hacky but here is my reasoning. The cache_sizes
+    #       are in ascending order. We want the last cache_size that is
+    #       smaller than c. This means this is the number of elements
+    #       that are less than c.
+    i = np.count_nonzero(cache_sizes < c) - 1
+    if i < 0:
+        i = 0
+    return miss_rates[i]
+
+
+def plot_iso_cache_size_miss_rate(
+    arrays: list[np.ndarray], output_path: str, num_plots: int
+):
+    """@brief   Generate plots of the miss rate for a fixed cache size over time."""
+    fig, axs = plt.subplots()
+    # fig.set_size_inches(16, 12)
+    fig.set_dpi(300)
+
+    fig.suptitle("Miss Rate for Fixed Cache Sizes Through Time")
+    mrcs = [convert_to_miss_rate_curve(array) for array in arrays]
+    max_wss = get_max_wss(mrcs)
+    for c in np.linspace(0, max_wss, num_plots):
+        # print(c)
+        mr_at_c = [
+            get_mr_at_c(cache_sizes, miss_rates, c) for cache_sizes, miss_rates in mrcs
+        ]
+        axs.plot(mr_at_c, label=f"Cache size: {c}")
+    axs.legend()
+
+    # Save in many formats because I hate losing work!
+    root, ext = os.path.splitext(output_path)
+    fig.savefig(f"{root}.png", format="png")
 
 
 def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
@@ -109,6 +150,12 @@ def main():
         default=None,
         help="use the first (last) <head> (-<tail>) entries only",
     )
+    parser.add_argument(
+        "--isocache-plot",
+        type=int,
+        default=0,
+        help="The number of cache sizes to plot over time.",
+    )
     parser.add_argument("--num-intervals", "-n", type=int, default=10)
     args = parser.parse_args()
 
@@ -132,6 +179,8 @@ def main():
     print(f"Number of unique accesses: {num_unique}")
 
     plot_all_hist_and_mrc(b, "hist-and-mrc.eps")
+    if args.isocache_plot > 0:
+        plot_iso_cache_size_miss_rate(b, "iso-cache.png", args.isocache_plot)
 
 
 if __name__ == "__main__":
