@@ -16,6 +16,9 @@ struct HashTable {
 bool
 HashTable__init(struct HashTable *me);
 
+size_t
+HashTable__get_size(struct HashTable const *const me);
+
 struct LookupReturn
 HashTable__lookup(struct HashTable *me, EntryType key);
 
