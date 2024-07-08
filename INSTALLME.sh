@@ -27,6 +27,9 @@ sudo apt install pkg-config libglib2.0-dev
 # Install environment niceties
 sudo apt install clang-format clangd
 
+# Install debugging tools
+sudo apt install valgrind
+
 # Build Meson
 meson setup build
 cd build
