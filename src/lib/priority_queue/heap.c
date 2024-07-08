@@ -239,7 +239,6 @@ bool
 Heap__is_full(struct Heap const *const me)
 {
     if (me == NULL) {
-        assert(validate_metadata(me));
         // My reasoning is that NULL is implicitly full... I'll admit
         // this is confusing semantics.
         return true;
@@ -269,7 +268,6 @@ KeyType
 Heap__get_max_key(struct Heap *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0) {
-        assert(validate_metadata(me));
         return 0;
     }
 
