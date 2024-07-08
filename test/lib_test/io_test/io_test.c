@@ -18,6 +18,16 @@ test_mmap(char const *const fpath)
     MemoryMap__write_as_json(stdout, &me);
     // We expect the number of bytes to exactly match our expectations!
     g_assert_cmpuint(me.num_bytes, ==, 84311825UL);
+
+    // Simply check that all parts of the memory map are reachable.
+    size_t checksum = 0;
+    for (size_t i = 0; i < me.num_bytes; ++i) {
+        checksum += ((char *)me.buffer)[i];
+    }
+    // NOTE I just simply calculated this checksum by running this test
+    //      and using the number it produced.
+    g_assert_cmpuint(checksum, ==, 141284780);
+
     MemoryMap__destroy(&me);
     return true;
 }
