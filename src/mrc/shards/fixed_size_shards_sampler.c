@@ -72,16 +72,16 @@ make_room(struct FixedSizeShardsSampler *me,
     }
     // No more elements with the old max_hash. Now we can update the new
     //  sampling_ratio, threshold, and scale!
-    max_hash = Heap__get_max_key(&me->pq);
+    Hash64BitType new_max_hash = Heap__get_max_key(&me->pq);
     // NOTE Converting UINT64_MAX from uint64_t to double causes the
     //      value to be rounded from 18446744073709551615 to
     //      18446744073709551616. By explicitly casting the UINT64_MAX
     //      to a double, I get rid of this warning. In this case, I am
     //      fine with this roundup because it provides an answer that is
     //      "close enough" (unlike cases where I use ratio_uint64).
-    me->sampling_ratio = (double)max_hash / (double)UINT64_MAX;
-    me->threshold = max_hash;
-    me->scale = UINT64_MAX / max_hash;
+    me->sampling_ratio = ratio_uint64(new_max_hash);
+    me->threshold = new_max_hash;
+    me->scale = UINT64_MAX / new_max_hash;
     return;
 }
 
