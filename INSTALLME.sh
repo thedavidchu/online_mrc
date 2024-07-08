@@ -1,6 +1,14 @@
 #!/usr/bin/bash
 ### @brief  This is the install script on a Debian-like machine.
-### @note   This assumes you have a clean repository.
+### @note   This assumes you have a clean, up-to-date repository.
+###         Otherwise, run the following (read notes carefully!!!):
+###         ```bash
+###         git fetch   # Fetch the remote
+###         git checkout main
+###         git reset --hard origin/main # Or, try `git pull` but you may have merge conflicts
+###         git clean -ndx # List which files to delete
+###         git clean -fdx  # Deletes all the listed files above!
+###         ```
 ### @note   You need sudo privileges to run this script. If not, then
 ###         you can try building the required files from source and/or
 ###         use Python's PIP.
