@@ -74,6 +74,10 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 #ifdef INTERVAL_STATISTICS
         IntervalStatistics__append_unsampled(&me->istats);
 #endif
+        // NOTE We increment the timestamp just because we want it to
+        //      keep pace with the regular Olken implementation when we
+        //      do interval analysis.
+        ++me->olken.current_time_stamp;
         return false;
     }
 
