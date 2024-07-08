@@ -33,6 +33,13 @@ IntervalStatistics__init(struct IntervalStatistics *const me,
 void
 IntervalStatistics__destroy(struct IntervalStatistics *const me);
 
+/// @brief  Append a reuse distance/time to the interval statistics.
+bool
+IntervalStatistics__append_scaled(struct IntervalStatistics *const me,
+                                  double const reuse_distance,
+                                  double const reuse_distance_horizontal_scale,
+                                  double const reuse_time);
+
 bool
 IntervalStatistics__append(struct IntervalStatistics *const me,
                            double const reuse_distance,

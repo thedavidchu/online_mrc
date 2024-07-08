@@ -47,9 +47,10 @@ resize(struct IntervalStatistics *const me)
 }
 
 bool
-IntervalStatistics__append(struct IntervalStatistics *const me,
-                           double const reuse_distance,
-                           double const reuse_time)
+IntervalStatistics__append_scaled(struct IntervalStatistics *const me,
+                                  double const reuse_distance,
+                                  double const reuse_distance_horizontal_scale,
+                                  double const reuse_time)
 {
     if (me == NULL) {
         return false;
@@ -66,11 +67,19 @@ IntervalStatistics__append(struct IntervalStatistics *const me,
     //      inexperienced C programmers would not understand what this
     //      means. It's a common idiom in C but I prefer to be clear
     //      even if I must be more verbose.
-    me->stats[me->length] =
-        (struct IntervalStatisticsItem){.reuse_distance = reuse_distance,
-                                        .reuse_time = reuse_time};
+    me->stats[me->length] = (struct IntervalStatisticsItem){
+        .reuse_distance = reuse_distance * reuse_distance_horizontal_scale,
+        .reuse_time = reuse_time};
     ++me->length;
     return true;
+}
+
+bool
+IntervalStatistics__append(struct IntervalStatistics *const me,
+                           double const reuse_distance,
+                           double const reuse_time)
+{
+    return IntervalStatistics__append_scaled(me, reuse_distance, 1, reuse_time);
 }
 
 bool
