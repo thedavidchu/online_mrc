@@ -145,9 +145,11 @@ handle_updated(struct EvictingMap *me,
                                     distance,
                                     scale == 0 ? 1 : scale);
 #ifdef INTERVAL_STATISTICS
-    IntervalStatistics__append(&me->istats,
-                               (double)distance * (scale == 0 ? 1 : scale),
-                               (double)me->current_time_stamp - timestamp - 1);
+    IntervalStatistics__append_scaled(&me->istats,
+                                      (double)distance,
+                                      (double)(scale == 0 ? 1 : scale),
+                                      (double)me->current_time_stamp -
+                                          timestamp - 1);
 #endif
     ++me->current_time_stamp;
 }
