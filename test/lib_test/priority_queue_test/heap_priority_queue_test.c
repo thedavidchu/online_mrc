@@ -3,6 +3,7 @@
 
 #include <glib.h>
 
+#include "arrays/reverse_index.h"
 #include "hash/types.h"
 #include "types/entry_type.h"
 
@@ -13,7 +14,7 @@
 //      however in the others, I at least try to clean up memory upon failure.
 // TODO Call this function with g_test_add(...) which includes facilities
 //      for cleanup.
-void
+static void
 test_heap_priority_queue(void)
 {
     struct Heap pq;
@@ -75,11 +76,37 @@ test_heap_priority_queue(void)
     Heap__destroy(&pq);
 }
 
+static void
+test_big_heap(void)
+{
+    size_t const heap_size = 1 << 12;
+    struct Heap me = {0};
+    g_assert_true(Heap__init(&me, heap_size));
+
+    for (size_t i = 0; i < 1 << 12; ++i) {
+        g_assert_true(Heap__insert_if_room(&me, i, i));
+    }
+
+    g_assert_true(Heap__is_full(&me));
+    g_assert_cmpuint(Heap__get_max_key(&me), ==, heap_size - 1);
+    for (size_t i = 0; i < heap_size; ++i) {
+        size_t max_key = REVERSE_INDEX(i, heap_size);
+        size_t max_val = 0;
+        g_assert_cmpuint(Heap__get_max_key(&me), ==, max_key);
+        g_assert_true(Heap__remove(&me, max_key, &max_val));
+        g_assert_cmpuint(max_val, ==, max_key);
+        g_assert_false(Heap__is_full(&me));
+    }
+
+    g_assert_cmpuint(me.length, ==, 0);
+}
+
 int
 main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
-    g_test_add_func("/priority_queue_test/splay_priority_queue__test",
+    g_test_add_func("/priority_queue_test/heap__test",
                     test_heap_priority_queue);
+    g_test_add_func("/priority_queue_test/heap__big_test", test_big_heap);
     return g_test_run();
 }

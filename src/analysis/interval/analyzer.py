@@ -19,11 +19,25 @@ def divide_array(array: np.ndarray, subdivisions: int):
     ]
 
 
+def count_sampled(array: np.ndarray):
+    """Count the number of sampled accesses in a chunk."""
+    reuse_time = array[:]["reuse_time"]
+    return np.count_nonzero(np.isnan(reuse_time) == False)
+
+
+def count_infinities(array: np.ndarray):
+    """Count the number of unique accesses in a chunk."""
+    reuse_time = array[:]["reuse_time"]
+    return np.count_nonzero(np.isinf(reuse_time))
+
+
 def count_unique(array: np.ndarray):
     """Count the number of unique accesses in a chunk."""
     reuse_time = array[:]["reuse_time"]
     position = np.arange(len(array))
-    is_first_access = reuse_time > position
+    is_first_access = np.logical_and(
+        np.isnan(reuse_time) == False, reuse_time >= position
+    )
     return np.count_nonzero(is_first_access)
 
 
@@ -122,6 +136,10 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
         axs[0, i].hist(reuse_dist, bins=100)
         axs[1, i].step(edges, mrc, where="post")
 
+        # Rotate x-ticks
+        axs[0, i].tick_params(axis="x", labelrotation=10)
+        axs[1, i].tick_params(axis="x", labelrotation=10)
+
         # Format axes
         axs[0, i].sharey(axs[0, 0])
         axs[1, i].sharey(axs[1, 0])
@@ -174,9 +192,13 @@ def main():
         print(f"Using all {len(b)} intervals")
 
     num_accesses = [len(c) for c in b]
+    num_sampled = [count_sampled(c) for c in b]
+    num_new = [count_infinities(c) for c in b]
     num_unique = [count_unique(c) for c in b]
-    print(f"Number of accesses: {num_accesses}")
-    print(f"Number of unique accesses: {num_unique}")
+    print(f"Number of total accesses: {num_accesses}")
+    print(f"Number of sampled accesses: {num_sampled}")
+    print(f"Number of new accesses: {num_new}")
+    print(f"Number of unique elements: {num_unique}")
 
     plot_all_hist_and_mrc(b, "hist-and-mrc.eps")
     if args.isocache_plot > 0:

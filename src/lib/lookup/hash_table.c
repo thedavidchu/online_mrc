@@ -36,6 +36,12 @@ HashTable__init(struct HashTable *me)
     return true;
 }
 
+size_t
+HashTable__get_size(struct HashTable const *const me)
+{
+    return g_hash_table_size(me->hash_table);
+}
+
 struct LookupReturn
 HashTable__lookup(struct HashTable *me, EntryType key)
 {

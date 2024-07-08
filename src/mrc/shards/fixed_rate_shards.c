@@ -92,10 +92,11 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
                "update should replace value");
 #ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append(&me->istats,
-                                   distance,
-                                   me->olken.current_time_stamp -
-                                       found.timestamp - 1);
+        IntervalStatistics__append_scaled(&me->istats,
+                                          distance,
+                                          me->scale,
+                                          me->olken.current_time_stamp -
+                                              found.timestamp - 1);
 #endif
         ++me->olken.current_time_stamp;
         // TODO(dchu): Maybe record the infinite distances for Parda!
