@@ -31,7 +31,9 @@ validate_args(size_t const length, size_t const max_num_unique_entries)
 }
 
 struct Trace
-generate_uniform_trace(const uint64_t length, const uint64_t seed)
+generate_uniform_trace(const uint64_t length,
+                       const uint64_t max_num_unique_entries,
+                       const uint64_t seed)
 {
     struct TraceItem *trace = NULL;
     struct UniformRandom urng = {0};
@@ -50,7 +52,7 @@ generate_uniform_trace(const uint64_t length, const uint64_t seed)
 
     for (size_t i = 0; i < length; ++i) {
         trace[i] = (struct TraceItem){
-            .key = UniformRandom__next_uint64(&urng),
+            .key = UniformRandom__next_uint64(&urng) % max_num_unique_entries,
         };
     }
 
