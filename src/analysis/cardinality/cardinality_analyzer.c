@@ -25,12 +25,14 @@ static size_t const artificial_trace_length = 1 << 20;
 static double const init_sampling_rate = 1e0;
 static size_t const max_size = 1 << 13;
 
-static bool run_zipfian = false;
-static bool run_uniform = false;
-static char *trace_path = NULL;
+// NOTE The 'gboolean' and 'bool' sizes are different so if these are
+//      regular 'bool', then they can get clobbered!
+static gboolean run_zipfian = false;
+static gboolean run_uniform = false;
+static gchar *trace_path = NULL;
 // When cleanup is enable, we delete all the files we generate from this
 // test.
-static bool cleanup = false;
+static gboolean cleanup = false;
 
 static char const *const TRACE_OUTPUT_PATH =
     "./trace_hyperloglog_cardinalities.bin";
@@ -132,6 +134,10 @@ test_hyperloglog_accuracy(char const *const fpath,
     return true;
 }
 
+/// @note   This function can only be called by one entity at a time
+///         lest the static counter be incremented too fast. I could fix
+///         this by creating a new structure containing the 'i' (or by
+///         modifying 'struct Trace', but that's too much work).
 static uint64_t
 next_trace_item(struct Trace *trace)
 {
@@ -200,6 +206,7 @@ main(int argc, char *argv[])
         g_print("option parsing failed: %s\n", error->message);
         exit(1);
     }
+    g_option_context_free(context);
 
     if (trace_path != NULL) {
         run_cardinality_estimate_on_trace(trace_path, TRACE_FORMAT_KIA);
