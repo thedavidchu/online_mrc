@@ -25,12 +25,14 @@ static size_t const artificial_trace_length = 1 << 20;
 static double const init_sampling_rate = 1e0;
 static size_t const max_size = 1 << 13;
 
-static bool run_zipfian = false;
-static bool run_uniform = false;
-static char *trace_path = NULL;
+// NOTE The 'gboolean' and 'bool' sizes are different so if these are
+//      regular 'bool', then they can get clobbered!
+static gboolean run_zipfian = false;
+static gboolean run_uniform = false;
+static gchar *trace_path = NULL;
 // When cleanup is enable, we delete all the files we generate from this
 // test.
-static bool cleanup = false;
+static gboolean cleanup = false;
 
 static char const *const TRACE_OUTPUT_PATH =
     "./trace_hyperloglog_cardinalities.bin";
@@ -214,6 +216,7 @@ main(int argc, char *argv[])
         g_print("option parsing failed: %s\n", error->message);
         exit(1);
     }
+    g_option_context_free(context);
 
     if (trace_path != NULL) {
         ASSERT_FUNCTION_RETURNS_TRUE(
