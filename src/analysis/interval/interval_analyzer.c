@@ -183,6 +183,20 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
         LOGGER_ERROR("input path '%s' DNE", args->input_path);
         is_error = true;
     }
+    if (args->input_path == NULL && !args->run_uniform && !args->run_zipfian) {
+        LOGGER_ERROR("no input selected!");
+        is_error = true;
+    }
+    if ((args->input_path != NULL && args->run_uniform) ||
+        (args->input_path != NULL && args->run_zipfian) ||
+        (args->run_uniform && args->run_zipfian)) {
+        LOGGER_WARN("selected multiple inputs, so we'll end up overwriting "
+                    "some (Zipfian overwrites Uniform which overwrites the "
+                    "trace): (-i:%p,-u:%d,-z:%d)",
+                    args->input_path,
+                    args->run_uniform,
+                    args->run_zipfian);
+    }
     if (trace_format_str != NULL &&
         !parse_trace_format_string(trace_format_str)) {
         LOGGER_ERROR("invalid trace format '%s'", trace_format_str);
@@ -194,6 +208,7 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
         free(help_msg);
         exit(-1);
     }
+
     g_option_context_free(context);
     return true;
 }
