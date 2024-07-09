@@ -71,6 +71,12 @@ static GOptionEntry entries[] = {
     G_OPTION_ENTRY_NULL,
 };
 
+static double
+calculate_error(double const oracle, double const output)
+{
+    return (oracle - output) / oracle;
+}
+
 /// @brief  Test the cardinality estimation of various techniques.
 static bool
 test_hyperloglog_accuracy(char const *const fpath,
@@ -107,6 +113,14 @@ test_hyperloglog_accuracy(char const *const fpath,
         estimates[3 * i + 0] = ht_size;
         estimates[3 * i + 1] = eht_size;
         estimates[3 * i + 2] = fs_size;
+
+        if (ht_size > 1 << 13) {
+            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.02);
+        } else if (ht_size > 1 << 10) {
+            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.03);
+        } else if (ht_size > 1 << 7) {
+            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.04);
+        }
     }
 
     if (fpath != NULL) {
