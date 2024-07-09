@@ -28,7 +28,7 @@ time $EXE -i $INPUT_PATH -a QuickMRC -s 1e-1 -o qmrcs1e-1-mrc.bin
 time $EXE -i $INPUT_PATH -a Fixed-Rate-SHARDS-Adj -s 1e-12 -o hash-only.bin
 
 # Plot the MRCs.
-python3 ../scripts/plot_mrc.py \
+python3 ../src/analysis/plot/plot_mrc.py \
     --oracle olken-mrc.bin \
     --input \
     frs1e-3-mrc.bin frsa1e-3-mrc.bin fss1e-1-mrc.bin \
