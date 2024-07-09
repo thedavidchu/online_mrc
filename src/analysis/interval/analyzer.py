@@ -142,8 +142,10 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
 
         # Format axes
         axs[0, i].sharey(axs[0, 0])
-        axs[1, i].sharey(axs[1, 0])
         axs[0, i].sharex(axs[1, i])
+
+        # Set range of MRC
+        axs[1, i].set_ylim([0, 1])
 
     # Save in many formats because I hate losing work!
     root, ext = os.path.splitext(output_path)
