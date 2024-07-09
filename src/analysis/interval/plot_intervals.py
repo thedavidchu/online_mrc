@@ -132,6 +132,8 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
         finite = filter_finite(array)
         reuse_dist = finite[:]["reuse_dist"]
         edges, mrc = convert_to_miss_rate_curve(array)
+        # NOTE  For some reason, not all MRCs start at (0.0, 1.0). For
+        #       this reason, we set the value to start there.
         if edges[0] != 0.0:
             edges[0] = 0.0
         axs[0, i].set_title(f"{i}/{len(arrays)}")
