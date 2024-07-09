@@ -77,12 +77,13 @@ update_item(struct FixedSizeShards *me,
     IntervalStatistics__append_scaled(&me->istats,
                                       distance,
                                       me->sampler.scale,
-                                      me->olken.current_time_stamp -
-                                          r.timestamp - 1);
+                                      me->olken.current_time_stamp - timestamp -
+                                          1);
 #endif
     Histogram__insert_scaled_finite(&me->olken.histogram,
                                     distance,
                                     me->sampler.scale);
+    return true;
 }
 
 static void
