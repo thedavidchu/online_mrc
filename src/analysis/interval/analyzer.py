@@ -26,7 +26,7 @@ def count_sampled(array: np.ndarray):
 
 
 def count_infinities(array: np.ndarray):
-    """Count the number of unique accesses in a chunk."""
+    """Count the number of new accesses in a chunk."""
     reuse_time = array[:]["reuse_time"]
     return np.count_nonzero(np.isinf(reuse_time))
 
@@ -51,10 +51,10 @@ def filter_finite(array: np.ndarray):
 def convert_to_miss_rate_curve(array: np.ndarray):
     """Convert an array into a miss rate curve."""
     finite = filter_finite(array)
-    num_inf = np.isinf(array[:]["reuse_dist"]).sum()
+    num_inf = count_infinities(array)
     reuse_dist = finite[:]["reuse_dist"]
     hist, cache_sizes = np.histogram(reuse_dist, bins=100)
-    mrc = 1 - np.cumsum(hist / len(array))
+    mrc = 1 - np.cumsum(hist / (len(reuse_dist) + num_inf))
     # NOTE  We set the first element of the MRC to 1.0 by definition.
     return cache_sizes, np.concatenate(([1.0], mrc))
 
@@ -132,6 +132,8 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
         finite = filter_finite(array)
         reuse_dist = finite[:]["reuse_dist"]
         edges, mrc = convert_to_miss_rate_curve(array)
+        if edges[0] != 0.0:
+            edges[0] = 0.0
         axs[0, i].set_title(f"{i}/{len(arrays)}")
         axs[0, i].hist(reuse_dist, bins=100)
         axs[1, i].step(edges, mrc, where="post")
@@ -141,11 +143,13 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
         axs[1, i].tick_params(axis="x", labelrotation=10)
 
         # Format axes
+        axs[0, i].sharex(axs[0, 0])
         axs[0, i].sharey(axs[0, 0])
-        axs[0, i].sharex(axs[1, i])
+        axs[1, i].sharex(axs[0, 0])
 
         # Set range of MRC
-        axs[1, i].set_ylim([0, 1])
+        # NOTE  We allocate a bit more space than needed for aesthetics.
+        axs[1, i].set_ylim([0, 1.05])
 
     # Save in many formats because I hate losing work!
     root, ext = os.path.splitext(output_path)
