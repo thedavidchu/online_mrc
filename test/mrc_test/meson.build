@@ -21,6 +21,7 @@ fixed_size_shards_test_exe = executable(
         hash_dep,
         miss_rate_curve_dep,
         glib_dep,
+        lookup_dep,
         shards_dep,
         olken_dep,
         zipfian_random_dep,
