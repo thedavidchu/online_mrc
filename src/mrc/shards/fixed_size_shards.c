@@ -89,7 +89,8 @@ update_item(struct FixedSizeShards *me,
 static void
 evict_item(void *eviction_data, EntryType entry)
 {
-    Olken__remove_item(eviction_data, entry);
+    bool r = Olken__remove_item(eviction_data, entry);
+    assert(r);
 }
 
 static bool
@@ -99,9 +100,11 @@ insert_item(struct FixedSizeShards *me, EntryType entry)
                                         entry,
                                         evict_item,
                                         &me->olken)) {
+        LOGGER_ERROR("fixed-size SHARDS sampler insertion failed");
         return false;
     }
     if (!Olken__insert_stack(&me->olken, entry)) {
+        LOGGER_ERROR("Olken insertion failed");
         return false;
     }
 #ifdef INTERVAL_STATISTICS
