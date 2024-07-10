@@ -4,7 +4,6 @@
 
 #include <glib.h>
 
-#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
@@ -12,7 +11,6 @@
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
-#include "math/positive_ceiling_divide.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "shards/fixed_size_shards.h"
