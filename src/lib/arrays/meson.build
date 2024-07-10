@@ -14,4 +14,7 @@ arrays_lib = library(
 arrays_dep = declare_dependency(
     link_with: arrays_lib,
     include_directories: arrays_inc,
+    dependencies: [
+        glib_dep,
+    ],
 )
