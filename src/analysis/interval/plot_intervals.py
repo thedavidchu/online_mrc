@@ -6,6 +6,8 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from tqdm import tqdm
 
 DTYPE = np.dtype([("reuse_dist", np.float64), ("reuse_time", np.float64)])
@@ -17,6 +19,18 @@ def divide_array(array: np.ndarray, subdivisions: int):
         array[i * len(array) // subdivisions : (i + 1) * len(array) // subdivisions]
         for i in range(subdivisions)
     ]
+
+
+def choose_selective_intervals(array: list[np.ndarray], head: None | int):
+    if head is None:
+        print(f"Using all {len(array)} intervals")
+        return array
+    if head < 0:
+        print(f"Using last {-head} of {len(array)} intervals")
+        return array[head:]
+    else:
+        print(f"Using first {head} of {len(array)} intervals")
+        return array[:head]
 
 
 def count_sampled(array: np.ndarray):
@@ -39,6 +53,17 @@ def count_unique(array: np.ndarray):
         np.isnan(reuse_time) == False, reuse_time >= position
     )
     return np.count_nonzero(is_first_access)
+
+
+def print_statistics(array: list[np.ndarray]):
+    num_accesses = [len(x) for x in array]
+    num_sampled = [count_sampled(x) for x in array]
+    num_new = [count_infinities(x) for x in array]
+    num_unique = [count_unique(x) for x in array]
+    print(f"Number of total accesses: {num_accesses}")
+    print(f"Number of sampled accesses: {num_sampled}")
+    print(f"Number of new accesses: {num_new}")
+    print(f"Number of unique elements: {num_unique}")
 
 
 def filter_finite(array: np.ndarray):
@@ -122,12 +147,9 @@ def plot_iso_cache_size_miss_rate(
     fig.savefig(f"{root}.png", format="png")
 
 
-def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
-    fig, axs = plt.subplots(ncols=len(arrays), nrows=2)
-    fig.set_size_inches(2 * axs.shape[1], 2 * axs.shape[0])
-    fig.set_dpi(300)
-
-    fig.suptitle("Histogram and MRC")
+def plot_hist_and_mrc(
+    fig: Figure, axs: np.ndarray[Axes], arrays: list[np.ndarray], idx: str
+):
     for i, array in enumerate(tqdm(arrays)):
         finite = filter_finite(array)
         reuse_dist = finite[:]["reuse_dist"]
@@ -138,7 +160,7 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
             edges[0] = 0.0
         axs[0, i].set_title(f"{i}/{len(arrays)}")
         axs[0, i].hist(reuse_dist, bins=100)
-        axs[1, i].step(edges, mrc, where="post")
+        axs[1, i].step(edges, mrc, where="post", label=f"{idx}")
 
         # Rotate x-ticks
         axs[0, i].tick_params(axis="x", labelrotation=10)
@@ -153,6 +175,21 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
         # NOTE  We allocate a bit more space than needed for aesthetics.
         axs[1, i].set_ylim([0, 1.05])
 
+
+def plot_all_hist_and_mrc(
+    input_paths: list[str], arrays: list[list[np.ndarray]], output_path: str
+):
+    fig, axs = plt.subplots(ncols=len(arrays[0]), nrows=2)
+    fig.set_size_inches(2 * axs.shape[1], 2 * axs.shape[0])
+    fig.set_dpi(300)
+
+    fig.suptitle("Histogram and MRC")
+    for i, array in enumerate(tqdm(arrays)):
+        plot_hist_and_mrc(fig, axs, array, input_paths[i])
+
+    if len(arrays) > 1:
+        axs[1, 0].legend()
+
     # Save in many formats because I hate losing work!
     root, ext = os.path.splitext(output_path)
     fig.savefig(f"{root}.eps", format="eps")
@@ -164,11 +201,11 @@ def plot_all_hist_and_mrc(arrays: list[np.ndarray], output_path: str):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input-file",
+        "--input-files",
         "-i",
-        required=True,
+        nargs="+",
         type=str,
-        help="input file path (root is used for output path)",
+        help="input file paths (root is used for output path)",
     )
     parser.add_argument(
         "--head",
@@ -185,32 +222,19 @@ def main():
     parser.add_argument("--num-intervals", "-n", type=int, default=10)
     args = parser.parse_args()
 
-    a = np.fromfile(args.input_file, dtype=DTYPE)
-    b = divide_array(a, args.num_intervals)
+    arrays = []
+    for input_file in args.input_files:
+        print(f"Processing {input_file} file")
+        x = np.fromfile(input_file, dtype=DTYPE)
+        x = divide_array(x, args.num_intervals)
+        x = choose_selective_intervals(x, args.head)
+        print_statistics(x)
 
-    print(f"Processing {args.input_file} file")
-    if args.head is not None:
-        if args.head < 0:
-            print(f"Using last {-args.head} of {len(b)} intervals")
-            b = b[args.head :]
-        else:
-            print(f"Using first {args.head} of {len(b)} intervals")
-            b = b[: args.head]
-    else:
-        print(f"Using all {len(b)} intervals")
+        if args.isocache_plot > 0:
+            plot_iso_cache_size_miss_rate(x, "iso-cache.png", args.isocache_plot)
+        arrays.append(x)
 
-    num_accesses = [len(c) for c in b]
-    num_sampled = [count_sampled(c) for c in b]
-    num_new = [count_infinities(c) for c in b]
-    num_unique = [count_unique(c) for c in b]
-    print(f"Number of total accesses: {num_accesses}")
-    print(f"Number of sampled accesses: {num_sampled}")
-    print(f"Number of new accesses: {num_new}")
-    print(f"Number of unique elements: {num_unique}")
-
-    plot_all_hist_and_mrc(b, "hist-and-mrc.eps")
-    if args.isocache_plot > 0:
-        plot_iso_cache_size_miss_rate(b, "iso-cache.png", args.isocache_plot)
+    plot_all_hist_and_mrc(args.input_files, arrays, "hist-and-mrc.eps")
 
 
 if __name__ == "__main__":
