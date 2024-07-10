@@ -19,7 +19,6 @@
 #include "interval_statistics/interval_statistics.h"
 #include "invariants/implies.h"
 #include "logger/logger.h"
-#include "shards/fixed_rate_shards_sampler.h"
 #include "trace/generator.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
