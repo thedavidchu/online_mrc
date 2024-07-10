@@ -144,7 +144,7 @@ def plot_iso_cache_size_miss_rate(
 
     # Save in many formats because I hate losing work!
     root, ext = os.path.splitext(output_path)
-    fig.savefig(f"{root}.png", format="png")
+    fig.savefig(f"{root}.pdf", format="pdf")
 
 
 def plot_hist_and_mrc(
@@ -192,10 +192,8 @@ def plot_all_hist_and_mrc(
 
     # Save in many formats because I hate losing work!
     root, ext = os.path.splitext(output_path)
-    fig.savefig(f"{root}.eps", format="eps")
     fig.savefig(f"{root}.svg", format="svg")
     fig.savefig(f"{root}.pdf", format="pdf")
-    fig.savefig(f"{root}.png", format="png")
 
 
 def main():
