@@ -4,6 +4,11 @@
 #include <stdint.h>
 
 struct Trace
+generate_uniform_trace(const uint64_t length,
+                       const uint64_t max_num_unique_entries,
+                       const uint64_t seed);
+
+struct Trace
 generate_zipfian_trace(const uint64_t length,
                        const uint64_t max_num_unique_entries,
                        const double skew,

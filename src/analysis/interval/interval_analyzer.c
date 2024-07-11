@@ -19,7 +19,7 @@
 #include "interval_statistics/interval_statistics.h"
 #include "invariants/implies.h"
 #include "logger/logger.h"
-#include "shards/fixed_rate_shards_sampler.h"
+#include "trace/generator.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
 #include "types/entry_type.h"
@@ -36,6 +36,8 @@ struct CommandLineArguments {
     char *input_path;
     // Input format.
     enum TraceFormat format;
+    gboolean run_uniform;
+    gboolean run_zipfian;
 
     char *output_path;
     char *fr_shards_output_path;
@@ -45,7 +47,7 @@ struct CommandLineArguments {
     double fr_shards_sampling_rate;
     double fs_shards_sampling_rate;
 
-    bool cleanup;
+    gboolean cleanup;
 };
 
 static bool
@@ -56,6 +58,8 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
 
     char *const DEFAULT_INPUT_PATH = NULL;
     enum TraceFormat const DEFAULT_INPUT_FORMAT = TRACE_FORMAT_KIA;
+    bool DEFAULT_RUN_UNIFORM = FALSE;
+    bool DEFAULT_RUN_ZIPFIAN = FALSE;
 
     char *const DEFAULT_OLKEN_OUTPUT_PATH = NULL;
     char *const DEFAULT_FIXED_RATE_SHARDS_OUTPUT_PATH = NULL;
@@ -65,11 +69,13 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
     double const DEFAULT_FIXED_RATE_SHARDS_SAMPLING_RATE = 1e-3;
     double const DEFAULT_FIXED_SIZE_SHARDS_SAMPLING_RATE = 1e-1;
 
-    bool const DEFAULT_CLEANUP_MODE = false;
+    bool const DEFAULT_CLEANUP_MODE = FALSE;
 
     *args = (struct CommandLineArguments){
         .input_path = DEFAULT_INPUT_PATH,
         .format = DEFAULT_INPUT_FORMAT,
+        .run_uniform = DEFAULT_RUN_UNIFORM,
+        .run_zipfian = DEFAULT_RUN_ZIPFIAN,
         .output_path = DEFAULT_OLKEN_OUTPUT_PATH,
         .fr_shards_output_path = DEFAULT_FIXED_RATE_SHARDS_OUTPUT_PATH,
         .fs_shards_output_path = DEFAULT_FIXED_SIZE_SHARDS_OUTPUT_PATH,
@@ -96,6 +102,20 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
          &trace_format_str,
          "format of the input file, either {Kia,Sari}. Default: Kia",
          "<input-format>"},
+        {"uniform",
+         'u',
+         0,
+         G_OPTION_ARG_NONE,
+         &args->run_uniform,
+         "run uniform random trace",
+         0},
+        {"zipfian",
+         'z',
+         0,
+         G_OPTION_ARG_NONE,
+         &args->run_zipfian,
+         "run zipfian random trace",
+         0},
         {"output",
          'o',
          0,
@@ -158,9 +178,23 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
     }
 
     bool is_error = false;
-    if (!file_exists(args->input_path)) {
+    if (args->input_path != NULL && !file_exists(args->input_path)) {
         LOGGER_ERROR("input path '%s' DNE", args->input_path);
         is_error = true;
+    }
+    if (args->input_path == NULL && !args->run_uniform && !args->run_zipfian) {
+        LOGGER_ERROR("no input selected!");
+        is_error = true;
+    }
+    if ((args->input_path != NULL && args->run_uniform) ||
+        (args->input_path != NULL && args->run_zipfian) ||
+        (args->run_uniform && args->run_zipfian)) {
+        LOGGER_WARN("selected multiple inputs, so we'll end up overwriting "
+                    "some (Zipfian overwrites Uniform which overwrites the "
+                    "trace): (-i:%p,-u:%d,-z:%d)",
+                    args->input_path,
+                    args->run_uniform,
+                    args->run_zipfian);
     }
     if (trace_format_str != NULL &&
         !parse_trace_format_string(trace_format_str)) {
@@ -173,6 +207,8 @@ parse_command_line_arguments(struct CommandLineArguments *const args,
         free(help_msg);
         exit(-1);
     }
+
+    g_option_context_free(context);
     return true;
 }
 
@@ -320,7 +356,7 @@ generate_fs_shards_reuse_stats(struct Trace *trace,
     //      only performed at the end!
     if (!FixedSizeShards__init(&me,
                                args->fs_shards_sampling_rate,
-                               trace->length,
+                               1 << 13,
                                1,
                                true)) {
         LOGGER_ERROR("bad initialization");
@@ -339,6 +375,25 @@ generate_fs_shards_reuse_stats(struct Trace *trace,
     FixedSizeShards__destroy(&me);
     return true;
 }
+
+static void
+run_experiments(struct Trace *trace,
+                struct CommandLineArguments const *const args)
+{
+    if (args->output_path) {
+        generate_olken_reuse_stats(trace, args);
+    }
+    if (args->emap_output_path) {
+        generate_emap_reuse_stats(trace, args);
+    }
+    if (args->fr_shards_output_path) {
+        generate_fr_shards_reuse_stats(trace, args);
+    }
+    if (args->fs_shards_output_path) {
+        generate_fs_shards_reuse_stats(trace, args);
+    }
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -347,27 +402,26 @@ main(int argc, char *argv[])
         LOGGER_ERROR("unable to parse command line arguments");
         return EXIT_FAILURE;
     }
-    enum TraceFormat format = args.format;
-    if (format == TRACE_FORMAT_INVALID) {
-        LOGGER_ERROR("invalid trace format");
-        exit(-1);
-    }
-    LOGGER_TRACE("beginning to read trace file '%s' with format '%s'",
-                 args.input_path,
-                 TRACE_FORMAT_STRINGS[args.format]);
-    struct Trace trace = read_trace(args.input_path, args.format);
 
-    if (args.output_path) {
-        generate_olken_reuse_stats(&trace, &args);
+    if (args.input_path != NULL) {
+        enum TraceFormat format = args.format;
+        if (format == TRACE_FORMAT_INVALID) {
+            LOGGER_ERROR("invalid trace format");
+            exit(-1);
+        }
+        LOGGER_TRACE("beginning to read trace file '%s' with format '%s'",
+                     args.input_path,
+                     TRACE_FORMAT_STRINGS[args.format]);
+        struct Trace trace = read_trace(args.input_path, args.format);
+        run_experiments(&trace, &args);
     }
-    if (args.emap_output_path) {
-        generate_emap_reuse_stats(&trace, &args);
+    if (args.run_uniform) {
+        struct Trace trace = generate_uniform_trace(1 << 20, 1 << 20, 0);
+        run_experiments(&trace, &args);
     }
-    if (args.fr_shards_output_path) {
-        generate_fr_shards_reuse_stats(&trace, &args);
-    }
-    if (args.fs_shards_output_path) {
-        generate_fs_shards_reuse_stats(&trace, &args);
+    if (args.run_zipfian) {
+        struct Trace trace = generate_zipfian_trace(1 << 20, 1 << 20, 0.99, 0);
+        run_experiments(&trace, &args);
     }
     return 0;
 }

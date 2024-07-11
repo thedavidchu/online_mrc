@@ -59,6 +59,12 @@ Olken__remove_item(struct Olken *me, EntryType entry)
     return tree__sleator_remove(&me->tree, r.timestamp);
 }
 
+void
+Olken__ignore_entry(struct Olken *me)
+{
+    ++me->current_time_stamp;
+}
+
 /// @return Return the stack distance of an existing item or uint64::MAX
 ///         upon an error.
 uint64_t

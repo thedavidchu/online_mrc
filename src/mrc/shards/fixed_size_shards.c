@@ -4,7 +4,6 @@
 
 #include <glib.h>
 
-#include "hash/MyMurmurHash3.h"
 #include "histogram/histogram.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
@@ -12,7 +11,6 @@
 #include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
-#include "math/positive_ceiling_divide.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "shards/fixed_size_shards.h"
@@ -56,9 +54,62 @@ cleanup:
 }
 
 static void
+unsampled_item(struct FixedSizeShards *me)
+{
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append_unsampled(&me->istats);
+#endif
+    Olken__ignore_entry(&me->olken);
+}
+
+static bool
+update_item(struct FixedSizeShards *me,
+            EntryType entry,
+            TimeStampType timestamp)
+{
+    uint64_t distance = Olken__update_stack(&me->olken, entry, timestamp);
+    if (distance == UINT64_MAX) {
+        return false;
+    }
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append_scaled(&me->istats,
+                                      distance,
+                                      me->sampler.scale,
+                                      me->olken.current_time_stamp - timestamp -
+                                          1);
+#endif
+    Histogram__insert_scaled_finite(&me->olken.histogram,
+                                    distance,
+                                    me->sampler.scale);
+    return true;
+}
+
+static void
 evict_item(void *eviction_data, EntryType entry)
 {
-    Olken__remove_item(eviction_data, entry);
+    bool r = Olken__remove_item(eviction_data, entry);
+    assert(r);
+}
+
+static bool
+insert_item(struct FixedSizeShards *me, EntryType entry)
+{
+    if (!FixedSizeShardsSampler__insert(&me->sampler,
+                                        entry,
+                                        evict_item,
+                                        &me->olken)) {
+        LOGGER_ERROR("fixed-size SHARDS sampler insertion failed");
+        return false;
+    }
+    if (!Olken__insert_stack(&me->olken, entry)) {
+        LOGGER_ERROR("Olken insertion failed");
+        return false;
+    }
+#ifdef INTERVAL_STATISTICS
+    IntervalStatistics__append_infinity(&me->istats);
+#endif
+    Histogram__insert_scaled_infinite(&me->olken.histogram, me->sampler.scale);
+    return true;
 }
 
 bool
@@ -71,43 +122,15 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     }
 
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
-#ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append_unsampled(&me->istats);
-#endif
+        unsampled_item(me);
         return false;
     }
 
     struct LookupReturn r = HashTable__lookup(&me->olken.hash_table, entry);
     if (r.success) {
-        uint64_t distance = Olken__update_stack(&me->olken, entry, r.timestamp);
-        if (distance == UINT64_MAX) {
-            return false;
-        }
-#ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append_scaled(&me->istats,
-                                          distance,
-                                          me->sampler.scale,
-                                          me->olken.current_time_stamp -
-                                              r.timestamp - 1);
-#endif
-        Histogram__insert_scaled_finite(&me->olken.histogram,
-                                        distance,
-                                        me->sampler.scale);
+        return update_item(me, entry, r.timestamp);
     } else {
-        if (!FixedSizeShardsSampler__insert(&me->sampler,
-                                            entry,
-                                            evict_item,
-                                            &me->olken)) {
-            return false;
-        }
-        if (!Olken__insert_stack(&me->olken, entry)) {
-            return false;
-        }
-#ifdef INTERVAL_STATISTICS
-        IntervalStatistics__append_infinity(&me->istats);
-#endif
-        Histogram__insert_scaled_infinite(&me->olken.histogram,
-                                          me->sampler.scale);
+        return insert_item(me, entry);
     }
     return true;
 }

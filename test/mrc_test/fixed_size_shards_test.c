@@ -8,6 +8,7 @@
 #include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
+#include "lookup/hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
@@ -106,6 +107,11 @@ long_accuracy_trace_test(void)
         uint64_t entry = ZipfianRandom__next(&zrng);
         Olken__access_item(&oracle, entry);
         FixedSizeShards__access_item(&me, entry);
+        // Verify the fixed size of this method
+        g_assert_cmpuint(HashTable__get_size(&me.olken.hash_table),
+                         <=,
+                         me.sampler.pq.capacity);
+        g_assert_cmpuint(me.olken.tree.cardinality, <=, me.sampler.pq.capacity);
     }
     struct MissRateCurve oracle_mrc = {0}, mrc = {0};
     MissRateCurve__init_from_histogram(&oracle_mrc, &oracle.histogram);

@@ -2,6 +2,7 @@
  *  @note   Yes, I know the way I clean up the files in the end is a
  *          complete hack.
  */
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,10 +17,11 @@
 #include "lookup/lookup.h"
 #include "random/uniform_random.h"
 #include "random/zipfian_random.h"
+#include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards_sampler.h"
-#include "test/mytester.h"
 #include "trace/reader.h"
 
+static int const num_tests = 4;
 static uint64_t const rng_seed = 42;
 static size_t const artificial_trace_length = 1 << 20;
 static double const init_sampling_rate = 1e0;
@@ -73,28 +75,25 @@ static GOptionEntry entries[] = {
     G_OPTION_ENTRY_NULL,
 };
 
-static double
-calculate_error(double const oracle, double const output)
-{
-    return (oracle - output) / oracle;
-}
-
 /// @brief  Test the cardinality estimation of various techniques.
 static bool
-test_hyperloglog_accuracy(char const *const fpath,
-                          uint64_t (*f_next)(void *),
-                          void *data)
+test_cardinality_estimate_accuracy(char const *const fpath,
+                                   uint64_t (*f_next)(void *),
+                                   void *data)
 {
     struct HashTable ht = {0};
     struct EvictingHashTable eht = {0};
     struct FixedSizeShardsSampler fs = {0};
+    struct FixedRateShards fr = {0};
 
     g_assert_true(HashTable__init(&ht));
     g_assert_true(EvictingHashTable__init(&eht, max_size, init_sampling_rate));
     g_assert_true(
         FixedSizeShardsSampler__init(&fs, init_sampling_rate, max_size, false));
+    g_assert_true(FixedRateShards__init(&fr, 1e-3, max_size, 1, false));
 
-    size_t *estimates = calloc(artificial_trace_length, 3 * sizeof(*estimates));
+    size_t *estimates =
+        calloc(artificial_trace_length, num_tests * sizeof(*estimates));
     assert(estimates);
 
     for (size_t i = 0; i < artificial_trace_length; ++i) {
@@ -106,30 +105,25 @@ test_hyperloglog_accuracy(char const *const fpath,
             FixedSizeShardsSampler__sample(&fs, x)) {
             FixedSizeShardsSampler__insert(&fs, x, NULL, NULL);
         }
+        FixedRateShards__access_item(&fr, x);
 
         size_t ht_size = g_hash_table_size(ht.hash_table);
         // NOTE It's just math that this is the cardinality estimate.
         size_t eht_size =
             EvictingHashTable__estimate_scale_factor(&eht) * eht.num_inserted;
         size_t fs_size = FixedSizeShardsSampler__estimate_cardinality(&fs);
-        estimates[3 * i + 0] = ht_size;
-        estimates[3 * i + 1] = eht_size;
-        estimates[3 * i + 2] = fs_size;
-
-        if (ht_size > 1 << 13) {
-            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.02);
-        } else if (ht_size > 1 << 10) {
-            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.03);
-        } else if (ht_size > 1 << 7) {
-            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.04);
-        }
+        size_t fr_size = fr.scale * HashTable__get_size(&fr.olken.hash_table);
+        estimates[num_tests * i + 0] = ht_size;
+        estimates[num_tests * i + 1] = eht_size;
+        estimates[num_tests * i + 2] = fs_size;
+        estimates[num_tests * i + 3] = fr_size;
     }
 
     if (fpath != NULL) {
         FILE *fp = fopen(fpath, "wb");
         assert(fp);
         if (fwrite(estimates,
-                   3 * sizeof(*estimates),
+                   num_tests * sizeof(*estimates),
                    artificial_trace_length,
                    fp) != artificial_trace_length) {
             LOGGER_ERROR("incorrect number of elements written");
@@ -145,9 +139,14 @@ test_hyperloglog_accuracy(char const *const fpath,
     HashTable__destroy(&ht);
     EvictingHashTable__destroy(&eht);
     FixedSizeShardsSampler__destroy(&fs);
+    FixedRateShards__destroy(&fr);
     return true;
 }
 
+/// @note   This function can only be called by one entity at a time
+///         lest the static counter be incremented too fast. I could fix
+///         this by creating a new structure containing the 'i' (or by
+///         modifying 'struct Trace', but that's too much work).
 static uint64_t
 next_trace_item(struct Trace *trace)
 {
@@ -161,45 +160,46 @@ next_trace_item(struct Trace *trace)
 }
 
 static bool
-test_hyperloglog_accuracy_on_trace(char const *const trace_path,
-                                   enum TraceFormat trace_format)
+run_cardinality_estimate_on_trace(char const *const trace_path,
+                                  enum TraceFormat trace_format)
 {
     struct Trace trace = read_trace(trace_path, trace_format);
     assert(trace.trace != NULL && trace.length != 0);
 
-    test_hyperloglog_accuracy(TRACE_OUTPUT_PATH,
-                              (uint64_t(*)(void *))next_trace_item,
-                              &trace);
+    test_cardinality_estimate_accuracy(TRACE_OUTPUT_PATH,
+                                       (uint64_t(*)(void *))next_trace_item,
+                                       &trace);
 
     Trace__destroy(&trace);
     return true;
 }
 
 static bool
-test_hyperloglog_accuracy_on_uniform(void)
+run_cardinality_estimate_on_uniform(void)
 {
     struct UniformRandom urng = {0};
 
     g_assert_true(UniformRandom__init(&urng, rng_seed));
 
-    test_hyperloglog_accuracy(UNIFORM_OUTPUT_PATH,
-                              (uint64_t(*)(void *))UniformRandom__next_uint64,
-                              &urng);
+    test_cardinality_estimate_accuracy(
+        UNIFORM_OUTPUT_PATH,
+        (uint64_t(*)(void *))UniformRandom__next_uint64,
+        &urng);
 
     UniformRandom__destroy(&urng);
     return true;
 }
 
 static bool
-test_hyperloglog_accuracy_on_zipfian(void)
+run_cardinality_estimate_on_zipfian(void)
 {
     struct ZipfianRandom zrng = {0};
 
     g_assert_true(ZipfianRandom__init(&zrng, 1 << 20, 0.99, rng_seed));
 
-    test_hyperloglog_accuracy(ZIPFIAN_OUTPUT_PATH,
-                              (uint64_t(*)(void *))ZipfianRandom__next,
-                              &zrng);
+    test_cardinality_estimate_accuracy(ZIPFIAN_OUTPUT_PATH,
+                                       (uint64_t(*)(void *))ZipfianRandom__next,
+                                       &zrng);
 
     ZipfianRandom__destroy(&zrng);
     return true;
@@ -219,20 +219,19 @@ main(int argc, char *argv[])
     g_option_context_free(context);
 
     if (trace_path != NULL) {
-        ASSERT_FUNCTION_RETURNS_TRUE(
-            test_hyperloglog_accuracy_on_trace(trace_path, TRACE_FORMAT_KIA));
+        run_cardinality_estimate_on_trace(trace_path, TRACE_FORMAT_KIA);
         if (cleanup && remove(TRACE_OUTPUT_PATH) != 0) {
             LOGGER_ERROR("failed to remove '%s'", TRACE_OUTPUT_PATH);
         }
     }
     if (run_uniform) {
-        ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_uniform());
+        run_cardinality_estimate_on_uniform();
         if (cleanup && remove(UNIFORM_OUTPUT_PATH) != 0) {
             LOGGER_ERROR("failed to remove '%s'", UNIFORM_OUTPUT_PATH);
         }
     }
     if (run_zipfian) {
-        ASSERT_FUNCTION_RETURNS_TRUE(test_hyperloglog_accuracy_on_zipfian());
+        run_cardinality_estimate_on_zipfian();
         if (cleanup && remove(ZIPFIAN_OUTPUT_PATH) != 0) {
             LOGGER_ERROR("failed to remove '%s'", ZIPFIAN_OUTPUT_PATH);
         }

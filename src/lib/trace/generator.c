@@ -31,6 +31,43 @@ validate_args(size_t const length, size_t const max_num_unique_entries)
 }
 
 struct Trace
+generate_uniform_trace(const uint64_t length,
+                       const uint64_t max_num_unique_entries,
+                       const uint64_t seed)
+{
+    struct TraceItem *trace = NULL;
+    struct UniformRandom urng = {0};
+
+    bool r = UniformRandom__init(&urng, seed);
+    if (!r) {
+        LOGGER_ERROR("couldn't initialize random number generator");
+        goto cleanup;
+    }
+
+    trace = calloc(length, sizeof(*trace));
+    if (trace == NULL) {
+        LOGGER_ERROR("could not allocate return value");
+        goto cleanup;
+    }
+
+    for (size_t i = 0; i < length; ++i) {
+        trace[i] = (struct TraceItem){
+            .key = UniformRandom__next_uint64(&urng) % max_num_unique_entries,
+        };
+    }
+
+    UniformRandom__destroy(&urng);
+    return (struct Trace){.trace = trace, .length = length};
+
+cleanup:
+    free(trace);
+    UniformRandom__destroy(&urng);
+    // Yes, I know I could just `return (struct Trace){0}`, but I want
+    // to be VERY explicit.
+    return (struct Trace){.trace = NULL, .length = 0};
+}
+
+struct Trace
 generate_zipfian_trace(const uint64_t length,
                        const uint64_t max_num_unique_entries,
                        const double skew,

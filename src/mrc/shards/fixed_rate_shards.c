@@ -72,6 +72,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
 #ifdef INTERVAL_STATISTICS
         IntervalStatistics__append_unsampled(&me->istats);
 #endif
+        ++me->olken.current_time_stamp;
         return;
     }
     ++me->num_entries_processed;

@@ -388,6 +388,7 @@ parse_command_line_arguments(int argc, char **argv)
     if (args.input_path == NULL) {
         LOGGER_ERROR("must specify input path!");
         error = true;
+        goto cleanup;
     }
     if (args.trace_format == TRACE_FORMAT_INVALID &&
         strcmp(args.input_path, "zipf") != 0 &&

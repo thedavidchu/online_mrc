@@ -10,6 +10,9 @@ subdir('timer') # Relies on common_headers
 subdir('trace')
 subdir('tree')
 
+# Relies on the 'file' library
+subdir('array')
+
 # Relies on the 'io' library
 subdir('histogram')
 

@@ -31,6 +31,15 @@ Olken__access_item(struct Olken *me, EntryType entry);
 bool
 Olken__remove_item(struct Olken *me, EntryType entry);
 
+/// @brief  Ignore an entry.
+/// @details    Sampling is not part of the core Olken algorithm,
+///             however, this is extensively used by others so I intend
+///             for this to be used when we ignore a sample. The reason
+///             is for time-based analysis, where we may want the final
+///             output and the oracle to line up in terms of time.
+void
+Olken__ignore_entry(struct Olken *me);
+
 /// @return Return the stack distance of an existing item or uint64::MAX
 ///         upon an error.
 uint64_t
