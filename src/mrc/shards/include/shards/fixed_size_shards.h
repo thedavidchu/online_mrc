@@ -4,7 +4,6 @@
 
 #include <glib.h>
 
-#include "histogram/histogram.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
