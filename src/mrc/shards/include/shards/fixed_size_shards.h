@@ -12,8 +12,6 @@
 #include "olken/olken.h"
 #include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
-#include "types/time_stamp_type.h"
-#include "unused/mark_unused.h"
 
 struct FixedSizeShards {
     struct Olken olken;
