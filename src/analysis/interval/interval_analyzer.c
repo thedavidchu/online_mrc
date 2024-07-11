@@ -356,7 +356,7 @@ generate_fs_shards_reuse_stats(struct Trace *trace,
     //      only performed at the end!
     if (!FixedSizeShards__init(&me,
                                args->fs_shards_sampling_rate,
-                               trace->length,
+                               1 << 13,
                                1,
                                true)) {
         LOGGER_ERROR("bad initialization");
