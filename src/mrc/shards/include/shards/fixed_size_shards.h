@@ -15,7 +15,9 @@
 struct FixedSizeShards {
     struct Olken olken;
     struct FixedSizeShardsSampler sampler;
+#ifdef INTERVAL_STATISTICS
     struct IntervalStatistics istats;
+#endif
 };
 
 /// @brief  Initialize the fixed-size SHARDS data structure.

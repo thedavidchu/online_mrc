@@ -34,8 +34,9 @@ FixedRateShards__init(struct FixedRateShards *me,
     //      point to the containing structure (i.e. the 'shell' of the
     //      Olken structure is not referenced anywhere).
     bool r = Olken__init(&me->olken, histogram_num_bins, histogram_bin_size);
-    if (!r)
-        return false;
+    if (!r) {
+        goto cleanup;
+    }
 #ifdef INTERVAL_STATISTICS
     if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
         goto cleanup;

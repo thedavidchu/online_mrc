@@ -46,7 +46,10 @@ if use_gprof
     add_project_link_arguments('-pg', '-no-pie', language: 'c')
 endif
 
-add_project_arguments('-DINTERVAL_STATISTICS', language: 'c')
+analyze_time_intervals = false
+if analyze_time_intervals
+    add_project_arguments('-DINTERVAL_STATISTICS', language: 'c')
+endif
 
 fs = import('fs')
 # Define the test trace
