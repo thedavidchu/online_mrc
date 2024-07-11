@@ -158,7 +158,7 @@ def plot_hist_and_mrc(
         #       this reason, we set the value to start there.
         if edges[0] != 0.0:
             edges[0] = 0.0
-        axs[0, i].set_title(f"{i}/{len(arrays)}")
+        axs[0, i].set_title(f"{i+1}/{len(arrays)}")
         axs[0, i].hist(reuse_dist, bins=100)
         axs[1, i].step(edges, mrc, where="post", label=f"{idx}")
 
