@@ -13,19 +13,6 @@ murmur_hash_3_lib = library(
     ],
 )
 
-# My wrapper around the MurmurHash3 functions. I don't like the name because it
-# doesn't match the functions inside.
-# NOTE  Meson complains about libraries without sources.
-my_murmur_hash_3_dep = declare_dependency(
-    link_with: [
-        murmur_hash_3_lib,
-    ],
-    include_directories: hash_inc,
-    dependencies: [
-        common_dep,
-    ],
-)
-
 splitmix64_lib = library(
     'splitmix64_lib',
     'splitmix64.c',
@@ -39,6 +26,6 @@ hash_dep = declare_dependency(
     ],
     include_directories: hash_inc,
     dependencies: [
-        my_murmur_hash_3_dep,
+        common_dep,
     ],
 )

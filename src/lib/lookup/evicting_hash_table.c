@@ -8,7 +8,7 @@
 
 #include <glib.h>
 
-#include "hash/splitmix64.h"
+#include "hash/MyMurmurHash3.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
@@ -19,7 +19,7 @@
 #include "unused/mark_unused.h"
 
 /// @note   Changing the hash function breaks my beautiful test cases.
-#define HASH_FUNCTION(key) splitmix64_hash(key)
+#define HASH_FUNCTION(key) Hash64bit(key)
 
 /// Source: https://en.wikipedia.org/wiki/HyperLogLog#Practical_considerations
 static double
