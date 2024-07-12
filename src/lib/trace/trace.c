@@ -43,6 +43,7 @@ Trace__init(struct Trace *const me, size_t const length)
     }
     return true;
 }
+
 void
 Trace__write_as_json(FILE *stream, struct Trace const *const me)
 {
