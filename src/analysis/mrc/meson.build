@@ -1,3 +1,29 @@
+generate_oracle_exe = executable(
+    'generate_oracle_exe',
+    'generate_oracle.c',
+    dependencies: [
+        common_dep,
+        file_dep,
+        histogram_dep,
+        miss_rate_curve_dep,
+        olken_dep,
+        timer_dep,
+        trace_dep,
+    ],
+)
+
+test(
+    'generate_oracle_test',
+    generate_oracle_exe,
+    args: [
+        '-i', test_trace,
+        '-f', 'Kia',
+        '-h', 'generate_oracle_test-histogram.bin',
+        '-m', 'generate_oracle_test-mrc.bin',
+        '--cleanup',
+    ],
+)
+
 generate_mrc_exe = executable(
     'generate_mrc_exe',
     'generate_mrc.c',
