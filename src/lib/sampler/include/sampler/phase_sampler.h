@@ -9,6 +9,10 @@
 
 struct PhaseSampler {
     GPtrArray *saved_histograms;
+    // HACK Concurrent instances of PhaseSamplers may overwrite each
+    //      other's files, so I am adding this complete hack to lessen
+    //      the probability of such.
+    size_t time_in_usec;
 };
 
 bool

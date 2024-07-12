@@ -264,7 +264,7 @@ AverageEvictionTime__to_mrc(struct AverageEvictionTime const *const me,
     for (size_t i = 0; i < me->phase_sampler.saved_histograms->len; ++i) {
         char *hist_path = me->phase_sampler.saved_histograms->pdata[i];
         struct Histogram hist = {0};
-        r = Histogram__init_from_file(&hist, hist_path);
+        r = Histogram__load(&hist, hist_path);
         assert(r);
         struct MissRateCurve my_mrc = {0};
         r = convert_hist_to_mrc(&hist, &my_mrc);

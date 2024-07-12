@@ -553,33 +553,10 @@ read_sparse_histogram(FILE *fp, struct Histogram *const me)
 }
 
 bool
-Histogram__save_sparse(struct Histogram const *const me, char const *const path)
+Histogram__save(struct Histogram const *const me, char const *const path)
 {
-    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFORMATION!");
-    if (me == NULL || me->histogram == NULL || me->num_bins == 0) {
-        return false;
-    }
-
-    FILE *fp = fopen(path, "wb");
-    if (!write_sparse_histogram(fp, me)) {
-        LOGGER_ERROR("failed to write histogram");
-        goto cleanup;
-    }
-    // Try to clean up regardless of the outcome of the fwrite(...).
-    if (fclose(fp) != 0)
-        return false;
-    return true;
-
-cleanup:
-    fclose(fp);
-    return false;
-}
-
-bool
-Histogram__save_to_file(struct Histogram const *const me,
-                        char const *const path)
-{
-    if (me == NULL || me->histogram == NULL || me->num_bins == 0) {
+    if (me == NULL || path == NULL || me->histogram == NULL ||
+        me->num_bins == 0 || me->bin_size == 0) {
         return false;
     }
 
@@ -612,12 +589,12 @@ cleanup:
 
 /// @brief  Read the full histogram from a file.
 bool
-Histogram__init_from_file(struct Histogram *const me, char const *const path)
+Histogram__load(struct Histogram *const me, char const *const path)
 {
     FILE *fp = fopen(path, "rb");
     if (fp == NULL) {
-        LOGGER_ERROR("fopen failed");
-        goto cleanup;
+        LOGGER_ERROR("fopen failed to open '%s'", path);
+        return false;
     }
 
     if (!read_metadata(fp, me)) {

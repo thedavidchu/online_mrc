@@ -83,8 +83,7 @@ test_phase_sampler(void)
 
         LOGGER_TRACE("reading from '%s'",
                      g_ptr_array_index(me.saved_histograms, i));
-        Histogram__init_from_file(&hist,
-                                  g_ptr_array_index(me.saved_histograms, i));
+        Histogram__load(&hist, g_ptr_array_index(me.saved_histograms, i));
         g_assert_true(Histogram__exactly_equal(&oracle, &hist));
         Histogram__destroy(&oracle);
         Histogram__destroy(&hist);

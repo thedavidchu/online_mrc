@@ -192,9 +192,9 @@ test_histogram_save(void)
 
     memcpy(histogram, random_values_0_to_11, sizeof(random_values_0_to_11));
     bool r = false;
-    r = Histogram__save_to_file(&a, "./histogram_test.bin");
+    r = Histogram__save(&a, "./histogram_test.bin");
     g_assert_true(r);
-    r = Histogram__init_from_file(&b, "./histogram_test.bin");
+    r = Histogram__load(&b, "./histogram_test.bin");
     g_assert_true(r);
 
     // Cleanup files!
