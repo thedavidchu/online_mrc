@@ -4,9 +4,10 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <sys/time.h>
 
 #include <glib.h>
-#include <stdio.h>
 
 #include "histogram/histogram.h"
 #include "logger/logger.h"
@@ -22,6 +23,9 @@ PhaseSampler__init(struct PhaseSampler *const me)
         LOGGER_ERROR("failed to allocate ptr arrray");
         return false;
     }
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    me->time_in_usec = 1000000 * tv.tv_sec + tv.tv_usec;
     return true;
 }
 
@@ -59,13 +63,13 @@ should_i_create_a_new_histogram(struct Histogram const *const old_hist,
 }
 
 static gchar *
-create_temporary_file_path(size_t const id)
+create_temporary_file_path(size_t const salt, size_t const id)
 {
     // TODO Upon upgrading to GLib 2.78, you can simplify this with
     //      the function 'g_string_new_take'.
     gchar *cwd = g_get_current_dir();
     GString *tmp_name = g_string_new(NULL);
-    g_string_append_printf(tmp_name, "./.tmp-histogram-%zu.bin", id);
+    g_string_append_printf(tmp_name, "./.tmp-%zu-histogram-%zu.bin", salt, id);
     gchar *path = g_build_path("/", cwd, tmp_name->str, NULL);
 
     free(cwd);
@@ -78,7 +82,7 @@ PhaseSampler__change_histogram(struct PhaseSampler *const me,
                                struct Histogram const *const old_hist)
 {
     size_t const id = me->saved_histograms->len;
-    gchar *new_tmp = create_temporary_file_path(id);
+    gchar *new_tmp = create_temporary_file_path(me->time_in_usec, id);
     LOGGER_TRACE("saving to '%s'", new_tmp);
     bool r = Histogram__save(old_hist, new_tmp);
     assert(r);
