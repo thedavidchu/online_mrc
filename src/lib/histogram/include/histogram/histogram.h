@@ -84,17 +84,11 @@ Histogram__write_as_json(FILE *stream, struct Histogram *me);
 
 /// @brief  Read the full histogram from a file.
 bool
-Histogram__init_from_file(struct Histogram *const me, char const *const path);
+Histogram__load(struct Histogram *const me, char const *const path);
 
 /// @brief  Save the full histogram to a file.
 bool
-Histogram__save_to_file(struct Histogram const *const me,
-                        char const *const path);
-
-/// @brief  Save the histogram in a sparse format of <index, frequency>.
-bool
-Histogram__save_sparse(struct Histogram const *const me,
-                       char const *const path);
+Histogram__save(struct Histogram const *const me, char const *const path);
 
 /// @brief  Write the Histogram as a JSON object to stdout.
 void

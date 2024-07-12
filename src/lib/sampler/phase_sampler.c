@@ -80,7 +80,7 @@ PhaseSampler__change_histogram(struct PhaseSampler *const me,
     size_t const id = me->saved_histograms->len;
     gchar *new_tmp = create_temporary_file_path(id);
     LOGGER_TRACE("saving to '%s'", new_tmp);
-    bool r = Histogram__save_to_file(old_hist, new_tmp);
+    bool r = Histogram__save(old_hist, new_tmp);
     assert(r);
 
     g_ptr_array_add(me->saved_histograms, new_tmp);
@@ -111,7 +111,7 @@ PhaseSampler__create_mrc(struct PhaseSampler const *const me,
     for (size_t i = 0; i < me->saved_histograms->len; ++i) {
         char *hist_path = me->saved_histograms->pdata[i];
         struct Histogram hist = {0};
-        r = Histogram__init_from_file(&hist, hist_path);
+        r = Histogram__load(&hist, hist_path);
         assert(r);
         struct MissRateCurve my_mrc = {0};
         r = MissRateCurve__init_from_histogram(&my_mrc, &hist);
