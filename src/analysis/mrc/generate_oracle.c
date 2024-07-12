@@ -129,6 +129,10 @@ parse_command_line_arguments(int argc, char **argv)
         g_print("option parsing failed: %s\n", error->message);
         goto cleanup;
     }
+    // Come on, GLib! The 'g_option_context_parse' changes the errno to
+    // 2 and leaves it for me to clean up. Or maybe I'm using it wrong.
+    errno = 0;
+    g_option_context_free(context);
 
     // Check the arguments for correctness.
     if (args.trace_path == NULL) {
@@ -166,7 +170,6 @@ parse_command_line_arguments(int argc, char **argv)
         LOGGER_WARN("MRC file '%s' already exists", args.mrc_path);
     }
 
-    g_option_context_free(context);
     return args;
 cleanup:
     help_msg = g_option_context_get_help(context, FALSE, NULL);
