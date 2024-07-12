@@ -477,7 +477,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
                                  Olken__access_item,
                                  Olken__post_process,
                                  &me.histogram,
-                                 Histogram__save_sparse,
+                                 Histogram__save,
                                  Olken__to_mrc,
                                  Olken__destroy)
 
@@ -494,7 +494,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
-    Histogram__save_sparse,
+    Histogram__save,
     FixedRateShards__to_mrc,
     FixedRateShards__destroy)
 
@@ -511,7 +511,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
-    Histogram__save_sparse,
+    Histogram__save,
     FixedRateShards__to_mrc,
     FixedRateShards__destroy)
 
@@ -528,7 +528,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
     &me.olken.histogram,
-    Histogram__save_sparse,
+    Histogram__save,
     FixedSizeShards__to_mrc,
     FixedSizeShards__destroy)
 
@@ -545,7 +545,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_quickmrc,
                                  QuickMRC__access_item,
                                  QuickMRC__post_process,
                                  &me.histogram,
-                                 Histogram__save_sparse,
+                                 Histogram__save,
                                  QuickMRC__to_mrc,
                                  QuickMRC__destroy)
 
@@ -580,7 +580,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_evicting_map,
                                  EvictingMap__access_item,
                                  EvictingMap__post_process,
                                  &me.histogram,
-                                 Histogram__save_sparse,
+                                 Histogram__save,
                                  EvictingMap__to_mrc,
                                  EvictingMap__destroy)
 
@@ -595,7 +595,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
-                                 Histogram__save_sparse,
+                                 Histogram__save,
                                  AverageEvictionTime__to_mrc,
                                  AverageEvictionTime__destroy)
 
@@ -610,7 +610,7 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_their_average_eviction_time,
                                  AverageEvictionTime__access_item,
                                  AverageEvictionTime__post_process,
                                  &me.histogram,
-                                 Histogram__save_sparse,
+                                 Histogram__save,
                                  AverageEvictionTime__their_to_mrc,
                                  AverageEvictionTime__destroy)
 
