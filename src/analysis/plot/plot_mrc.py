@@ -141,15 +141,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--oracle", type=str, required=False, help="path to oracle")
     parser.add_argument(
-        "--input", nargs="+", type=str, required=False, default=[], help="input path(s)"
+        "--input", nargs="+", type=str, required=True, help="input path(s)"
     )
-    parser.add_argument("--output", type=str, default="mrc.png", help="output path")
+    parser.add_argument(
+        "--output", nargs="*", type=str, default="mrc.pdf", help="output path(s)"
+    )
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
     oracle_path = args.oracle
     input_paths: list[str] = args.input
-    output_path = args.output
+    output_paths: list[str] = args.output
 
     plt.figure(figsize=(12, 8), dpi=300)
     plt.title("Miss-Rate Curve")
@@ -162,7 +164,8 @@ def main():
     for input_path in input_paths:
         plot_from_path(input_path, debug=args.debug)
     plt.legend()
-    plt.savefig(output_path)
+    for output_path in output_paths:
+        plt.savefig(output_path)
 
 
 if __name__ == "__main__":
