@@ -18,6 +18,12 @@
 #include "math/doubles_are_equal.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 
+// This is the number of bytes that the metadata takes up at the
+// beginning of the file.
+static size_t const METADATA_SIZE =
+    sizeof(((struct MissRateCurve *)NULL)->num_bins) +
+    sizeof(((struct MissRateCurve *)NULL)->bin_size);
+
 bool
 MissRateCurve__alloc_empty(struct MissRateCurve *const me,
                            uint64_t const num_mrc_bins,
@@ -159,102 +165,138 @@ MissRateCurve__init_from_parda_histogram(struct MissRateCurve *me,
     return true;
 }
 
-bool
-MissRateCurve__init_from_file(struct MissRateCurve *me,
-                              char const *restrict const file_name,
-                              const uint64_t num_bins,
-                              const uint64_t bin_size)
-{
-    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
-    if (me == NULL || file_name == NULL) {
-        return false;
-    }
-    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
-    if (me->miss_rate == NULL) {
-        return false;
-    }
-    FILE *fp = fopen(file_name, "rb");
-    if (fp == NULL) {
-        free(me->miss_rate);
-        return false;
-    }
-    // NOTE I am assuming the endianness of the writer and reader will be the
-    // same.
-    size_t n = fread(me->miss_rate, sizeof(*me->miss_rate), num_bins, fp);
-    // Try to clean up regardless of the outcome of the fread(...).
-    int r = fclose(fp);
-    if (n != num_bins || r != 0) {
-        free(me->miss_rate);
-        return false;
-    }
-    me->num_bins = num_bins;
-    me->bin_size = bin_size;
-    return true;
-}
-
 struct SparseEntry {
     uint64_t key;
     double value;
 };
 
-/// @return     Returns {0} upon out-of-bounds access.
+/// @return     Returns {.key=UINT64_MAX, .value=0} upon out-of-bounds access.
 ///             We use this to our advantage below.
 static struct SparseEntry
-read_sparse_entry(struct MemoryMap *mm, size_t offset)
+read_sparse_entry(struct MemoryMap const *const mm, size_t index)
 {
     struct SparseEntry r = {0};
-    size_t num_entries = mm->num_bytes / (sizeof(r.key) + sizeof(r.value));
-    assert(mm && mm->buffer);
-    if (offset >= num_entries)
+    if (METADATA_SIZE + index * sizeof(r) < mm->num_bytes) {
+        assert(METADATA_SIZE + (index + 1) * sizeof(r) <= mm->num_bytes);
+        uint8_t *tmp =
+            &((uint8_t *)mm->buffer)[METADATA_SIZE + index * sizeof(r)];
+        memcpy(&r, tmp, sizeof(r));
         return r;
-    assert(mm->num_bytes % (sizeof(r.key) + sizeof(r.value)) == 0 &&
-           "unexpected format");
+    }
+    return (struct SparseEntry){.key = UINT64_MAX, .value = 0.0};
+}
 
-    uint8_t *tmp =
-        &((uint8_t *)mm->buffer)[offset * (sizeof(r.key) + sizeof(r.value))];
-    memcpy(&r.key, &tmp[0], sizeof(r.key));
-    memcpy(&r.value, &tmp[sizeof(r.key)], sizeof(r.value));
-    return r;
+static bool
+write_sparse_entry(FILE *fp,
+                   const uint64_t index,
+                   const uint64_t bin_size,
+                   const double miss_rate)
+{
+    uint64_t const scaled_idx = index * bin_size;
+    struct SparseEntry const entry = {.key = scaled_idx, .value = miss_rate};
+    if (fwrite(&entry, sizeof(entry), 1, fp) != 1) {
+        LOGGER_ERROR("failed to write entry");
+        return false;
+    }
+    return true;
 }
 
 bool
-MissRateCurve__init_from_sparse_file(struct MissRateCurve *me,
-                                     char const *restrict const file_name,
-                                     const uint64_t num_bins,
-                                     const uint64_t bin_size)
+MissRateCurve__save(struct MissRateCurve const *const me,
+                    char const *restrict const file_name)
 {
-    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
+    if (me == NULL || file_name == NULL || me->miss_rate == NULL ||
+        me->num_bins == 0 || me->bin_size == 0) {
+        return false;
+    }
+
+    FILE *fp = fopen(file_name, "wb");
+    // NOTE I am assuming the endianness of the writer and reader will be
+    // the same.
+    if (fwrite(&me->num_bins, sizeof(me->num_bins), 1, fp) != 1) {
+        LOGGER_ERROR("failed to write num_bins");
+        goto cleanup;
+    }
+    if (fwrite(&me->bin_size, sizeof(me->bin_size), 1, fp) != 1) {
+        LOGGER_ERROR("failed to write bin_size");
+        goto cleanup;
+    }
+    // NOTE I do the 0th element separately so that from 1 onward, I can
+    // simply
+    //      compare with the previous.
+    if (!write_sparse_entry(fp, 0, me->bin_size, me->miss_rate[0]))
+        goto cleanup;
+    for (size_t i = 1; i < me->num_bins; ++i) {
+        if (me->miss_rate[i] == me->miss_rate[i - 1]) {
+            continue;
+        }
+        if (!write_sparse_entry(fp, i, me->bin_size, me->miss_rate[i]))
+            goto cleanup;
+    }
+    // Try to clean up regardless of the outcome of the fwrite(...).
+    if (fclose(fp) != 0) {
+        return false;
+    }
+    return true;
+cleanup:
+    fclose(fp);
+    return false;
+}
+
+bool
+MissRateCurve__load(struct MissRateCurve *const me,
+                    char const *restrict const file_name)
+{
     if (me == NULL || file_name == NULL) {
         return false;
     }
 
+    // NOTE I ensure the cleanup works fine by setting the input data
+    //      structure to {0}.
+    *me = (struct MissRateCurve){0};
+
     struct MemoryMap mm = {0};
     if (!MemoryMap__init(&mm, file_name, "rb")) {
         LOGGER_ERROR("failed to open '%s'", file_name);
-        return false;
+        goto cleanup;
     }
 
+    // Read metadata.
+    if (mm.num_bytes < METADATA_SIZE) {
+        LOGGER_ERROR("not enough bytes to create num_bins and bin_size");
+        goto cleanup;
+    }
+    size_t const num_bins = ((size_t *)mm.buffer)[0];
+    size_t const bin_size = ((size_t *)mm.buffer)[1];
+
+    // Ensure there is data to read.
     struct SparseEntry curr = {0}, next = {0};
-    size_t num_entries = mm.num_bytes / (sizeof(curr.key) + sizeof(curr.value));
+    size_t num_entries = (mm.num_bytes - METADATA_SIZE) / sizeof(curr);
     if (num_entries == 0) {
-        MemoryMap__destroy(&mm);
-        return false;
+        LOGGER_ERROR("not enough bytes to create an entry");
+        goto cleanup;
+    }
+    if (num_entries > num_bins) {
+        LOGGER_ERROR("too many entries considering the number of bins");
+        goto cleanup;
     }
 
-    me->miss_rate = (double *)malloc(num_bins * sizeof(*me->miss_rate));
+    // NOTE Yes, I know that I am setting all of the memory anyways,
+    //      but 'calloc' is much easier to debug!
+    me->miss_rate = (double *)calloc(num_bins, sizeof(*me->miss_rate));
     if (me->miss_rate == NULL) {
-        return false;
+        LOGGER_ERROR("allocation failed!");
+        goto cleanup;
     }
-    size_t offset = 0; // Index into the mmap buffer
-    curr = read_sparse_entry(&mm, 0);
+    size_t idx = 0;
+    curr = read_sparse_entry(&mm, idx);
+    next = read_sparse_entry(&mm, idx + 1);
     assert(curr.key == 0 && curr.value == 1.0);
-    next = read_sparse_entry(&mm, 1);
-    g_assert_cmpuint(num_entries, <=, num_bins);
     for (size_t i = 0; i < num_bins; ++i) {
-        if (offset < num_entries - 1 && i == next.key) {
-            ++offset;
-            next = read_sparse_entry(&mm, offset + 1);
-            curr = read_sparse_entry(&mm, offset);
+        if (i == next.key) {
+            ++idx;
+            curr = read_sparse_entry(&mm, idx);
+            next = read_sparse_entry(&mm, idx + 1);
         }
         me->miss_rate[i] = curr.value;
     }
@@ -266,86 +308,9 @@ MissRateCurve__init_from_sparse_file(struct MissRateCurve *me,
     me->num_bins = num_bins;
     me->bin_size = bin_size;
     return true;
-}
-
-bool
-MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
-                                    char const *restrict const file_name)
-{
-    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
-    if (me == NULL || me->miss_rate == NULL) {
-        return false;
-    }
-    FILE *fp = fopen(file_name, "wb");
-    // NOTE I am assuming the endianness of the writer and reader will be the
-    // same.
-    size_t n = fwrite(me->miss_rate, sizeof(*me->miss_rate), me->num_bins, fp);
-    // Try to clean up regardless of the outcome of the fwrite(...).
-    int r = fclose(fp);
-    if (n != me->num_bins || r != 0) {
-        return false;
-    }
-    return true;
-}
-
-static bool
-write_index_miss_rate_pair(FILE *fp,
-                           const uint64_t index,
-                           const uint64_t bin_size,
-                           const double miss_rate)
-{
-    size_t n = 0;
-    uint64_t scaled_idx = index * bin_size;
-
-    // We want to make sure we're writing the expected sizes out the file.
-    // Otherwise, our reader will be confused. We should write out:
-    // (uint64, float64)
-    assert(sizeof(index) == 8 && sizeof(miss_rate) == 8 && "unexpected sizes");
-
-    n = fwrite(&scaled_idx, sizeof(scaled_idx), 1, fp);
-    if (n != 1) {
-        LOGGER_ERROR("failed to write scaled index %zu", scaled_idx);
-        return false;
-    }
-    n = fwrite(&miss_rate, sizeof(miss_rate), 1, fp);
-    if (n != 1) {
-        LOGGER_ERROR("failed to write object %zu: %g", scaled_idx, miss_rate);
-        return false;
-    }
-    return true;
-}
-
-bool
-MissRateCurve__write_sparse_binary_to_file(struct MissRateCurve const *const me,
-                                           char const *restrict const file_name)
-{
-    LOGGER_WARN("DEPRECATED BECAUSE WE LOSE SO MUCH VALUABLE INFO!");
-    if (me == NULL || me->miss_rate == NULL || me->num_bins == 0) {
-        return false;
-    }
-
-    FILE *fp = fopen(file_name, "wb");
-    // NOTE I am assuming the endianness of the writer and reader will be the
-    // same.
-    // NOTE I do the 0th element separately so that from 1 onward, I can simply
-    //      compare with the previous.
-    if (!write_index_miss_rate_pair(fp, 0, me->bin_size, me->miss_rate[0]))
-        goto cleanup;
-    for (size_t i = 1; i < me->num_bins; ++i) {
-        if (me->miss_rate[i] == me->miss_rate[i - 1]) {
-            continue;
-        }
-        if (!write_index_miss_rate_pair(fp, i, me->bin_size, me->miss_rate[i]))
-            goto cleanup;
-    }
-    // Try to clean up regardless of the outcome of the fwrite(...).
-    if (fclose(fp) != 0) {
-        return false;
-    }
-    return true;
-
 cleanup:
-    fclose(fp);
+    MemoryMap__destroy(&mm);
+    free(me->miss_rate);
     return false;
 }
 
@@ -488,10 +453,11 @@ MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
     const uint64_t max_bound = MAX(lhs->num_bins, rhs->num_bins);
     double mae = 0.0;
     for (uint64_t i = 0; i < min_bound; ++i) {
-        // NOTE This is just a little (potential) optimization to have the ABS
-        //      act on `diff` alone because we do restrict pointer aliasing for
-        //      `miss_rate`, so the compiler may force it to do repeated memory
-        //      accesses. I'm not sure. Either way, I find this more readable.
+        // NOTE This is just a little (potential) optimization to have
+        //      the ABS act on `diff` alone because we do restrict
+        //      pointer aliasing for `miss_rate`, so the compiler may
+        //      force it to do repeated memory accesses. I'm not sure.
+        //      Either way, I find this more readable.
         const double diff = lhs->miss_rate[i] - rhs->miss_rate[i];
         mae += ABS(diff);
     }

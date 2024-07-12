@@ -654,27 +654,20 @@ get_oracle_mrc(struct CommandLineArguments const args,
     struct MissRateCurve oracle_mrc = {0};
     if (file_exists(args.oracle_path)) {
         LOGGER_TRACE("using existing oracle");
-        r = MissRateCurve__init_from_sparse_file(&oracle_mrc,
-                                                 args.oracle_path,
-                                                 trace->length,
-                                                 1);
+        r = MissRateCurve__load(&oracle_mrc, args.oracle_path);
         g_assert_true(r);
         return oracle_mrc;
     } else if (args.algorithm == MRC_ALGORITHM_OLKEN) {
         LOGGER_TRACE("using Olken result as oracle");
-        r = MissRateCurve__write_sparse_binary_to_file(mrc, args.oracle_path);
+        r = MissRateCurve__save(mrc, args.oracle_path);
         g_assert_true(r);
-        r = MissRateCurve__init_from_sparse_file(&oracle_mrc,
-                                                 args.oracle_path,
-                                                 mrc->num_bins,
-                                                 mrc->bin_size);
+        r = MissRateCurve__load(&oracle_mrc, args.oracle_path);
         g_assert_true(r);
         return oracle_mrc;
     } else {
         LOGGER_TRACE("running Olken to produce oracle");
         oracle_mrc = run_olken(trace, args);
-        r = MissRateCurve__write_sparse_binary_to_file(&oracle_mrc,
-                                                       args.oracle_path);
+        r = MissRateCurve__save(&oracle_mrc, args.oracle_path);
         g_assert_true(r);
         return oracle_mrc;
     }
@@ -759,8 +752,7 @@ main(int argc, char **argv)
     }
 
     // Write out trace
-    g_assert_true(
-        MissRateCurve__write_sparse_binary_to_file(&mrc, args.output_path));
+    g_assert_true(MissRateCurve__save(&mrc, args.output_path));
     LOGGER_TRACE("Wrote out sparse MRC to '%s'", args.output_path);
     // NOTE This takes advantage of C's short-circuiting booleans.
     //      I find this idiom cleaner than nested if-statements.

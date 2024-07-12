@@ -10,8 +10,8 @@
 
 struct MissRateCurve {
     double *miss_rate;
-    uint64_t num_bins;
-    uint64_t bin_size;
+    size_t num_bins;
+    size_t bin_size;
 };
 
 /// @brief  Allocate an empty MRC. This is not a valid MRC since it does
@@ -40,31 +40,15 @@ MissRateCurve__init_from_parda_histogram(struct MissRateCurve *me,
                                          uint64_t histogram_total,
                                          uint64_t false_infinities);
 
+/// @brief  Save a sparse MRC curve to a file.
 bool
-MissRateCurve__init_from_file(struct MissRateCurve *me,
-                              char const *restrict const file_name,
-                              const uint64_t num_bins,
-                              const uint64_t bin_size);
+MissRateCurve__save(struct MissRateCurve const *const me,
+                    char const *restrict const file_name);
 
+/// @brief  Load a sparse MRC curve from a file.
 bool
-MissRateCurve__init_from_sparse_file(struct MissRateCurve *me,
-                                     char const *restrict const file_name,
-                                     const uint64_t num_bins,
-                                     const uint64_t bin_size);
-
-/// @note   This does not save the bin_size, which means you need to pass
-///         this information some other way. Sorry, but it would make the
-///         output binary more complicated if I were to pass it.
-bool
-MissRateCurve__write_binary_to_file(struct MissRateCurve const *const me,
-                                    char const *restrict const file_name);
-
-/// @brief  Save pairs of (index, value) so it's much sparser and thus
-///         easier to plot.
-bool
-MissRateCurve__write_sparse_binary_to_file(
-    struct MissRateCurve const *const me,
-    char const *restrict const file_name);
+MissRateCurve__load(struct MissRateCurve *const me,
+                    char const *restrict const file_name);
 
 /// @return non-negative mean squared error, or a negative number (e.g. -1.0) on
 ///         error.
