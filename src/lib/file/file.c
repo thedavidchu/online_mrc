@@ -52,7 +52,7 @@ file_exists(char const *const file_name)
     // NOTE Good if we don't want to create the file.
     bool const r = access(file_name, F_OK) == 0;
     if (errno) {
-        LOGGER_TRACE("access(\"%s\", F_OK) raised error", file_name);
+        LOGGER_TRACE("file '%s' DNE", file_name);
     }
     errno = prev_errno;
     return r;
