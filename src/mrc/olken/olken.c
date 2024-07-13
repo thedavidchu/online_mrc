@@ -11,31 +11,28 @@
 #include "olken/olken.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
-#include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-bool
-Olken__init(struct Olken *me,
-            const uint64_t histogram_num_bins,
-            const uint64_t histogram_bin_size)
+static bool
+initialize(struct Olken *const me,
+           size_t const histogram_num_bins,
+           size_t const histogram_bin_size,
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     if (me == NULL) {
         return false;
     }
-    bool r = tree__init(&me->tree);
-    if (!r) {
+    if (!tree__init(&me->tree)) {
         goto tree_error;
     }
-    r = HashTable__init(&me->hash_table);
-    if (!r) {
+    if (!HashTable__init(&me->hash_table)) {
         goto hash_table_error;
     }
-    r = Histogram__init(&me->histogram,
-                        histogram_num_bins,
-                        histogram_bin_size,
-                        false);
-    if (!r) {
+    if (!Histogram__init(&me->histogram,
+                         histogram_num_bins,
+                         histogram_bin_size,
+                         out_of_bounds_mode)) {
         goto histogram_error;
     }
     me->current_time_stamp = 0;
@@ -49,6 +46,28 @@ tree_error:
     return false;
 }
 
+bool
+Olken__init(struct Olken *const me,
+            size_t const histogram_num_bins,
+            size_t const histogram_bin_size)
+{
+    return initialize(me,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      HistogramOutOfBoundsMode__allow_overflow);
+}
+
+bool
+Olken__init_full(struct Olken *me,
+                 size_t const histogram_num_bins,
+                 size_t const histogram_bin_size,
+                 enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+{
+    return initialize(me,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      out_of_bounds_mode);
+}
 bool
 Olken__remove_item(struct Olken *me, EntryType entry)
 {
