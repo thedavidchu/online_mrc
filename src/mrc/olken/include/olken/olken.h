@@ -25,6 +25,8 @@ Olken__init(struct Olken *const me,
             size_t const histogram_num_bins,
             size_t const histogram_bin_size);
 
+/// @brief  Initialize the Olken data structure, but with more parameters!
+/// @note   The API of this function is less stable than the Olken__init().
 bool
 Olken__init_full(struct Olken *me,
                  size_t const histogram_num_bins,
