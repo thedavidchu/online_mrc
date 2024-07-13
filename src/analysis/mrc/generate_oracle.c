@@ -203,7 +203,10 @@ run_olken(struct CommandLineArguments const *args,
     struct Olken me = {0};
     struct MissRateCurve mrc = {0};
 
-    if (!Olken__init(&me, args->num_bins, args->bin_size)) {
+    if (!Olken__init_full(&me,
+                          args->num_bins,
+                          args->bin_size,
+                          HistogramOutOfBoundsMode__realloc)) {
         LOGGER_ERROR("failed to initialize");
         goto cleanup;
     }
