@@ -21,9 +21,17 @@ struct Olken {
 };
 
 bool
-Olken__init(struct Olken *me,
-            const uint64_t histogram_num_bins,
-            const uint64_t histogram_bin_size);
+Olken__init(struct Olken *const me,
+            size_t const histogram_num_bins,
+            size_t const histogram_bin_size);
+
+/// @brief  Initialize the Olken data structure, but with more parameters!
+/// @note   The API of this function is less stable than the Olken__init().
+bool
+Olken__init_full(struct Olken *me,
+                 size_t const histogram_num_bins,
+                 size_t const histogram_bin_size,
+                 enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
 bool
 Olken__access_item(struct Olken *me, EntryType entry);
