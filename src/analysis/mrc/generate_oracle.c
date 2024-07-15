@@ -1,5 +1,7 @@
 /**
  *  @brief  This file generates the oracle for an MRC trace.
+ *
+ *  @note   Use the 'create_oracles.py' script as a convenient wrapper!
  */
 #include <inttypes.h>
 #include <stdbool.h>
