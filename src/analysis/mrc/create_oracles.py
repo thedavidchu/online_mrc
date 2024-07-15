@@ -2,7 +2,8 @@
 """
 @brief  Generate the oracle for a directory of traces.
 
-Usage: run this file with `nohup python3 <path-to-create_oracles.py>`
+@example    Here's an example of how to call this file:
+`nohup python3 <this-file> -i /mnt/disk1-20tb/Traces/FilteredTwitter_Binary/ -o /mnt/disk1-20tb/same_size_oracle/twitter/ -f Sari -e hashes`
 """
 import argparse
 import os
@@ -37,7 +38,7 @@ def run_trace(
     log_abspath = os.path.join(output_abspath, f"{stem}-olken.log")
     if all(map(os.path.exists, [hist_abspath, mrc_abspath, log_abspath])):
         if not overwrite:
-            print(f"Skipped {stem}.bin")
+            print(f"All outputs for {stem}.bin already exist (skipping)")
             return
         else:
             print(f"All outputs for {stem}.bin already exist (running anyway)")
@@ -56,10 +57,29 @@ def run_trace(
 
 
 def get_stems(input_path: Path, exclude: str) -> list[str]:
-    paths = os.listdir(input_path)
+    """
+    @brief  Get the stems from the input path.
+
+    @details    I define a stem as follows:
+                ```
+                "/my/path/to/a/file.txt"
+                               ^^^^-------- this is the "stem".
+                ```
+    @note   I only process the leaf files of the input_path
+    """
+    # NOTE  I sort from smallest to largest so that we can quickly see
+    #       if the script works!
+    paths = sorted(
+        [os.path.join(str(input_path), path) for path in os.listdir(input_path)],
+        key=lambda f: os.path.getsize(f),
+    )
+    # I filter paths that are not leaf files because we obviously cannot
+    # read from those paths.
+    paths = [path for path in paths if os.path.isfile(path)]
     roots = [root for root, ext in [os.path.splitext(path) for path in paths]]
-    stems = [os.path.basename(root) for root in roots if root not in exclude.split(",")]
-    return stems
+    stems = [os.path.basename(root) for root in roots]
+    filtered_stems = [stem for stem in stems if stem not in exclude.split(",")]
+    return filtered_stems
 
 
 def main():
@@ -89,14 +109,11 @@ def main():
     stems = get_stems(args.input, args.exclude)
     print(stems)
     input_abspath, output_abspath = str(args.input), str(args.output)
-    with Pool(8) as p:
-        p.starmap(
-            run_trace,
-            [
-                (input_abspath, args.format, output_abspath, stem, args.overwrite)
-                for stem in stems
-            ],
-        )
+    for stem in stems:
+        # NOTE  I was having trouble with 'nohup' and child processes,
+        #       so I decided to just run it all single threaded because
+        #       I have all weekend to run it, yay!
+        run_trace(input_abspath, args.format, output_abspath, stem, args.overwrite)
 
 
 if __name__ == "__main__":
