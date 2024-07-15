@@ -158,7 +158,7 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "results. Default: %s.\n",
             DEFAULT_ORACLE_PATH ? DEFAULT_ORACLE_PATH : "(null)");
     fprintf(stream,
-            "    --hist-num-size, -l <num-bins>: the number of histogram bins. "
+            "    --hist-num-bins, -l <num-bins>: the number of histogram bins. "
             "Default: <CEIL(trace-length / bin-size)>.\n");
     fprintf(stream,
             "    --hist-bin-size, -b <bin-size>: the histogram bin size. "
