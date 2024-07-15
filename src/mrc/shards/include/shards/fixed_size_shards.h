@@ -32,6 +32,7 @@ FixedSizeShards__init(struct FixedSizeShards *const me,
                       size_t const histogram_bin_size);
 
 /// @brief  See 'FixedSizeShards__init'.
+/// @note   The interface is less stable than 'FixedSizeShards__init'.
 bool
 FixedSizeShards__init_full(
     struct FixedSizeShards *const me,
