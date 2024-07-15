@@ -25,11 +25,21 @@ struct FixedSizeShards {
 /// @param  max_size    :   The maximum number of elements that we will track.
 ///                         Additional elements will be removed.
 bool
-FixedSizeShards__init(struct FixedSizeShards *me,
-                      const double starting_sampling_ratio,
-                      const uint64_t max_size,
-                      const uint64_t histogram_num_bins,
-                      const uint64_t histogram_bin_size);
+FixedSizeShards__init(struct FixedSizeShards *const me,
+                      double const starting_sampling_ratio,
+                      size_t const max_size,
+                      size_t const histogram_num_bins,
+                      size_t const histogram_bin_size);
+
+/// @brief  See 'FixedSizeShards__init'.
+bool
+FixedSizeShards__init_full(
+    struct FixedSizeShards *const me,
+    double const starting_sampling_ratio,
+    size_t const max_size,
+    size_t const histogram_num_bins,
+    size_t const histogram_bin_size,
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
 bool
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);

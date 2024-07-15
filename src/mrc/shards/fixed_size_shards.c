@@ -18,12 +18,13 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-bool
-FixedSizeShards__init(struct FixedSizeShards *me,
-                      const double starting_sampling_ratio,
-                      const uint64_t max_size,
-                      const uint64_t histogram_num_bins,
-                      const uint64_t histogram_bin_size)
+static bool
+initialize(struct FixedSizeShards *const me,
+           double const starting_sampling_ratio,
+           size_t const max_size,
+           size_t const histogram_num_bins,
+           size_t const histogram_bin_size,
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
         1.0 < starting_sampling_ratio || max_size == 0) {
@@ -31,7 +32,10 @@ FixedSizeShards__init(struct FixedSizeShards *me,
         return false;
     }
 
-    if (!Olken__init(&me->olken, histogram_num_bins, histogram_bin_size)) {
+    if (!Olken__init_full(&me->olken,
+                          histogram_num_bins,
+                          histogram_bin_size,
+                          out_of_bounds_mode)) {
         LOGGER_WARN("failed to initialize Olken");
         goto cleanup;
     }
@@ -51,6 +55,38 @@ FixedSizeShards__init(struct FixedSizeShards *me,
 cleanup:
     FixedSizeShards__destroy(me);
     return false;
+}
+
+bool
+FixedSizeShards__init(struct FixedSizeShards *const me,
+                      double const starting_sampling_ratio,
+                      size_t const max_size,
+                      size_t const histogram_num_bins,
+                      size_t const histogram_bin_size)
+{
+    return initialize(me,
+                      starting_sampling_ratio,
+                      max_size,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      HistogramOutOfBoundsMode__allow_overflow);
+}
+
+bool
+FixedSizeShards__init_full(
+    struct FixedSizeShards *const me,
+    double const starting_sampling_ratio,
+    size_t const max_size,
+    size_t const histogram_num_bins,
+    size_t const histogram_bin_size,
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+{
+    return initialize(me,
+                      starting_sampling_ratio,
+                      max_size,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      out_of_bounds_mode);
 }
 
 static void
