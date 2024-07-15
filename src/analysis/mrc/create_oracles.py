@@ -181,7 +181,7 @@ def main():
             )
         if args.emap:
             run_output_on_trace(
-                "Fixed-Size-SHARDS",
+                "Evicting-Map",
                 input_abspath,
                 args.format,
                 output_abspath,
@@ -190,7 +190,7 @@ def main():
             )
         if args.fs_shards:
             run_output_on_trace(
-                "Evicting-Map",
+                "Fixed-Size-SHARDS",
                 input_abspath,
                 args.format,
                 output_abspath,
