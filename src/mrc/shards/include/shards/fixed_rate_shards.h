@@ -42,11 +42,22 @@ struct FixedRateShards {
 /// @param  adjustment: whether to perform the SHARDS adjustment (default
 ///             should be true according to Waldspurger!)
 bool
-FixedRateShards__init(struct FixedRateShards *me,
+FixedRateShards__init(struct FixedRateShards *const me,
                       const double sampling_ratio,
                       const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size,
                       const bool adjustment);
+
+/// @brief  See 'FixedRateShards__init'.
+/// @note   This interface is less stable than 'FixedRateShards__init'.
+bool
+FixedRateShards__init_full(
+    struct FixedRateShards *const me,
+    double const sampling_ratio,
+    size_t const histogram_num_bins,
+    size_t const histogram_bin_size,
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+    bool const adjustment);
 
 void
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);
