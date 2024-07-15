@@ -84,7 +84,10 @@ parse_command_line_arguments(int argc, char **argv)
          "format of the input trace. Options: {Kia,Sari}. Default: Kia.",
          NULL},
         {"histogram",
-         'h',
+         // NOTE I chose 'g' because the second syllable of 'histogram'
+         //      begins with a 'g'. Cryptic, I know... Needless to say,
+         //     '-h' was taken by the help option.
+         'g',
          0,
          G_OPTION_ARG_FILENAME,
          &args.histogram_path,

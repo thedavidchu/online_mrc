@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """
-@brief  Generate the oracle for a directory of traces.
+@brief  Generate the oracle and/or output for a directory of traces.
 
-@example    Here's an example of how to call this file:
+@example    Here's an example of how to call this file to produce the oracle:
 `nohup python3 <this-file> -i /mnt/disk1-20tb/Traces/FilteredTwitter_Binary/ -o /mnt/disk1-20tb/same_size_oracle/twitter/ -f Sari -e hashes`
 """
 import argparse
@@ -10,9 +10,10 @@ import os
 from pathlib import Path
 from subprocess import run
 
-EXECUTABLE = (
+ORACLE_EXE = (
     "/home/david/projects/online_mrc/build/src/analysis/mrc/generate_oracle_exe"
 )
+OUTPUT_EXE = "/home/david/projects/online_mrc/build/src/analysis/mrc/generate_mrc_exe"
 
 
 def setup_env():
@@ -25,34 +26,6 @@ def setup_env():
     build_dir = os.path.join(top_level_dir, "build")
     os.chdir(build_dir)
     run("meson compile".split())
-
-
-def run_trace(
-    input_abspath: str, format: str, output_abspath: str, stem: str, overwrite: bool
-):
-    print(f"Started {stem}.bin")
-    trace_abspath = os.path.join(input_abspath, f"{stem}.bin")
-    hist_abspath = os.path.join(output_abspath, f"{stem}-olken-histogram.bin")
-    mrc_abspath = os.path.join(output_abspath, f"{stem}-olken-mrc.bin")
-    log_abspath = os.path.join(output_abspath, f"{stem}-olken.log")
-    if all(map(os.path.exists, [hist_abspath, mrc_abspath, log_abspath])):
-        if not overwrite:
-            print(f"All outputs for {stem}.bin already exist (skipping)")
-            return
-        else:
-            print(f"All outputs for {stem}.bin already exist (running anyway)")
-    elif any(map(os.path.exists, [hist_abspath, mrc_abspath, log_abspath])):
-        print(f"Some outputs for {stem}.bin already exist (running anyway)")
-    else:
-        print(f"No outputs for {stem}.bin exist (running)")
-    output = run(
-        f"nohup {EXECUTABLE} -i {trace_abspath} -f {format} -h {hist_abspath} -m {mrc_abspath}".split(),
-        capture_output=True,
-        text=True,
-    )
-    with open(log_abspath, "w") as f:
-        f.write(output.stdout)
-    print(f"Finished {stem}.bin")
 
 
 def get_stems(input_path: Path, exclude: str) -> list[str]:
@@ -81,6 +54,81 @@ def get_stems(input_path: Path, exclude: str) -> list[str]:
     return filtered_stems
 
 
+def all_paths_exist(*paths: str) -> bool:
+    return all(os.path.exists(p) for p in paths)
+
+
+def any_paths_exist(*paths: str) -> bool:
+    return any(os.path.exists(p) for p in paths)
+
+
+def run_oracle_on_trace(
+    input_abspath: str, format: str, output_abspath: str, stem: str, overwrite: bool
+):
+    print(f"Started {stem}.bin")
+    trace_abspath = os.path.join(input_abspath, f"{stem}.bin")
+    hist_abspath = os.path.join(output_abspath, f"{stem}-olken-histogram.bin")
+    mrc_abspath = os.path.join(output_abspath, f"{stem}-olken-mrc.bin")
+    log_abspath = os.path.join(output_abspath, f"{stem}-olken.log")
+    if all_paths_exist(hist_abspath, mrc_abspath, log_abspath):
+        if not overwrite:
+            print(f"All outputs for {stem}.bin already exist (skipping)")
+            return
+        else:
+            print(f"All outputs for {stem}.bin already exist (running anyway)")
+    elif any_paths_exist(hist_abspath, mrc_abspath, log_abspath):
+        print(f"Some outputs for {stem}.bin already exist (running anyway)")
+    else:
+        print(f"No outputs for {stem}.bin exist (running)")
+    output = run(
+        f"nohup {ORACLE_EXE} -i {trace_abspath} -f {format} --histogram {hist_abspath} -m {mrc_abspath}".split(),
+        capture_output=True,
+        text=True,
+    )
+    with open(log_abspath, "w") as f:
+        f.write(output.stdout)
+    print(f"Finished {stem}.bin")
+
+
+def run_output_on_trace(
+    algorithm: str,
+    input_abspath: str,
+    format: str,
+    output_abspath: str,
+    stem: str,
+    overwrite: bool,
+):
+    print(f"Started {stem}.bin")
+    trace_abspath = os.path.join(input_abspath, f"{stem}.bin")
+    hist_abspath = os.path.join(output_abspath, f"{stem}-{algorithm}-histogram.bin")
+    mrc_abspath = os.path.join(output_abspath, f"{stem}-{algorithm}-mrc.bin")
+    log_abspath = os.path.join(output_abspath, f"{stem}-{algorithm}.log")
+    if all_paths_exist(hist_abspath, mrc_abspath, log_abspath):
+        if not overwrite:
+            print(f"All {algorithm} outputs for {stem}.bin already exist (skipping)")
+            return
+        else:
+            print(
+                f"All {algorithm} outputs for {stem}.bin already exist (running anyway)"
+            )
+    elif any_paths_exist(hist_abspath, mrc_abspath, log_abspath):
+        print(f"Some {algorithm} outputs for {stem}.bin already exist (running anyway)")
+    else:
+        print(f"No {algorithm} outputs for {stem}.bin exist (running)")
+    # NOTE  I set the initial sampling rate to 1e-1 by default without
+    #       a way of modifying this.
+    # NOTE  For a fair comparison, I set the number of histogram bins to
+    #       be the same default number as in the Olken implementation.
+    output = run(
+        f"nohup {OUTPUT_EXE} -i {trace_abspath} -a {algorithm} -f {format} --histogram {hist_abspath} -o {mrc_abspath} -s 1e-1 --hist-num-bins {1<<20}".split(),
+        capture_output=True,
+        text=True,
+    )
+    with open(log_abspath, "w") as f:
+        f.write(output.stdout)
+    print(f"Finished {stem}.bin")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", "-i", type=Path, help="directory of inputs")
@@ -100,6 +148,21 @@ def main():
         help="format of the input traces",
     )
     parser.add_argument(
+        "--oracle",
+        action="store_true",
+        help="run the oracle",
+    )
+    parser.add_argument(
+        "--fs-shards",
+        action="store_true",
+        help="run Fixed-Size SHARDS",
+    )
+    parser.add_argument(
+        "--emap",
+        action="store_true",
+        help="run evicting map",
+    )
+    parser.add_argument(
         "--overwrite",
         action="store_true",
         help="overwrite files even if all of the outputs exist",
@@ -112,7 +175,28 @@ def main():
         # NOTE  I was having trouble with 'nohup' and child processes,
         #       so I decided to just run it all single threaded because
         #       I have all weekend to run it, yay!
-        run_trace(input_abspath, args.format, output_abspath, stem, args.overwrite)
+        if args.oracle:
+            run_oracle_on_trace(
+                input_abspath, args.format, output_abspath, stem, args.overwrite
+            )
+        if args.emap:
+            run_output_on_trace(
+                "Fixed-Size-SHARDS",
+                input_abspath,
+                args.format,
+                output_abspath,
+                stem,
+                args.overwrite,
+            )
+        if args.fs_shards:
+            run_output_on_trace(
+                "Evicting-Map",
+                input_abspath,
+                args.format,
+                output_abspath,
+                stem,
+                args.overwrite,
+            )
 
 
 if __name__ == "__main__":
