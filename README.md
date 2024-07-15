@@ -27,6 +27,9 @@ This project depends on the following:
 Note: I'm too lazy to write proper header guards; especially since they are so
 fragile if you make them match the path but then move a file around!
 
+The Python files are formatted with the Black formatter and are tested
+using Python version 3.11.
+
 Project Structure
 --------------------------------------------------------------------------------
 
