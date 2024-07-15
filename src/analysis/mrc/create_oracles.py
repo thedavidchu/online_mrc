@@ -8,7 +8,6 @@
 import argparse
 import os
 from pathlib import Path
-from multiprocessing import Pool
 from subprocess import run
 
 EXECUTABLE = (
