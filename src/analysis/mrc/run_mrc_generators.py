@@ -169,7 +169,7 @@ def main():
     )
     args = parser.parse_args()
     stems = get_stems(args.input, args.exclude)
-    print(stems)
+    print(f"Stems in {str(args.input)}: {stems}")
     input_abspath, output_abspath = str(args.input), str(args.output)
     for stem in stems:
         # NOTE  I was having trouble with 'nohup' and child processes,
