@@ -408,11 +408,49 @@ MissRateCurve__all_close(struct MissRateCurve const *const lhs,
     return ok;
 }
 
-double
-MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
-                                  struct MissRateCurve *rhs)
+static size_t
+get_working_set_size(struct MissRateCurve const *const me)
 {
-    if (lhs == NULL && rhs == NULL) {
+    if (!is_initialized(me)) {
+        return 0;
+    }
+    size_t max_cache_size = 0;
+    // We start from 1 just because it simplifies the logic. I believe
+    // this is correct as it is... well, duh! Otherwise I wouldn't have
+    // written it this way!
+    for (size_t i = 1; i < me->num_bins; ++i) {
+        // NOTE Miss rate is monotonically decreasing for LRU...
+        assert(me->miss_rate[i] <= me->miss_rate[i - 1]);
+        if (me->miss_rate[i] < me->miss_rate[i - 1]) {
+            max_cache_size = i;
+        }
+    }
+    assert(max_cache_size < me->num_bins);
+    return max_cache_size;
+}
+
+static inline double
+absolute_error(double const a, double const b)
+{
+    return ABS(a - b);
+}
+
+static inline double
+squared_error(double const a, double const b)
+{
+    return (a - b) * (a - b);
+}
+
+/// @brief  Calculate the mean of some comparison function.
+/// @note   I hope the C compiler inlines the function pointer!
+static inline double
+compute_mean_of_comparison(struct MissRateCurve const *const lhs,
+                           struct MissRateCurve const *const rhs,
+                           double (*compare)(double const, double const))
+{
+    // NOTE This condition holds when lhs == rhs == NULL and when they
+    //      are a non-NULL value as well!
+    if (lhs == rhs) {
         return 0.0;
     }
     if (!is_initialized(lhs) || !is_initialized(rhs)) {
@@ -420,74 +458,65 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
     }
     if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
         lhs->bin_size != rhs->bin_size) {
-        LOGGER_ERROR(
-            "cannot compare MRCs with different bin sizes (%zu vs %zu)",
-            lhs->bin_size,
-            rhs->bin_size);
+        LOGGER_ERROR("cannot compare MRCs with different (or zero) bin sizes "
+                     "(%zu vs %zu)",
+                     lhs->bin_size,
+                     rhs->bin_size);
         return INFINITY;
     }
 
-    const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
-    const uint64_t max_bound = MAX(lhs->num_bins, rhs->num_bins);
-    double mse = 0.0;
-    for (uint64_t i = 0; i < min_bound; ++i) {
-        const double diff = lhs->miss_rate[i] - rhs->miss_rate[i];
-        mse += diff * diff;
+    size_t const lhs_wss = get_working_set_size(lhs);
+    size_t const rhs_wss = get_working_set_size(rhs);
+    // NOTE I rely on the optimizing compiler to recognize that these
+    //      if statements are logically equivalent. However, when I have
+    //      it this way, I can const-qualify everything. Yay!
+    size_t const min_wss = MIN(lhs_wss, rhs_wss);
+    size_t const max_wss = MAX(lhs_wss, rhs_wss);
+    // NOTE I use the '<' operator because that's what GLib's 'MIN'
+    //      function uses and I wanted to use the identical operator so
+    //      the compiler can best see this (it doesn't really matter).
+    struct MissRateCurve const *const min_wss_mrc =
+        lhs_wss < rhs_wss ? lhs : rhs;
+    struct MissRateCurve const *const max_wss_mrc =
+        lhs_wss < rhs_wss ? rhs : lhs;
+    assert(min_wss_mrc != max_wss_mrc &&
+           "my logic is incorrect above or we passed in two of the same "
+           "MRCs and my handling of that case was deleted");
+    assert(min_wss < min_wss_mrc->num_bins);
+    assert(max_wss < max_wss_mrc->num_bins);
+
+    // NOTE This may elucidate some of the boundary checking logic:
+    //      0. WSS(min_wss_mrc) <= WSS(max_wss_mrc) [by definition]
+    //      1. WSS(min_wss_mrc) <= |min_wss_mrc|
+    //      2. WSS(max_wss_mrc) <= |max_wss_mrc|
+    //      But there is no bound on the sizes of either MRCs and the
+    //      size of min_wss_mrc versus WSS(max_wss_mrc).
+    double comparison_sum = 0.0;
+    // NOTE I can safely use the '<=' operator because I have checked
+    //      that the WSS is strictly less than the size of each buffer.
+    for (uint64_t i = 0; i <= min_wss; ++i) {
+        comparison_sum += compare(lhs->miss_rate[i], rhs->miss_rate[i]);
     }
-    for (uint64_t i = min_bound; i < max_bound; ++i) {
-        // NOTE I'm assuming the compiler pulls this if-statement out of the
-        //      loop. I think this arrangement is more idiomatic than having
-        //      separate for-loops.
-        double diff = (lhs->num_bins > rhs->num_bins)
-                          ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
-                          : rhs->miss_rate[i] - lhs->miss_rate[min_bound - 1];
-        mse += diff * diff;
+    double const mr_at_min_wss_of_min_wss_mrc = min_wss_mrc->miss_rate[min_wss];
+    for (uint64_t i = min_wss; i <= max_wss; ++i) {
+        comparison_sum +=
+            compare(mr_at_min_wss_of_min_wss_mrc, max_wss_mrc->miss_rate[i]);
     }
-    return mse / (double)(max_bound == 0 ? 1 : max_bound);
+    return comparison_sum / (double)(max_wss == 0 ? 1 : max_wss);
 }
 
 double
-MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
-                                   struct MissRateCurve *rhs)
+MissRateCurve__mean_absolute_error(struct MissRateCurve const *const lhs,
+                                   struct MissRateCurve const *const rhs)
 {
-    if (lhs == NULL && rhs == NULL) {
-        return 0.0;
-    }
-    // Correctness assertions
-    if (lhs->miss_rate == NULL && lhs->num_bins != 0) {
-        return INFINITY;
-    }
-    if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
-        return INFINITY;
-    }
-    if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
-        lhs->bin_size != rhs->bin_size) {
-        LOGGER_ERROR("cannot compare MRCs with different bin sizes");
-        return INFINITY;
-    }
+    return compute_mean_of_comparison(lhs, rhs, absolute_error);
+}
 
-    const uint64_t min_bound = MIN(lhs->num_bins, rhs->num_bins);
-    const uint64_t max_bound = MAX(lhs->num_bins, rhs->num_bins);
-    double mae = 0.0;
-    for (uint64_t i = 0; i < min_bound; ++i) {
-        // NOTE This is just a little (potential) optimization to have
-        //      the ABS act on `diff` alone because we do restrict
-        //      pointer aliasing for `miss_rate`, so the compiler may
-        //      force it to do repeated memory accesses. I'm not sure.
-        //      Either way, I find this more readable.
-        const double diff = lhs->miss_rate[i] - rhs->miss_rate[i];
-        mae += ABS(diff);
-    }
-    for (uint64_t i = min_bound; i < max_bound; ++i) {
-        // NOTE I'm assuming the compiler pulls this if-statement out of the
-        //      loop. I think this arrangement is more idiomatic than having
-        //      separate for-loops.
-        double diff = (lhs->num_bins > rhs->num_bins)
-                          ? lhs->miss_rate[i] - rhs->miss_rate[min_bound - 1]
-                          : rhs->miss_rate[i] - lhs->miss_rate[min_bound - 1];
-        mae += ABS(diff);
-    }
-    return mae / (double)(max_bound == 0 ? 1 : max_bound);
+double
+MissRateCurve__mean_squared_error(struct MissRateCurve const *const lhs,
+                                  struct MissRateCurve const *const rhs)
+{
+    return compute_mean_of_comparison(lhs, rhs, squared_error);
 }
 
 bool
