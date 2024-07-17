@@ -24,12 +24,39 @@ static size_t const METADATA_SIZE =
     sizeof(((struct MissRateCurve *)NULL)->num_bins) +
     sizeof(((struct MissRateCurve *)NULL)->bin_size);
 
+/// @brief  Check whether an array is properly initialized.
+/// @note   This function disallows any of the size fields to be zero.
+static bool
+is_initialized(struct MissRateCurve const *const me)
+{
+    if (me == NULL) {
+        LOGGER_ERROR("MissRateCurve is NULL");
+        return false;
+    }
+    if (me->num_bins == 0) {
+        LOGGER_ERROR("number of bins is 0");
+        return false;
+    }
+    if (me->bin_size == 0) {
+        LOGGER_ERROR("bin size is 0");
+        return false;
+    }
+    // NOTE We assert that the 'num_bins' is positive, so we cannot have
+    //      a NULL miss rate array.
+    //      Recall `me->num_bins > 0` => `me->miss_rate != NULL`
+    if (me->miss_rate == NULL) {
+        LOGGER_ERROR("array of miss-rates is NULL");
+        return false;
+    }
+    return true;
+}
+
 bool
 MissRateCurve__alloc_empty(struct MissRateCurve *const me,
                            uint64_t const num_mrc_bins,
                            uint64_t const bin_size)
 {
-    if (me == NULL) {
+    if (me == NULL || num_mrc_bins == 0 || bin_size == 0) {
         return false;
     }
     *me = (struct MissRateCurve){
@@ -205,8 +232,7 @@ bool
 MissRateCurve__save(struct MissRateCurve const *const me,
                     char const *restrict const file_name)
 {
-    if (me == NULL || file_name == NULL || me->miss_rate == NULL ||
-        me->num_bins == 0 || me->bin_size == 0) {
+    if (!is_initialized(me) || file_name == NULL) {
         return false;
     }
 
@@ -319,10 +345,7 @@ MissRateCurve__scaled_iadd(struct MissRateCurve *const me,
                            struct MissRateCurve const *const other,
                            double const scale)
 {
-    if (me == NULL || me->miss_rate == NULL) {
-        return false;
-    }
-    if (other == NULL || other->miss_rate == NULL) {
+    if (!is_initialized(me) || !is_initialized(other)) {
         return false;
     }
 
@@ -350,13 +373,11 @@ MissRateCurve__all_close(struct MissRateCurve const *const lhs,
     // my error checks. Sometimes, num_bins can be 0, other times, I do
     // not allow it... I don't even know if I disallow a value of 0 in
     // the initialization function.
-    if (lhs == NULL || lhs->miss_rate == NULL || lhs->num_bins == 0 ||
-        lhs->bin_size == 0) {
+    if (!is_initialized(lhs)) {
         LOGGER_ERROR("invalid LHS");
         return false;
     }
-    if (rhs == NULL || rhs->miss_rate == NULL || rhs->num_bins == 0 ||
-        rhs->bin_size == 0) {
+    if (!is_initialized(rhs)) {
         LOGGER_ERROR("invalid RHS");
         return false;
     }
@@ -394,11 +415,7 @@ MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
     if (lhs == NULL && rhs == NULL) {
         return 0.0;
     }
-    // Correctness assertions
-    if (lhs->miss_rate == NULL && lhs->num_bins != 0) {
-        return INFINITY;
-    }
-    if (rhs->miss_rate == NULL && rhs->num_bins != 0) {
+    if (!is_initialized(lhs) || !is_initialized(rhs)) {
         return INFINITY;
     }
     if (lhs->bin_size == 0 || rhs->bin_size == 0 ||
