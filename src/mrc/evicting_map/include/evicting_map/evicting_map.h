@@ -8,7 +8,6 @@
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
-#include "unused/mark_unused.h"
 
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
@@ -25,11 +24,19 @@ struct EvictingMap {
 };
 
 bool
-EvictingMap__init(struct EvictingMap *me,
-                  const double init_sampling_ratio,
-                  const uint64_t num_hash_buckets,
-                  const uint64_t histogram_num_bins,
-                  const uint64_t histogram_bin_size);
+EvictingMap__init(struct EvictingMap *const me,
+                  double const init_sampling_ratio,
+                  uint64_t const num_hash_buckets,
+                  uint64_t const histogram_num_bins,
+                  uint64_t const histogram_bin_size);
+
+bool
+EvictingMap__init_full(struct EvictingMap *const me,
+                       double const init_sampling_ratio,
+                       uint64_t const num_hash_buckets,
+                       uint64_t const histogram_num_bins,
+                       uint64_t const histogram_bin_size,
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
 void
 EvictingMap__access_item(struct EvictingMap *me, EntryType entry);

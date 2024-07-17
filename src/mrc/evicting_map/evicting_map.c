@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <math.h>
 #include <stdbool.h> // bool
 #include <stdint.h>  // uint64_t
 #include <stdio.h>
@@ -9,7 +8,6 @@
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
-#include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/basic_tree.h"
@@ -21,12 +19,13 @@
 
 #include "evicting_map/evicting_map.h"
 
-bool
-EvictingMap__init(struct EvictingMap *me,
-                  const double init_sampling_ratio,
-                  const uint64_t num_hash_buckets,
-                  const uint64_t histogram_num_bins,
-                  const uint64_t histogram_bin_size)
+static bool
+initialize(struct EvictingMap *const me,
+           double const init_sampling_ratio,
+           uint64_t const num_hash_buckets,
+           uint64_t const histogram_num_bins,
+           uint64_t const histogram_bin_size,
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     if (me == NULL)
         return false;
@@ -39,7 +38,7 @@ EvictingMap__init(struct EvictingMap *me,
     if (!Histogram__init(&me->histogram,
                          histogram_num_bins,
                          histogram_bin_size,
-                         false))
+                         out_of_bounds_mode))
         goto cleanup;
 #ifdef INTERVAL_STATISTICS
     if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
@@ -52,6 +51,37 @@ EvictingMap__init(struct EvictingMap *me,
 cleanup:
     EvictingMap__destroy(me);
     return false;
+}
+
+bool
+EvictingMap__init(struct EvictingMap *const me,
+                  const double init_sampling_ratio,
+                  const uint64_t num_hash_buckets,
+                  const uint64_t histogram_num_bins,
+                  const uint64_t histogram_bin_size)
+{
+    return initialize(me,
+                      init_sampling_ratio,
+                      num_hash_buckets,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      HistogramOutOfBoundsMode__allow_overflow);
+}
+
+bool
+EvictingMap__init_full(struct EvictingMap *const me,
+                       double const init_sampling_ratio,
+                       uint64_t const num_hash_buckets,
+                       uint64_t const histogram_num_bins,
+                       uint64_t const histogram_bin_size,
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+{
+    return initialize(me,
+                      init_sampling_ratio,
+                      num_hash_buckets,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      out_of_bounds_mode);
 }
 
 /// @brief  Do no work (besides simple book-keeping).
