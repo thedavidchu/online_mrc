@@ -9,7 +9,7 @@ import argparse
 import os
 from pathlib import Path
 from shlex import split
-from subprocess import run
+from subprocess import run, CompletedProcess
 
 ORACLE_EXE = (
     "/home/david/projects/online_mrc/build/src/analysis/mrc/generate_oracle_exe"
@@ -17,16 +17,15 @@ ORACLE_EXE = (
 OUTPUT_EXE = "/home/david/projects/online_mrc/build/src/analysis/mrc/generate_mrc_exe"
 
 
+def sh(cmd: str, **kwargs) -> CompletedProcess[str]:
+    return run(split(cmd), capture_output=True, text=True, **kwargs)
+
+
 def setup_env():
-    top_level_dir = run(
-        split("git rev-parse --show-toplevel"),
-        capture_output=True,
-        timeout=60,
-        text=True,
-    ).stdout.strip()
+    top_level_dir = sh("git rev-parse --show-toplevel", timeout=60).stdout.strip()
     build_dir = os.path.join(top_level_dir, "build")
     os.chdir(build_dir)
-    run(split("meson compile"))
+    sh("meson compile")
 
 
 def get_stems(input_path: Path, exclude: str) -> list[str]:
@@ -81,12 +80,8 @@ def run_oracle_on_trace(
         print(f"Some outputs for {stem}.bin already exist (running anyway)")
     else:
         print(f"No outputs for {stem}.bin exist (running)")
-    output = run(
-        split(
-            f"nohup {ORACLE_EXE} -i {trace_abspath} -f {format} --histogram {hist_abspath} -m {mrc_abspath}"
-        ),
-        capture_output=True,
-        text=True,
+    output = sh(
+        f"nohup {ORACLE_EXE} -i {trace_abspath} -f {format} --histogram {hist_abspath} -m {mrc_abspath}"
     )
     with open(log_abspath, "w") as f:
         f.write(output.stdout)
@@ -122,12 +117,8 @@ def run_output_on_trace(
     #       a way of modifying this.
     # NOTE  For a fair comparison, I set the number of histogram bins to
     #       be the same default number as in the Olken implementation.
-    output = run(
-        split(
-            f"nohup {OUTPUT_EXE} -i {trace_abspath} -a {algorithm} -f {format} --histogram {hist_abspath} -o {mrc_abspath} -s 1e-1 --hist-num-bins {1<<20}"
-        ),
-        capture_output=True,
-        text=True,
+    output = sh(
+        f"nohup {OUTPUT_EXE} -i {trace_abspath} -a {algorithm} -f {format} --histogram {hist_abspath} -o {mrc_abspath} -s 1e-1 --hist-num-bins {1<<20}"
     )
     with open(log_abspath, "w") as f:
         f.write(output.stdout)
