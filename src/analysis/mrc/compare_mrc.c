@@ -102,7 +102,7 @@ main(int argc, char **argv)
 
     double const mae = MissRateCurve__mean_absolute_error(&oracle, &test);
     double const mse = MissRateCurve__mean_squared_error(&oracle, &test);
-    LOGGER_INFO("MAE: %g | MSE: %g", mae, mse);
+    LOGGER_INFO("MAE: %f | MSE: %f", mae, mse);
 
     return 0;
 }
