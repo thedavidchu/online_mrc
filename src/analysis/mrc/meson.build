@@ -1,3 +1,13 @@
+compare_mrc_exe = executable(
+    'compare_mrc_exe',
+    'compare_mrc.c',
+    dependencies: [
+        common_dep,
+        file_dep,
+        miss_rate_curve_dep,
+    ],
+)
+
 generate_oracle_exe = executable(
     'generate_oracle_exe',
     'generate_oracle.c',
