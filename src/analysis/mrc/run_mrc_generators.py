@@ -8,6 +8,7 @@
 import argparse
 import os
 from pathlib import Path
+from shlex import split
 from subprocess import run
 
 ORACLE_EXE = (
@@ -18,14 +19,14 @@ OUTPUT_EXE = "/home/david/projects/online_mrc/build/src/analysis/mrc/generate_mr
 
 def setup_env():
     top_level_dir = run(
-        "git rev-parse --show-toplevel".split(),
+        split("git rev-parse --show-toplevel"),
         capture_output=True,
         timeout=60,
         text=True,
     ).stdout.strip()
     build_dir = os.path.join(top_level_dir, "build")
     os.chdir(build_dir)
-    run("meson compile".split())
+    run(split("meson compile"))
 
 
 def get_stems(input_path: Path, exclude: str) -> list[str]:
@@ -81,7 +82,9 @@ def run_oracle_on_trace(
     else:
         print(f"No outputs for {stem}.bin exist (running)")
     output = run(
-        f"nohup {ORACLE_EXE} -i {trace_abspath} -f {format} --histogram {hist_abspath} -m {mrc_abspath}".split(),
+        split(
+            f"nohup {ORACLE_EXE} -i {trace_abspath} -f {format} --histogram {hist_abspath} -m {mrc_abspath}"
+        ),
         capture_output=True,
         text=True,
     )
@@ -120,7 +123,9 @@ def run_output_on_trace(
     # NOTE  For a fair comparison, I set the number of histogram bins to
     #       be the same default number as in the Olken implementation.
     output = run(
-        f"nohup {OUTPUT_EXE} -i {trace_abspath} -a {algorithm} -f {format} --histogram {hist_abspath} -o {mrc_abspath} -s 1e-1 --hist-num-bins {1<<20}".split(),
+        split(
+            f"nohup {OUTPUT_EXE} -i {trace_abspath} -a {algorithm} -f {format} --histogram {hist_abspath} -o {mrc_abspath} -s 1e-1 --hist-num-bins {1<<20}"
+        ),
         capture_output=True,
         text=True,
     )
