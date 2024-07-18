@@ -28,7 +28,7 @@ test(
     args: [
         '-i', test_trace,
         '-f', 'Kia',
-        '-h', 'generate_oracle_test-histogram.bin',
+        '-g', 'generate_oracle_test-histogram.bin',
         '-m', 'generate_oracle_test-mrc.bin',
         '--cleanup',
     ],
