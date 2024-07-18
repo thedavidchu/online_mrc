@@ -28,13 +28,13 @@ Olken__init(struct Olken *const me,
 /// @brief  Initialize the Olken data structure, but with more parameters!
 /// @note   The API of this function is less stable than the Olken__init().
 bool
-Olken__init_full(struct Olken *me,
+Olken__init_full(struct Olken *const me,
                  size_t const histogram_num_bins,
                  size_t const histogram_bin_size,
                  enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
 bool
-Olken__access_item(struct Olken *me, EntryType entry);
+Olken__access_item(struct Olken *const me, EntryType const entry);
 
 bool
 Olken__remove_item(struct Olken *me, EntryType entry);
@@ -66,12 +66,11 @@ void
 Olken__print_histogram_as_json(struct Olken *me);
 
 void
-Olken__destroy(struct Olken *me);
+Olken__destroy(struct Olken *const me);
 
 /// @brief  Provide a neat interface to access the histogram.
 /// @details    Yes, I know that getter/setter functions are passé, but
 ///             I need a neat interface to get the histograms of every
 ///             MRC algorithm.
 bool
-Olken__get_histogram(struct Olken const *const me,
-                     struct Histogram const *histogram);
+Olken__get_histogram(struct Olken const *const me, struct Histogram *histogram);
