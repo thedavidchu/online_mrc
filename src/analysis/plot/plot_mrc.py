@@ -70,7 +70,7 @@ def main():
         "--input", nargs="+", type=str, required=True, help="input path(s)"
     )
     parser.add_argument(
-        "--output", nargs="*", type=str, default="mrc.pdf", help="output path(s)"
+        "--output", nargs="*", type=str, default=["mrc.pdf"], help="output path(s)"
     )
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
