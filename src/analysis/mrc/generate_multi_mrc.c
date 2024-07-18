@@ -219,7 +219,7 @@ static void
 print_trace_summary(struct CommandLineArguments const *args,
                     struct Trace const *const trace)
 {
-    fprintf(stderr,
+    fprintf(LOGGER_STREAM,
             "Trace(source='%s', format='%s', length=%zu)\n",
             args->input_path,
             TRACE_FORMAT_STRINGS[args->trace_format],
@@ -509,6 +509,9 @@ run_cleanup(struct RunnerArguments const *const args)
 int
 main(int argc, char **argv)
 {
+    // This variable is for things that are not critical failures but
+    // indicate we didn't succeed.
+    int status = EXIT_SUCCESS;
     struct CommandLineArguments args = {0};
     args = parse_command_line_arguments(argc, argv);
     print_command_line_arguments(&args);
@@ -533,6 +536,7 @@ main(int argc, char **argv)
         //              oracle if the files already exist.
         if (!run_runner(&work.data[i], &trace)) {
             LOGGER_ERROR("oracle runner failed");
+            status = EXIT_FAILURE;
         }
     }
 
@@ -554,6 +558,7 @@ main(int argc, char **argv)
             if (!MissRateCurve__load(&mrc, work.data[i].mrc_path)) {
                 LOGGER_ERROR("failed to load MRC from '%s'",
                              work.data[i].mrc_path);
+                status = EXIT_FAILURE;
                 continue;
             }
             double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
@@ -572,6 +577,7 @@ main(int argc, char **argv)
         for (size_t i = 0; i < work.length; ++i) {
             if (!run_cleanup(&work.data[i])) {
                 LOGGER_ERROR("oracle runner failed");
+                status = EXIT_FAILURE;
             }
         }
     }
@@ -580,5 +586,5 @@ main(int argc, char **argv)
     free_command_line_arguments(&args);
     Trace__destroy(&trace);
 
-    return 0;
+    return status;
 }
