@@ -66,6 +66,17 @@ test(
 )
 
 test(
+    'generate_multi_mrc_empty_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', 'zipf',
+        '-l', '10000',
+        '-r', 'Olken()',
+        '--cleanup',
+    ],
+)
+
+test(
     'generate_multi_mrc_test',
     generate_multi_mrc_exe,
     args: [

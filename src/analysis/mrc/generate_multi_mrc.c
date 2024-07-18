@@ -452,9 +452,15 @@ create_work_array(struct CommandLineArguments const *const args)
     }
     if (args->run != NULL) {
         for (size_t i = 0; args->run[i] != NULL; ++i) {
-            if (!RunnerArguments__init(&array[1 + i],
-                                       args->run[i],
-                                       args->cleanup)) {
+            // NOTE I have to check whether the oracle was provided so
+            //      I know if I take the first bucket or the second.
+            //      Maybe in the future, I should just _always_ reserve
+            //      the first bucket for the oracle regardless of
+            //      whether it actually uses it.
+            if (!RunnerArguments__init(
+                    &array[(args->oracle != NULL ? 1 : 0) + i],
+                    args->run[i],
+                    args->cleanup)) {
                 LOGGER_WARN("failed to initialize runner arguments '%s'",
                             args->run[i]);
             }
