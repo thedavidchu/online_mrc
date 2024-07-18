@@ -21,7 +21,7 @@ bool
 HistogramOutOfBoundsMode__parse(enum HistogramOutOfBoundsMode *me,
                                 char const *const str)
 {
-    for (size_t i = 1; i < ARRAY_SIZE(HISTOGRAM_MODE_STRINGS); ++i) {
+    for (size_t i = 0; i < ARRAY_SIZE(HISTOGRAM_MODE_STRINGS); ++i) {
         if (strcmp(HISTOGRAM_MODE_STRINGS[i], str) == 0) {
             *me = (enum HistogramOutOfBoundsMode)i;
             return true;
