@@ -10,11 +10,25 @@
 
 #include <glib.h>
 
+#include "arrays/array_size.h"
 #include "histogram/histogram.h"
 #include "invariants/implies.h"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "math/positive_ceiling_divide.h"
+
+bool
+HistogramOutOfBoundsMode__parse(enum HistogramOutOfBoundsMode *me,
+                                char const *const str)
+{
+    for (size_t i = 0; i < ARRAY_SIZE(HISTOGRAM_MODE_STRINGS); ++i) {
+        if (strcmp(HISTOGRAM_MODE_STRINGS[i], str) == 0) {
+            *me = (enum HistogramOutOfBoundsMode)i;
+            return true;
+        }
+    }
+    return false;
+}
 
 static bool
 init_histogram(struct Histogram *const me,
@@ -108,42 +122,50 @@ merge_bins(struct Histogram *const me,
     return true;
 }
 
+/// @param  alloc_amortization_factor: double
+///         the factor by which to amortize the cost of reallocation.
 static bool
 alloc_more_histogram(struct Histogram *const me,
                      uint64_t const index,
-                     uint64_t const horizontal_scale)
+                     uint64_t const horizontal_scale,
+                     double const alloc_amortization_factor)
 {
     assert(me && !fits_in_histogram(me, index, horizontal_scale));
+    assert(alloc_amortization_factor >= 1.0 &&
+           "cannot amortize by less than 1.0");
 
     // NOTE We must be able to accomodate a value of
     //      'index * horizontal_scale', which means we should add 1.
-    //      Next, we want to amortize the allocation, so I overestimate
-    //      by a small factor (I chose 2 just because then I don't have
-    //      the complication of multiplying an integer by a float).
-    size_t new_num_bins =
-        2 * POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
+    size_t new_num_bins = alloc_amortization_factor *
+                          (double)(index * horizontal_scale + 1) / me->bin_size;
+    if (new_num_bins <= me->num_bins) {
+        // NOTE This is extremely inefficient but we would only use it
+        //      if larger allocations have failed.
+        LOGGER_WARN("using inefficient reallocation strategy to go "
+                    "from %zu to %zu bins",
+                    me->num_bins,
+                    new_num_bins);
+        new_num_bins += me->num_bins + 1;
+    }
     uint64_t *new_histogram =
         realloc(me->histogram, new_num_bins * sizeof(*me->histogram));
     // NOTE This error handling code is for large traces with many unique
     //      elements. Admittedly it is a bit confusing because we have
     //      variables being changed inside this if-statement.
     if (new_histogram == NULL) {
-        LOGGER_WARN(
-            "unable to reallocate %zu histogram bins. We'll try reducing the "
-            "number of bins allocated (but we'll lose the amortized runtime "
-            "efficiency)!",
-            new_num_bins);
-        // NOTE This is half the number of bins as we previously tried to
-        //      allocate!
-        new_num_bins =
-            POSITIVE_CEILING_DIVIDE(index * horizontal_scale + 1, me->bin_size);
-        new_histogram =
-            realloc(me->histogram, new_num_bins * sizeof(*me->histogram));
-        if (new_histogram == NULL) {
-            LOGGER_ERROR("unable to reallocate %zu histogram bins!",
+        // We need to provide a base case for the recursion.
+        if (alloc_amortization_factor <= 1.0) {
+            LOGGER_ERROR("unable to reallocate from %zu to %zu bins",
+                         me->num_bins,
                          new_num_bins);
             return false;
         }
+        LOGGER_WARN(
+            "unable to reallocate %zu histogram bins. We'll try reducing the "
+            "number of bins allocated (but we'll lose the amortized runtime)!",
+            new_num_bins);
+        // NOTE If we cannot allocate
+        return alloc_more_histogram(me, index, horizontal_scale, 1.0);
     }
     // Zero the indices that have not been set.
     memset(&new_histogram[me->num_bins],
@@ -173,7 +195,7 @@ stretch_histogram_if_necessary(struct Histogram *const me,
     case HistogramOutOfBoundsMode__merge_bins:
         return merge_bins(me, index, horizontal_scale);
     case HistogramOutOfBoundsMode__realloc:
-        return alloc_more_histogram(me, index, horizontal_scale);
+        return alloc_more_histogram(me, index, horizontal_scale, 1.5);
     default:
         return true;
     }

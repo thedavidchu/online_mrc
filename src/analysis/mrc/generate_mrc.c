@@ -158,7 +158,7 @@ print_help(FILE *stream, struct CommandLineArguments const *args)
             "results. Default: %s.\n",
             DEFAULT_ORACLE_PATH ? DEFAULT_ORACLE_PATH : "(null)");
     fprintf(stream,
-            "    --hist-num-size, -l <num-bins>: the number of histogram bins. "
+            "    --hist-num-bins, -l <num-bins>: the number of histogram bins. "
             "Default: <CEIL(trace-length / bin-size)>.\n");
     fprintf(stream,
             "    --hist-bin-size, -b <bin-size>: the histogram bin size. "
@@ -392,8 +392,8 @@ parse_command_line_arguments(int argc, char **argv)
     }
     if (args.trace_format == TRACE_FORMAT_INVALID &&
         strcmp(args.input_path, "zipf") != 0 &&
-        strcmp(args.input_path, "step") &&
-        strcmp(args.input_path, "two-step")) {
+        strcmp(args.input_path, "step") != 0 &&
+        strcmp(args.input_path, "two-step") != 0) {
         LOGGER_WARN("trace format was not specified, so defaulting to Kia's");
         args.trace_format = TRACE_FORMAT_KIA;
     }
@@ -467,30 +467,33 @@ cleanup:
         return mrc;                                                            \
     }
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_olken,
-                                 struct Olken,
-                                 me,
-                                 args,
-                                 Olken__init(&me,
-                                             args.hist_num_bins,
-                                             args.hist_bin_size),
-                                 Olken__access_item,
-                                 Olken__post_process,
-                                 &me.histogram,
-                                 Histogram__save,
-                                 Olken__to_mrc,
-                                 Olken__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_olken,
+    struct Olken,
+    me,
+    args,
+    Olken__init_full(&me,
+                     args.hist_num_bins,
+                     args.hist_bin_size,
+                     HistogramOutOfBoundsMode__realloc),
+    Olken__access_item,
+    Olken__post_process,
+    &me.histogram,
+    Histogram__save,
+    Olken__to_mrc,
+    Olken__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     run_fixed_rate_shards,
     struct FixedRateShards,
     me,
     args,
-    FixedRateShards__init(&me,
-                          args.shards_sampling_ratio,
-                          args.hist_num_bins,
-                          args.hist_bin_size,
-                          false),
+    FixedRateShards__init_full(&me,
+                               args.shards_sampling_ratio,
+                               args.hist_num_bins,
+                               args.hist_bin_size,
+                               HistogramOutOfBoundsMode__realloc,
+                               false),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
@@ -503,11 +506,12 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     struct FixedRateShards,
     me,
     args,
-    FixedRateShards__init(&me,
-                          args.shards_sampling_ratio,
-                          args.hist_num_bins,
-                          args.hist_bin_size,
-                          true),
+    FixedRateShards__init_full(&me,
+                               args.shards_sampling_ratio,
+                               args.hist_num_bins,
+                               args.hist_bin_size,
+                               HistogramOutOfBoundsMode__realloc,
+                               true),
     FixedRateShards__access_item,
     FixedRateShards__post_process,
     &me.olken.histogram,
@@ -520,11 +524,12 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(
     struct FixedSizeShards,
     me,
     args,
-    FixedSizeShards__init(&me,
-                          args.shards_sampling_ratio,
-                          1 << 13,
-                          args.hist_num_bins,
-                          args.hist_bin_size),
+    FixedSizeShards__init_full(&me,
+                               args.shards_sampling_ratio,
+                               1 << 13,
+                               args.hist_num_bins,
+                               args.hist_bin_size,
+                               HistogramOutOfBoundsMode__realloc),
     FixedSizeShards__access_item,
     FixedSizeShards__post_process,
     &me.olken.histogram,
@@ -568,21 +573,23 @@ CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_goel_quickmrc,
                                  GoelQuickMRC__to_mrc,
                                  GoelQuickMRC__destroy)
 
-CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_evicting_map,
-                                 struct EvictingMap,
-                                 me,
-                                 args,
-                                 EvictingMap__init(&me,
-                                                   args.shards_sampling_ratio,
-                                                   1 << 13,
-                                                   args.hist_num_bins,
-                                                   args.hist_bin_size),
-                                 EvictingMap__access_item,
-                                 EvictingMap__post_process,
-                                 &me.histogram,
-                                 Histogram__save,
-                                 EvictingMap__to_mrc,
-                                 EvictingMap__destroy)
+CONSTRUCT_RUN_ALGORITHM_FUNCTION(
+    run_evicting_map,
+    struct EvictingMap,
+    me,
+    args,
+    EvictingMap__init_full(&me,
+                           args.shards_sampling_ratio,
+                           1 << 13,
+                           args.hist_num_bins,
+                           args.hist_bin_size,
+                           HistogramOutOfBoundsMode__realloc),
+    EvictingMap__access_item,
+    EvictingMap__post_process,
+    &me.histogram,
+    Histogram__save,
+    EvictingMap__to_mrc,
+    EvictingMap__destroy)
 
 CONSTRUCT_RUN_ALGORITHM_FUNCTION(run_average_eviction_time,
                                  struct AverageEvictionTime,

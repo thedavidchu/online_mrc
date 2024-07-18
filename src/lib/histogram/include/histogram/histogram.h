@@ -5,6 +5,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
+static char const *const HISTOGRAM_MODE_STRINGS[] = {
+    "allow_overflow",
+    "merge_bins",
+    "realloc",
+    "INVALID",
+};
+
 /// @brief  When we have an element that doesn't fit in the histogram,
 ///         we have multiple options of resolution.
 ///         1. Allow overflow (and record this as a 'false infinity')
@@ -16,13 +23,21 @@
 ///             This maintains the precision at the expense of larger
 ///             storage overheads.
 enum HistogramOutOfBoundsMode {
+    // NOTE This value is set to zero for backwards compatibility (with
+    //      'false'). This guarantee is deprecated and future code
+    //      should not rely on this.
     HistogramOutOfBoundsMode__allow_overflow,
     // When we get a finite element larger than the current maximum,
     // double the range of our histogram by merging neighbouring buckets
     // until we can fit the element!
     HistogramOutOfBoundsMode__merge_bins,
     HistogramOutOfBoundsMode__realloc,
+    HistogramOutOfBoundsMode__INVALID,
 };
+
+bool
+HistogramOutOfBoundsMode__parse(enum HistogramOutOfBoundsMode *me,
+                                char const *const str);
 
 /// @brief  Track (potentially scaled) equal-sized values by frequency.
 /// @note   I assume no overflow in any of these values!
@@ -46,6 +61,9 @@ Histogram__init(struct Histogram *me,
                 size_t const num_bins,
                 size_t const bin_size,
                 enum HistogramOutOfBoundsMode const out_of_bounds_mode);
+
+void
+Histogram__destroy(struct Histogram *me);
 
 bool
 Histogram__insert_finite(struct Histogram *me, const uint64_t index);
@@ -113,6 +131,3 @@ Histogram__euclidean_error(struct Histogram const *const lhs,
 bool
 Histogram__iadd(struct Histogram *const me,
                 struct Histogram const *const other);
-
-void
-Histogram__destroy(struct Histogram *me);

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "histogram/histogram.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "types/entry_type.h"
@@ -42,16 +43,27 @@ struct FixedRateShards {
 /// @param  adjustment: whether to perform the SHARDS adjustment (default
 ///             should be true according to Waldspurger!)
 bool
-FixedRateShards__init(struct FixedRateShards *me,
+FixedRateShards__init(struct FixedRateShards *const me,
                       const double sampling_ratio,
                       const uint64_t histogram_num_bins,
                       const uint64_t histogram_bin_size,
                       const bool adjustment);
 
-void
+/// @brief  See 'FixedRateShards__init'.
+/// @note   This interface is less stable than 'FixedRateShards__init'.
+bool
+FixedRateShards__init_full(
+    struct FixedRateShards *const me,
+    double const sampling_ratio,
+    size_t const histogram_num_bins,
+    size_t const histogram_bin_size,
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+    bool const adjustment);
+
+bool
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);
 
-void
+bool
 FixedRateShards__post_process(struct FixedRateShards *me);
 
 bool
@@ -63,3 +75,7 @@ FixedRateShards__print_histogram_as_json(struct FixedRateShards *me);
 
 void
 FixedRateShards__destroy(struct FixedRateShards *me);
+
+bool
+FixedRateShards__get_histogram(struct FixedRateShards *const me,
+                               struct Histogram const **const histogram);

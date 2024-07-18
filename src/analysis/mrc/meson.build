@@ -1,3 +1,13 @@
+compare_mrc_exe = executable(
+    'compare_mrc_exe',
+    'compare_mrc.c',
+    dependencies: [
+        common_dep,
+        file_dep,
+        miss_rate_curve_dep,
+    ],
+)
+
 generate_oracle_exe = executable(
     'generate_oracle_exe',
     'generate_oracle.c',
@@ -20,6 +30,62 @@ test(
         '-f', 'Kia',
         '-h', 'generate_oracle_test-histogram.bin',
         '-m', 'generate_oracle_test-mrc.bin',
+        '--cleanup',
+    ],
+)
+
+generate_multi_mrc_exe = executable(
+    'generate_multi_mrc_exe',
+    'generate_multi_mrc.c',
+    include_directories: [include_directories('.')],
+    dependencies: [
+        average_eviction_time_dep,
+        evicting_map_dep,
+        common_dep,
+        shards_dep,
+        glib_dep,
+        goel_quickmrc_dep,
+        file_dep,
+        miss_rate_curve_dep,
+        olken_dep,
+        quickmrc_dep,
+        timer_dep,
+        trace_dep,
+    ],
+)
+
+test(
+    'generate_multi_mrc_olken_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', 'zipf',
+        '-l', '10000',
+        '-o', 'Olken(mrc=generate_multi_mrc_olken_test-olken-mrc.bin,hist=generate_multi_mrc_olken_test-olken-hist.bin)',
+        '--cleanup',
+    ],
+)
+
+test(
+    'generate_multi_mrc_empty_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', 'zipf',
+        '-l', '10000',
+        '-r', 'Olken()',
+        '--cleanup',
+    ],
+)
+
+test(
+    'generate_multi_mrc_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', 'zipf',
+        '-l', '1000000',
+        '-o', 'Olken(mrc=generate_multi_mrc_test-olken-mrc.bin,hist=generate_multi_mrc_test-olken-hist.bin,bin_size=1024,mode=realloc)',
+        '-r', 'Fixed-Rate-SHARDS(mrc=generate_multi_mrc_test-frs-mrc.bin,hist=generate_multi_mrc_test-frs-hist.bin,sampling=1e-3,num_bins=1024,bin_size=1024,mode=realloc,adj=true)',
+        '-r', 'Fixed-Size-SHARDS(mrc=generate_multi_mrc_test-fss-mrc.bin,hist=generate_multi_mrc_test-fss-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
+        '-r', 'Evicting-Map(mrc=generate_multi_mrc_test-emap-mrc.bin,hist=generate_multi_mrc_test-emap-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
         '--cleanup',
     ],
 )

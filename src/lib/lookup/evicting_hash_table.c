@@ -51,8 +51,10 @@ EvictingHashTable__init(struct EvictingHashTable *me,
         return false;
 
     struct EvictingHashTableNode *data = malloc(length * sizeof(*me->data));
-    if (data == NULL)
+    if (data == NULL) {
+        LOGGER_ERROR("failed to initialize with length %zu", length);
         return false;
+    }
     // NOTE There is no way to allow us to sample values with a hash of
     //      UINT64_MAX because we reserve this as the "invalid" hash value.
     for (size_t i = 0; i < length; ++i) {

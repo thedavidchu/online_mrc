@@ -21,20 +21,23 @@
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
 
-bool
-FixedRateShards__init(struct FixedRateShards *me,
-                      const double sampling_ratio,
-                      const uint64_t histogram_num_bins,
-                      const uint64_t histogram_bin_size,
-                      const bool adjustment)
+static bool
+initialize(struct FixedRateShards *me,
+           double const sampling_ratio,
+           size_t const histogram_num_bins,
+           size_t const histogram_bin_size,
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+           bool const adjustment)
 {
     if (me == NULL || sampling_ratio <= 0.0 || 1.0 < sampling_ratio)
         return false;
     // NOTE I am assuming that Olken does not have any structures that
     //      point to the containing structure (i.e. the 'shell' of the
     //      Olken structure is not referenced anywhere).
-    bool r = Olken__init(&me->olken, histogram_num_bins, histogram_bin_size);
-    if (!r) {
+    if (!Olken__init_full(&me->olken,
+                          histogram_num_bins,
+                          histogram_bin_size,
+                          out_of_bounds_mode)) {
         goto cleanup;
     }
 #ifdef INTERVAL_STATISTICS
@@ -42,26 +45,67 @@ FixedRateShards__init(struct FixedRateShards *me,
         goto cleanup;
     }
 #endif
-    me->sampling_ratio = sampling_ratio;
-    me->threshold = ratio_uint64(sampling_ratio);
-    me->scale = 1 / sampling_ratio;
+    *me = (struct FixedRateShards){
+        .olken = me->olken,
+#ifdef INTERVAL_STATISTICS
+        .istats = me->istats,
+#endif
+        .sampling_ratio = sampling_ratio,
+        .threshold = ratio_uint64(sampling_ratio),
+        .scale = 1 / sampling_ratio,
 
-    me->adjustment = adjustment;
-    me->num_entries_seen = 0;
-    me->num_entries_processed = 0;
+        .adjustment = adjustment,
+        .num_entries_seen = 0,
+        .num_entries_processed = 0,
+    };
     return true;
 cleanup:
     FixedRateShards__destroy(me);
     return false;
 }
 
-void
+bool
+FixedRateShards__init(struct FixedRateShards *const me,
+                      const double sampling_ratio,
+                      const uint64_t histogram_num_bins,
+                      const uint64_t histogram_bin_size,
+                      const bool adjustment)
+{
+    return initialize(me,
+                      sampling_ratio,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      // NOTE   This is the default mode whereby any
+                      //        overflow is accumulated in the
+                      //        'false_inifinity' bin.
+                      HistogramOutOfBoundsMode__allow_overflow,
+                      adjustment);
+}
+
+bool
+FixedRateShards__init_full(
+    struct FixedRateShards *const me,
+    double const sampling_ratio,
+    size_t const histogram_num_bins,
+    size_t const histogram_bin_size,
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+    bool const adjustment)
+{
+    return initialize(me,
+                      sampling_ratio,
+                      histogram_num_bins,
+                      histogram_bin_size,
+                      out_of_bounds_mode,
+                      adjustment);
+}
+
+bool
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
 {
     bool r = false;
 
     if (me == NULL) {
-        return;
+        return false;
     }
 
     ++me->num_entries_seen;
@@ -74,7 +118,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         IntervalStatistics__append_unsampled(&me->istats);
 #endif
         ++me->olken.current_time_stamp;
-        return;
+        return true;
     }
     ++me->num_entries_processed;
 
@@ -120,17 +164,19 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         ++me->olken.current_time_stamp;
         Histogram__insert_scaled_infinite(&me->olken.histogram, me->scale);
     }
+
+    return true;
 }
 
-void
+bool
 FixedRateShards__post_process(struct FixedRateShards *me)
 {
     if (me == NULL || me->olken.histogram.histogram == NULL ||
         me->olken.histogram.num_bins < 1)
-        return;
+        return false;
 
     if (!me->adjustment)
-        return;
+        return true;
 
     // NOTE I need to scale the adjustment by the scale that I've been adjusting
     //      all values. Conversely, I could just not scale any values by the
@@ -139,10 +185,12 @@ FixedRateShards__post_process(struct FixedRateShards *me)
     const int64_t adjustment =
         me->scale *
         (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
-    bool r = Histogram__adjust_first_buckets(&me->olken.histogram, adjustment);
-    if (!r) {
+    ;
+    if (!Histogram__adjust_first_buckets(&me->olken.histogram, adjustment)) {
         LOGGER_WARN("error in adjusting buckets");
+        return false;
     }
+    return true;
 }
 
 bool
@@ -166,4 +214,14 @@ FixedRateShards__destroy(struct FixedRateShards *me)
     IntervalStatistics__destroy(&me->istats);
 #endif
     *me = (struct FixedRateShards){0};
+}
+
+bool
+FixedRateShards__get_histogram(struct FixedRateShards *const me,
+                               struct Histogram const **const histogram)
+{
+    if (me == NULL) {
+        return false;
+    }
+    return Olken__get_histogram(&me->olken, histogram);
 }

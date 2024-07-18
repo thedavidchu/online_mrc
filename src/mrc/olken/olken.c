@@ -58,7 +58,7 @@ Olken__init(struct Olken *const me,
 }
 
 bool
-Olken__init_full(struct Olken *me,
+Olken__init_full(struct Olken *const me,
                  size_t const histogram_num_bins,
                  size_t const histogram_bin_size,
                  enum HistogramOutOfBoundsMode const out_of_bounds_mode)
@@ -125,7 +125,7 @@ Olken__insert_stack(struct Olken *me, EntryType entry)
 }
 
 bool
-Olken__access_item(struct Olken *me, EntryType entry)
+Olken__access_item(struct Olken *const me, EntryType const entry)
 {
     if (me == NULL) {
         return false;
@@ -150,7 +150,7 @@ Olken__access_item(struct Olken *me, EntryType entry)
 }
 
 bool
-Olken__post_process(struct Olken *me)
+Olken__post_process(struct Olken *const me)
 {
     UNUSED(me);
     return true;
@@ -176,7 +176,7 @@ Olken__print_histogram_as_json(struct Olken *me)
 }
 
 void
-Olken__destroy(struct Olken *me)
+Olken__destroy(struct Olken *const me)
 {
     if (me == NULL) {
         return;
@@ -185,4 +185,18 @@ Olken__destroy(struct Olken *me)
     HashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
     *me = (struct Olken){0};
+}
+
+bool
+Olken__get_histogram(struct Olken const *const me,
+                     struct Histogram const **const histogram)
+{
+    if (me == NULL || histogram == NULL) {
+        // NOTE I was going to set '*histogram = NULL' if 'me == NULL',
+        //      but this is kind of weird and required some fancy error
+        //      handling in case 'histogram == NULL'. I decided to not.
+        return false;
+    }
+    *histogram = &me->histogram;
+    return true;
 }

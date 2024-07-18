@@ -50,12 +50,6 @@ bool
 MissRateCurve__load(struct MissRateCurve *const me,
                     char const *restrict const file_name);
 
-/// @return non-negative mean squared error, or a negative number (e.g. -1.0) on
-///         error.
-double
-MissRateCurve__mean_squared_error(struct MissRateCurve *lhs,
-                                  struct MissRateCurve *rhs);
-
 /// @note   This is useful when trying to average many MRCs without
 ///         needing to load all of the histograms at once.
 /// @note   I am not entirely content with the semantics of this function.
@@ -71,16 +65,15 @@ MissRateCurve__all_close(struct MissRateCurve const *const lhs,
                          struct MissRateCurve const *const rhs,
                          double const epsilon);
 
-/// @return non-negative mean absolute error, or a negative number (e.g. -1.0)
-///         on error.
-/// @todo   This function should only compare to the end of the smallest
-///         MRC because otherwise we could get very good accuracy by
-///         predicting an MRC that is slightly greater than the working
-///         set size that stretches to near infinity. Then, the majority
-///         of the comparison will be between the two tails of the MRCs.
+/// @return non-negative mean squared error, or INFINITY on error.
 double
-MissRateCurve__mean_absolute_error(struct MissRateCurve *lhs,
-                                   struct MissRateCurve *rhs);
+MissRateCurve__mean_absolute_error(struct MissRateCurve const *const lhs,
+                                   struct MissRateCurve const *const rhs);
+
+/// @return non-negative mean squared error, or INFINITY on error.
+double
+MissRateCurve__mean_squared_error(struct MissRateCurve const *const lhs,
+                                  struct MissRateCurve const *const rhs);
 
 void
 MissRateCurve__write_as_json(FILE *stream,
