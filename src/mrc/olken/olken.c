@@ -188,12 +188,15 @@ Olken__destroy(struct Olken *const me)
 }
 
 bool
-Olken__get_histogram(struct Olken const *const me, struct Histogram *histogram)
+Olken__get_histogram(struct Olken const *const me,
+                     struct Histogram const **const histogram)
 {
-    if (me == NULL) {
-        *histogram = (struct Histogram){0};
+    if (me == NULL || histogram == NULL) {
+        // NOTE I was going to set '*histogram = NULL' if 'me == NULL',
+        //      but this is kind of weird and required some fancy error
+        //      handling in case 'histogram == NULL'. I decided to not.
         return false;
     }
-    *histogram = me->histogram;
+    *histogram = &me->histogram;
     return true;
 }

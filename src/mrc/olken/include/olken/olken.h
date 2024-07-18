@@ -73,4 +73,5 @@ Olken__destroy(struct Olken *const me);
 ///             I need a neat interface to get the histograms of every
 ///             MRC algorithm.
 bool
-Olken__get_histogram(struct Olken const *const me, struct Histogram *histogram);
+Olken__get_histogram(struct Olken const *const me,
+                     struct Histogram const **const histogram);

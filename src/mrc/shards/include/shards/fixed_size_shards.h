@@ -57,3 +57,7 @@ FixedSizeShards__print_histogram_as_json(struct FixedSizeShards *me);
 
 void
 FixedSizeShards__destroy(struct FixedSizeShards *me);
+
+bool
+FixedSizeShards__get_histogram(struct FixedSizeShards *const me,
+                               struct Histogram const **const histogram);

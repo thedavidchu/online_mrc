@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "histogram/histogram.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "types/entry_type.h"
@@ -74,3 +75,13 @@ FixedRateShards__print_histogram_as_json(struct FixedRateShards *me);
 
 void
 FixedRateShards__destroy(struct FixedRateShards *me);
+
+bool
+FixedRateShards__get_histogram(struct FixedRateShards *const me,
+                               struct Histogram const **const histogram)
+{
+    if (me == NULL) {
+        return false;
+    }
+    return Olken__get_histogram(&me->olken, histogram);
+}

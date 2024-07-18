@@ -206,3 +206,13 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
 #endif
     *me = (struct FixedSizeShards){0};
 }
+
+bool
+FixedSizeShards__get_histogram(struct FixedSizeShards *const me,
+                               struct Histogram const **const histogram)
+{
+    if (me == NULL) {
+        return false;
+    }
+    return Olken__get_histogram(&me->olken, histogram);
+}

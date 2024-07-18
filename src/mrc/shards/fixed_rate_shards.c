@@ -211,3 +211,7 @@ FixedRateShards__destroy(struct FixedRateShards *me)
 #endif
     *me = (struct FixedRateShards){0};
 }
+
+bool
+FixedRateShards__get_histogram(struct FixedRateShards *const me,
+                               struct Histogram const **const histogram);
