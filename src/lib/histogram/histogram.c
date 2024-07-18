@@ -10,11 +10,25 @@
 
 #include <glib.h>
 
+#include "arrays/array_size.h"
 #include "histogram/histogram.h"
 #include "invariants/implies.h"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "math/positive_ceiling_divide.h"
+
+bool
+HistogramOutOfBoundsMode__parse(enum HistogramOutOfBoundsMode *me,
+                                char const *const str)
+{
+    for (size_t i = 1; i < ARRAY_SIZE(HISTOGRAM_MODE_STRINGS); ++i) {
+        if (strcmp(HISTOGRAM_MODE_STRINGS[i], str) == 0) {
+            *me = (enum HistogramOutOfBoundsMode)i;
+            return true;
+        }
+    }
+    return false;
+}
 
 static bool
 init_histogram(struct Histogram *const me,
