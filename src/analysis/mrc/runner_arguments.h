@@ -264,6 +264,12 @@ RunnerArguments__init(struct RunnerArguments *const me,
     if (me == NULL || str == NULL) {
         return false;
     }
+    // NOTE Not every algorithm uses all of these values. I have set
+    //      each to a 'reasonable' value (except for 'sampling_rate')
+    //      because I'd prefer not to debug crashes if the value is
+    //      simply forgotten (e.g. if I set the 'max_size' to 'SIZE_MAX',
+    //      then by not setting it, I get an error on allocating the
+    //      hash table for the Evicting Map).
     *me = (struct RunnerArguments){.ok = false,
                                    .algorithm = MRC_ALGORITHM_INVALID,
                                    .mrc_path = NULL,
@@ -271,7 +277,7 @@ RunnerArguments__init(struct RunnerArguments *const me,
                                    .sampling_rate = 1.0,
                                    .num_bins = 1 << 20,
                                    .bin_size = 1,
-                                   .max_size = SIZE_MAX,
+                                   .max_size = 1 << 13,
                                    .out_of_bounds_mode =
                                        HistogramOutOfBoundsMode__allow_overflow,
                                    .shards_adj = true,
