@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "arrays/array_size.h"
+#include "evicting_map/evicting_map.h"
 #include "file/file.h"
 #include "glib.h"
 #include "histogram/histogram.h"
@@ -364,6 +365,32 @@ run_fixed_size_shards(struct RunnerArguments const *const args,
         (void (*)(void *const))FixedSizeShards__destroy);
 }
 
+static bool
+run_evicting_map(struct RunnerArguments const *const args,
+                 struct Trace const *const trace)
+{
+    struct EvictingMap me = {0};
+    if (!EvictingMap__init_full(&me,
+                                args->sampling_rate,
+                                1 << 13,
+                                args->num_bins,
+                                args->bin_size,
+                                args->out_of_bounds_mode)) {
+        LOGGER_ERROR("initialization failed!");
+        return false;
+    }
+
+    return trace_runner(
+        &me,
+        args,
+        trace,
+        (bool (*)(void *const, uint64_t const))EvictingMap__access_item,
+        (bool (*)(void *const))EvictingMap__post_process,
+        (bool (*)(void *const,
+                  struct Histogram const **const))EvictingMap__get_histogram,
+        (void (*)(void *const))EvictingMap__destroy);
+}
+
 /// @note   I introduce this function so that I can do perform some logic but
 ///         also maintain the constant-qualification of the members of struct
 ///         Trace.
@@ -470,9 +497,13 @@ run_runner(struct RunnerArguments const *const args,
             LOGGER_WARN("Fixed-Size SHARDS failed");
         }
         return true;
+    case MRC_ALGORITHM_EVICTING_MAP:
+        if (!run_evicting_map(args, trace)) {
+            LOGGER_WARN("Evicting Map failed");
+        }
+        return true;
     case MRC_ALGORITHM_QUICKMRC:
     case MRC_ALGORITHM_GOEL_QUICKMRC:
-    case MRC_ALGORITHM_EVICTING_MAP:
     case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
     case MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME:
         LOGGER_WARN("not implemented algorithm %s",

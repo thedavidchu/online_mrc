@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "histogram/histogram.h"
@@ -38,7 +39,7 @@ EvictingMap__init_full(struct EvictingMap *const me,
                        uint64_t const histogram_bin_size,
                        enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
-void
+bool
 EvictingMap__access_item(struct EvictingMap *me, EntryType entry);
 
 void
@@ -56,3 +57,7 @@ EvictingMap__print_histogram_as_json(struct EvictingMap *me);
 
 void
 EvictingMap__destroy(struct EvictingMap *me);
+
+bool
+EvictingMap__get_histogram(struct EvictingMap const *const me,
+                           struct Histogram const **const histogram);

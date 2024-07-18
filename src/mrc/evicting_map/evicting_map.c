@@ -184,11 +184,11 @@ handle_updated(struct EvictingMap *me,
     ++me->current_time_stamp;
 }
 
-void
+bool
 EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
 {
     if (me == NULL)
-        return;
+        return false;
     ValueType timestamp = me->current_time_stamp;
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
@@ -209,6 +209,7 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     default:
         assert(0 && "impossible");
     }
+    return true;
 }
 
 void
@@ -257,4 +258,15 @@ EvictingMap__destroy(struct EvictingMap *me)
     IntervalStatistics__destroy(&me->istats);
 #endif
     *me = (struct EvictingMap){0};
+}
+
+bool
+EvictingMap__get_histogram(struct EvictingMap const *const me,
+                           struct Histogram const **const histogram)
+{
+    if (me == NULL || histogram == NULL) {
+        return false;
+    }
+    *histogram = &me->histogram;
+    return true;
 }
