@@ -63,6 +63,7 @@ struct RunnerArguments {
     double sampling_rate;
     size_t num_bins;
     size_t bin_size;
+    size_t max_size;
     enum HistogramOutOfBoundsMode out_of_bounds_mode;
     bool shards_adj;
 
@@ -144,6 +145,25 @@ parse_positive_double(double *value, char const *const str)
     return true;
 }
 
+static void
+print_help(void)
+{
+    fprintf(LOGGER_STREAM, "Welcome to a tutorial on my very simple parser!\n");
+    fprintf(LOGGER_STREAM,
+            "Format: "
+            "<Algorithm>(mrc=<file>,hist=<file>,sampling=<float64-in-[0,1]>,"
+            "num_bins=<positive-int>,bin_size=<positive-int>,"
+            "max_size=<positive-int>,mode={allow_overflow,merge_bins,realloc},"
+            "adj={true,false})\n");
+    fprintf(LOGGER_STREAM,
+            "Example: "
+            "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
+            "100,bin_size=100,max_size=8000,mode=realloc,adj=false)\n");
+    fprintf(LOGGER_STREAM,
+            "Notes: we reserve the use of the characters '(),='. There are no "
+            "white spaces since these will not be stripped.\n");
+}
+
 static bool
 parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
 {
@@ -152,7 +172,7 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
     *no_more_args = false;
     char *param = strtok(NULL, "=");
     // If this is the case, then we have no arguments!
-    if (param == NULL) {
+    if (param == NULL || strcmp(param, ")") == 0) {
         *no_more_args = true;
         return true;
     }
@@ -193,6 +213,13 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
             return false;
         }
         return parse_positive_size(&me->bin_size, value);
+    } else if (strcmp(param, "max_size") == 0) {
+        char *value = strtok(NULL, ",)");
+        if (value == NULL) {
+            LOGGER_ERROR("invalid value for parameter '%s'", param);
+            return false;
+        }
+        return parse_positive_size(&me->max_size, value);
     } else if (strcmp(param, "mode") == 0) {
         char *value = strtok(NULL, ",)");
         if (value == NULL) {
@@ -208,11 +235,11 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
         }
         return parse_bool(&me->shards_adj, value);
     } else if (strcmp(param, "help") == 0) {
-        LOGGER_ERROR("Algorithm(mrc=A,hist=B,sampling=C,num_bins=D,bin_size=E,"
-                     "mode=F,adj=G)");
+        print_help();
         return false;
     } else {
         LOGGER_ERROR("unrecognized parameter '%s'", param);
+        print_help();
         return false;
     }
 }
@@ -239,6 +266,7 @@ RunnerArguments__init(struct RunnerArguments *const me,
                                    .sampling_rate = 1.0,
                                    .num_bins = 1 << 20,
                                    .bin_size = 1,
+                                   .max_size = SIZE_MAX,
                                    .out_of_bounds_mode =
                                        HistogramOutOfBoundsMode__allow_overflow,
                                    .shards_adj = true,
@@ -289,13 +317,14 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
     }
     fprintf(fp,
             "RunnerArguments(algorithm=%s, mrc=%s, hist=%s, sampling=%g, "
-            "num_bins=%" PRIu64 ", bin_size=%" PRIu64 ", mode=%s, adj=%s)\n",
+            "num_bins=%zu, bin_size=%zu, max_size=%zu, mode=%s, adj=%s)\n",
             algorithm_names[me->algorithm],
             maybe_string(me->mrc_path),
             maybe_string(me->hist_path),
             me->sampling_rate,
             me->num_bins,
             me->bin_size,
+            me->max_size,
             HISTOGRAM_MODE_STRINGS[me->out_of_bounds_mode],
             bool_to_string(me->shards_adj));
     return true;
