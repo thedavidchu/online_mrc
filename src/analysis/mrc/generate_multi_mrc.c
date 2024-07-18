@@ -347,7 +347,7 @@ run_fixed_size_shards(struct RunnerArguments const *const args,
     struct FixedSizeShards me = {0};
     if (!FixedSizeShards__init_full(&me,
                                     args->sampling_rate,
-                                    1 << 13,
+                                    args->max_size,
                                     args->num_bins,
                                     args->bin_size,
                                     args->out_of_bounds_mode)) {
@@ -373,7 +373,7 @@ run_evicting_map(struct RunnerArguments const *const args,
     struct EvictingMap me = {0};
     if (!EvictingMap__init_full(&me,
                                 args->sampling_rate,
-                                1 << 13,
+                                args->max_size,
                                 args->num_bins,
                                 args->bin_size,
                                 args->out_of_bounds_mode)) {
@@ -447,8 +447,9 @@ create_work_array(struct CommandLineArguments const *const args)
     // Initialize work data
     if (args->oracle != NULL) {
         if (!RunnerArguments__init(&array[0], args->oracle, args->cleanup)) {
-            LOGGER_WARN("failed to initialize runner arguments '%s'",
-                        args->oracle);
+            LOGGER_FATAL("failed to initialize runner arguments '%s'",
+                         args->oracle);
+            exit(-1);
         }
     }
     if (args->run != NULL) {
@@ -462,8 +463,9 @@ create_work_array(struct CommandLineArguments const *const args)
                     &array[(args->oracle != NULL ? 1 : 0) + i],
                     args->run[i],
                     args->cleanup)) {
-                LOGGER_WARN("failed to initialize runner arguments '%s'",
-                            args->run[i]);
+                LOGGER_FATAL("failed to initialize runner arguments '%s'",
+                             args->run[i]);
+                exit(-1);
             }
         }
     }
@@ -488,6 +490,14 @@ static bool
 run_runner(struct RunnerArguments const *const args,
            struct Trace const *const trace)
 {
+    if (!args->ok) {
+        // NOTE I have a bunch of checks in place so this shouldn't
+        //      ever trigger unless someone calls this function from
+        //      another way.
+        LOGGER_WARN("skipping because it's not ok");
+        return false;
+    }
+    RunnerArguments__println(args, LOGGER_STREAM);
     switch (args->algorithm) {
     case MRC_ALGORITHM_OLKEN:
         if (!run_olken(args, trace)) {

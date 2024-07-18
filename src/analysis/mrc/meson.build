@@ -84,8 +84,8 @@ test(
         '-l', '1000000',
         '-o', 'Olken(mrc=generate_multi_mrc_test-olken-mrc.bin,hist=generate_multi_mrc_test-olken-hist.bin,bin_size=1024,mode=realloc)',
         '-r', 'Fixed-Rate-SHARDS(mrc=generate_multi_mrc_test-frs-mrc.bin,hist=generate_multi_mrc_test-frs-hist.bin,sampling=1e-3,num_bins=1024,bin_size=1024,mode=realloc,adj=true)',
-        '-r', 'Fixed-Size-SHARDS(mrc=generate_multi_mrc_test-fss-mrc.bin,hist=generate_multi_mrc_test-fss-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,mode=realloc,adj=false)',
-        '-r', 'Evicting-Map(mrc=generate_multi_mrc_test-emap-mrc.bin,hist=generate_multi_mrc_test-emap-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,mode=realloc,adj=false)',
+        '-r', 'Fixed-Size-SHARDS(mrc=generate_multi_mrc_test-fss-mrc.bin,hist=generate_multi_mrc_test-fss-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
+        '-r', 'Evicting-Map(mrc=generate_multi_mrc_test-emap-mrc.bin,hist=generate_multi_mrc_test-emap-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
         '--cleanup',
     ],
 )

@@ -57,6 +57,8 @@ static char const *const BOOLEAN_STRINGS[2] = {"false", "true"};
 ///     - Size of histogram bins [optional. Default = 1]
 ///     - Histogram overflow strategy [optional. Default = overflow]
 struct RunnerArguments {
+    bool ok;
+
     enum MRCAlgorithm algorithm;
     char *mrc_path;
     char *hist_path;
@@ -148,20 +150,22 @@ parse_positive_double(double *value, char const *const str)
 static void
 print_help(void)
 {
-    fprintf(LOGGER_STREAM, "Welcome to a tutorial on my very simple parser!\n");
     fprintf(LOGGER_STREAM,
-            "Format: "
+            ">>> Welcome to a tutorial on my very simple parser!\n");
+    fprintf(LOGGER_STREAM,
+            "    Format: "
             "<Algorithm>(mrc=<file>,hist=<file>,sampling=<float64-in-[0,1]>,"
             "num_bins=<positive-int>,bin_size=<positive-int>,"
             "max_size=<positive-int>,mode={allow_overflow,merge_bins,realloc},"
             "adj={true,false})\n");
     fprintf(LOGGER_STREAM,
-            "Example: "
+            "    Example: "
             "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
             "100,bin_size=100,max_size=8000,mode=realloc,adj=false)\n");
-    fprintf(LOGGER_STREAM,
-            "Notes: we reserve the use of the characters '(),='. There are no "
-            "white spaces since these will not be stripped.\n");
+    fprintf(
+        LOGGER_STREAM,
+        "    Notes: we reserve the use of the characters '(),='. There are no "
+        "white spaces since these will not be stripped.\n");
 }
 
 static bool
@@ -260,7 +264,8 @@ RunnerArguments__init(struct RunnerArguments *const me,
     if (me == NULL || str == NULL) {
         return false;
     }
-    *me = (struct RunnerArguments){.algorithm = MRC_ALGORITHM_INVALID,
+    *me = (struct RunnerArguments){.ok = false,
+                                   .algorithm = MRC_ALGORITHM_INVALID,
                                    .mrc_path = NULL,
                                    .hist_path = NULL,
                                    .sampling_rate = 1.0,
@@ -296,12 +301,13 @@ RunnerArguments__init(struct RunnerArguments *const me,
         //      the time..." but can be very confusing. Or maybe I'm
         //      using it wrong. Either way, that's what's happening.
         if (!parse_argument_string(me, &no_more_args)) {
-            LOGGER_ERROR("");
+            LOGGER_ERROR("error in parsing argument string '%s'", str);
             return false;
         }
     }
 
     free(garbage);
+    me->ok = true;
     return true;
 cleanup:
     free(garbage);
