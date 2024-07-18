@@ -392,8 +392,8 @@ parse_command_line_arguments(int argc, char **argv)
     }
     if (args.trace_format == TRACE_FORMAT_INVALID &&
         strcmp(args.input_path, "zipf") != 0 &&
-        strcmp(args.input_path, "step") &&
-        strcmp(args.input_path, "two-step")) {
+        strcmp(args.input_path, "step") != 0 &&
+        strcmp(args.input_path, "two-step") != 0) {
         LOGGER_WARN("trace format was not specified, so defaulting to Kia's");
         args.trace_format = TRACE_FORMAT_KIA;
     }
