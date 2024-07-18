@@ -171,10 +171,11 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     return true;
 }
 
-void
+bool
 FixedSizeShards__post_process(struct FixedSizeShards *me)
 {
     UNUSED(me);
+    return true;
 }
 
 bool

@@ -99,13 +99,13 @@ FixedRateShards__init_full(
                       adjustment);
 }
 
-void
+bool
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
 {
     bool r = false;
 
     if (me == NULL) {
-        return;
+        return false;
     }
 
     ++me->num_entries_seen;
@@ -118,7 +118,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         IntervalStatistics__append_unsampled(&me->istats);
 #endif
         ++me->olken.current_time_stamp;
-        return;
+        return true;
     }
     ++me->num_entries_processed;
 
@@ -164,17 +164,19 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
         ++me->olken.current_time_stamp;
         Histogram__insert_scaled_infinite(&me->olken.histogram, me->scale);
     }
+
+    return true;
 }
 
-void
+bool
 FixedRateShards__post_process(struct FixedRateShards *me)
 {
     if (me == NULL || me->olken.histogram.histogram == NULL ||
         me->olken.histogram.num_bins < 1)
-        return;
+        return false;
 
     if (!me->adjustment)
-        return;
+        return true;
 
     // NOTE I need to scale the adjustment by the scale that I've been adjusting
     //      all values. Conversely, I could just not scale any values by the
@@ -183,10 +185,12 @@ FixedRateShards__post_process(struct FixedRateShards *me)
     const int64_t adjustment =
         me->scale *
         (me->num_entries_seen * me->sampling_ratio - me->num_entries_processed);
-    bool r = Histogram__adjust_first_buckets(&me->olken.histogram, adjustment);
-    if (!r) {
+    ;
+    if (!Histogram__adjust_first_buckets(&me->olken.histogram, adjustment)) {
         LOGGER_WARN("error in adjusting buckets");
+        return false;
     }
+    return true;
 }
 
 bool
@@ -214,4 +218,10 @@ FixedRateShards__destroy(struct FixedRateShards *me)
 
 bool
 FixedRateShards__get_histogram(struct FixedRateShards *const me,
-                               struct Histogram const **const histogram);
+                               struct Histogram const **const histogram)
+{
+    if (me == NULL) {
+        return false;
+    }
+    return Olken__get_histogram(&me->olken, histogram);
+}

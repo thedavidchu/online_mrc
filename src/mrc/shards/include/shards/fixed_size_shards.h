@@ -45,7 +45,7 @@ FixedSizeShards__init_full(
 bool
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);
 
-void
+bool
 FixedSizeShards__post_process(struct FixedSizeShards *me);
 
 bool

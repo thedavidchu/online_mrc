@@ -60,10 +60,10 @@ FixedRateShards__init_full(
     enum HistogramOutOfBoundsMode const out_of_bounds_mode,
     bool const adjustment);
 
-void
+bool
 FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry);
 
-void
+bool
 FixedRateShards__post_process(struct FixedRateShards *me);
 
 bool
@@ -78,10 +78,4 @@ FixedRateShards__destroy(struct FixedRateShards *me);
 
 bool
 FixedRateShards__get_histogram(struct FixedRateShards *const me,
-                               struct Histogram const **const histogram)
-{
-    if (me == NULL) {
-        return false;
-    }
-    return Olken__get_histogram(&me->olken, histogram);
-}
+                               struct Histogram const **const histogram);
