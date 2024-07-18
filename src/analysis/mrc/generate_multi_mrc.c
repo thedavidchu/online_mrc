@@ -391,10 +391,13 @@ create_work_array(struct CommandLineArguments const *const args)
     if (args->oracle != NULL) {
         ++length;
     }
-    for (size_t i = 0; args->run[i] != NULL; ++i) {
-        ++length;
+    if (args->run != NULL) {
+        for (size_t i = 0; args->run[i] != NULL; ++i) {
+            ++length;
+        }
     }
     struct RunnerArguments *array = calloc(length, sizeof(*array));
+    assert(array != NULL);
 
     // Initialize work data
     if (args->oracle != NULL) {
@@ -403,12 +406,14 @@ create_work_array(struct CommandLineArguments const *const args)
                         args->oracle);
         }
     }
-    for (size_t i = 0; args->run[i] != NULL; ++i) {
-        if (!RunnerArguments__init(&array[1 + i],
-                                   args->run[i],
-                                   args->cleanup)) {
-            LOGGER_WARN("failed to initialize runner arguments '%s'",
-                        args->run[i]);
+    if (args->run != NULL) {
+        for (size_t i = 0; args->run[i] != NULL; ++i) {
+            if (!RunnerArguments__init(&array[1 + i],
+                                       args->run[i],
+                                       args->cleanup)) {
+                LOGGER_WARN("failed to initialize runner arguments '%s'",
+                            args->run[i]);
+            }
         }
     }
 
@@ -468,6 +473,9 @@ run_runner(struct RunnerArguments const *const args,
 static bool
 run_cleanup(struct RunnerArguments const *const args)
 {
+    LOGGER_TRACE("cleaning up '%s' and '%s'",
+                 maybe_string(args->hist_path),
+                 maybe_string(args->mrc_path));
     // NOTE This takes advantage of C's short-circuiting booleans.
     //      I find this idiom cleaner than nested if-statements.
     if (args->cleanup && args->hist_path != NULL &&

@@ -54,6 +54,17 @@ generate_multi_mrc_exe = executable(
     ],
 )
 
+test(
+    'generate_multi_mrc_olken_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', 'zipf',
+        '-l', '10000',
+        '-o', 'Olken(mrc=olken-mrc.bin)',
+        # '--cleanup',
+    ],
+)
+
 generate_mrc_exe = executable(
     'generate_mrc_exe',
     'generate_mrc.c',
