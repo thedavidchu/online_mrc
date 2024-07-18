@@ -34,6 +34,26 @@ test(
     ],
 )
 
+generate_multi_mrc_exe = executable(
+    'generate_multi_mrc_exe',
+    'generate_multi_mrc.c',
+    include_directories: [include_directories('.')],
+    dependencies: [
+        average_eviction_time_dep,
+        evicting_map_dep,
+        common_dep,
+        shards_dep,
+        glib_dep,
+        goel_quickmrc_dep,
+        file_dep,
+        miss_rate_curve_dep,
+        olken_dep,
+        quickmrc_dep,
+        timer_dep,
+        trace_dep,
+    ],
+)
+
 generate_mrc_exe = executable(
     'generate_mrc_exe',
     'generate_mrc.c',
