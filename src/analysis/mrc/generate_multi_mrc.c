@@ -27,7 +27,7 @@
 
 struct CommandLineArguments {
     char *executable;
-    char *input_path;
+    gchar *input_path;
     enum TraceFormat trace_format;
     uint64_t artificial_trace_length;
 
@@ -40,7 +40,7 @@ struct CommandLineArguments {
     //      - Size of histogram bins [optional. Default = 1]
     //      - Histogram overflow strategy [optional. Default = overflow]
     //      - SHARDS adjustment [optional. Default = true for Fixed-Rate SHARDS]
-    char **run;
+    gchar **run;
 
     // NOTE This string contains the following information:
     //      - MRC path [both input/output]
@@ -48,7 +48,7 @@ struct CommandLineArguments {
     //      - Number of histogram bins [optional. Default = arbitrarily large]
     //      - Size of histogram bins [optional. Default = 1]
     //      - Histogram overflow strategy [optional. Default = overflow]
-    char *oracle;
+    gchar *oracle;
 
     bool cleanup;
 };
@@ -175,6 +175,23 @@ cleanup:
     g_print("%s", help_msg);
     free(help_msg);
     exit(-1);
+}
+
+/// @note   TIL GLib's strings from the command line parsing must be
+///         manually freed. Of course it makes sense, but I am just a
+///         silly-willy.
+void
+free_command_line_arguments(struct CommandLineArguments *const args)
+{
+    g_free(args->input_path);
+    g_free(args->oracle);
+    if (args->run) {
+        for (size_t i = 0; args->run[i] != NULL; ++i) {
+            g_free(args->run[i]);
+        }
+        g_free(args->run);
+    }
+    *args = (struct CommandLineArguments){0};
 }
 
 static void
@@ -512,6 +529,8 @@ main(int argc, char **argv)
 
     struct RunnerArgumentsArray work = create_work_array(&args);
     for (size_t i = 0; i < work.length; ++i) {
+        // TODO(dchu)   We want to avoid rerunning the (expensive)
+        //              oracle if the files already exist.
         if (!run_runner(&work.data[i], &trace)) {
             LOGGER_ERROR("oracle runner failed");
         }
@@ -558,6 +577,7 @@ main(int argc, char **argv)
     }
 
     free_work_array(&work);
+    free_command_line_arguments(&args);
     Trace__destroy(&trace);
 
     return 0;
