@@ -67,3 +67,11 @@ Olken__print_histogram_as_json(struct Olken *me);
 
 void
 Olken__destroy(struct Olken *me);
+
+/// @brief  Provide a neat interface to access the histogram.
+/// @details    Yes, I know that getter/setter functions are passé, but
+///             I need a neat interface to get the histograms of every
+///             MRC algorithm.
+bool
+Olken__get_histogram(struct Olken const *const me,
+                     struct Histogram const *histogram);

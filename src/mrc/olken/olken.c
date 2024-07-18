@@ -186,3 +186,15 @@ Olken__destroy(struct Olken *me)
     Histogram__destroy(&me->histogram);
     *me = (struct Olken){0};
 }
+
+bool
+Olken__get_histogram(struct Olken const *const me,
+                     struct Histogram const *histogram)
+{
+    if (me == NULL) {
+        histogram = NULL;
+        return false;
+    }
+    histogram = &me->histogram;
+    return true;
+}
