@@ -68,9 +68,6 @@ struct RunnerArguments {
     size_t max_size;
     enum HistogramOutOfBoundsMode out_of_bounds_mode;
     bool shards_adj;
-
-    // This is inherited from the global arguments!
-    bool cleanup;
 };
 
 char const *
@@ -257,9 +254,7 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
 ///         that begin with a dash because, again, I do not want the
 ///         shell to parse these.
 bool
-RunnerArguments__init(struct RunnerArguments *const me,
-                      char const *const str,
-                      bool const cleanup)
+RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
 {
     if (me == NULL || str == NULL) {
         return false;
@@ -279,9 +274,8 @@ RunnerArguments__init(struct RunnerArguments *const me,
                                    .bin_size = 1,
                                    .max_size = 1 << 13,
                                    .out_of_bounds_mode =
-                                       HistogramOutOfBoundsMode__allow_overflow,
-                                   .shards_adj = true,
-                                   .cleanup = cleanup};
+                                       HistogramOutOfBoundsMode__realloc,
+                                   .shards_adj = true};
     char *const garbage = strdup(str);
     if (garbage == NULL) {
         LOGGER_ERROR("bad strdup");

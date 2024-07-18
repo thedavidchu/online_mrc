@@ -446,7 +446,7 @@ create_work_array(struct CommandLineArguments const *const args)
 
     // Initialize work data
     if (args->oracle != NULL) {
-        if (!RunnerArguments__init(&array[0], args->oracle, args->cleanup)) {
+        if (!RunnerArguments__init(&array[0], args->oracle)) {
             LOGGER_FATAL("failed to initialize runner arguments '%s'",
                          args->oracle);
             exit(-1);
@@ -461,8 +461,7 @@ create_work_array(struct CommandLineArguments const *const args)
             //      whether it actually uses it.
             if (!RunnerArguments__init(
                     &array[(args->oracle != NULL ? 1 : 0) + i],
-                    args->run[i],
-                    args->cleanup)) {
+                    args->run[i])) {
                 LOGGER_FATAL("failed to initialize runner arguments '%s'",
                              args->run[i]);
                 exit(-1);
@@ -543,12 +542,10 @@ run_cleanup(struct RunnerArguments const *const args)
                  maybe_string(args->mrc_path));
     // NOTE This takes advantage of C's short-circuiting booleans.
     //      I find this idiom cleaner than nested if-statements.
-    if (args->cleanup && args->hist_path != NULL &&
-        remove(args->hist_path) != 0) {
+    if (args->hist_path != NULL && remove(args->hist_path) != 0) {
         LOGGER_WARN("failed to remove '%s'", args->hist_path);
     }
-    if (args->cleanup && args->mrc_path != NULL &&
-        remove(args->mrc_path) != 0) {
+    if (args->mrc_path != NULL && remove(args->mrc_path) != 0) {
         LOGGER_WARN("failed to remove '%s'", args->mrc_path);
     }
     return true;
