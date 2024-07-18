@@ -143,7 +143,6 @@ parse_command_line_arguments(int argc, char *argv[])
     // Come on, GLib! The 'g_option_context_parse' changes the errno to
     // 2 and leaves it for me to clean up. Or maybe I'm using it wrong.
     errno = 0;
-    g_option_context_free(context);
 
     // Check the arguments for correctness.
     if (args.input_path == NULL || (!file_exists(args.input_path) &&
@@ -170,11 +169,13 @@ parse_command_line_arguments(int argc, char *argv[])
         goto cleanup;
     }
 
+    g_option_context_free(context);
     return args;
 cleanup:
     help_msg = g_option_context_get_help(context, FALSE, NULL);
     g_print("%s", help_msg);
     free(help_msg);
+    g_option_context_free(context);
     exit(-1);
 }
 
