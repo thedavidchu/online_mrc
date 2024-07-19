@@ -213,7 +213,7 @@ def main():
         "--extensions",
         nargs="+",
         type=str,
-        default=".log",
+        default=[".log"],
         help="extensions to process (format: '--extensions .log .csv')",
     )
     parser.add_argument(
@@ -225,10 +225,10 @@ def main():
 
     if args.time:
         output = "time.pdf" if args.output is None else args.output
-        plot_runtime(args.inputs, args.extensions.split(","), output)
+        plot_runtime(args.inputs, args.extensions, output)
     if args.accuracy:
         output = "accuracy.pdf" if args.output is None else args.output
-        plot_accuracy(args.inputs, args.extensions.split(","), output)
+        plot_accuracy(args.inputs, args.extensions, output)
 
 
 if __name__ == "__main__":
