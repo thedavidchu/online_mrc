@@ -67,10 +67,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--oracle", type=str, required=False, help="path to oracle")
     parser.add_argument(
-        "--input", nargs="+", type=str, required=True, help="input path(s)"
+        "--input", "-i", nargs="+", type=str, required=True, help="input path(s)"
     )
     parser.add_argument(
-        "--output", nargs="*", type=str, default=["mrc.pdf"], help="output path(s)"
+        "--output",
+        "-o",
+        nargs="*",
+        type=str,
+        default=["mrc.pdf"],
+        help="output path(s)",
     )
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
