@@ -24,6 +24,7 @@
 #include "trace/reader.h"
 #include "trace/trace.h"
 
+#include "helper.h"
 #include "runner_arguments.h"
 
 /// @note   The keyword 'inline' prevents a compiler warning as per:
@@ -686,7 +687,7 @@ main(int argc, char **argv)
         // TODO(dchu)   We want to avoid rerunning the (expensive)
         //              oracle if the files already exist.
         if (!run_runner(&work.data[i], &trace)) {
-            LOGGER_ERROR("oracle runner failed");
+            LOGGER_ERROR("trace runner failed");
             status = EXIT_FAILURE;
         }
     }

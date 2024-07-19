@@ -1,3 +1,13 @@
+runner_arguments_lib = library(
+    'runner_arguments_lib',
+    'runner_arguments.c',
+    include_directories: include_directories('.'),
+    dependencies: [
+        common_dep,
+        histogram_dep,
+    ],
+)
+
 compare_mrc_exe = executable(
     'compare_mrc_exe',
     'compare_mrc.c',
@@ -37,6 +47,9 @@ test(
 generate_multi_mrc_exe = executable(
     'generate_multi_mrc_exe',
     'generate_multi_mrc.c',
+    link_with: [
+        runner_arguments_lib,
+    ],
     include_directories: [include_directories('.')],
     dependencies: [
         average_eviction_time_dep,
