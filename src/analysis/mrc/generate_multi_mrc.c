@@ -26,6 +26,10 @@
 
 #include "runner_arguments.h"
 
+/// @note   The keyword 'inline' prevents a compiler warning as per:
+///         https://stackoverflow.com/questions/32432596/warning-always-inline-function-might-not-be-inlinable-wattributes
+#define forceinline __attribute__((always_inline)) inline
+
 struct CommandLineArguments {
     char *executable;
     gchar *input_path;
@@ -228,7 +232,11 @@ print_trace_summary(struct CommandLineArguments const *args,
             trace->length);
 }
 
-static inline bool
+/// @note   I forcibly inline this with the hope that the compiler will
+///         be able to realize that the function pointers are constants.
+///         I noticed an improvement from 8.2s to 7.6s on the Twitter
+///         trace, cluster15.bin. It did not fix the stackoverflow.
+static forceinline bool
 trace_runner(void *const runner_data,
              struct RunnerArguments const *const args,
              struct Trace const *const trace,
