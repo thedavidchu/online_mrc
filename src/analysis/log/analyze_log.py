@@ -96,7 +96,7 @@ def get_compute_time_from_log(text: str, path: Path) -> dict[str, float]:
     return {l.group(1): float(l.group(5)) for l in matching_lines}
 
 
-def plot_runtime(inputs: list[Path], extensions: list[str], output: Path):
+def plot_runtime(inputs: list[Path], extensions: list[str], outputs: list[Path]):
     emap_times = {}
     fss_times = {}
     for file in get_file_tree(inputs):
@@ -137,7 +137,8 @@ def plot_runtime(inputs: list[Path], extensions: list[str], output: Path):
         labels,
         rotation=90,
     )
-    fig.savefig(output)
+    for output in outputs:
+        fig.savefig(output)
 
 
 def get_accuracy_from_log(text: str, path: Path) -> dict[str, tuple[float, float]]:
@@ -160,7 +161,7 @@ def get_accuracy_from_log(text: str, path: Path) -> dict[str, tuple[float, float
     return {l.group(1): (float(l.group(2)), float(l.group(3))) for l in matching_lines}
 
 
-def plot_accuracy(inputs: list[Path], extensions: list[str], output: Path):
+def plot_accuracy(inputs: list[Path], extensions: list[str], outputs: list[Path]):
     emap_accuracies = {}
     fss_accuracies = {}
     for file in tqdm(get_file_tree(inputs)):
@@ -200,7 +201,8 @@ def plot_accuracy(inputs: list[Path], extensions: list[str], output: Path):
         rotation=90,
     )
     axs.legend()
-    fig.savefig(output)
+    for output in outputs:
+        fig.savefig(output)
 
 
 def main():
@@ -218,16 +220,28 @@ def main():
     parser.add_argument(
         "--output", "-o", type=Path, default=None, help="file for output"
     )
-    parser.add_argument("--time", action="store_true", help="plot runtime")
-    parser.add_argument("--accuracy", action="store_true", help="plot accuracy")
+    parser.add_argument(
+        "--time",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="specifying this will plot runtime. Default: time.pdf (ignore what Python says). You can replace this with your own custom names!",
+    )
+    parser.add_argument(
+        "--accuracy",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="specifying this will plot accuracy. Default: accuracy.pdf (ignore what Python says). You can replace this with your own custom names!",
+    )
     args = parser.parse_args()
 
-    if args.time:
-        output = "time.pdf" if args.output is None else args.output
-        plot_runtime(args.inputs, args.extensions, output)
-    if args.accuracy:
-        output = "accuracy.pdf" if args.output is None else args.output
-        plot_accuracy(args.inputs, args.extensions, output)
+    if args.time is not None:
+        outputs = [Path("time.pdf")] if args.time == [] else args.time
+        plot_runtime(args.inputs, args.extensions, outputs)
+    if args.accuracy is not None:
+        outputs = [Path("accuracy.pdf")] if args.accuracy == [] else args.accuracy
+        plot_accuracy(args.inputs, args.extensions, outputs)
 
 
 if __name__ == "__main__":
