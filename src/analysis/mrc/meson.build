@@ -90,7 +90,7 @@ test(
     args: [
         '-i', test_trace,
         '-f', 'Kia',
-        '-o', 'Olken(mrc=generate_oracle_test-mrc.bin,hist=generate_oracle_test-histogram.bin)',
+        '-o', 'Olken(mrc=generate_mrc_trace_test-mrc.bin,hist=generate_mrc_trace_test-histogram.bin)',
         '--cleanup',
     ],
 )
@@ -101,10 +101,10 @@ test(
     args: [
         '-i', 'zipf',
         '-l', '1000000',
-        '-o', 'Olken(mrc=generate_multi_mrc_test-olken-mrc.bin,hist=generate_multi_mrc_test-olken-hist.bin,bin_size=1024,mode=realloc)',
-        '-r', 'Fixed-Rate-SHARDS(mrc=generate_multi_mrc_test-frs-mrc.bin,hist=generate_multi_mrc_test-frs-hist.bin,sampling=1e-3,num_bins=1024,bin_size=1024,mode=realloc,adj=true)',
-        '-r', 'Fixed-Size-SHARDS(mrc=generate_multi_mrc_test-fss-mrc.bin,hist=generate_multi_mrc_test-fss-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
-        '-r', 'Evicting-Map(mrc=generate_multi_mrc_test-emap-mrc.bin,hist=generate_multi_mrc_test-emap-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
+        '-o', 'Olken(mrc=generate_mrc_main_test-olken-mrc.bin,hist=generate_mrc_main_test-olken-hist.bin,bin_size=1024,mode=realloc)',
+        '-r', 'Fixed-Rate-SHARDS(mrc=generate_mrc_main_test-frs-mrc.bin,hist=generate_mrc_main_test-frs-hist.bin,sampling=1e-3,num_bins=1024,bin_size=1024,mode=realloc,adj=true)',
+        '-r', 'Fixed-Size-SHARDS(mrc=generate_mrc_main_test-fss-mrc.bin,hist=generate_mrc_main_test-fss-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
+        '-r', 'Evicting-Map(mrc=generate_mrc_main_test-emap-mrc.bin,hist=generate_mrc_main_test-emap-hist.bin,sampling=1e-1,num_bins=1024,bin_size=1024,max_size=8192,mode=realloc,adj=false)',
         '--cleanup',
     ],
 )
