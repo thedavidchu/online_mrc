@@ -38,32 +38,6 @@ compare_mrc_exe = executable(
     ],
 )
 
-generate_oracle_exe = executable(
-    'generate_oracle_exe',
-    'generate_oracle.c',
-    dependencies: [
-        common_dep,
-        file_dep,
-        histogram_dep,
-        miss_rate_curve_dep,
-        olken_dep,
-        timer_dep,
-        trace_dep,
-    ],
-)
-
-test(
-    'generate_oracle_test',
-    generate_oracle_exe,
-    args: [
-        '-i', test_trace,
-        '-f', 'Kia',
-        '-g', 'generate_oracle_test-histogram.bin',
-        '-m', 'generate_oracle_test-mrc.bin',
-        '--cleanup',
-    ],
-)
-
 generate_multi_mrc_exe = executable(
     'generate_multi_mrc_exe',
     'generate_multi_mrc.c',
@@ -89,18 +63,7 @@ generate_multi_mrc_exe = executable(
 )
 
 test(
-    'generate_multi_mrc_olken_test',
-    generate_multi_mrc_exe,
-    args: [
-        '-i', 'zipf',
-        '-l', '10000',
-        '-o', 'Olken(mrc=generate_multi_mrc_olken_test-olken-mrc.bin,hist=generate_multi_mrc_olken_test-olken-hist.bin)',
-        '--cleanup',
-    ],
-)
-
-test(
-    'generate_multi_mrc_empty_test',
+    'generate_mrc_empty_test',
     generate_multi_mrc_exe,
     args: [
         '-i', 'zipf',
@@ -111,7 +74,29 @@ test(
 )
 
 test(
-    'generate_multi_mrc_test',
+    'generate_mrc_zipf_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', 'zipf',
+        '-l', '10000',
+        '-o', 'Olken(mrc=generate_multi_mrc_olken_test-olken-mrc.bin,hist=generate_multi_mrc_olken_test-olken-hist.bin)',
+        '--cleanup',
+    ],
+)
+
+test(
+    'generate_mrc_trace_test',
+    generate_multi_mrc_exe,
+    args: [
+        '-i', test_trace,
+        '-f', 'Kia',
+        '-o', 'Olken(mrc=generate_oracle_test-mrc.bin,hist=generate_oracle_test-histogram.bin)',
+        '--cleanup',
+    ],
+)
+
+test(
+    'generate_mrc_main_test',
     generate_multi_mrc_exe,
     args: [
         '-i', 'zipf',
@@ -124,9 +109,12 @@ test(
     ],
 )
 
-generate_mrc_exe = executable(
-    'generate_mrc_exe',
-    'generate_mrc.c',
+################################################################################
+### GENERATE MRC TESTS
+########################
+deprecated_generate_mrc_exe = executable(
+    'deprecated_generate_mrc_exe',
+    'deprecated_generate_mrc.c',
     include_directories: [],
     dependencies: [
         average_eviction_time_dep,
@@ -143,13 +131,10 @@ generate_mrc_exe = executable(
         trace_dep,
     ],
 )
-
-################################################################################
-### GENERATE MRC TESTS
-################################################################################
+########################################################
 test(
-    'generate_mrc_olken_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_olken_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -159,8 +144,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_fixed_rate_shards_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_fixed_rate_shards_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -170,8 +155,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_fixed_rate_shards_adj_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_fixed_rate_shards_adj_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -181,8 +166,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_fixed_size_shards_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_fixed_size_shards_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -193,8 +178,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_quickmrc_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_quickmrc_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -205,8 +190,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_goel_quickmrc_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_goel_quickmrc_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -217,8 +202,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_evicting_map_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_evicting_map_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -229,8 +214,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_aet_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_aet_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
@@ -240,8 +225,8 @@ test(
     ],
 )
 test(
-    'generate_mrc_their_aet_test',
-    generate_mrc_exe,
+    'deprecated_generate_mrc_their_aet_test',
+    deprecated_generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-n', '10000',
