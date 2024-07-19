@@ -144,7 +144,7 @@ def get_accuracy_from_log(text: str, path: Path) -> dict[str, tuple[float, float
     pattern = re.compile(
         get_log_pattern(
             "INFO",
-            rf"({PATH_PATTERN}) -- Mean Absolute Error (MAE): ({FLOAT_PATTERN}) [|] Mean Squared Error (MSE): ({FLOAT_PATTERN})",
+            rf"({PATH_PATTERN}) -- Mean Absolute Error \(MAE\): ({FLOAT_PATTERN}) [|] Mean Squared Error \(MSE\): ({FLOAT_PATTERN})",
         )
     )
     matching_lines = [
