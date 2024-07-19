@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "arrays/array_size.h"
 #include "histogram/histogram.h"
 
 enum MRCAlgorithm {
@@ -32,6 +33,21 @@ static char *algorithm_names[] = {
     "Average-Eviction-Time",
     "Their-Average-Eviction-Time",
 };
+
+/// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
+static inline void
+print_available_algorithms(FILE *stream)
+{
+    fprintf(stream, "{");
+    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
+    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
+        fprintf(stream, "%s", algorithm_names[i]);
+        if (i != ARRAY_SIZE(algorithm_names) - 1) {
+            fprintf(stream, ",");
+        }
+    }
+    fprintf(stream, "}");
+}
 
 /// @brief  The arguments for running an instance.
 /// @details

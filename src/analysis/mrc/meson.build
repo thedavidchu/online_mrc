@@ -8,6 +8,26 @@ runner_arguments_lib = library(
     ],
 )
 
+trace_runner_lib = library(
+    'trace_runner_lib',
+    'trace_runner.c',
+    include_directories: include_directories('.'),
+    dependencies: [
+        average_eviction_time_dep,
+        evicting_map_dep,
+        common_dep,
+        shards_dep,
+        glib_dep,
+        goel_quickmrc_dep,
+        file_dep,
+        miss_rate_curve_dep,
+        olken_dep,
+        quickmrc_dep,
+        timer_dep,
+        trace_dep,
+    ],
+)
+
 compare_mrc_exe = executable(
     'compare_mrc_exe',
     'compare_mrc.c',
@@ -49,6 +69,7 @@ generate_multi_mrc_exe = executable(
     'generate_multi_mrc.c',
     link_with: [
         runner_arguments_lib,
+        trace_runner_lib,
     ],
     include_directories: [include_directories('.')],
     dependencies: [
