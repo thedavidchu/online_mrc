@@ -67,7 +67,7 @@ def get_trace_read_time_from_log(text: str, path: Path) -> float:
     ]
     if len(matching_lines) == 0:
         warn(f"log {path} has no trace time")
-        return 0
+        return 0.0
     if len(matching_lines) > 1:
         raise ValueError(f"log {path} has multiple trace times")
     time = float(matching_lines[0].group(1))
