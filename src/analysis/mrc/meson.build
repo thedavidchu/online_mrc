@@ -38,9 +38,9 @@ compare_mrc_exe = executable(
     ],
 )
 
-generate_multi_mrc_exe = executable(
-    'generate_multi_mrc_exe',
-    'generate_multi_mrc.c',
+generate_mrc_exe = executable(
+    'generate_mrc_exe',
+    'generate_mrc.c',
     link_with: [
         runner_arguments_lib,
         trace_runner_lib,
@@ -64,7 +64,7 @@ generate_multi_mrc_exe = executable(
 
 test(
     'generate_mrc_empty_test',
-    generate_multi_mrc_exe,
+    generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-l', '10000',
@@ -75,18 +75,18 @@ test(
 
 test(
     'generate_mrc_zipf_test',
-    generate_multi_mrc_exe,
+    generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-l', '10000',
-        '-o', 'Olken(mrc=generate_multi_mrc_olken_test-olken-mrc.bin,hist=generate_multi_mrc_olken_test-olken-hist.bin)',
+        '-o', 'Olken(mrc=generate_mrc_zipf_test-olken-mrc.bin,hist=generate_mrc_zipf_test-olken-hist.bin)',
         '--cleanup',
     ],
 )
 
 test(
     'generate_mrc_trace_test',
-    generate_multi_mrc_exe,
+    generate_mrc_exe,
     args: [
         '-i', test_trace,
         '-f', 'Kia',
@@ -97,7 +97,7 @@ test(
 
 test(
     'generate_mrc_main_test',
-    generate_multi_mrc_exe,
+    generate_mrc_exe,
     args: [
         '-i', 'zipf',
         '-l', '1000000',
