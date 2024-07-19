@@ -14,6 +14,20 @@
 #include "helper.h"
 #include "runner_arguments.h"
 
+void
+print_available_algorithms(FILE *stream)
+{
+    fprintf(stream, "{");
+    // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
+    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
+        fprintf(stream, "%s", algorithm_names[i]);
+        if (i != ARRAY_SIZE(algorithm_names) - 1) {
+            fprintf(stream, ",");
+        }
+    }
+    fprintf(stream, "}");
+}
+
 static enum MRCAlgorithm
 parse_algorithm_string(char const *const str)
 {
@@ -177,14 +191,6 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
     }
 }
 
-/// @brief  Parse an initialization string.
-/// @details    My arbitrary format is thus:
-///     "Algorithm(mrc=A,hist=B,sampling=C,num_bins=D,bin_size=E,mode=F,adj=G)"
-/// @note   I do not allow spaces in case they are weirdly tokenized by
-///         the shell.
-/// @note   I do not follow the standard POSIX convention of arguments
-///         that begin with a dash because, again, I do not want the
-///         shell to parse these.
 bool
 RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
 {

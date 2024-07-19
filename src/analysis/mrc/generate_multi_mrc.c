@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "arrays/array_size.h"
-#include "arrays/is_last.h"
 #include "file/file.h"
 #include "glib.h"
 #include "logger/logger.h"
