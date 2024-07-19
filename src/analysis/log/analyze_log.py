@@ -218,9 +218,6 @@ def main():
         help="extensions to process (format: '--extensions .log .csv')",
     )
     parser.add_argument(
-        "--output", "-o", type=Path, default=None, help="file for output"
-    )
-    parser.add_argument(
         "--time",
         nargs="*",
         type=Path,
