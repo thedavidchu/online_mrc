@@ -105,5 +105,6 @@ main(int argc, char **argv)
     double const mse = MissRateCurve__mean_squared_error(&oracle, &test);
     LOGGER_INFO("MAE: %f | MSE: %f", mae, mse);
 
+    LOGGER_INFO("=== SUCCESS ===");
     return 0;
 }

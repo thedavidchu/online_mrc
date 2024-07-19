@@ -639,5 +639,6 @@ main(int argc, char **argv)
     free_command_line_arguments(&args);
     Trace__destroy(&trace);
 
+    LOGGER_INFO("=== SUCCESS ===");
     return status;
 }

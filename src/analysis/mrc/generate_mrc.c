@@ -771,5 +771,6 @@ main(int argc, char **argv)
     Trace__destroy(&trace);
     LOGGER_TRACE("Destroyed trace object");
 
+    LOGGER_INFO("=== SUCCESS ===");
     return 0;
 }

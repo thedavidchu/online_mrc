@@ -282,5 +282,6 @@ main(int argc, char **argv)
         remove(args.histogram_path);
         remove(args.mrc_path);
     }
+    LOGGER_INFO("=== SUCCESS ===");
     return 0;
 }
