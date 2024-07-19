@@ -436,6 +436,85 @@ struct RunnerArgumentsArray {
     size_t length;
 };
 
+/// @brief  Return true iff both paths are non-NULL and match.
+static bool
+non_null_paths_match(char const *const a, char const *const b)
+{
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+    return strcmp(a, b) == 0;
+}
+
+static bool
+check_no_paths_match(struct RunnerArguments const *const array,
+                     size_t const length)
+{
+    bool ok = true;
+    // NOTE Yes, I could do this in linear time with a hash table, but
+    //      I'm too lazy to set all of that stuff up so we're going with
+    //      quadratic time! This should be quick (assuming there aren't
+    //      too many options passed in).
+    // NOTE Okay, actually since we're checking two strings, I think it
+    //      would actually be cleaner to do it with a hash table. I
+    //      unfortunately don't have a string-based hash table on hand.
+    for (size_t i = 0; i < length; ++i) {
+        if (non_null_paths_match(array[i].mrc_path, array[i].hist_path)) {
+            LOGGER_ERROR("MRC and histogram output paths match: '%s'",
+                         array[i].mrc_path);
+            ok = false;
+        }
+        for (size_t j = i + 1; j < length; ++j) {
+            if (non_null_paths_match(array[i].mrc_path, array[j].mrc_path)) {
+                LOGGER_ERROR("got two identical MRC paths '%s'",
+                             array[i].mrc_path);
+                ok = false;
+            }
+            if (non_null_paths_match(array[i].hist_path, array[j].hist_path)) {
+                LOGGER_ERROR("got two identical histogram paths '%s'",
+                             array[i].mrc_path);
+                ok = false;
+            }
+            if (non_null_paths_match(array[i].mrc_path, array[j].hist_path)) {
+                LOGGER_ERROR("got two identical MRC paths '%s'",
+                             array[i].mrc_path);
+                ok = false;
+            }
+            if (non_null_paths_match(array[i].hist_path, array[j].mrc_path)) {
+                LOGGER_ERROR("got two identical MRC paths '%s'",
+                             array[i].mrc_path);
+                ok = false;
+            }
+        }
+    }
+    return ok;
+}
+
+/// @note   This isn't actually that bad except for the fact that the
+///         logging isn't specific enough. I do this simply for the
+///         convenience of not having to think too hard about how to
+///         resolve this.
+static bool
+check_no_algorithms_match(struct RunnerArguments const *const array,
+                          size_t const length)
+{
+    bool ok = true;
+    // NOTE Yes, I could do this in linear time with a hash table, but
+    //      I'm too lazy to set all of that stuff up so we're going with
+    //      quadratic time! This should be quick (assuming there aren't
+    //      too many options passed in).
+    for (size_t i = 0; i < length; ++i) {
+        for (size_t j = i + 1; j < length; ++j) {
+            if (array[i].algorithm == array[j].algorithm) {
+                LOGGER_ERROR("algorithm '%s' is run twice",
+                             algorithm_names[array[i].algorithm]);
+                ok = false;
+            }
+        }
+    }
+    return ok;
+}
+
 static struct RunnerArgumentsArray
 create_work_array(struct CommandLineArguments const *const args)
 {
@@ -477,7 +556,22 @@ create_work_array(struct CommandLineArguments const *const args)
         }
     }
 
+    // Verify the work array is valid and makes sense
+    if (!check_no_paths_match(array, length)) {
+        LOGGER_ERROR("matching paths means we'd overwrite some values!");
+        goto cleanup;
+    }
+    if (!check_no_algorithms_match(array, length)) {
+        LOGGER_ERROR(
+            "matching algorithms means our logging won't be specific enough!");
+        goto cleanup;
+    }
+    // TODO(dchu)   Add a warning when parameters are not used. For example,
+    //              'Olken' does not use 'sampling' or 'max_size'.
     return (struct RunnerArgumentsArray){.data = array, .length = length};
+cleanup:
+    free(array);
+    return (struct RunnerArgumentsArray){.data = NULL, .length = 0};
 }
 
 static void
@@ -584,6 +678,10 @@ main(int argc, char **argv)
     print_trace_summary(&args, &trace);
 
     struct RunnerArgumentsArray work = create_work_array(&args);
+    if (work.data == NULL && work.length == 0) {
+        LOGGER_INFO("error in creating work array");
+        return EXIT_FAILURE;
+    }
     for (size_t i = 0; i < work.length; ++i) {
         // TODO(dchu)   We want to avoid rerunning the (expensive)
         //              oracle if the files already exist.
@@ -618,7 +716,7 @@ main(int argc, char **argv)
             double mae = MissRateCurve__mean_absolute_error(&oracle_mrc, &mrc);
             LOGGER_INFO("%s -- Mean Absolute Error (MAE): %f | Mean Squared "
                         "Error (MSE): %f",
-                        work.data[i].mrc_path,
+                        algorithm_names[work.data[i].algorithm],
                         mae,
                         mse);
             MissRateCurve__destroy(&mrc);
