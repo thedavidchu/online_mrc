@@ -406,69 +406,53 @@ tree__validate(struct Tree *me)
         return r;
     }
 }
-#include "logger/logger.h"
 
-/// @brief  Iteratively free chains of single children.
-/// @note   I invented the word "monoprogenous" to mean "someone with a single
-///         child", which I derived from "monoprogeny" meaning "single child",
-///         which in turn came from a sketchy source on the internet.
-/// @note   The semantics of this function are admittedly a bit unintuitive
-///         because it frees the pointer that we are passed, unlike the
-///         `Subtree__free` function. This is just something you'll have to deal
-///         with because otherwise we'd need this function to specifically track
-///         the first point it is passed so that it won't free it.
+/// @brief  Free a subtree iteratively (though destructively).
+/// @note   This converts the 'left' branch to point to the parent,
+///         thus allowing us to walk back up the tree. I really like
+///         this solution's performance, but I am less than thrilled
+///         that it does some eyebrow raising repurposing.
+/// @note   I stole this as-is (i.e. without understanding fully) from
+///         https://codegolf.stackexchange.com/questions/478/free-a-binary-tree/489
+/// @todo   UNDERSTAND THE GOSH-DARN THING!
+/// @note   Previously, in my quest for efficient resource deallocation,
+///         I iterated over chains of single children. This seemed to
+///         work OK but didn't have any good theoretical guarantees and
+///         failed on Twitter's cluster15.bin.
 static void
-free_monoprogenous_subtree(struct Subtree *const me,
-                           size_t const recursion_depth)
+free_subtree(struct Subtree *me)
 {
-    struct Subtree *child = me;
-    struct Subtree *tmp = NULL;
-
-    while (child != NULL) {
-        if (child->left_subtree == NULL) {
-            tmp = child;
-            child = child->right_subtree;
-            free(tmp);
-            continue;
-        } else if (child->right_subtree == NULL) {
-            tmp = child;
-            child = child->left_subtree;
-            free(tmp);
-            continue;
+    struct Subtree *node = me;
+    struct Subtree *up = NULL;
+    while (node != NULL) {
+        if (node->left_subtree != NULL) {
+            struct Subtree *left = node->left_subtree;
+            node->left_subtree = up;
+            up = node;
+            node = left;
+        } else if (node->right_subtree != NULL) {
+            struct Subtree *right = node->right_subtree;
+            node->left_subtree = up;
+            node->right_subtree = NULL;
+            up = node;
+            node = right;
         } else {
-            subtree__free(child->left_subtree, recursion_depth + 1);
-            subtree__free(child->right_subtree, recursion_depth + 1);
-            free(child);
-            return;
+            if (up == NULL) {
+                free(node);
+                node = NULL;
+            }
+            while (up != NULL) {
+                free(node);
+                if (up->right_subtree != NULL) {
+                    node = up->right_subtree;
+                    up->right_subtree = NULL;
+                    break;
+                } else {
+                    node = up;
+                    up = up->left_subtree;
+                }
+            }
         }
-    }
-}
-
-void
-subtree__free(struct Subtree *me, size_t const recursion_depth)
-{
-    if (me == NULL) {
-        return;
-    }
-    LOGGER_VERBOSE("Begin subtree__free(me={.key = %lu, .length = %zu, .left = "
-                   "%p, .right = %p}, recursion_depth=%zu)",
-                   me->key,
-                   me->cardinality,
-                   (void *)me->left_subtree,
-                   (void *)me->right_subtree,
-                   recursion_depth);
-    // Limit the possibility of stackoverflow for tree that has devolved into a
-    // linked list
-    if (me->left_subtree == NULL) {
-        free_monoprogenous_subtree(me->right_subtree, recursion_depth + 1);
-        free(me);
-    } else if (me->right_subtree == NULL) {
-        free_monoprogenous_subtree(me->left_subtree, recursion_depth + 1);
-        free(me);
-    } else {
-        subtree__free(me->left_subtree, recursion_depth + 1);
-        subtree__free(me->right_subtree, recursion_depth + 1);
-        free(me);
     }
 }
 
@@ -478,10 +462,7 @@ tree__destroy(struct Tree *me)
     if (me == NULL) {
         return;
     }
-    LOGGER_TRACE("Begin tree__destroy(me={.root = %p, .cardinality = %zu})",
-                 (void *)me->root,
-                 me->cardinality);
-    subtree__free(me->root, 0);
+    free_subtree(me->root);
     *me = (struct Tree){0};
 }
 
