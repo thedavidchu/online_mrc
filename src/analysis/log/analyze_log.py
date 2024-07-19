@@ -66,7 +66,8 @@ def get_trace_read_time_from_log(text: str, path: Path) -> float:
         if re.match(pattern, line) is not None
     ]
     if len(matching_lines) == 0:
-        raise ValueError(f"log {path} has no trace time")
+        warn(f"log {path} has no trace time")
+        return 0
     if len(matching_lines) > 1:
         raise ValueError(f"log {path} has multiple trace times")
     time = float(matching_lines[0].group(1))
@@ -91,8 +92,7 @@ def get_compute_time_from_log(text: str, path: Path) -> dict[str, float]:
         #       read/write again and I can run the remaining Olken
         #       traces.
         warn(f"log {path} has no compute time")
-        return 0
-        raise ValueError(f"log {path} has no compute time")
+        return {}
     return {l.group(1): float(l.group(5)) for l in matching_lines}
 
 
@@ -154,8 +154,7 @@ def get_accuracy_from_log(text: str, path: Path) -> dict[str, tuple[float, float
     ]
     if len(matching_lines) == 0:
         warn(f"log {path} has no accuracy")
-        return 0, 0
-        raise ValueError(f"log {path} has no compute time")
+        return {}
     # NOTE  I no longer explicit name them here, but the first float is
     #       the MAE and the second is the MSE.
     return {l.group(1): (float(l.group(2)), float(l.group(3))) for l in matching_lines}
