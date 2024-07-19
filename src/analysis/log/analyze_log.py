@@ -10,6 +10,15 @@ from warnings import warn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+# NOTE  I do not support spaces or control characters in paths.
+PATH_PATTERN = r"[a-zA-Z0-9_./\\-]+"
+FLOAT_PATTERN = r"\d+[.]\d+"
+
+
+def get_log_pattern(level: str, pattern: str) -> str:
+    assert level in "VERBOSE,TRACE,DEBUG,INFO,WARN,ERROR,FATAL".split(",")
+    return rf"^\[{level}\] \[\d+-\d+-\d+ \d+:\d+:\d+\] \[ {PATH_PATTERN}:\d+ \] \[errno \d+: [^\]]*\] {pattern}"
+
 
 def get_file_tree(path: Path | list[Path]) -> list[Path]:
     """Return a list of all the files belonging to a directory."""
@@ -49,7 +58,7 @@ def get_longest_substring(a: str, b: str) -> str:
 
 def get_trace_read_time_from_log(text: str, path: Path) -> float:
     pattern = re.compile(
-        r"^\[INFO\] \[\d+-\d+-\d+ \d+:\d+:\d+\] \[ [-._/a-zA-Z]+:\d+ \] \[errno \d+: [^\]]*\] Trace Read Time: (\d+[.]\d+) sec$"
+        get_log_pattern("INFO", rf"Trace Read Time: ({FLOAT_PATTERN}) sec$")
     )
     matching_lines = [
         re.match(pattern, line)
@@ -64,9 +73,12 @@ def get_trace_read_time_from_log(text: str, path: Path) -> float:
     return time
 
 
-def get_compute_time_from_log(text: str, path: Path) -> float:
+def get_compute_time_from_log(text: str, path: Path) -> dict[str, float]:
     pattern = re.compile(
-        r"^\[INFO\] \[\d+-\d+-\d+ \d+:\d+:\d+\] \[ [-._/a-zA-Z]+:\d+ \] \[errno \d+: [^\]]*\] Histogram Time: (\d+[.]\d+) [|] Post-Process Time: (\d+[.]\d+) [|] MRC Time: (\d+[.]\d+) [|] Total Time: (\d+[.]\d+)$"
+        get_log_pattern(
+            "INFO",
+            rf"({PATH_PATTERN}) -- Histogram Time: ({FLOAT_PATTERN}) [|] Post-Process Time: ({FLOAT_PATTERN}) [|] MRC Time: ({FLOAT_PATTERN}) [|] Total Time: ({FLOAT_PATTERN})$",
+        )
     )
     matching_lines = [
         re.match(pattern, line)
@@ -81,27 +93,29 @@ def get_compute_time_from_log(text: str, path: Path) -> float:
         warn(f"log {path} has no compute time")
         return 0
         raise ValueError(f"log {path} has no compute time")
-    if len(matching_lines) > 1:
-        raise ValueError(f"log {path} has multiple compute times")
-    time = float(matching_lines[0].group(4))
-    return time
+    return {l.group(1): float(l.group(5)) for l in matching_lines}
 
 
 def plot_runtime(inputs: list[Path], extensions: list[str], output: Path):
-    compute_times = {}
+    emap_times = {}
+    fss_times = {}
     for file in get_file_tree(inputs):
         if file.suffix not in extensions:
             continue
         with file.open() as f:
             text = f.read()
         ttime = get_trace_read_time_from_log(text, file)
-        ctime = get_compute_time_from_log(text, file)
-        print(f"Times for {str(file)}: Trace read: {ttime} -- Total compute: {ctime}")
-        compute_times[str(file)] = ctime
-    compute_times = {k: v for k, v in sorted(compute_times.items())}
-
-    emap_times = {k: v for k, v in compute_times.items() if "Evicting-Map" in k}
-    fss_times = {k: v for k, v in compute_times.items() if "Fixed-Size-SHARDS" in k}
+        ctimes = get_compute_time_from_log(text, file)
+        for algo, ctime in ctimes.items():
+            print(
+                f"Times for {str(file)}:{algo} -- Trace read: {ttime} | Total compute: {ctime}"
+            )
+            if algo == "Evicting-Map":
+                emap_times[str(file)] = ctime
+            elif algo == "Fixed-Size-SHARDS":
+                fss_times[str(file)] = ctime
+    emap_times = {k: v for k, v in (emap_times.items())}
+    fss_times = {k: v for k, v in (fss_times.items())}
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Runtimes by Trace")
@@ -126,9 +140,12 @@ def plot_runtime(inputs: list[Path], extensions: list[str], output: Path):
     fig.savefig(output)
 
 
-def get_accuracy_from_log(text: str, path: Path) -> tuple[float, float]:
+def get_accuracy_from_log(text: str, path: Path) -> dict[str, tuple[float, float]]:
     pattern = re.compile(
-        r"^\[INFO\] \[\d+-\d+-\d+ \d+:\d+:\d+\] \[ [-._/a-zA-Z]+:\d+ \] \[errno \d+: [^\]]*\] MAE: (\d+[.]\d+) [|] MSE: (\d+[.]\d+)"
+        get_log_pattern(
+            "INFO",
+            rf"({PATH_PATTERN}) -- Mean Absolute Error (MAE): ({FLOAT_PATTERN}) [|] Mean Squared Error (MSE): ({FLOAT_PATTERN})",
+        )
     )
     matching_lines = [
         re.match(pattern, line)
@@ -139,28 +156,28 @@ def get_accuracy_from_log(text: str, path: Path) -> tuple[float, float]:
         warn(f"log {path} has no accuracy")
         return 0, 0
         raise ValueError(f"log {path} has no compute time")
-    if len(matching_lines) > 1:
-        raise ValueError(f"log {path} has multiple compute times")
-    mae, mse = float(matching_lines[0].group(1)), float(matching_lines[0].group(2))
-    return mae, mse
+    # NOTE  I no longer explicit name them here, but the first float is
+    #       the MAE and the second is the MSE.
+    return {l.group(1): (float(l.group(2)), float(l.group(3))) for l in matching_lines}
 
 
 def plot_accuracy(inputs: list[Path], extensions: list[str], output: Path):
-    mae_accuracies = {}
+    emap_accuracies = {}
+    fss_accuracies = {}
     for file in tqdm(get_file_tree(inputs)):
         if file.suffix not in extensions:
             continue
         with file.open() as f:
             text = f.read()
-        mae, mse = get_accuracy_from_log(text, file)
-        print(f"Accuracies for {str(file)}: MAE: {mae} -- MSE: {mse}")
-        mae_accuracies[str(file)] = mae
-    mae_accuracies = {k: v for k, v in sorted(mae_accuracies.items())}
-
-    emap_accuracies = {k: v for k, v in mae_accuracies.items() if "Evicting-Map" in k}
-    fss_accuracies = {
-        k: v for k, v in mae_accuracies.items() if "Fixed-Size-SHARDS" in k
-    }
+        accuracies = get_accuracy_from_log(text, file)
+        for algo, (mae, mse) in accuracies.items():
+            print(f"Accuracies for {str(file)}:{algo} -- MAE: {mae} | MSE: {mse}")
+            if "Evicting-Map" == algo:
+                emap_accuracies[str(file)] = mae
+            elif "Fixed-Size-SHARDS" == algo:
+                fss_accuracies[str(file)] = mae
+    emap_accuracies = {k: v for k, v in sorted(emap_accuracies.items())}
+    fss_accuracies = {k: v for k, v in sorted(fss_accuracies.items())}
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Mean Absolute Error (MAE) by Trace")
