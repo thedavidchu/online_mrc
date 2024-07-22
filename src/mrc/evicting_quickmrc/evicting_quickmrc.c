@@ -22,14 +22,14 @@ static bool
 initialize(struct EvictingQuickMRC *const me,
            double const init_sampling_ratio,
            uint64_t const num_hash_buckets,
-           uint64_t const num_qmrc_buckets,
+           uint64_t const num_qmrc__buckets,
            uint64_t const histogram_num_bins,
            uint64_t const histogram_bin_size,
            enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     if (me == NULL)
         return false;
-    if (!qmrc_init(&me->qmrc, num_hash_buckets, num_qmrc_buckets, 0))
+    if (!qmrc__init(&me->qmrc, num_hash_buckets, num_qmrc__buckets, 0))
         goto cleanup;
     if (!EvictingHashTable__init(&me->hash_table,
                                  num_hash_buckets,
@@ -57,7 +57,7 @@ bool
 EvictingQuickMRC__init(struct EvictingQuickMRC *const me,
                        const double init_sampling_ratio,
                        const uint64_t num_hash_buckets,
-                       uint64_t const num_qmrc_buckets,
+                       uint64_t const num_qmrc__buckets,
                        const uint64_t histogram_num_bins,
                        uint64_t const histogram_bin_size,
                        enum HistogramOutOfBoundsMode const out_of_bounds_mode)
@@ -65,7 +65,7 @@ EvictingQuickMRC__init(struct EvictingQuickMRC *const me,
     return initialize(me,
                       init_sampling_ratio,
                       num_hash_buckets,
-                      num_qmrc_buckets,
+                      num_qmrc__buckets,
                       histogram_num_bins,
                       histogram_bin_size,
                       out_of_bounds_mode);
@@ -98,7 +98,7 @@ handle_inserted(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
 
     const uint64_t scale =
         EvictingHashTable__estimate_scale_factor(&me->hash_table);
-    qmrc_insert(&me->qmrc);
+    qmrc__insert(&me->qmrc);
     Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__append_infinity(&me->istats);
@@ -118,8 +118,8 @@ handle_replaced(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
     bool r = false;
     MAYBE_UNUSED(r);
 
-    qmrc_delete(&me->qmrc, s.old_value);
-    r = qmrc_insert(&me->qmrc);
+    qmrc__delete(&me->qmrc, s.old_value);
+    r = qmrc__insert(&me->qmrc);
     assert(r);
 
     Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
@@ -141,9 +141,9 @@ handle_updated(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
     uint64_t distance = 0;
     MAYBE_UNUSED(r);
 
-    distance = qmrc_lookup(&me->qmrc, (KeyType)s.old_value);
-    qmrc_delete(&me->qmrc, s.old_value);
-    r = qmrc_insert(&me->qmrc);
+    distance = qmrc__lookup(&me->qmrc, (KeyType)s.old_value);
+    qmrc__delete(&me->qmrc, s.old_value);
+    r = qmrc__insert(&me->qmrc);
     assert(r);
 
     Histogram__insert_scaled_finite(&me->histogram,
@@ -226,7 +226,7 @@ EvictingQuickMRC__destroy(struct EvictingQuickMRC *me)
     if (me == NULL) {
         return;
     }
-    qmrc_destroy(&me->qmrc);
+    qmrc__destroy(&me->qmrc);
     EvictingHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
 #ifdef INTERVAL_STATISTICS
