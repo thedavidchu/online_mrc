@@ -1,5 +1,6 @@
 import argparse
 import os
+from warnings import warn
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,6 +26,9 @@ def timing(f):
 
 
 def read_and_plot_mrc(path: str, label: str, debug: bool, separator: str):
+    if not os.path.exists(path) or not os.path.isfile(path):
+        warn(f"{path} DNE")
+        return
     dt = np.dtype([("index", np.uint64), ("miss-rate", np.float64)])
     with open(path, "rb") as f:
         if separator == "":
