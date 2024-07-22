@@ -18,13 +18,11 @@
 
 #define CACHELINE_SIZE 64
 
-typedef size_t count_t;
-
 /* Logically, a bucket contains and epoch and a count.
  *
  * struct bucket {
  *	int epoch;     // epoch at which this bucket is created
- *	count_t count; // nr of keys in bucket
+ *	size_t count; // nr of keys in bucket
  * };
  *
  * below, we allocate epochs and counts arrays separately, which may provide
@@ -37,21 +35,21 @@ struct qmrc {
     int *epochs;
     /* nr of keys last accessed in an epoch E, where E lies in the range
      * epochs[N-1] > E >= epochs[N] are stored in bucket N */
-    count_t *counts;
+    size_t *counts;
 
-    count_t nr_buckets;  /* number of epochs/counts buckets */
-    count_t epoch_limit; /* threshold when an epoch is created */
-    count_t total_keys;  /* current total number of unique keys */
-    count_t max_keys;    /* max unique keys that currently fit in histogram */
+    size_t nr_buckets;  /* number of epochs/counts buckets */
+    size_t epoch_limit; /* threshold when an epoch is created */
+    size_t total_keys;  /* current total number of unique keys */
+    size_t max_keys;    /* max unique keys that currently fit in histogram */
 
     int adjust_epoch_limit; /* adjust epoch_limit, if not specified */
 
     int nr_merge;
     int nr_zero;
 #ifdef STATS
-    count_t *lookup;
-    count_t *delete;
-    count_t *merge;
+    size_t *lookup;
+    size_t *delete;
+    size_t *merge;
 #endif /* STATS */
 };
 
@@ -64,9 +62,9 @@ qmrc_remove_epoch(int *buckets, int idx)
 }
 
 static void
-qmrc_remove_bucket(count_t *buckets, int idx)
+qmrc_remove_bucket(size_t *buckets, int idx)
 {
-    memmove(buckets + 1, buckets, (size_t)idx * sizeof(count_t));
+    memmove(buckets + 1, buckets, (size_t)idx * sizeof(size_t));
 }
 
 static void
@@ -86,7 +84,7 @@ static void
 qmrc_merge(struct qmrc *qmrc)
 {
     int merge_idx = 0; /* index of bucket to merge */
-    count_t min_sum = INT_MAX;
+    size_t min_sum = INT_MAX;
 
     /* compute the sum of the counts of consecutive buckets and merge two
      * buckets with the smallest sum. this strategy aims to keep similar
@@ -98,7 +96,7 @@ qmrc_merge(struct qmrc *qmrc)
      * consecutive buckets.
      */
     for (int idx = 1; idx < qmrc->nr_buckets; idx++) {
-        count_t sum = qmrc->counts[idx - 1] + qmrc->counts[idx];
+        size_t sum = qmrc->counts[idx - 1] + qmrc->counts[idx];
         if (min_sum > sum) {
             min_sum = sum;
             merge_idx = idx;
@@ -164,7 +162,7 @@ qmrc_init(int log_hist_buckets, int log_qmrc_buckets, int log_epoch_limit)
     qmrc = calloc(1, sizeof(struct qmrc));
     assert(qmrc);
 
-    qmrc->nr_buckets = (count_t)1 << log_qmrc_buckets;
+    qmrc->nr_buckets = (size_t)1 << log_qmrc_buckets;
 
     /* align buckets to cache size */
     alloc_size = qmrc->nr_buckets * sizeof(int);
@@ -172,13 +170,13 @@ qmrc_init(int log_hist_buckets, int log_qmrc_buckets, int log_epoch_limit)
     assert((intptr_t)qmrc->epochs % CACHELINE_SIZE == 0);
     memset(qmrc->epochs, 0, alloc_size);
 
-    alloc_size = qmrc->nr_buckets * sizeof(count_t);
+    alloc_size = qmrc->nr_buckets * sizeof(size_t);
     qmrc->counts = aligned_alloc(CACHELINE_SIZE, alloc_size);
     assert((intptr_t)qmrc->counts % CACHELINE_SIZE == 0);
     memset(qmrc->counts, 0, alloc_size);
 
     /* set initial max_keys to the number of histogram buckets */
-    qmrc->max_keys = (count_t)1 << log_hist_buckets;
+    qmrc->max_keys = (size_t)1 << log_hist_buckets;
 
     /* Choice of epoch limit is somewhat critical for performance and
      * accuracy. A smaller epoch limit will increase the number of epochs
@@ -191,14 +189,14 @@ qmrc_init(int log_hist_buckets, int log_qmrc_buckets, int log_epoch_limit)
         log_epoch_limit = log_hist_buckets - log_qmrc_buckets;
     }
     assert(log_epoch_limit >= 0);
-    qmrc->epoch_limit = (count_t)1 << log_epoch_limit;
+    qmrc->epoch_limit = (size_t)1 << log_epoch_limit;
 
 #ifdef STATS
-    qmrc->lookup = calloc(qmrc->nr_buckets, sizeof(count_t));
+    qmrc->lookup = calloc(qmrc->nr_buckets, sizeof(size_t));
     assert(qmrc->lookup);
-    qmrc->delete = calloc(qmrc->nr_buckets, sizeof(count_t));
+    qmrc->delete = calloc(qmrc->nr_buckets, sizeof(size_t));
     assert(qmrc->delete);
-    qmrc->merge = calloc(qmrc->nr_buckets, sizeof(count_t));
+    qmrc->merge = calloc(qmrc->nr_buckets, sizeof(size_t));
     assert(qmrc->merge);
 #endif /* STATS */
 
@@ -258,7 +256,7 @@ hsum_8x32(__m256i v)
 int
 qmrc_lookup(struct qmrc *qmrc, int epoch)
 {
-    count_t sd = 0;
+    size_t sd = 0;
     int idx = -1;
 
 #ifndef QMRC_NO_AVX2 /* avx2 provides a little benefit. */
@@ -313,7 +311,7 @@ qmrc_lookup(struct qmrc *qmrc, int epoch)
         float ratio = (float)(epoch - qmrc->epochs[idx]) /
                       (float)(qmrc->epochs[idx - 1] - qmrc->epochs[idx]);
         float sub = ratio * (float)qmrc->counts[idx];
-        sd = sd - (count_t)sub;
+        sd = sd - (size_t)sub;
     }
 #endif /* QMRC_INTERPOLATE */
 
