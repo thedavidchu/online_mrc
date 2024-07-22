@@ -432,12 +432,20 @@ main(int argc, char **argv)
 {
     // This variable is for things that are not critical failures but
     // indicate we didn't succeed.
-    int status = EXIT_SUCCESS;
+    bool ok = true;
     struct CommandLineArguments args = {0};
     args = parse_command_line_arguments(argc, argv);
     print_command_line_arguments(&args);
 
-    // Read in trace
+    // Parse work. This is above the trace reader because it should be
+    // faster and thus a failure will fail faster.
+    struct RunnerArgumentsArray work = create_work_array(&args);
+    if (work.data == NULL && work.length == 0) {
+        LOGGER_INFO("error in creating work array");
+        goto cleanup;
+    }
+
+    // Read in trace. This can be a very slow process.
     double t0 = get_wall_time_sec();
     struct Trace trace = get_trace(args);
     double t1 = get_wall_time_sec();
@@ -447,21 +455,16 @@ main(int argc, char **argv)
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
                      (void *)trace.trace,
                      trace.length);
-        return EXIT_FAILURE;
+        goto cleanup;
     }
     print_trace_summary(&args, &trace);
 
-    struct RunnerArgumentsArray work = create_work_array(&args);
-    if (work.data == NULL && work.length == 0) {
-        LOGGER_INFO("error in creating work array");
-        return EXIT_FAILURE;
-    }
     for (size_t i = 0; i < work.length; ++i) {
         // TODO(dchu)   We want to avoid rerunning the (expensive)
         //              oracle if the files already exist.
         if (!run_runner(&work.data[i], &trace)) {
             LOGGER_ERROR("trace runner failed");
-            status = EXIT_FAILURE;
+            ok = false;
         }
     }
 
@@ -471,7 +474,7 @@ main(int argc, char **argv)
         struct MissRateCurve oracle_mrc = {0};
         if (!MissRateCurve__load(&oracle_mrc, work.data[0].mrc_path)) {
             LOGGER_ERROR("failed to load oracle MRC");
-            exit(EXIT_FAILURE);
+            goto cleanup;
         }
 
         // NOTE We start from 1 because the first spot is occupied by
@@ -483,7 +486,7 @@ main(int argc, char **argv)
             if (!MissRateCurve__load(&mrc, work.data[i].mrc_path)) {
                 LOGGER_ERROR("failed to load MRC from '%s'",
                              work.data[i].mrc_path);
-                status = EXIT_FAILURE;
+                ok = false;
                 continue;
             }
             double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
@@ -502,7 +505,7 @@ main(int argc, char **argv)
         for (size_t i = 0; i < work.length; ++i) {
             if (!run_cleanup(&work.data[i])) {
                 LOGGER_ERROR("oracle runner failed");
-                status = EXIT_FAILURE;
+                ok = false;
             }
         }
     }
@@ -511,6 +514,15 @@ main(int argc, char **argv)
     free_command_line_arguments(&args);
     Trace__destroy(&trace);
 
+    if (!ok) {
+        goto cleanup;
+    }
     LOGGER_INFO("=== SUCCESS ===");
-    return status;
+    return EXIT_SUCCESS;
+cleanup:
+    // NOTE I don't cleanup the memory because I count on the OS doing
+    //      it and because some of the goto statements jump over
+    //      variable declarations, which would cause errors.
+    LOGGER_ERROR("=== FAILURE ===");
+    return EXIT_FAILURE;
 }
