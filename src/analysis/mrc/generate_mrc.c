@@ -344,14 +344,22 @@ create_work_array(struct CommandLineArguments const *const args)
         }
     }
     struct RunnerArguments *array = calloc(length, sizeof(*array));
-    assert(array != NULL);
+    if (array == NULL) {
+        LOGGER_ERROR("bad calloc() of size %zu * %zu", length, sizeof(*array));
+        goto cleanup;
+    }
 
     // Initialize work data
     if (args->oracle != NULL) {
         if (!RunnerArguments__init(&array[0], args->oracle)) {
             LOGGER_FATAL("failed to initialize runner arguments '%s'",
                          args->oracle);
-            exit(-1);
+            goto cleanup;
+        }
+        if (array[0].algorithm != MRC_ALGORITHM_OLKEN) {
+            LOGGER_ERROR("Olken is the only exact method supported, not '%s'",
+                         algorithm_names[array[0].algorithm]);
+            goto cleanup;
         }
     }
     if (args->run != NULL) {
