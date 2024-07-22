@@ -18,41 +18,6 @@
 
 #define CACHELINE_SIZE 64
 
-/* Logically, a bucket contains and epoch and a count.
- *
- * struct bucket {
- *	int epoch;     // epoch at which this bucket is created
- *	size_t count; // nr of keys in bucket
- * };
- *
- * below, we allocate epochs and counts arrays separately, which may provide
- * better locality */
-
-struct qmrc {
-    /* stores epoch at which a bucket is created.
-     * current (most recent) epoch is stored in epochs[0]. */
-    /* qmrc_delete code assumes that epochs is an int array */
-    int *epochs;
-    /* nr of keys last accessed in an epoch E, where E lies in the range
-     * epochs[N-1] > E >= epochs[N] are stored in bucket N */
-    size_t *counts;
-
-    size_t nr_buckets;  /* number of epochs/counts buckets */
-    size_t epoch_limit; /* threshold when an epoch is created */
-    size_t total_keys;  /* current total number of unique keys */
-    size_t max_keys;    /* max unique keys that currently fit in histogram */
-
-    int adjust_epoch_limit; /* adjust epoch_limit, if not specified */
-
-    int nr_merge;
-    int nr_zero;
-#ifdef STATS
-    size_t *lookup;
-    size_t *delete;
-    size_t *merge;
-#endif /* STATS */
-};
-
 /* remove idx element from buckets by
  * shifting all previous elements to the right by one. */
 static void
@@ -153,14 +118,15 @@ qmrc_merge(struct qmrc *qmrc)
  * log_epoch_limit is the log of the threshold at which the current bucket is
  * considered full and a new epoch is created. If it is 0, we adapt it.
  */
-struct qmrc *
-qmrc_init(int log_hist_buckets, int log_qmrc_buckets, int log_epoch_limit)
+bool
+qmrc_init(struct qmrc *qmrc,
+          int log_hist_buckets,
+          int log_qmrc_buckets,
+          int log_epoch_limit)
 {
-    struct qmrc *qmrc;
-    size_t alloc_size;
-
-    qmrc = calloc(1, sizeof(struct qmrc));
-    assert(qmrc);
+    size_t alloc_size = 0;
+    if (!qmrc)
+        return false;
 
     qmrc->nr_buckets = (size_t)1 << log_qmrc_buckets;
 
@@ -183,7 +149,7 @@ qmrc_init(int log_hist_buckets, int log_qmrc_buckets, int log_epoch_limit)
      * being created, which will increase accuracy but lower performance.*/
     if (log_epoch_limit == 0) {
         /* increase epoch_limit as we increase max_keys */
-        qmrc->adjust_epoch_limit = 1;
+        qmrc->adjust_epoch_limit = true;
         /* expected number of keys in a qmrc bucket is
          * (max_keys / qmrc_buckets). */
         log_epoch_limit = log_hist_buckets - log_qmrc_buckets;
@@ -200,7 +166,7 @@ qmrc_init(int log_hist_buckets, int log_qmrc_buckets, int log_epoch_limit)
     assert(qmrc->merge);
 #endif /* STATS */
 
-    return qmrc;
+    return false;
 }
 
 #ifndef QMRC_NO_AVX2
