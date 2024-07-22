@@ -60,7 +60,7 @@ qmrc_merge(struct qmrc *qmrc)
      * make sure that min_sum is the sum of the counts[] of two
      * consecutive buckets.
      */
-    for (int idx = 1; idx < qmrc->nr_buckets; idx++) {
+    for (size_t idx = 1; idx < qmrc->nr_buckets; idx++) {
         size_t sum = qmrc->counts[idx - 1] + qmrc->counts[idx];
         if (min_sum > sum) {
             min_sum = sum;
@@ -154,7 +154,7 @@ qmrc_init(struct qmrc *qmrc,
          * (max_keys / qmrc_buckets). */
         epoch_limit = max_keys - nr_qmrc_buckets;
     }
-    assert(epoch_limit >= 0);
+    assert(epoch_limit > 0);
     qmrc->epoch_limit = epoch_limit;
 
 #ifdef STATS
