@@ -114,8 +114,8 @@ def plot_runtime(inputs: list[Path], extensions: list[str], outputs: list[Path])
                 emap_times[str(file)] = ctime
             elif algo == "Fixed-Size-SHARDS":
                 fss_times[str(file)] = ctime
-    emap_times = {k: v for k, v in (emap_times.items())}
-    fss_times = {k: v for k, v in (fss_times.items())}
+    emap_times = {k: v for k, v in sorted(emap_times.items())}
+    fss_times = {k: v for k, v in sorted(fss_times.items())}
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Runtimes by Trace")
