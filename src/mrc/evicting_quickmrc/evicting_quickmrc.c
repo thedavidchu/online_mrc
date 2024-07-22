@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#include "qmrc.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
@@ -17,10 +18,10 @@
 #include "types/value_type.h"
 #include "unused/mark_unused.h"
 
-#include "evicting_map/evicting_quickmrc.h"
+#include "evicting_quickmrc/evicting_quickmrc.h"
 
 static bool
-initialize(struct EvictingMap *const me,
+initialize(struct EvictingQuickMRC *const me,
            double const init_sampling_ratio,
            uint64_t const num_hash_buckets,
            uint64_t const histogram_num_bins,
@@ -29,7 +30,7 @@ initialize(struct EvictingMap *const me,
 {
     if (me == NULL)
         return false;
-    if (!tree__init(&me->tree))
+    if (!qmrc_init(&me->qmrc, histogram_num_bins * histogram_bin_size, 128, 0))
         goto cleanup;
     if (!EvictingHashTable__init(&me->hash_table,
                                  num_hash_buckets,
@@ -49,16 +50,16 @@ initialize(struct EvictingMap *const me,
     return true;
 
 cleanup:
-    EvictingMap__destroy(me);
+    EvictingQuickMRC__destroy(me);
     return false;
 }
 
 bool
-EvictingMap__init(struct EvictingMap *const me,
-                  const double init_sampling_ratio,
-                  const uint64_t num_hash_buckets,
-                  const uint64_t histogram_num_bins,
-                  const uint64_t histogram_bin_size)
+EvictingQuickMRC__init(struct EvictingQuickMRC *const me,
+                       const double init_sampling_ratio,
+                       const uint64_t num_hash_buckets,
+                       const uint64_t histogram_num_bins,
+                       const uint64_t histogram_bin_size)
 {
     return initialize(me,
                       init_sampling_ratio,
@@ -69,12 +70,13 @@ EvictingMap__init(struct EvictingMap *const me,
 }
 
 bool
-EvictingMap__init_full(struct EvictingMap *const me,
-                       double const init_sampling_ratio,
-                       uint64_t const num_hash_buckets,
-                       uint64_t const histogram_num_bins,
-                       uint64_t const histogram_bin_size,
-                       enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+EvictingQuickMRC__init_full(
+    struct EvictingQuickMRC *const me,
+    double const init_sampling_ratio,
+    uint64_t const num_hash_buckets,
+    uint64_t const histogram_num_bins,
+    uint64_t const histogram_bin_size,
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     return initialize(me,
                       init_sampling_ratio,
@@ -86,7 +88,7 @@ EvictingMap__init_full(struct EvictingMap *const me,
 
 /// @brief  Do no work (besides simple book-keeping).
 static inline void
-handle_ignored(struct EvictingMap *me,
+handle_ignored(struct EvictingQuickMRC *me,
                struct SampledTryPutReturn s,
                TimeStampType value)
 {
@@ -104,20 +106,14 @@ handle_ignored(struct EvictingMap *me,
 
 /// @brief  Insert a new element into the hash table without eviction.
 static inline void
-handle_inserted(struct EvictingMap *me,
-                struct SampledTryPutReturn s,
-                TimeStampType value)
+handle_inserted(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
 {
     UNUSED(s);
     assert(me != NULL);
 
     const uint64_t scale =
         EvictingHashTable__estimate_scale_factor(&me->hash_table);
-    bool r = false;
-    MAYBE_UNUSED(r);
-
-    r = tree__sleator_insert(&me->tree, value);
-    assert(r);
+    qmrc_insert(&me->qmrc);
     Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__append_infinity(&me->istats);
@@ -128,9 +124,7 @@ handle_inserted(struct EvictingMap *me,
 /// @brief  Insert a new element into the hash table but replace an old
 ///         element.
 static inline void
-handle_replaced(struct EvictingMap *me,
-                struct SampledTryPutReturn s,
-                TimeStampType timestamp)
+handle_replaced(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
 {
     assert(me != NULL);
 
@@ -139,9 +133,9 @@ handle_replaced(struct EvictingMap *me,
     bool r = false;
     MAYBE_UNUSED(r);
 
-    r = tree__sleator_remove(&me->tree, s.old_value);
+    r = qmrc_delete(&me->qmrc, s.old_value);
     assert(r);
-    r = tree__sleator_insert(&me->tree, timestamp);
+    r = qmrc_insert(&me->qmrc);
     assert(r);
 
     Histogram__insert_scaled_infinite(&me->histogram, scale == 0 ? 1 : scale);
@@ -153,9 +147,7 @@ handle_replaced(struct EvictingMap *me,
 
 /// @brief  Update an existing element in the hash table.
 static inline void
-handle_updated(struct EvictingMap *me,
-               struct SampledTryPutReturn s,
-               TimeStampType timestamp)
+handle_updated(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
 {
     assert(me != NULL);
 
@@ -165,10 +157,10 @@ handle_updated(struct EvictingMap *me,
     uint64_t distance = 0;
     MAYBE_UNUSED(r);
 
-    distance = tree__reverse_rank(&me->tree, (KeyType)s.old_value);
-    r = tree__sleator_remove(&me->tree, s.old_value);
+    distance = qmrc_lookup(&me->qmrc, (KeyType)s.old_value);
+    r = qmrc_delete(&me->qmrc, s.old_value);
     assert(r);
-    r = tree__sleator_insert(&me->tree, timestamp);
+    r = qmrc_insert(&me->qmrc);
     assert(r);
 
     Histogram__insert_scaled_finite(&me->histogram,
@@ -185,7 +177,7 @@ handle_updated(struct EvictingMap *me,
 }
 
 bool
-EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
+EvictingQuickMRC__access_item(struct EvictingQuickMRC *me, EntryType entry)
 {
     if (me == NULL)
         return false;
@@ -198,13 +190,13 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
         handle_ignored(me, r, timestamp);
         break;
     case SAMPLED_INSERTED:
-        handle_inserted(me, r, timestamp);
+        handle_inserted(me, r);
         break;
     case SAMPLED_REPLACED:
-        handle_replaced(me, r, timestamp);
+        handle_replaced(me, r);
         break;
     case SAMPLED_UPDATED:
-        handle_updated(me, r, timestamp);
+        handle_updated(me, r);
         break;
     default:
         assert(0 && "impossible");
@@ -213,7 +205,7 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
 }
 
 void
-EvictingMap__refresh_threshold(struct EvictingMap *me)
+EvictingQuickMRC__refresh_threshold(struct EvictingQuickMRC *me)
 {
     if (me == NULL)
         return;
@@ -221,20 +213,20 @@ EvictingMap__refresh_threshold(struct EvictingMap *me)
 }
 
 bool
-EvictingMap__post_process(struct EvictingMap *me)
+EvictingQuickMRC__post_process(struct EvictingQuickMRC *me)
 {
     UNUSED(me);
     return true;
 }
 
 bool
-EvictingMap__to_mrc(struct EvictingMap const *const me,
-                    struct MissRateCurve *const mrc)
+EvictingQuickMRC__to_mrc(struct EvictingQuickMRC const *const me,
+                         struct MissRateCurve *const mrc)
 {
     return MissRateCurve__init_from_histogram(mrc, &me->histogram);
 }
 void
-EvictingMap__print_histogram_as_json(struct EvictingMap *me)
+EvictingQuickMRC__print_histogram_as_json(struct EvictingQuickMRC *me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -246,23 +238,23 @@ EvictingMap__print_histogram_as_json(struct EvictingMap *me)
 }
 
 void
-EvictingMap__destroy(struct EvictingMap *me)
+EvictingQuickMRC__destroy(struct EvictingQuickMRC *me)
 {
     if (me == NULL) {
         return;
     }
-    tree__destroy(&me->tree);
+    qmrc_destroy(&me->qmrc);
     EvictingHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__destroy(&me->istats);
 #endif
-    *me = (struct EvictingMap){0};
+    *me = (struct EvictingQuickMRC){0};
 }
 
 bool
-EvictingMap__get_histogram(struct EvictingMap const *const me,
-                           struct Histogram const **const histogram)
+EvictingQuickMRC__get_histogram(struct EvictingQuickMRC const *const me,
+                                struct Histogram const **const histogram)
 {
     if (me == NULL || histogram == NULL) {
         return false;

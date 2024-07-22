@@ -120,15 +120,15 @@ qmrc_merge(struct qmrc *qmrc)
  */
 bool
 qmrc_init(struct qmrc *qmrc,
-          int log_hist_buckets,
-          int log_qmrc_buckets,
-          int log_epoch_limit)
+          size_t max_keys,
+          size_t nr_qmrc_buckets,
+          size_t epoch_limit)
 {
     size_t alloc_size = 0;
     if (!qmrc)
         return false;
 
-    qmrc->nr_buckets = (size_t)1 << log_qmrc_buckets;
+    qmrc->nr_buckets = nr_qmrc_buckets;
 
     /* align buckets to cache size */
     alloc_size = qmrc->nr_buckets * sizeof(int);
@@ -142,20 +142,20 @@ qmrc_init(struct qmrc *qmrc,
     memset(qmrc->counts, 0, alloc_size);
 
     /* set initial max_keys to the number of histogram buckets */
-    qmrc->max_keys = (size_t)1 << log_hist_buckets;
+    qmrc->max_keys = max_keys;
 
     /* Choice of epoch limit is somewhat critical for performance and
      * accuracy. A smaller epoch limit will increase the number of epochs
      * being created, which will increase accuracy but lower performance.*/
-    if (log_epoch_limit == 0) {
+    if (epoch_limit == 0) {
         /* increase epoch_limit as we increase max_keys */
         qmrc->adjust_epoch_limit = true;
         /* expected number of keys in a qmrc bucket is
          * (max_keys / qmrc_buckets). */
-        log_epoch_limit = log_hist_buckets - log_qmrc_buckets;
+        epoch_limit = max_keys - nr_qmrc_buckets;
     }
-    assert(log_epoch_limit >= 0);
-    qmrc->epoch_limit = (size_t)1 << log_epoch_limit;
+    assert(epoch_limit >= 0);
+    qmrc->epoch_limit = epoch_limit;
 
 #ifdef STATS
     qmrc->lookup = calloc(qmrc->nr_buckets, sizeof(size_t));
