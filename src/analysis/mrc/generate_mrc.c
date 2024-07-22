@@ -345,7 +345,7 @@ create_work_array(struct CommandLineArguments const *const args)
     }
     struct RunnerArguments *array = calloc(length, sizeof(*array));
     if (array == NULL) {
-        LOGGER_ERROR("bad calloc() of size %zu * %zu", length, sizeof(*array));
+        LOGGER_ERROR("bad calloc(%zu, %zu)", length, sizeof(*array));
         goto cleanup;
     }
 
