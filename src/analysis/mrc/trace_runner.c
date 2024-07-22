@@ -25,7 +25,7 @@
 /// @note   I forcibly inline this with the hope that the compiler will
 ///         be able to realize that the function pointers are constants.
 ///         I noticed an improvement from 8.2s to 7.6s on the Twitter
-///         trace, cluster15.bin. It did not fix the stackoverflow.
+///         trace, cluster15.bin.
 static forceinline bool
 trace_runner(void *const runner_data,
              struct RunnerArguments const *const args,
