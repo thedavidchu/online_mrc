@@ -39,19 +39,19 @@ struct qmrc {
 };
 
 bool
-qmrc_init(struct qmrc *qmrc,
-          size_t max_keys,
-          size_t nr_qmrc_buckets,
-          size_t epoch_limit);
+qmrc__init(struct qmrc *qmrc,
+           size_t max_keys,
+           size_t nr_qmrc_buckets,
+           size_t epoch_limit);
 
 size_t
-qmrc_lookup(struct qmrc *qmrc, int epoch);
+qmrc__lookup(struct qmrc *qmrc, int epoch);
 
 int
-qmrc_insert(struct qmrc *qmrc);
+qmrc__insert(struct qmrc *qmrc);
 
 void
-qmrc_delete(struct qmrc *qmrc, int epoch);
+qmrc__delete(struct qmrc *qmrc, int epoch);
 
 void
-qmrc_destroy(struct qmrc *qmrc);
+qmrc__destroy(struct qmrc *qmrc);

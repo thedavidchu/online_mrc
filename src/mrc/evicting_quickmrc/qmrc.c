@@ -201,26 +201,26 @@ hsum_8x32(__m256i v)
  * epochs: 4  3  2  1  0
  * counts: 30 10 07 03 20
  *
- * say we perform qmrc_lookup(1)
- * this decrements the count for epoch 1, and then via qmrc_insert,
+ * say we perform qmrc__lookup(1)
+ * this decrements the count for epoch 1, and then via qmrc__insert,
  * increments the count for epoch 4
  * epochs: 4  3  2  1  0
  * counts: 31 10 07 02 20
  *
- * however, say the epoch_limit is 30, then qmrc_insert will create
+ * however, say the epoch_limit is 30, then qmrc__insert will create
  * a new epoch (5) by merging epoch 2 with epoch 1
  * epochs: 5  4  3  1  0
  * counts: 01 30 10 09 20
  *
- * then qmrc_lookup will return the new current epoch (5)
- * 5 = qmrc_lookup(1)
+ * then qmrc__lookup will return the new current epoch (5)
+ * 5 = qmrc__lookup(1)
  */
 
 /* TODO: add optimization when epoch == epochs[0]. this should benefit skewed
  * workloads. */
 /* TODO: add support for object sizes. should be relatively simple */
 size_t
-qmrc_lookup(struct qmrc *qmrc, int epoch)
+qmrc__lookup(struct qmrc *qmrc, int epoch)
 {
     size_t sd = 0;
     int idx = -1;
@@ -281,7 +281,7 @@ qmrc_lookup(struct qmrc *qmrc, int epoch)
     }
 #endif /* QMRC_INTERPOLATE */
 
-    /* this code should be same as the bottom of qmrc_insert() */
+    /* this code should be same as the bottom of qmrc__insert() */
     if (unlikely(qmrc->counts[0] >= qmrc->epoch_limit))
         qmrc_merge(qmrc);
 
@@ -293,7 +293,7 @@ qmrc_lookup(struct qmrc *qmrc, int epoch)
 }
 
 int
-qmrc_insert(struct qmrc *qmrc)
+qmrc__insert(struct qmrc *qmrc)
 {
 #ifdef ASSERT
     assert(qmrc->total_keys <= qmrc->max_keys);
@@ -338,7 +338,7 @@ qmrc_lowerbound(struct qmrc *qmrc, int epoch)
 #define COUNTS_PER_CACHELINE (int)(CACHELINE_SIZE / sizeof(int))
 
 void
-qmrc_delete(struct qmrc *qmrc, int epoch)
+qmrc__delete(struct qmrc *qmrc, int epoch)
 {
 #ifndef QMRC_BINARY
     int idx = -1;
@@ -367,7 +367,7 @@ qmrc_delete(struct qmrc *qmrc, int epoch)
 }
 
 void
-qmrc_destroy(struct qmrc *qmrc)
+qmrc__destroy(struct qmrc *qmrc)
 {
 #ifdef ASSERT
     /* assuming that the cache is empty when this function is invoked,
@@ -378,5 +378,4 @@ qmrc_destroy(struct qmrc *qmrc)
 #endif /* ASSERT */
     free(qmrc->counts);
     free(qmrc->epochs);
-    free(qmrc);
 }
