@@ -31,6 +31,7 @@ bool
 EvictingQuickMRC__init(struct EvictingQuickMRC *const me,
                        double const init_sampling_ratio,
                        uint64_t const num_hash_buckets,
+                       uint64_t const num_qmrc_buckets,
                        uint64_t const histogram_num_bins,
                        uint64_t const histogram_bin_size,
                        enum HistogramOutOfBoundsMode const out_of_bounds_mode);

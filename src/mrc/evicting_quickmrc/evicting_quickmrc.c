@@ -11,8 +11,6 @@
 #endif
 #include "lookup/evicting_hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
-#include "tree/basic_tree.h"
-#include "tree/sleator_tree.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
@@ -24,13 +22,14 @@ static bool
 initialize(struct EvictingQuickMRC *const me,
            double const init_sampling_ratio,
            uint64_t const num_hash_buckets,
+           uint64_t const num_qmrc_buckets,
            uint64_t const histogram_num_bins,
            uint64_t const histogram_bin_size,
            enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     if (me == NULL)
         return false;
-    if (!qmrc_init(&me->qmrc, histogram_num_bins * histogram_bin_size, 128, 0))
+    if (!qmrc_init(&me->qmrc, num_hash_buckets, num_qmrc_buckets, 0))
         goto cleanup;
     if (!EvictingHashTable__init(&me->hash_table,
                                  num_hash_buckets,
@@ -58,29 +57,15 @@ bool
 EvictingQuickMRC__init(struct EvictingQuickMRC *const me,
                        const double init_sampling_ratio,
                        const uint64_t num_hash_buckets,
+                       uint64_t const num_qmrc_buckets,
                        const uint64_t histogram_num_bins,
-                       const uint64_t histogram_bin_size)
+                       uint64_t const histogram_bin_size,
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode)
 {
     return initialize(me,
                       init_sampling_ratio,
                       num_hash_buckets,
-                      histogram_num_bins,
-                      histogram_bin_size,
-                      HistogramOutOfBoundsMode__allow_overflow);
-}
-
-bool
-EvictingQuickMRC__init_full(
-    struct EvictingQuickMRC *const me,
-    double const init_sampling_ratio,
-    uint64_t const num_hash_buckets,
-    uint64_t const histogram_num_bins,
-    uint64_t const histogram_bin_size,
-    enum HistogramOutOfBoundsMode const out_of_bounds_mode)
-{
-    return initialize(me,
-                      init_sampling_ratio,
-                      num_hash_buckets,
+                      num_qmrc_buckets,
                       histogram_num_bins,
                       histogram_bin_size,
                       out_of_bounds_mode);
@@ -133,8 +118,7 @@ handle_replaced(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
     bool r = false;
     MAYBE_UNUSED(r);
 
-    r = qmrc_delete(&me->qmrc, s.old_value);
-    assert(r);
+    qmrc_delete(&me->qmrc, s.old_value);
     r = qmrc_insert(&me->qmrc);
     assert(r);
 
@@ -158,8 +142,7 @@ handle_updated(struct EvictingQuickMRC *me, struct SampledTryPutReturn s)
     MAYBE_UNUSED(r);
 
     distance = qmrc_lookup(&me->qmrc, (KeyType)s.old_value);
-    r = qmrc_delete(&me->qmrc, s.old_value);
-    assert(r);
+    qmrc_delete(&me->qmrc, s.old_value);
     r = qmrc_insert(&me->qmrc);
     assert(r);
 

@@ -40,9 +40,9 @@ struct qmrc {
 
 bool
 qmrc_init(struct qmrc *qmrc,
-          int log_hist_buckets,
-          int log_qmrc_buckets,
-          int log_epoch_limit);
+          size_t max_keys,
+          size_t nr_qmrc_buckets,
+          size_t epoch_limit);
 
 size_t
 qmrc_lookup(struct qmrc *qmrc, int epoch);
