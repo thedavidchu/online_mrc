@@ -1,4 +1,8 @@
-/** Taken from Ashvin Goel's QuickMRC implementation. */
+/** Taken from Ashvin Goel's QuickMRC implementation.
+ *
+ *  @note   I use the double-underscore naming convention to avoid link
+ *          errors because I duplicate Ashvin's function's names.
+ */
 #pragma once
 
 #include <stdbool.h>

@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
-#include "qmrc.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
@@ -17,6 +16,7 @@
 #include "unused/mark_unused.h"
 
 #include "evicting_quickmrc/evicting_quickmrc.h"
+#include "evicting_quickmrc/qmrc.h"
 
 static bool
 initialize(struct EvictingQuickMRC *const me,
