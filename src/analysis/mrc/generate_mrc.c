@@ -330,9 +330,23 @@ check_no_algorithms_match(struct RunnerArguments const *const array,
     return ok;
 }
 
+static void
+free_work_array(struct RunnerArgumentsArray *me)
+{
+    if (me == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < me->length; ++i) {
+        RunnerArguments__destroy(&me->data[i]);
+    }
+    free(me->data);
+    *me = (struct RunnerArgumentsArray){0};
+}
+
 static struct RunnerArgumentsArray
 create_work_array(struct CommandLineArguments const *const args)
 {
+    struct RunnerArgumentsArray r = {0};
     // Get length of allocation required
     size_t length = 0;
     if (args->oracle != NULL) {
@@ -393,21 +407,13 @@ create_work_array(struct CommandLineArguments const *const args)
     //              'Olken' does not use 'sampling' or 'max_size'.
     return (struct RunnerArgumentsArray){.data = array, .length = length};
 cleanup:
-    free(array);
-    return (struct RunnerArgumentsArray){.data = NULL, .length = 0};
-}
-
-static void
-free_work_array(struct RunnerArgumentsArray *me)
-{
-    if (me == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < me->length; ++i) {
-        RunnerArguments__destroy(&me->data[i]);
-    }
-    free(me->data);
-    *me = (struct RunnerArgumentsArray){0};
+    // NOTE It is OK to cleanup the array because calloc set all the
+    //      pointers to NULL so we are not doing anything bad.
+    r = (struct RunnerArgumentsArray){.data = array, .length = length};
+    free_work_array(&r);
+    // NOTE The 'free_work_array()' function should set 'r' to '{0}',
+    //      but I want to be very explicit that it will be '{0}'.
+    return (struct RunnerArgumentsArray){0};
 }
 
 static bool
