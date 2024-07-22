@@ -442,7 +442,7 @@ main(int argc, char **argv)
     struct RunnerArgumentsArray work = create_work_array(&args);
     if (work.data == NULL && work.length == 0) {
         LOGGER_INFO("error in creating work array");
-        goto cleanup;
+        goto cleanup_cmdln;
     }
 
     // Read in trace. This can be a very slow process.
@@ -455,7 +455,7 @@ main(int argc, char **argv)
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
                      (void *)trace.trace,
                      trace.length);
-        goto cleanup;
+        goto cleanup_work;
     }
     print_trace_summary(&args, &trace);
 
@@ -474,7 +474,7 @@ main(int argc, char **argv)
         struct MissRateCurve oracle_mrc = {0};
         if (!MissRateCurve__load(&oracle_mrc, work.data[0].mrc_path)) {
             LOGGER_ERROR("failed to load oracle MRC");
-            goto cleanup;
+            goto cleanup_trace;
         }
 
         // NOTE We start from 1 because the first spot is occupied by
@@ -519,6 +519,12 @@ main(int argc, char **argv)
     }
     LOGGER_INFO("=== SUCCESS ===");
     return EXIT_SUCCESS;
+cleanup_trace:
+    Trace__destroy(&trace);
+cleanup_work:
+    free_work_array(&work);
+cleanup_cmdln:
+    free_command_line_arguments(&args);
 cleanup:
     // NOTE I don't cleanup the memory because I count on the OS doing
     //      it and because some of the goto statements jump over
