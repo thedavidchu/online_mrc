@@ -96,7 +96,7 @@ fixed_rate_shards_test_exe = executable(
     ],
 )
 
-bucketed_shards_test_exe = executable(
+evicting_map_test_exe = executable(
     'evicting_map_test_exe',
     'evicting_map_test.c',
     include_directories: [
@@ -162,6 +162,6 @@ endif
 test('parda_fixed_rate_shards_test', parda_fixed_rate_shards_test_exe)
 test('fixed_rate_shards_test', fixed_rate_shards_test_exe)
 test('quickmrc_test', quickmrc_test_exe)
-test('bucketed_shards_test', bucketed_shards_test_exe)
+test('evicting_map_test', evicting_map_test_exe)
 test('bucketed_quickmrc_test', bucketed_quickmrc_test_exe)
 test('average_eviction_time_test', average_eviction_time_test_exe)
