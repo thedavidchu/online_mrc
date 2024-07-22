@@ -43,11 +43,15 @@ qmrc_init(struct qmrc *qmrc,
           int log_hist_buckets,
           int log_qmrc_buckets,
           int log_epoch_limit);
-int
+
+size_t
 qmrc_lookup(struct qmrc *qmrc, int epoch);
+
 int
 qmrc_insert(struct qmrc *qmrc);
+
 void
 qmrc_delete(struct qmrc *qmrc, int epoch);
+
 void
 qmrc_destroy(struct qmrc *qmrc);

@@ -219,7 +219,7 @@ hsum_8x32(__m256i v)
 /* TODO: add optimization when epoch == epochs[0]. this should benefit skewed
  * workloads. */
 /* TODO: add support for object sizes. should be relatively simple */
-int
+size_t
 qmrc_lookup(struct qmrc *qmrc, int epoch)
 {
     size_t sd = 0;
@@ -289,7 +289,7 @@ qmrc_lookup(struct qmrc *qmrc, int epoch)
     qmrc->counts[0]++;
 
     /* return current epoch */
-    return qmrc->epochs[0];
+    return sd;
 }
 
 int
