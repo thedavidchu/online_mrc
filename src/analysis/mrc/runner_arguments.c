@@ -181,6 +181,13 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
             return false;
         }
         return parse_bool(&me->shards_adj, value);
+    } else if (strcmp(param, "qmrc_size") == 0) {
+        char *value = strtok(NULL, ",)");
+        if (value == NULL) {
+            LOGGER_ERROR("invalid value for parameter '%s'", param);
+            return false;
+        }
+        return parse_positive_size(&me->qmrc_size, value);
     } else if (strcmp(param, "help") == 0) {
         print_help();
         return false;
@@ -203,17 +210,20 @@ RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
     //      simply forgotten (e.g. if I set the 'max_size' to 'SIZE_MAX',
     //      then by not setting it, I get an error on allocating the
     //      hash table for the Evicting Map).
-    *me = (struct RunnerArguments){.ok = false,
-                                   .algorithm = MRC_ALGORITHM_INVALID,
-                                   .mrc_path = NULL,
-                                   .hist_path = NULL,
-                                   .sampling_rate = 1.0,
-                                   .num_bins = 1 << 20,
-                                   .bin_size = 1,
-                                   .max_size = 1 << 13,
-                                   .out_of_bounds_mode =
-                                       HistogramOutOfBoundsMode__realloc,
-                                   .shards_adj = true};
+    *me = (struct RunnerArguments){
+        .ok = false,
+        .algorithm = MRC_ALGORITHM_INVALID,
+        .mrc_path = NULL,
+        .hist_path = NULL,
+        .sampling_rate = 1.0,
+        .num_bins = 1 << 20,
+        .bin_size = 1,
+        .max_size = 1 << 13,
+        .out_of_bounds_mode = HistogramOutOfBoundsMode__realloc,
+        .shards_adj = true,
+        // NOTE This should give us approximately 1% error.
+        .qmrc_size = 128,
+    };
     char *const garbage = strdup(str);
     if (garbage == NULL) {
         LOGGER_ERROR("bad strdup");

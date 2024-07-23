@@ -70,6 +70,8 @@ struct RunnerArguments {
     size_t max_size;
     enum HistogramOutOfBoundsMode out_of_bounds_mode;
     bool shards_adj;
+    // The number of buckets allotted to the QuickMRC buffers.
+    size_t qmrc_size;
 };
 
 /// @brief  Parse an initialization string.
