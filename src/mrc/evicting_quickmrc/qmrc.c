@@ -166,7 +166,7 @@ qmrc__init(struct qmrc *qmrc,
     assert(qmrc->merge);
 #endif /* STATS */
 
-    return false;
+    return true;
 }
 
 #ifndef QMRC_NO_AVX2
