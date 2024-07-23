@@ -15,6 +15,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_QUICKMRC,
     MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_EVICTING_MAP,
+    MRC_ALGORITHM_EVICTING_QUICKMRC,
     MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
     MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME,
 };
@@ -29,6 +30,7 @@ static char *algorithm_names[] = {
     "QuickMRC",
     "Goel-QuickMRC",
     "Evicting-Map",
+    "Evicting-QuickMRC",
     "Average-Eviction-Time",
     "Their-Average-Eviction-Time",
 };
