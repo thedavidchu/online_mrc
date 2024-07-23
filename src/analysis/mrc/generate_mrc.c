@@ -185,7 +185,7 @@ print_command_line_arguments(struct CommandLineArguments const *args)
             "length=%zu, oracle='%s', run=",
             args->executable,
             args->input_path,
-            algorithm_names[args->trace_format],
+            TRACE_FORMAT_STRINGS[args->trace_format],
             args->artificial_trace_length,
             maybe_string(args->oracle));
     if (args->run != NULL) {
