@@ -100,15 +100,15 @@ print_help(void)
             "<Algorithm>(mrc=<file>,hist=<file>,sampling=<float64-in-[0,1]>,"
             "num_bins=<positive-int>,bin_size=<positive-int>,"
             "max_size=<positive-int>,mode={allow_overflow,merge_bins,realloc},"
-            "adj={true,false})\n");
-    fprintf(LOGGER_STREAM,
-            "    Example: "
-            "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
-            "100,bin_size=100,max_size=8000,mode=realloc,adj=false)\n");
+            "adj={true,false},qmrc_size=<positive-int>)\n");
     fprintf(
         LOGGER_STREAM,
-        "    Notes: we reserve the use of the characters '(),='. There are no "
-        "white spaces since these will not be stripped.\n");
+        "    Example: "
+        "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
+        "100,bin_size=100,max_size=8000,mode=realloc,adj=false,qmrc_size=1)\n");
+    fprintf(LOGGER_STREAM,
+            "    Notes: we reserve the use of the characters '(),='. "
+            "White spaces are not stripped.\n");
 }
 
 static bool
@@ -271,7 +271,8 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
     }
     fprintf(fp,
             "RunnerArguments(algorithm=%s, mrc=%s, hist=%s, sampling=%g, "
-            "num_bins=%zu, bin_size=%zu, max_size=%zu, mode=%s, adj=%s)\n",
+            "num_bins=%zu, bin_size=%zu, max_size=%zu, mode=%s, adj=%s, "
+            "qmrc_size=%zu)\n",
             algorithm_names[me->algorithm],
             maybe_string(me->mrc_path),
             maybe_string(me->hist_path),
@@ -280,7 +281,8 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
             me->bin_size,
             me->max_size,
             HISTOGRAM_MODE_STRINGS[me->out_of_bounds_mode],
-            bool_to_string(me->shards_adj));
+            bool_to_string(me->shards_adj),
+            me->qmrc_size);
     return true;
 }
 
