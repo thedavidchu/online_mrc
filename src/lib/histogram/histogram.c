@@ -72,6 +72,41 @@ Histogram__init(struct Histogram *me,
     return true;
 }
 
+/// @brief  Check whether a histogram is properly initialized.
+/// @note   This function disallows any of the size fields to be zero.
+static bool
+is_initialized(struct Histogram const *const me)
+{
+    if (me == NULL) {
+        LOGGER_ERROR("Histogram is NULL");
+        return false;
+    }
+    if (me->num_bins == 0) {
+        LOGGER_ERROR("number of bins is 0");
+        return false;
+    }
+    if (me->bin_size == 0) {
+        LOGGER_ERROR("bin size is 0");
+        return false;
+    }
+    // NOTE We assert that the 'num_bins' is positive, so we cannot have
+    //      a NULL miss rate array.
+    //      Recall `me->num_bins > 0` => `me->histogram != NULL`
+    if (me->histogram == NULL) {
+        LOGGER_ERROR("array of frequencies is NULL");
+        return false;
+    }
+    // NOTE I hope the compiler optimizes this into a range comparison
+    //      or something actually intelligent.
+    if (me->out_of_bounds_mode != HistogramOutOfBoundsMode__allow_overflow &&
+        me->out_of_bounds_mode != HistogramOutOfBoundsMode__merge_bins &&
+        me->out_of_bounds_mode != HistogramOutOfBoundsMode__realloc) {
+        LOGGER_ERROR("invalid out of bounds mode!");
+        return false;
+    }
+    return true;
+}
+
 /// @brief  Double the size of each buckets to increase the histogram
 ///         range.
 /// @note   I stole the logic from Ashvin's QuickMRC histogram
@@ -212,7 +247,7 @@ Histogram__insert_scaled_finite(struct Histogram *me,
                                 const uint64_t index,
                                 const uint64_t scale)
 {
-    if (me == NULL || me->histogram == NULL || me->bin_size == 0) {
+    if (!is_initialized(me)) {
         return false;
     }
     if (!stretch_histogram_if_necessary(me, index, scale)) {
@@ -241,7 +276,7 @@ Histogram__insert_infinite(struct Histogram *me)
 bool
 Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
 {
-    if (me == NULL || me->histogram == NULL) {
+    if (!is_initialized(me)) {
         return false;
     }
     me->infinity += scale;
@@ -252,7 +287,7 @@ Histogram__insert_scaled_infinite(struct Histogram *me, const uint64_t scale)
 uint64_t
 Histogram__calculate_running_sum(struct Histogram *me)
 {
-    if (me == NULL) {
+    if (!is_initialized(me)) {
         return 0;
     }
 
@@ -267,7 +302,7 @@ Histogram__calculate_running_sum(struct Histogram *me)
 void
 Histogram__clear(struct Histogram *const me)
 {
-    if (me == NULL) {
+    if (!is_initialized(me)) {
         return;
     }
 
@@ -415,7 +450,7 @@ Histogram__debug_difference(struct Histogram *me,
 bool
 Histogram__adjust_first_buckets(struct Histogram *me, int64_t const adjustment)
 {
-    if (me == NULL || me->num_bins < 1 || me->bin_size < 1)
+    if (!is_initialized(me))
         return false;
 
     // NOTE SHARDS-Adj only adds to the first bucket; but what if the
@@ -577,8 +612,7 @@ read_sparse_histogram(FILE *fp, struct Histogram *const me)
 bool
 Histogram__save(struct Histogram const *const me, char const *const path)
 {
-    if (me == NULL || path == NULL || me->histogram == NULL ||
-        me->num_bins == 0 || me->bin_size == 0) {
+    if (!is_initialized(me) || path == NULL) {
         return false;
     }
 
