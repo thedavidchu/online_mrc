@@ -119,10 +119,10 @@ qmrc_merge(struct qmrc *qmrc)
  * considered full and a new epoch is created. If it is 0, we adapt it.
  */
 bool
-qmrc_init(struct qmrc *qmrc,
-          size_t max_keys,
-          size_t nr_qmrc_buckets,
-          size_t epoch_limit)
+qmrc__init(struct qmrc *qmrc,
+           size_t max_keys,
+           size_t nr_qmrc_buckets,
+           size_t epoch_limit)
 {
     size_t alloc_size = 0;
     if (!qmrc)
