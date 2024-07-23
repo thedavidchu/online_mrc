@@ -96,7 +96,7 @@ fixed_rate_shards_test_exe = executable(
     ],
 )
 
-bucketed_shards_test_exe = executable(
+evicting_map_test_exe = executable(
     'evicting_map_test_exe',
     'evicting_map_test.c',
     include_directories: [
@@ -105,6 +105,24 @@ bucketed_shards_test_exe = executable(
     dependencies: [
         glib_dep,
         evicting_map_dep,
+        shards_dep,
+        hash_dep,
+        histogram_dep,
+        miss_rate_curve_dep,
+        zipfian_random_dep,
+        olken_dep,
+    ],
+)
+
+evicting_quickmrc_test_exe = executable(
+    'evicting_quickmrc_test_exe',
+    'evicting_quickmrc_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        glib_dep,
+        evicting_quickmrc_dep,
         shards_dep,
         hash_dep,
         histogram_dep,
@@ -162,6 +180,7 @@ endif
 test('parda_fixed_rate_shards_test', parda_fixed_rate_shards_test_exe)
 test('fixed_rate_shards_test', fixed_rate_shards_test_exe)
 test('quickmrc_test', quickmrc_test_exe)
-test('bucketed_shards_test', bucketed_shards_test_exe)
+test('evicting_map_test', evicting_map_test_exe)
+test('evicting_quickmrc_test', evicting_quickmrc_test_exe)
 test('bucketed_quickmrc_test', bucketed_quickmrc_test_exe)
 test('average_eviction_time_test', average_eviction_time_test_exe)
