@@ -199,7 +199,7 @@ run_evicting_quickmrc(struct RunnerArguments const *const args,
     if (!EvictingQuickMRC__init(&me,
                                 args->sampling_rate,
                                 args->max_size,
-                                128,
+                                args->qmrc_size,
                                 args->num_bins,
                                 args->bin_size,
                                 args->out_of_bounds_mode)) {
