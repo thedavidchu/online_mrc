@@ -15,6 +15,7 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_QUICKMRC,
     MRC_ALGORITHM_GOEL_QUICKMRC,
     MRC_ALGORITHM_EVICTING_MAP,
+    MRC_ALGORITHM_EVICTING_QUICKMRC,
     MRC_ALGORITHM_AVERAGE_EVICTION_TIME,
     MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME,
 };
@@ -29,6 +30,7 @@ static char *algorithm_names[] = {
     "QuickMRC",
     "Goel-QuickMRC",
     "Evicting-Map",
+    "Evicting-QuickMRC",
     "Average-Eviction-Time",
     "Their-Average-Eviction-Time",
 };
@@ -60,14 +62,30 @@ struct RunnerArguments {
     bool ok;
 
     enum MRCAlgorithm algorithm;
+    // The path to save the generated MRC.
+    // TODO Include an 'overwrite' argument, which determines whether we
+    //      use this path as an input (to simply calculate the accuracy)
+    //      or an output (to save the generated MRC).
     char *mrc_path;
+    // Similar to above but for the histogram.
     char *hist_path;
+    // The initial rate at which to sample.
     double sampling_rate;
+    // The initial number of bins in the histogram.
     size_t num_bins;
+    // The initial size of each histogram bin.
     size_t bin_size;
+    // The maximum number of unique elements to track.
     size_t max_size;
+    // How to deal with histogram values that are larger than the array.
     enum HistogramOutOfBoundsMode out_of_bounds_mode;
+    // Whether to adjust fixed-rate SHARDS to make up for the descrepancy
+    // between the number of entries sampled and the expected number of
+    // samples.
+    // TODO Enable this for fixed-size SHARDS.
     bool shards_adj;
+    // The number of buckets allotted to the QuickMRC buffers.
+    size_t qmrc_size;
 };
 
 /// @brief  Parse an initialization string.

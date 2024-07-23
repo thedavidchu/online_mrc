@@ -100,15 +100,15 @@ print_help(void)
             "<Algorithm>(mrc=<file>,hist=<file>,sampling=<float64-in-[0,1]>,"
             "num_bins=<positive-int>,bin_size=<positive-int>,"
             "max_size=<positive-int>,mode={allow_overflow,merge_bins,realloc},"
-            "adj={true,false})\n");
-    fprintf(LOGGER_STREAM,
-            "    Example: "
-            "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
-            "100,bin_size=100,max_size=8000,mode=realloc,adj=false)\n");
+            "adj={true,false},qmrc_size=<positive-int>)\n");
     fprintf(
         LOGGER_STREAM,
-        "    Notes: we reserve the use of the characters '(),='. There are no "
-        "white spaces since these will not be stripped.\n");
+        "    Example: "
+        "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
+        "100,bin_size=100,max_size=8000,mode=realloc,adj=false,qmrc_size=1)\n");
+    fprintf(LOGGER_STREAM,
+            "    Notes: we reserve the use of the characters '(),='. "
+            "White spaces are not stripped.\n");
 }
 
 static bool
@@ -181,6 +181,13 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
             return false;
         }
         return parse_bool(&me->shards_adj, value);
+    } else if (strcmp(param, "qmrc_size") == 0) {
+        char *value = strtok(NULL, ",)");
+        if (value == NULL) {
+            LOGGER_ERROR("invalid value for parameter '%s'", param);
+            return false;
+        }
+        return parse_positive_size(&me->qmrc_size, value);
     } else if (strcmp(param, "help") == 0) {
         print_help();
         return false;
@@ -203,17 +210,20 @@ RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
     //      simply forgotten (e.g. if I set the 'max_size' to 'SIZE_MAX',
     //      then by not setting it, I get an error on allocating the
     //      hash table for the Evicting Map).
-    *me = (struct RunnerArguments){.ok = false,
-                                   .algorithm = MRC_ALGORITHM_INVALID,
-                                   .mrc_path = NULL,
-                                   .hist_path = NULL,
-                                   .sampling_rate = 1.0,
-                                   .num_bins = 1 << 20,
-                                   .bin_size = 1,
-                                   .max_size = 1 << 13,
-                                   .out_of_bounds_mode =
-                                       HistogramOutOfBoundsMode__realloc,
-                                   .shards_adj = true};
+    *me = (struct RunnerArguments){
+        .ok = false,
+        .algorithm = MRC_ALGORITHM_INVALID,
+        .mrc_path = NULL,
+        .hist_path = NULL,
+        .sampling_rate = 1.0,
+        .num_bins = 1 << 20,
+        .bin_size = 1,
+        .max_size = 1 << 13,
+        .out_of_bounds_mode = HistogramOutOfBoundsMode__realloc,
+        .shards_adj = true,
+        // NOTE This should give us approximately 1% error.
+        .qmrc_size = 128,
+    };
     char *const garbage = strdup(str);
     if (garbage == NULL) {
         LOGGER_ERROR("bad strdup");
@@ -261,7 +271,8 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
     }
     fprintf(fp,
             "RunnerArguments(algorithm=%s, mrc=%s, hist=%s, sampling=%g, "
-            "num_bins=%zu, bin_size=%zu, max_size=%zu, mode=%s, adj=%s)\n",
+            "num_bins=%zu, bin_size=%zu, max_size=%zu, mode=%s, adj=%s, "
+            "qmrc_size=%zu)\n",
             algorithm_names[me->algorithm],
             maybe_string(me->mrc_path),
             maybe_string(me->hist_path),
@@ -270,7 +281,8 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
             me->bin_size,
             me->max_size,
             HISTOGRAM_MODE_STRINGS[me->out_of_bounds_mode],
-            bool_to_string(me->shards_adj));
+            bool_to_string(me->shards_adj),
+            me->qmrc_size);
     return true;
 }
 

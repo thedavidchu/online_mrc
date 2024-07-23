@@ -15,6 +15,7 @@ trace_runner_lib = library(
     dependencies: [
         average_eviction_time_dep,
         evicting_map_dep,
+        evicting_quickmrc_dep,
         common_dep,
         shards_dep,
         glib_dep,

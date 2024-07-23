@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "evicting_map/evicting_map.h"
+#include "evicting_quickmrc/evicting_quickmrc.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -190,6 +191,33 @@ run_evicting_map(struct RunnerArguments const *const args,
         (void (*)(void *const))EvictingMap__destroy);
 }
 
+static bool
+run_evicting_quickmrc(struct RunnerArguments const *const args,
+                      struct Trace const *const trace)
+{
+    struct EvictingQuickMRC me = {0};
+    if (!EvictingQuickMRC__init(&me,
+                                args->sampling_rate,
+                                args->max_size,
+                                args->qmrc_size,
+                                args->num_bins,
+                                args->bin_size,
+                                args->out_of_bounds_mode)) {
+        LOGGER_ERROR("initialization failed!");
+        return false;
+    }
+
+    return trace_runner(
+        &me,
+        args,
+        trace,
+        (bool (*)(void *const, uint64_t const))EvictingQuickMRC__access_item,
+        (bool (*)(void *const))EvictingQuickMRC__post_process,
+        (bool (*)(void *const, struct Histogram const **const))
+            EvictingQuickMRC__get_histogram,
+        (void (*)(void *const))EvictingQuickMRC__destroy);
+}
+
 bool
 run_runner(struct RunnerArguments const *const args,
            struct Trace const *const trace)
@@ -221,6 +249,11 @@ run_runner(struct RunnerArguments const *const args,
     case MRC_ALGORITHM_EVICTING_MAP:
         if (!run_evicting_map(args, trace)) {
             LOGGER_WARN("Evicting Map failed");
+        }
+        return true;
+    case MRC_ALGORITHM_EVICTING_QUICKMRC:
+        if (!run_evicting_quickmrc(args, trace)) {
+            LOGGER_WARN("Evicting QuickMRC failed");
         }
         return true;
     case MRC_ALGORITHM_QUICKMRC:
