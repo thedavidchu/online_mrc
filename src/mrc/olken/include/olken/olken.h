@@ -15,7 +15,7 @@
 
 struct Olken {
     struct Tree tree;
-    struct HashTable hash_table;
+    struct KHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
 };

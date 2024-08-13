@@ -28,7 +28,7 @@ initialize(struct Olken *const me,
     if (!tree__init(&me->tree)) {
         goto tree_error;
     }
-    if (!HashTable__init(&me->hash_table)) {
+    if (!KHashTable__init(&me->hash_table)) {
         goto hash_table_error;
     }
     if (!Histogram__init(&me->histogram,
@@ -41,7 +41,7 @@ initialize(struct Olken *const me,
     return true;
 
 histogram_error:
-    HashTable__destroy(&me->hash_table);
+    KHashTable__destroy(&me->hash_table);
 hash_table_error:
     tree__destroy(&me->tree);
 tree_error:
@@ -73,7 +73,7 @@ Olken__init_full(struct Olken *const me,
 bool
 Olken__remove_item(struct Olken *me, EntryType entry)
 {
-    struct LookupReturn r = HashTable__remove(&me->hash_table, entry);
+    struct LookupReturn r = KHashTable__remove(&me->hash_table, entry);
     if (!r.success) {
         return false;
     }
@@ -101,7 +101,9 @@ Olken__update_stack(struct Olken *me, EntryType entry, TimeStampType timestamp)
     if (!tree__sleator_insert(&me->tree, me->current_time_stamp)) {
         return UINT64_MAX;
     }
-    if (HashTable__put_unique(&me->hash_table, entry, me->current_time_stamp) !=
+    if (KHashTable__put_unique(&me->hash_table,
+                               entry,
+                               me->current_time_stamp) !=
         LOOKUP_PUTUNIQUE_REPLACE_VALUE) {
         return UINT64_MAX;
     }
@@ -115,7 +117,9 @@ Olken__insert_stack(struct Olken *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
-    if (HashTable__put_unique(&me->hash_table, entry, me->current_time_stamp) !=
+    if (KHashTable__put_unique(&me->hash_table,
+                               entry,
+                               me->current_time_stamp) !=
         LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
         return false;
     }
@@ -133,7 +137,7 @@ Olken__access_item(struct Olken *const me, EntryType const entry)
         return false;
     }
 
-    struct LookupReturn found = HashTable__lookup(&me->hash_table, entry);
+    struct LookupReturn found = KHashTable__lookup(&me->hash_table, entry);
     if (found.success) {
         uint64_t distance = Olken__update_stack(me, entry, found.timestamp);
         if (distance == UINT64_MAX) {
@@ -184,7 +188,7 @@ Olken__destroy(struct Olken *const me)
         return;
     }
     tree__destroy(&me->tree);
-    HashTable__destroy(&me->hash_table);
+    KHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
     *me = (struct Olken){0};
 }
