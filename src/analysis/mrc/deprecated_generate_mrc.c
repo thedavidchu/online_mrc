@@ -224,7 +224,7 @@ parse_positive_double(char const *const str)
 static void
 print_command_line_arguments(struct CommandLineArguments const *args)
 {
-    fprintf(stderr,
+    fprintf(stdout,
             "CommandLineArguments(executable='%s', input_path='%s', "
             "algorithm='%s', output_path='%s', shards_ratio='%g', "
             "artifical_trace_length='%zu', oracle_path='%s', "
