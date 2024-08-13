@@ -16,7 +16,7 @@
 
 struct Olken {
     struct Tree tree;
-    struct HashTable hash_table;
+    struct KHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
 };
@@ -81,7 +81,7 @@ Olken__get_histogram(struct Olken const *const me,
 inline size_t
 Olken__get_cardinality(struct Olken const *const me)
 {
-    return HashTable__get_size(&me->hash_table);
+    return KHashTable__get_size(&me->hash_table);
 }
 
 /// @brief  Lookup a value in Olken.
@@ -90,7 +90,7 @@ Olken__get_cardinality(struct Olken const *const me)
 inline struct LookupReturn
 Olken__lookup(struct Olken const *const me, EntryType const key)
 {
-    return HashTable__lookup(&me->hash_table, key);
+    return KHashTable__lookup(&me->hash_table, key);
 }
 
 /// @brief  Lookup a value in Olken.
@@ -101,5 +101,5 @@ Olken__put(struct Olken *const me,
            EntryType const key,
            TimeStampType const value)
 {
-    return HashTable__put_unique(&me->hash_table, key, value);
+    return KHashTable__put_unique(&me->hash_table, key, value);
 }
