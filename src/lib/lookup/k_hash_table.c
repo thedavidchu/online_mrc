@@ -7,7 +7,6 @@
 #include <stdio.h>
 
 #include "khash.h"
-#include "logger/logger.h"
 #include "lookup/lookup.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
