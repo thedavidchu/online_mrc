@@ -11,6 +11,7 @@
 #include "test/mytester.h"
 #include "trace/generator.h"
 #include "trace/trace.h"
+#include "unused/mark_unused.h"
 
 static bool
 access_same_key_five_times(void)
