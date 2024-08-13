@@ -19,7 +19,7 @@
 KHASH_MAP_INIT_INT64(64, uint64_t)
 
 bool
-KHashTable__init(struct KHashTable *me)
+KHashTable__init(struct KHashTable *const me)
 {
     if (me == NULL)
         return false;

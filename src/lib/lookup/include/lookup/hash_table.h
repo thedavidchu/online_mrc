@@ -14,22 +14,24 @@ struct HashTable {
 };
 
 bool
-HashTable__init(struct HashTable *me);
+HashTable__init(struct HashTable *const me);
 
 size_t
 HashTable__get_size(struct HashTable const *const me);
 
 struct LookupReturn
-HashTable__lookup(struct HashTable *me, EntryType key);
+HashTable__lookup(struct HashTable const *const me, EntryType const key);
 
 enum PutUniqueStatus
-HashTable__put_unique(struct HashTable *me, EntryType key, TimeStampType value);
+HashTable__put_unique(struct HashTable *const me,
+                      EntryType const key,
+                      TimeStampType const value);
 
 struct LookupReturn
 HashTable__remove(struct HashTable *const me, EntryType const key);
 
 void
-HashTable__write_as_json(FILE *stream, struct HashTable const *const me);
+HashTable__write_as_json(FILE *const stream, struct HashTable const *const me);
 
 void
-HashTable__destroy(struct HashTable *me);
+HashTable__destroy(struct HashTable *const me);

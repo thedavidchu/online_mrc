@@ -22,7 +22,7 @@ struct KHashTable {
 };
 
 bool
-KHashTable__init(struct KHashTable *me);
+KHashTable__init(struct KHashTable *const me);
 
 size_t
 KHashTable__get_size(struct KHashTable const *const me);
