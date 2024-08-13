@@ -1,3 +1,11 @@
+/* All text besides this comment belong to the original text. I chose to copy
+ * the file directly rather than creating a submodule for expediency.
+ *
+ * Retrival Information:
+ * Date/Time: 2024 Aug 13 at 10 AM
+ * URL: https://github.com/attractivechaos/klib/blob/master/khash.h
+ * Commit hash: 29445495262cf34f4c3b82d3917ac83f3e1f3f58
+ */
 /* The MIT License
 
    Copyright (c) 2008, 2009, 2011 by Attractive Chaos <attractor@live.co.uk>
