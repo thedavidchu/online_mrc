@@ -39,6 +39,8 @@ compare_mrc_exe = executable(
     ],
 )
 
+test('compare_mrc_test', compare_mrc_exe, args: '-h')
+
 generate_mrc_exe = executable(
     'generate_mrc_exe',
     'generate_mrc.c',
