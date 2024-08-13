@@ -6,6 +6,7 @@
 
 #include "histogram/histogram.h"
 #include "lookup/hash_table.h"
+#include "lookup/k_hash_table.h"
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -13,6 +14,7 @@
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
+#include "unused/mark_unused.h"
 
 static bool
 initialize(struct Olken *const me,
