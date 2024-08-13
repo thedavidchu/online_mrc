@@ -7,17 +7,16 @@
 #include <stdio.h>
 
 #include "khash.h"
+#include "lookup/k_hash_table.h"
 #include "lookup/lookup.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
+// NOTE If I were to put this in the header, then I would be dumping
+//      a whole whack of unwanted symbols into the header namespace.
+//      I did have to do some sketchy stuff, such as directly using the
+//      post-macro names of structures for the proper forward declaration.
 KHASH_MAP_INIT_INT64(64, uint64_t)
-
-/// @brief  This implemenents a hash table with key and values of type
-///         uint64_t. It uses the klib library backend.
-struct KHashTable {
-    khash_t(64) * hash_table;
-};
 
 bool
 KHashTable__init(struct KHashTable *me)

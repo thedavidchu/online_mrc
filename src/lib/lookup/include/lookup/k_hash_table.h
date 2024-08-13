@@ -1,19 +1,24 @@
+#pragma once
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "khash.h"
 #include "lookup/lookup.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-KHASH_MAP_INIT_INT64(64, uint64_t)
+// HACK This is the post-macro name of the khash_t(64). This is simply
+//      to avoid dumping the namespace of 'khash.h' into all downstream
+//      headers. In theory, this is a pointer anyways, so maybe I can
+//      just have a 'void *'. Who knows?
+struct kh_64_s;
 
 /// @brief  This implemenents a hash table with key and values of type
 ///         uint64_t. It uses the klib library backend.
 struct KHashTable {
-    khash_t(64) * hash_table;
+    struct kh_64_s *hash_table;
 };
 
 bool
