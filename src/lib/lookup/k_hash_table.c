@@ -36,7 +36,7 @@ KHashTable__get_size(struct KHashTable const *const me)
 }
 
 struct LookupReturn
-KHashTable__lookup(struct KHashTable *me, EntryType key)
+KHashTable__lookup(struct KHashTable const *const me, EntryType key)
 {
     if (me == NULL || me->hash_table == NULL)
         return (struct LookupReturn){.success = false, .timestamp = 0};
@@ -48,9 +48,9 @@ KHashTable__lookup(struct KHashTable *me, EntryType key)
 
 /// @return Returns whether we inserted, replaced, or errored.
 enum PutUniqueStatus
-KHashTable__put_unique(struct KHashTable *me,
-                       EntryType key,
-                       TimeStampType value)
+KHashTable__put_unique(struct KHashTable *const me,
+                       EntryType const key,
+                       TimeStampType const value)
 {
 
     if (me == NULL || me->hash_table == NULL)
@@ -116,7 +116,7 @@ KHashTable__write(struct KHashTable const *const me,
 }
 
 void
-KHashTable__destroy(struct KHashTable *me)
+KHashTable__destroy(struct KHashTable *const me)
 {
     if (me == NULL || me->hash_table == NULL)
         return;

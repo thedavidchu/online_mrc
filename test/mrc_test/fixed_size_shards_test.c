@@ -108,7 +108,7 @@ long_accuracy_trace_test(void)
         Olken__access_item(&oracle, entry);
         FixedSizeShards__access_item(&me, entry);
         // Verify the fixed size of this method
-        g_assert_cmpuint(HashTable__get_size(&me.olken.hash_table),
+        g_assert_cmpuint(Olken__get_cardinality(&me.olken),
                          <=,
                          me.sampler.pq.capacity);
         g_assert_cmpuint(me.olken.tree.cardinality, <=, me.sampler.pq.capacity);

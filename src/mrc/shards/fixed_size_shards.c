@@ -9,7 +9,6 @@
 #include "interval_statistics/interval_statistics.h"
 #endif
 #include "logger/logger.h"
-#include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -17,6 +16,7 @@
 #include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
+#include "unused/mark_unused.h"
 
 static bool
 initialize(struct FixedSizeShards *const me,
@@ -162,7 +162,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
         return false;
     }
 
-    struct LookupReturn r = HashTable__lookup(&me->olken.hash_table, entry);
+    struct LookupReturn r = Olken__lookup(&me->olken, entry);
     if (r.success) {
         return update_item(me, entry, r.timestamp);
     } else {

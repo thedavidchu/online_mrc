@@ -7,7 +7,6 @@
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
-#include "random/zipfian_random.h"
 #include "test/mytester.h"
 #include "trace/generator.h"
 #include "trace/trace.h"

@@ -28,13 +28,13 @@ size_t
 KHashTable__get_size(struct KHashTable const *const me);
 
 struct LookupReturn
-KHashTable__lookup(struct KHashTable *me, EntryType key);
+KHashTable__lookup(struct KHashTable const *const me, EntryType key);
 
 /// @return Returns whether we inserted, replaced, or errored.
 enum PutUniqueStatus
-KHashTable__put_unique(struct KHashTable *me,
-                       EntryType key,
-                       TimeStampType value);
+KHashTable__put_unique(struct KHashTable *const me,
+                       EntryType const key,
+                       TimeStampType const value);
 
 struct LookupReturn
 KHashTable__remove(struct KHashTable *const me, EntryType const key);
@@ -45,4 +45,4 @@ KHashTable__write(struct KHashTable const *const me,
                   bool const newline);
 
 void
-KHashTable__destroy(struct KHashTable *me);
+KHashTable__destroy(struct KHashTable *const me);
