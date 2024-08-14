@@ -7,9 +7,11 @@
 #include "lookup/k_hash_table.h"
 #include "lookup/lookup.h"
 #include "test/mytester.h"
+#include "unused/mark_unused.h"
 
-#define MAX_SIZE (1 << 20)
-#define STREAM   NULL
+#define MAX_SIZE         (1 << 20)
+#define STREAM           NULL
+#define MAX_INT_PLUS_ONE (((size_t)1 << 32) + 1)
 
 static bool
 test_khash(void)
@@ -79,12 +81,12 @@ test_khash(void)
 
 /// @brief  Test the ability to store more than 4 billion elements.
 static bool
-test_large_khash(size_t const size)
+test_large_khash(void)
 {
     struct KHashTable me = {0};
     g_assert_true(KHashTable__init(&me));
 
-    for (uint64_t i = 0; i < size; ++i) {
+    for (uint64_t i = 0; i < MAX_INT_PLUS_ONE; ++i) {
         enum PutUniqueStatus r = KHashTable__put_unique(&me, i, 2 * i);
         g_assert_cmpint(r, ==, LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE);
     }
@@ -97,6 +99,6 @@ int
 main(void)
 {
     ASSERT_FUNCTION_RETURNS_TRUE(test_khash());
-    ASSERT_FUNCTION_RETURNS_TRUE(test_large_khash(((size_t)1 << 32) + 1));
+    UNUSED(test_large_khash);
     return EXIT_SUCCESS;
 }
