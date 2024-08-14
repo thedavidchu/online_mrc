@@ -95,7 +95,7 @@ KHashTable__write(struct KHashTable const *const me,
                   FILE *const stream,
                   bool const newline)
 {
-    if (me == NULL || me->hash_table == NULL)
+    if (me == NULL || me->hash_table == NULL || stream == NULL)
         return false;
     fprintf(stream, "{");
     for (khiter_t k = kh_begin(me->hash_table); k != kh_end(me->hash_table);
