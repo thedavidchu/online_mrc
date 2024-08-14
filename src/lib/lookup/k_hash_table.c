@@ -42,6 +42,9 @@ KHashTable__lookup(struct KHashTable const *const me, EntryType key)
         return (struct LookupReturn){.success = false, .timestamp = 0};
     khiter_t k = kh_get(64, me->hash_table, key);
     bool found = (k != kh_end(me->hash_table));
+    if (!found) {
+        return (struct LookupReturn){.success = found, .timestamp = 0};
+    }
     uint64_t value = kh_value(me->hash_table, k);
     return (struct LookupReturn){.success = found, .timestamp = value};
 }
