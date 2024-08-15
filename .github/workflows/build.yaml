@@ -25,7 +25,7 @@ jobs:
       - run: |
           sudo mkdir /usr/local/include/boost
           ll /usr/local/include
-          sudo chmod o+wx /usr/local/include/boost
+          sudo chmod a+rwx /usr/local/include/boost
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
