@@ -47,9 +47,11 @@ jobs:
           echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
           BOOST_ROOT=/usr/include/boost/boost
           echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
+      - run: echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
       - run: meson setup builddir/
         env:
           CC: gcc
+          BOOST_ROOT: /usr/include/boost/boost
       - run: meson test -C builddir/ -v
       - uses: actions/upload-artifact@v1
         if: failure()
