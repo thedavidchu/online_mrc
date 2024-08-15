@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install meson ninja
+      # HACK  You're not supposed to add non-package-manager controlled
+      #       packages to '/usr/include', but I can't get Meson to
+      #       detect it otherwise!
       - run: sudo chmod a+rwx /usr/include
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
