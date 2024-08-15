@@ -42,12 +42,6 @@ jobs:
             arch: x86
             # NOTE: If a boost version matching all requirements cannot be found,
             # this build step will fail
-      - run: |
-          ls /usr/include/boost
-          echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
-          BOOST_ROOT=/usr/include/boost/boost
-          echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
-      - run: echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
       - run: meson setup builddir/
         env:
           CC: gcc
