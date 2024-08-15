@@ -20,10 +20,6 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install meson ninja
-      # HACK  You're not supposed to add non-package-manager controlled
-      #       packages to '/usr/include', but I can't get Meson to
-      #       detect it otherwise!
-      - run: sudo chmod a+rwx /usr/include
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
@@ -35,7 +31,7 @@ jobs:
             # OPTIONAL: Specify a platform version
             platform_version: 22.04
             # OPTIONAL: Specify a custom install location
-            boost_install_dir: /usr/include
+            boost_install_dir: ${{github.workspace}}
             # OPTIONAL: Specify a toolset
             toolset: gcc
             # OPTIONAL: Specify an architecture
@@ -45,7 +41,10 @@ jobs:
       - run: meson setup builddir/
         env:
           CC: gcc
-          BOOST_ROOT: /usr/include/boost/boost
+          # NOTE  For some reason, the environment variables are not
+          #       transferred between runs, so I have to set the
+          #       'BOOST_ROOT' for the C++ Boost library manually.
+          BOOST_ROOT: ${{github.workspace}}
       - run: meson test -C builddir/ -v
       - uses: actions/upload-artifact@v1
         if: failure()
