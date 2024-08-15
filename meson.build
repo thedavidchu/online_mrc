@@ -30,7 +30,11 @@ thread_dep = dependency('threads')
 
 # We require the version to be newer than 1.81.0 so that it includes
 # Boost's 'boost/unordered/unordered_flat_map.hpp' file.
-boost_dep = dependency('boost', version: '>=1.81.0')
+# boost_dep = dependency('boost', version: '>=1.81.0')
+cxx = meson.get_compiler('cpp', native: true)
+boost_dep = [
+    cxx.find_library('boost_unordered'),
+]
 glib_dep = dependency(
     'glib-2.0',
     default_options: [
