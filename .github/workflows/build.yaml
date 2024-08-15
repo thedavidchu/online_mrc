@@ -24,7 +24,7 @@ jobs:
       - run: |
           sudo apt-get -y update
           sudo apt-get -y upgrade
-          sudo apt-get -y install libboost-dev
+          sudo apt-get -y install libboost-all-dev
       - run: meson setup builddir/
         env:
           CC: gcc
