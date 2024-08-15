@@ -20,6 +20,7 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install meson ninja
+      - run: BOOST_ROOT=${{github.workspace}}
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
@@ -31,7 +32,7 @@ jobs:
             # OPTIONAL: Specify a platform version
             platform_version: 22.04
             # OPTIONAL: Specify a custom install location
-            boost_install_dir: /usr/local/include
+            boost_install_dir: ${{github.workspace}}
             # OPTIONAL: Specify a toolset
             toolset: gcc
             # OPTIONAL: Specify an architecture

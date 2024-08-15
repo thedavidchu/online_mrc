@@ -28,7 +28,9 @@ cc = meson.get_compiler('c', native: true)
 math_dep = cc.find_library('m', required: false)
 thread_dep = dependency('threads')
 
-boost_dep = dependency('boost')
+# We require the version to be newer than 1.81.0 so that it includes
+# Boost's 'boost/unordered/unordered_flat_map.hpp' file.
+boost_dep = dependency('boost', version: '>=1.81.0')
 glib_dep = dependency(
     'glib-2.0',
     default_options: [
