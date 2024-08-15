@@ -1,3 +1,16 @@
+boost_hash_table_test_exe = executable(
+    'boost_hash_table_test_exe',
+    'boost_hash_table_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        common_dep,
+        glib_dep,
+        lookup_dep,
+    ],
+)
+
 k_hash_table_test_exe = executable(
     'k_hash_table_test_exe',
     'k_hash_table_test.c',
@@ -52,6 +65,7 @@ evicting_lookup_test_exe = executable(
     ],
 )
 
+test('boost_hash_table_test', boost_hash_table_test_exe)
 test('k_hash_table_test', k_hash_table_test_exe)
 test('lookup_test', lookup_test_exe)
 test('parallel_lookup_test', parallel_lookup_test_exe)

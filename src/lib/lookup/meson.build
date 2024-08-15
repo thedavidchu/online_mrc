@@ -8,6 +8,7 @@ lookup_lib = library(
         'parallel_list.c',
         'evicting_hash_table.c',
         'k_hash_table.c',
+        'boost_hash_table.cpp',
     ],
     dependencies: [
         common_dep,
