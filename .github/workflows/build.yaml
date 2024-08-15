@@ -23,8 +23,8 @@ jobs:
       # NOTE  I couldn't get the Boost installation to download into
       #       /usr/local/include (i.e. the standard path), so I instead
       - run: |
-          sudo mkdir /usr/local/include/boost
-          sudo chmod a+rwx /usr/local/include/boost
+          sudo chmod a+rwx /usr/local/include
+          PATH=$PATH:/usr/local/include/boost:/usr/local/include
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
