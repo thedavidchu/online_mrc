@@ -43,11 +43,8 @@ jobs:
             # NOTE: If a boost version matching all requirements cannot be found,
             # this build step will fail
       - run: |
-          echo ---
-          echo ----
           ls /usr/include/boost
-          echo -----
-          echo ------
+          echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
       - run: meson setup builddir/
         env:
           CC: gcc
