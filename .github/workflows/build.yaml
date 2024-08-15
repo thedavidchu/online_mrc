@@ -45,6 +45,8 @@ jobs:
       - run: |
           ls /usr/include/boost
           echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
+          BOOST_ROOT=/usr/include/boost/boost
+          echo $BOOST_ROOT $BOOST_INCLUDEDIR $BOOST_LIBRARYDIR
       - run: meson setup builddir/
         env:
           CC: gcc
