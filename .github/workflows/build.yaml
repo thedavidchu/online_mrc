@@ -24,7 +24,7 @@ jobs:
       #       /usr/local/include (i.e. the standard path), so I instead
       - run: |
           sudo mkdir /usr/local/include/boost
-          ll /usr/local/include
+          ls /usr/local/include
           sudo chmod a+rwx /usr/local/include/boost
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
