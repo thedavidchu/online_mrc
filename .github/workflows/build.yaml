@@ -25,7 +25,9 @@ jobs:
       #       detect it otherwise!
       - run: sudo chmod a+rwx /usr/include
       - run: |
+          echo ---
           ls /usr/include
+          echo ----
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
@@ -45,9 +47,13 @@ jobs:
             # NOTE: If a boost version matching all requirements cannot be found,
             # this build step will fail
       - run: |
+          echo ---
           ls /usr/include
+          echo ----
           ls /usr/include/boost
+          echo -----
           ls /usr/include/boost/boost
+          echo ------
       - run: meson setup builddir/
         env:
           CC: gcc
