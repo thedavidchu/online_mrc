@@ -15,6 +15,7 @@
 #include "lookup/evicting_hash_table.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
+#include "olken/olken.h"
 #include "random/uniform_random.h"
 #include "random/zipfian_random.h"
 #include "shards/fixed_rate_shards.h"
@@ -99,7 +100,7 @@ test_cardinality_estimate_accuracy(char const *const fpath,
     for (size_t i = 0; i < artificial_trace_length; ++i) {
         enum PutUniqueStatus s = LOOKUP_PUTUNIQUE_ERROR;
         uint64_t const x = f_next(data);
-        s = HashTable__put_unique(&ht, x, 0);
+        s = HashTable__put(&ht, x, 0);
         EvictingHashTable__try_put(&eht, x, 0);
         if (s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
             FixedSizeShardsSampler__sample(&fs, x)) {
@@ -112,7 +113,7 @@ test_cardinality_estimate_accuracy(char const *const fpath,
         size_t eht_size =
             EvictingHashTable__estimate_scale_factor(&eht) * eht.num_inserted;
         size_t fs_size = FixedSizeShardsSampler__estimate_cardinality(&fs);
-        size_t fr_size = fr.scale * HashTable__get_size(&fr.olken.hash_table);
+        size_t fr_size = fr.scale * Olken__get_cardinality(&fr.olken);
         estimates[num_tests * i + 0] = ht_size;
         estimates[num_tests * i + 1] = eht_size;
         estimates[num_tests * i + 2] = fs_size;

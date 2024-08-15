@@ -88,18 +88,14 @@ AverageEvictionTime__access_item(struct AverageEvictionTime *me,
         // We subtract an extra one so that the reuse_time between two
         // neighbouring accesses is 0.
         uint64_t const reuse_time = me->current_time_stamp - old_timestamp - 1;
-        if (HashTable__put_unique(&me->hash_table,
-                                  entry,
-                                  me->current_time_stamp) !=
+        if (HashTable__put(&me->hash_table, entry, me->current_time_stamp) !=
             LOOKUP_PUTUNIQUE_REPLACE_VALUE)
             LOGGER_WARN("failed to replace value in hash table");
         if (!Histogram__insert_finite(&me->histogram, reuse_time))
             LOGGER_WARN("failed to insert into histogram");
         ++me->current_time_stamp;
     } else {
-        if (HashTable__put_unique(&me->hash_table,
-                                  entry,
-                                  me->current_time_stamp) !=
+        if (HashTable__put(&me->hash_table, entry, me->current_time_stamp) !=
             LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE)
             LOGGER_WARN("failed to insert into hash table");
         if (!Histogram__insert_infinite(&me->histogram))

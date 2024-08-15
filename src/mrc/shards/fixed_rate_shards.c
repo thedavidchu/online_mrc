@@ -122,7 +122,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
     }
     ++me->num_entries_processed;
 
-    struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
+    struct LookupReturn found = Olken__lookup(&me->olken, entry);
     if (found.success) {
         uint64_t distance =
             tree__reverse_rank(&me->olken.tree, (KeyType)found.timestamp);
@@ -132,9 +132,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                                  (KeyType)me->olken.current_time_stamp);
         assert(r && "insert should not fail");
         enum PutUniqueStatus s =
-            HashTable__put_unique(&me->olken.hash_table,
-                                  entry,
-                                  me->olken.current_time_stamp);
+            Olken__put(&me->olken, entry, me->olken.current_time_stamp);
         assert(s == LOOKUP_PUTUNIQUE_REPLACE_VALUE &&
                "update should replace value");
 #ifdef INTERVAL_STATISTICS
@@ -151,9 +149,7 @@ FixedRateShards__access_item(struct FixedRateShards *me, EntryType entry)
                                         me->scale);
     } else {
         enum PutUniqueStatus s =
-            HashTable__put_unique(&me->olken.hash_table,
-                                  entry,
-                                  me->olken.current_time_stamp);
+            Olken__put(&me->olken, entry, me->olken.current_time_stamp);
         assert(s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
                "update should insert key/value");
         tree__sleator_insert(&me->olken.tree,

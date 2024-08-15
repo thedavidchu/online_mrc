@@ -69,9 +69,9 @@ struct SampledLookupReturn
 EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key);
 
 struct SampledPutReturn
-EvictingHashTable__put_unique(struct EvictingHashTable *me,
-                              KeyType key,
-                              ValueType value);
+EvictingHashTable__put(struct EvictingHashTable *me,
+                       KeyType key,
+                       ValueType value);
 
 /// @note   If we know the globally maximum threshold, then we can
 ///         immediately discard any element that is greater than this.

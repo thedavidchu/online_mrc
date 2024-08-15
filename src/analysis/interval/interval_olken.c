@@ -7,7 +7,6 @@
 #include "interval/interval_olken.h"
 #include "interval_statistics/interval_statistics.h"
 #include "logger/logger.h"
-#include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "olken/olken.h"
 
@@ -50,7 +49,7 @@ IntervalOlken__access_item(struct IntervalOlken *me, EntryType const entry)
         return false;
     }
 
-    struct LookupReturn found = HashTable__lookup(&me->olken.hash_table, entry);
+    struct LookupReturn found = Olken__lookup(&me->olken, entry);
     if (found.success) {
         uint64_t rt = me->olken.current_time_stamp - found.timestamp - 1;
         uint64_t rd = Olken__update_stack(&me->olken, entry, found.timestamp);

@@ -1,21 +1,28 @@
+lookup_inc = include_directories('include', '.')
+
+lookup_lib = library(
+    'lookup_lib',
+    [
+        'hash_table.c',
+        'parallel_hash_table.c',
+        'parallel_list.c',
+        'evicting_hash_table.c',
+        'k_hash_table.c',
+        'boost_hash_table.cpp',
+    ],
+    dependencies: [
+        boost_dep,
+        common_dep,
+        glib_dep,
+        math_dep,
+        thread_dep,
+        hash_dep,
+    ],
+    include_directories: lookup_inc,
+)
+
 lookup_dep = declare_dependency(
-    link_with: library(
-        'lookup_lib',
-        [
-            'hash_table.c',
-            'parallel_hash_table.c',
-            'parallel_list.c',
-            'evicting_hash_table.c',
-        ],
-        dependencies: [
-            common_dep,
-            glib_dep,
-            math_dep,
-            thread_dep,
-            hash_dep,
-        ],
-        include_directories: include_directories('include'),
-    ),
+    link_with: lookup_lib,
     dependencies: [
         common_dep,
         glib_dep,
@@ -23,5 +30,5 @@ lookup_dep = declare_dependency(
         math_dep,
         thread_dep,
     ],
-    include_directories: include_directories('include'),
+    include_directories: lookup_inc,
 )

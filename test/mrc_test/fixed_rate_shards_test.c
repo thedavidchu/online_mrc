@@ -44,6 +44,8 @@ access_same_key_five_times(void)
 
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
+    MissRateCurve__destroy(&oracle_mrc);
+    MissRateCurve__destroy(&mrc);
     return true;
 }
 
@@ -84,6 +86,8 @@ small_exact_trace_test(void)
 
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
+    MissRateCurve__destroy(&oracle_mrc);
+    MissRateCurve__destroy(&mrc);
     return true;
 }
 
@@ -120,6 +124,8 @@ long_accuracy_trace_test(void)
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
     FixedRateShards__destroy(&me);
+    MissRateCurve__destroy(&oracle_mrc);
+    MissRateCurve__destroy(&mrc);
     return true;
 }
 
@@ -169,6 +175,8 @@ long_parda_matching_trace_test(void)
     ZipfianRandom__destroy(&zrng);
     PardaFixedRateShards__destroy(&oracle);
     FixedRateShards__destroy(&me);
+    MissRateCurve__destroy(&oracle_mrc);
+    MissRateCurve__destroy(&mrc);
     return true;
 }
 

@@ -6,16 +6,18 @@
 #include <glib.h>
 
 #include "histogram/histogram.h"
+#include "lookup/boost_hash_table.h"
 #include "lookup/hash_table.h"
+#include "lookup/k_hash_table.h"
+#include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/types.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
-#include "unused/mark_unused.h"
 
 struct Olken {
     struct Tree tree;
-    struct HashTable hash_table;
+    struct BoostHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
 };
@@ -75,3 +77,30 @@ Olken__destroy(struct Olken *const me);
 bool
 Olken__get_histogram(struct Olken const *const me,
                      struct Histogram const **const histogram);
+
+/// @brief  Get the cardinality of the current working set size.
+inline size_t
+Olken__get_cardinality(struct Olken const *const me)
+{
+    return BoostHashTable__get_size(&me->hash_table);
+}
+
+/// @brief  Lookup a value in Olken.
+/// @note   This is simply to allow changing the implementation of the
+///         hash table without breaking dependencies.
+inline struct LookupReturn
+Olken__lookup(struct Olken const *const me, EntryType const key)
+{
+    return BoostHashTable__lookup(&me->hash_table, key);
+}
+
+/// @brief  Lookup a value in Olken.
+/// @note   This is simply to allow changing the implementation of the
+///         hash table without breaking dependencies.
+inline enum PutUniqueStatus
+Olken__put(struct Olken *const me,
+           EntryType const key,
+           TimeStampType const value)
+{
+    return BoostHashTable__put(&me->hash_table, key, value);
+}

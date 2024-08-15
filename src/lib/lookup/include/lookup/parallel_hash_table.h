@@ -17,14 +17,14 @@ bool
 ParallelHashTable__init(struct ParallelHashTable *me, size_t num_buckets);
 
 bool
-ParallelHashTable__put_unique(struct ParallelHashTable *me,
-                          EntryType entry,
-                          TimeStampType timestamp);
+ParallelHashTable__put(struct ParallelHashTable *me,
+                       EntryType entry,
+                       TimeStampType timestamp);
 
 bool
-ParallelHashTable__put_unique(struct ParallelHashTable *me,
-                          EntryType entry,
-                          TimeStampType new_timestamp);
+ParallelHashTable__put(struct ParallelHashTable *me,
+                       EntryType entry,
+                       TimeStampType new_timestamp);
 
 struct LookupReturn
 ParallelHashTable__lookup(struct ParallelHashTable *me, EntryType);

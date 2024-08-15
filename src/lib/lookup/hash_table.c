@@ -20,7 +20,7 @@ gboolean_to_bool(const gboolean b)
 }
 
 bool
-HashTable__init(struct HashTable *me)
+HashTable__init(struct HashTable *const me)
 {
     if (me == NULL)
         return false;
@@ -43,7 +43,7 @@ HashTable__get_size(struct HashTable const *const me)
 }
 
 struct LookupReturn
-HashTable__lookup(struct HashTable *me, EntryType key)
+HashTable__lookup(struct HashTable const *const me, EntryType const key)
 {
     if (me == NULL || me->hash_table == NULL)
         return (struct LookupReturn){.success = false, .timestamp = 0};
@@ -60,7 +60,9 @@ HashTable__lookup(struct HashTable *me, EntryType key)
 
 /// @return Returns whether we inserted, replaced, or errored.
 enum PutUniqueStatus
-HashTable__put_unique(struct HashTable *me, EntryType key, TimeStampType value)
+HashTable__put(struct HashTable *const me,
+               EntryType const key,
+               TimeStampType const value)
 {
 
     if (me == NULL || me->hash_table == NULL)
@@ -91,7 +93,7 @@ HashTable__remove(struct HashTable *const me, EntryType const key)
 }
 
 static void
-write_ghashtable_as_json(FILE *stream,
+write_ghashtable_as_json(FILE *const stream,
                          GHashTable *const hash_table,
                          bool const new_line)
 {
@@ -125,7 +127,7 @@ write_ghashtable_as_json(FILE *stream,
 }
 
 void
-HashTable__write_as_json(FILE *stream, struct HashTable const *const me)
+HashTable__write_as_json(FILE *const stream, struct HashTable const *const me)
 {
     if (stream == NULL) {
         LOGGER_WARN("stream == NULL");
@@ -145,7 +147,7 @@ HashTable__write_as_json(FILE *stream, struct HashTable const *const me)
 }
 
 void
-HashTable__destroy(struct HashTable *me)
+HashTable__destroy(struct HashTable *const me)
 {
     if (me == NULL || me->hash_table == NULL)
         return;
