@@ -44,7 +44,7 @@ jobs:
           # NOTE  For some reason, the environment variables are not
           #       transferred between runs, so I have to set the
           #       'BOOST_ROOT' for the C++ Boost library manually.
-          BOOST_ROOT: ${{github.workspace}}
+          BOOST_ROOT: ${{github.workspace}}/boost
       - run: meson test -C builddir/ -v
       - uses: actions/upload-artifact@v1
         if: failure()
