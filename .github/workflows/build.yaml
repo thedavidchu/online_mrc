@@ -22,9 +22,7 @@ jobs:
       - run: pip install meson ninja
       # NOTE  I couldn't get the Boost installation to download into
       #       /usr/local/include (i.e. the standard path), so I instead
-      - run: |
-        sudo mkdir /usr/local/include
-        # boost_root=${{github.workspace}}
+      - run: sudo mkdir /usr/local/include/boost
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
