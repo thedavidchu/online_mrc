@@ -101,9 +101,7 @@ Olken__update_stack(struct Olken *me, EntryType entry, TimeStampType timestamp)
     if (!tree__sleator_insert(&me->tree, me->current_time_stamp)) {
         return UINT64_MAX;
     }
-    if (KHashTable__put_unique(&me->hash_table,
-                               entry,
-                               me->current_time_stamp) !=
+    if (KHashTable__put(&me->hash_table, entry, me->current_time_stamp) !=
         LOOKUP_PUTUNIQUE_REPLACE_VALUE) {
         return UINT64_MAX;
     }
@@ -117,9 +115,7 @@ Olken__insert_stack(struct Olken *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
-    if (KHashTable__put_unique(&me->hash_table,
-                               entry,
-                               me->current_time_stamp) !=
+    if (KHashTable__put(&me->hash_table, entry, me->current_time_stamp) !=
         LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
         return false;
     }

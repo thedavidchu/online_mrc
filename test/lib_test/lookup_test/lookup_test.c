@@ -17,7 +17,7 @@ hash_table_test(void)
     g_assert_true(HashTable__init(&me));
 
     for (size_t i = 0; i < N; ++i) {
-        g_assert_true(HashTable__put_unique(&me, i, i));
+        g_assert_true(HashTable__put(&me, i, i));
     }
 
     for (size_t i = 0; i < N; ++i) {
@@ -26,7 +26,7 @@ hash_table_test(void)
     }
 
     for (size_t i = 0; i < N; ++i) {
-        g_assert_true(HashTable__put_unique(&me, i, 1234567890));
+        g_assert_true(HashTable__put(&me, i, 1234567890));
     }
 
     for (size_t i = 0; i < N; ++i) {

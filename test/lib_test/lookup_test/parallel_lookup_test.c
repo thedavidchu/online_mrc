@@ -34,7 +34,7 @@ single_thread_test(void)
     g_assert_true(ParallelHashTable__init(&me, 8));
 
     for (size_t i = 0; i < N; ++i) {
-        g_assert_true(ParallelHashTable__put_unique(&me, i, i));
+        g_assert_true(ParallelHashTable__put(&me, i, i));
     }
 
     for (size_t i = 0; i < N; ++i) {
@@ -43,7 +43,7 @@ single_thread_test(void)
     }
 
     for (size_t i = 0; i < N; ++i) {
-        g_assert_true(ParallelHashTable__put_unique(&me, i, 1234567890));
+        g_assert_true(ParallelHashTable__put(&me, i, 1234567890));
     }
 
     for (size_t i = 0; i < N; ++i) {
@@ -67,10 +67,9 @@ multithread_writer(void *args)
 {
     struct WorkerArgs *w = args;
     for (EntryType entry = w->start; entry < w->end; ++entry) {
-        g_assert_true(
-            ParallelHashTable__put_unique(w->hash_table,
-                                          entry,
-                                          w->entry_to_timestamp(entry)));
+        g_assert_true(ParallelHashTable__put(w->hash_table,
+                                             entry,
+                                             w->entry_to_timestamp(entry)));
     }
     return NULL;
 }

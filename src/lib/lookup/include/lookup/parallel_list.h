@@ -27,7 +27,7 @@ struct ParallelListNode {
  *  @note   Splay the input key to the front of the list.
  */
 bool
-ParallelList__put_unique(struct ParallelList *me,
+ParallelList__put(struct ParallelList *me,
                   EntryType entry,
                   TimeStampType timestamp);
 

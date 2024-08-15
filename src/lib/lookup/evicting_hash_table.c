@@ -103,9 +103,9 @@ EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key)
 }
 
 struct SampledPutReturn
-EvictingHashTable__put_unique(struct EvictingHashTable *me,
-                              KeyType key,
-                              ValueType value)
+EvictingHashTable__put(struct EvictingHashTable *me,
+                       KeyType key,
+                       ValueType value)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledPutReturn){.status = SAMPLED_NOTFOUND};

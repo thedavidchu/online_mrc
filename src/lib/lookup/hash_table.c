@@ -60,9 +60,9 @@ HashTable__lookup(struct HashTable const *const me, EntryType const key)
 
 /// @return Returns whether we inserted, replaced, or errored.
 enum PutUniqueStatus
-HashTable__put_unique(struct HashTable *const me,
-                      EntryType const key,
-                      TimeStampType const value)
+HashTable__put(struct HashTable *const me,
+               EntryType const key,
+               TimeStampType const value)
 {
 
     if (me == NULL || me->hash_table == NULL)

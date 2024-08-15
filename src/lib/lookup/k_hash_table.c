@@ -51,9 +51,9 @@ KHashTable__lookup(struct KHashTable const *const me, EntryType key)
 
 /// @return Returns whether we inserted, replaced, or errored.
 enum PutUniqueStatus
-KHashTable__put_unique(struct KHashTable *const me,
-                       EntryType const key,
-                       TimeStampType const value)
+KHashTable__put(struct KHashTable *const me,
+                EntryType const key,
+                TimeStampType const value)
 {
 
     if (me == NULL || me->hash_table == NULL)

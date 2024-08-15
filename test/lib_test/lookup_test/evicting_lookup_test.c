@@ -23,7 +23,7 @@ sampled_test(void)
 
     for (size_t i = 0; i < UNIQUE_KEYS; ++i) {
         KeyType key = i;
-        EvictingHashTable__put_unique(&me, key, first_val);
+        EvictingHashTable__put(&me, key, first_val);
     }
 
     bool keys[UNIQUE_KEYS] = {0};
@@ -46,7 +46,7 @@ sampled_test(void)
     for (size_t i = 0; i < UNIQUE_KEYS; ++i) {
         KeyType key = i;
         struct SampledPutReturn r =
-            EvictingHashTable__put_unique(&me, key, second_val);
+            EvictingHashTable__put(&me, key, second_val);
         if (keys[i]) {
             g_assert_cmpuint(r.status, ==, SAMPLED_UPDATED);
             g_assert_cmpuint(r.new_hash, ==, HASH_FUNCTION(key));

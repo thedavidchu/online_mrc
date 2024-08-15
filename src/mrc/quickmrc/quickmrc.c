@@ -80,7 +80,7 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        HashTable__put_unique(&me->hash_table, entry, new_timestamp);
+        HashTable__put(&me->hash_table, entry, new_timestamp);
         Histogram__insert_scaled_finite(&me->histogram, stack_dist, me->scale);
     } else {
         if (!QuickMRCBuckets__insert_new(&me->buckets)) {
@@ -90,7 +90,7 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
             return false;
         }
         TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        HashTable__put_unique(&me->hash_table, entry, new_timestamp);
+        HashTable__put(&me->hash_table, entry, new_timestamp);
     }
 
     return true;

@@ -68,9 +68,9 @@ ParallelList__pop_node(struct ParallelList *me, EntryType entry)
  *  @note   Splay the input.
  */
 bool
-ParallelList__put_unique(struct ParallelList *me,
-                         EntryType entry,
-                         TimeStampType timestamp)
+ParallelList__put(struct ParallelList *me,
+                  EntryType entry,
+                  TimeStampType timestamp)
 {
     if (me == NULL) {
         return false;

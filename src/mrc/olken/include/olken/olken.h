@@ -101,5 +101,5 @@ Olken__put(struct Olken *const me,
            EntryType const key,
            TimeStampType const value)
 {
-    return KHashTable__put_unique(&me->hash_table, key, value);
+    return KHashTable__put(&me->hash_table, key, value);
 }

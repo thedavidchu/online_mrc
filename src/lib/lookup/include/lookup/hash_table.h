@@ -23,9 +23,9 @@ struct LookupReturn
 HashTable__lookup(struct HashTable const *const me, EntryType const key);
 
 enum PutUniqueStatus
-HashTable__put_unique(struct HashTable *const me,
-                      EntryType const key,
-                      TimeStampType const value);
+HashTable__put(struct HashTable *const me,
+               EntryType const key,
+               TimeStampType const value);
 
 struct LookupReturn
 HashTable__remove(struct HashTable *const me, EntryType const key);

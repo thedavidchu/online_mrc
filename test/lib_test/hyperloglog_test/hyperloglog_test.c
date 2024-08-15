@@ -100,7 +100,7 @@ test_hyperloglog_accuracy(char const *const fpath,
     for (size_t i = 0; i < artificial_trace_length; ++i) {
         enum PutUniqueStatus s = LOOKUP_PUTUNIQUE_ERROR;
         uint64_t const x = f_next(data);
-        s = HashTable__put_unique(&ht, x, 0);
+        s = HashTable__put(&ht, x, 0);
         EvictingHashTable__try_put(&eht, x, 0);
         if (s == LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE &&
             FixedSizeShardsSampler__sample(&fs, x)) {

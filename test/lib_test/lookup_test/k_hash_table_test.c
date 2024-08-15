@@ -22,7 +22,7 @@ test_khash(void)
 
     // Test successful inserts
     for (uint64_t i = 0; i < MAX_SIZE; ++i) {
-        enum PutUniqueStatus r = KHashTable__put_unique(&me, i, 2 * i);
+        enum PutUniqueStatus r = KHashTable__put(&me, i, 2 * i);
         g_assert_cmpint(r, ==, LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE);
         KHashTable__write(&me, STREAM, true);
     }
@@ -42,7 +42,7 @@ test_khash(void)
 
     // Test successful replacements
     for (uint64_t i = 0; i < MAX_SIZE; ++i) {
-        enum PutUniqueStatus r = KHashTable__put_unique(&me, i, 3 * i);
+        enum PutUniqueStatus r = KHashTable__put(&me, i, 3 * i);
         g_assert_cmpint(r, ==, LOOKUP_PUTUNIQUE_REPLACE_VALUE);
         KHashTable__write(&me, STREAM, true);
     }
@@ -87,7 +87,7 @@ test_large_khash(void)
     g_assert_true(KHashTable__init(&me));
 
     for (uint64_t i = 0; i < MAX_INT_PLUS_ONE; ++i) {
-        enum PutUniqueStatus r = KHashTable__put_unique(&me, i, 2 * i);
+        enum PutUniqueStatus r = KHashTable__put(&me, i, 2 * i);
         g_assert_cmpint(r, ==, LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE);
     }
 
