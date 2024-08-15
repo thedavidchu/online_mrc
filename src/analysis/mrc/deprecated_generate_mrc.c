@@ -245,7 +245,7 @@ static void
 print_trace_summary(struct CommandLineArguments const *args,
                     struct Trace const *const trace)
 {
-    fprintf(stderr,
+    fprintf(stdout,
             "Trace(source='%s', format='%s', length=%zu)\n",
             args->input_path,
             TRACE_FORMAT_STRINGS[args->trace_format],
