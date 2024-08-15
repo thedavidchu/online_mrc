@@ -28,6 +28,7 @@ cc = meson.get_compiler('c', native: true)
 math_dep = cc.find_library('m', required: false)
 thread_dep = dependency('threads')
 
+boost_dep = dependency('boost')
 glib_dep = dependency(
     'glib-2.0',
     default_options: [
