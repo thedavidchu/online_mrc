@@ -24,6 +24,8 @@ jobs:
       #       packages to '/usr/include', but I can't get Meson to
       #       detect it otherwise!
       - run: sudo chmod a+rwx /usr/include
+      - run: |
+          ls /usr/include
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
@@ -42,6 +44,10 @@ jobs:
             arch: x86
             # NOTE: If a boost version matching all requirements cannot be found,
             # this build step will fail
+      - run: |
+          ls /usr/include
+          ls /usr/include/boost
+          ls /usr/include/boost/boost
       - run: meson setup builddir/
         env:
           CC: gcc
