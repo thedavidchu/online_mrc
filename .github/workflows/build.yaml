@@ -20,6 +20,8 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install meson ninja
+      # NOTE  I couldn't get the Boost installation to download into
+      #       /usr/local/include (i.e. the standard path), so I instead
       - run: BOOST_ROOT=${{github.workspace}}
       - name: Install boost
         uses: MarkusJx/install-boost@v2.4.5
