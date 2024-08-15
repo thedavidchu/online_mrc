@@ -10,11 +10,19 @@ extern "C" {
 #include "types/key_type.h"
 #include "types/value_type.h"
 
-struct BoostHashTable *
-BoostHashTable__new(void);
+struct BoostHashTablePrivate;
+
+struct BoostHashTable {
+    // NOTE I am uninspired and named the private member 'private'. This
+    //      is a keyword in C++, so I need to add the trailing underscore.
+    struct BoostHashTablePrivate *private_;
+};
+
+bool
+BoostHashTable__init(struct BoostHashTable *const me);
 
 void
-BoostHashTable__free(struct BoostHashTable *const me);
+BoostHashTable__destroy(struct BoostHashTable *const me);
 
 struct LookupReturn
 BoostHashTable__lookup(struct BoostHashTable const *const me,

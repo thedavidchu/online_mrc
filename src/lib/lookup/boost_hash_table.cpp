@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <memory>
 #include <stdio.h> // This is for FILE so that it matches the header.
 
@@ -11,35 +10,47 @@
 #include "types/key_type.h"
 #include "types/value_type.h"
 
-struct BoostHashTable {
+struct BoostHashTablePrivate {
     boost::unordered::unordered_flat_map<std::uint64_t, std::uint64_t>
         hash_table;
 };
 
-struct BoostHashTable *
-BoostHashTable__new(void)
+static struct BoostHashTablePrivate *
+new_private_hash_table(void)
 {
-    std::unique_ptr<struct BoostHashTable> me =
-        std::make_unique<struct BoostHashTable>();
-    std::cout << me.get() << std::endl;
-    struct BoostHashTable *raw_ptr = me.release();
-    std::cout << raw_ptr << std::endl;
+    std::unique_ptr<struct BoostHashTablePrivate> me =
+        std::make_unique<struct BoostHashTablePrivate>();
+    struct BoostHashTablePrivate *raw_ptr = me.release();
     return raw_ptr;
 }
 
-void
-BoostHashTable__free(struct BoostHashTable *const me)
+bool
+BoostHashTable__init(struct BoostHashTable *const me)
 {
-    std::unique_ptr<struct BoostHashTable> ptr{me};
+    me->private_ = new_private_hash_table();
+    return (me->private_ != NULL);
+}
+
+static void
+free_private_hash_table(struct BoostHashTablePrivate *const me)
+{
+    std::unique_ptr<struct BoostHashTablePrivate> ptr{me};
+}
+
+void
+BoostHashTable__destroy(struct BoostHashTable *const me)
+{
+    free_private_hash_table(me->private_);
+    *me = {0};
 }
 
 struct LookupReturn
 BoostHashTable__lookup(struct BoostHashTable const *const me, KeyType const key)
 {
-    if (me == NULL || !me->hash_table.contains(key)) {
+    if (me == NULL || !me->private_->hash_table.contains(key)) {
         return {false, 0};
     }
-    return {true, me->hash_table.at(key)};
+    return {true, me->private_->hash_table.at(key)};
 }
 
 enum PutUniqueStatus
@@ -50,22 +61,22 @@ BoostHashTable__put(struct BoostHashTable *const me,
     if (me == NULL) {
         return LOOKUP_PUTUNIQUE_ERROR;
     }
-    if (!me->hash_table.contains(key)) {
-        me->hash_table[key] = value;
+    if (!me->private_->hash_table.contains(key)) {
+        me->private_->hash_table[key] = value;
         return LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE;
     }
-    me->hash_table[key] = value;
+    me->private_->hash_table[key] = value;
     return LOOKUP_PUTUNIQUE_REPLACE_VALUE;
 }
 
 struct LookupReturn
 BoostHashTable__remove(struct BoostHashTable *const me, KeyType const key)
 {
-    if (me == NULL || !me->hash_table.contains(key)) {
+    if (me == NULL || !me->private_->hash_table.contains(key)) {
         return {false, 0};
     }
-    ValueType value = me->hash_table.at(key);
-    me->hash_table.erase(key);
+    ValueType value = me->private_->hash_table.at(key);
+    me->private_->hash_table.erase(key);
     return {true, value};
 }
 
@@ -77,7 +88,7 @@ BoostHashTable__write(struct BoostHashTable const *const me,
     if (me == NULL || stream == NULL)
         return false;
     fprintf(stream, "{");
-    for (auto [key, value] : me->hash_table) {
+    for (auto [key, value] : me->private_->hash_table) {
         // NOTE We could remove the trailing comma if we keep track of
         //      how many items we are printing versus how many we have
         //      already printed. When we see the last item, then we do
