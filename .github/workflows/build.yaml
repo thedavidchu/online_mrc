@@ -20,14 +20,14 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install meson ninja
-      - run: meson setup builddir/
-        env:
-          CC: gcc
       # Get Boost C++ library
       - run: |
           sudo apt-get -y update
           sudo apt-get -y upgrade
           sudo apt-get -y install libboost-dev
+      - run: meson setup builddir/
+        env:
+          CC: gcc
       - run: meson test -C builddir/ -v
       - uses: actions/upload-artifact@v1
         if: failure()
