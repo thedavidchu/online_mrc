@@ -41,6 +41,9 @@ BoostHashTable__write(struct BoostHashTable const *const me,
                       FILE *const stream,
                       bool const newline);
 
+size_t
+BoostHashTable__get_size(struct BoostHashTable const *const me);
+
 #ifdef __cplusplus
 }
 #endif

@@ -101,3 +101,9 @@ BoostHashTable__write(struct BoostHashTable const *const me,
     fprintf(stream, "}%s", newline ? "\n" : "");
     return true;
 }
+
+size_t
+BoostHashTable__get_size(struct BoostHashTable const *const me)
+{
+    return me->private_->hash_table.size();
+}

@@ -6,6 +6,7 @@
 #include <glib.h>
 
 #include "histogram/histogram.h"
+#include "lookup/boost_hash_table.h"
 #include "lookup/hash_table.h"
 #include "lookup/k_hash_table.h"
 #include "lookup/lookup.h"
@@ -16,7 +17,7 @@
 
 struct Olken {
     struct Tree tree;
-    struct KHashTable hash_table;
+    struct BoostHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
 };
@@ -81,7 +82,7 @@ Olken__get_histogram(struct Olken const *const me,
 inline size_t
 Olken__get_cardinality(struct Olken const *const me)
 {
-    return KHashTable__get_size(&me->hash_table);
+    return BoostHashTable__get_size(&me->hash_table);
 }
 
 /// @brief  Lookup a value in Olken.
@@ -90,7 +91,7 @@ Olken__get_cardinality(struct Olken const *const me)
 inline struct LookupReturn
 Olken__lookup(struct Olken const *const me, EntryType const key)
 {
-    return KHashTable__lookup(&me->hash_table, key);
+    return BoostHashTable__lookup(&me->hash_table, key);
 }
 
 /// @brief  Lookup a value in Olken.
@@ -101,5 +102,5 @@ Olken__put(struct Olken *const me,
            EntryType const key,
            TimeStampType const value)
 {
-    return KHashTable__put(&me->hash_table, key, value);
+    return BoostHashTable__put(&me->hash_table, key, value);
 }
