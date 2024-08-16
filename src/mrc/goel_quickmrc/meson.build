@@ -22,7 +22,9 @@ goel_quickmrc_lib = library(
         '-DQMRC',
         '-DASSERT',
         # NOTE  This is so then we can inline the vectorized instructions.
-        '-march=native',
+        # NOTE  When you simply use '-march=native', it may fail if the
+        #       native architecture doesn't support vectorization.
+        '-march=mavx512f',
         # HACK  Turn off all of the failing compiler flags...
         '-Wno-builtin-declaration-mismatch',
         '-Wno-implicit-function-declaration',
