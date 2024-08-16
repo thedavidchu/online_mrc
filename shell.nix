@@ -6,12 +6,14 @@ in
 pkgs.mkShellNoCC {
   packages = with pkgs; [
     # Packages are listed here: https://search.nixos.org/packages
+    stdenvNoCC
     git
     # NOTE  I'm not sure why 'libgcc' doesn't work.
     gcc
     pkg-config
     glib
     glibc
+    boost
     xsimd
     python312
     python312Packages.meson
