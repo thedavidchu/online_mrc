@@ -199,9 +199,13 @@ def get_accuracy_from_log(text: str, path: Path) -> dict[str, tuple[float, float
     return {l.group(1): (float(l.group(2)), float(l.group(3))) for l in matching_lines}
 
 
-def plot_accuracy(inputs: list[Path], extensions: list[str], outputs: list[Path]):
-    emap_accuracies = {}
-    fss_accuracies = {}
+def plot_accuracy(
+    inputs: list[Path],
+    extensions: list[str],
+    outputs: list[Path],
+    algorithms: list[str],
+):
+    mean_absolute_errors = {algo: {} for algo in algorithms}
     for file in tqdm(get_file_tree(inputs)):
         if file.suffix not in extensions:
             continue
@@ -210,28 +214,31 @@ def plot_accuracy(inputs: list[Path], extensions: list[str], outputs: list[Path]
         accuracies = get_accuracy_from_log(text, file)
         for algo, (mae, mse) in accuracies.items():
             print(f"Accuracies for {str(file)}:{algo} -- MAE: {mae} | MSE: {mse}")
-            if "Evicting-Map" == algo:
-                emap_accuracies[str(file)] = mae
-            elif "Fixed-Size-SHARDS" == algo:
-                fss_accuracies[str(file)] = mae
-    emap_accuracies = {k: v for k, v in sorted(emap_accuracies.items())}
-    fss_accuracies = {k: v for k, v in sorted(fss_accuracies.items())}
+            if algo in algorithms:
+                mean_absolute_errors[algo][str(file)] = mae
+    mean_absolute_errors = {
+        algo: {k: v for k, v in sorted(accuracies.items())}
+        for algo, accuracies in mean_absolute_errors.items()
+    }
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Mean Absolute Error (MAE) by Trace")
     fig.supxlabel("Trace Name")
     fig.supylabel("Mean Absolute Error (MAE) [%]")
-    axs.plot(
-        [100 * x for x in emap_accuracies.values()],
-        label="Evicting Map",
-    )
-    axs.plot([100 * x for x in fss_accuracies.values()], label="Fixed-Size SHARDS")
+    for algo, accuracies in mean_absolute_errors.items():
+        pretty_label = algo.replace("-", " ")
+        axs.plot(
+            [100 * x for x in accuracies.values()],
+            label=pretty_label,
+        )
 
-    emap_stems = get_file_stems(emap_accuracies.keys())
-    fss_stems = get_file_stems(fss_accuracies.keys())
+    all_stems = {
+        algo: get_file_stems(times_.keys())
+        for algo, times_ in mean_absolute_errors.items()
+    }
     labels = [
-        get_longest_substring(emap_stem, fss_stem).strip(" \t_-./")
-        for emap_stem, fss_stem in zip(emap_stems, fss_stems)
+        get_longest_substring(*stems).strip(" \t_-./")
+        for stems in zip(*all_stems.values())
     ]
     axs.set_xticks(
         range(len(labels)),
@@ -293,7 +300,9 @@ def main():
         plot_runtime(args.inputs, args.extensions, outputs, ["Olken"])
     if args.accuracy is not None:
         outputs = [Path("accuracy.pdf")] if args.accuracy == [] else args.accuracy
-        plot_accuracy(args.inputs, args.extensions, outputs)
+        plot_accuracy(
+            args.inputs, args.extensions, outputs, ["Evicting-Map", "Fixed-Size-SHARDS"]
+        )
 
 
 if __name__ == "__main__":
