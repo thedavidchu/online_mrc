@@ -10,6 +10,20 @@ from warnings import warn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+
+def check_no_matches(*args) -> bool:
+    """Check that all of the arguments are unique (or are None).
+
+    Examples
+    --------
+    1. {1, 2, None, None} -> True
+    2. {0, 0} -> False
+    """
+    num_none = sum(arg is None for arg in args)
+    num_unique = len({arg for arg in args if arg is not None})
+    return len(args) == num_none + num_unique
+
+
 # NOTE  I do not support spaces or control characters in paths.
 PATH_PATTERN = r"[a-zA-Z0-9_./\\-]+"
 FLOAT_PATTERN = r"\d+[.]\d+"
@@ -37,7 +51,7 @@ def get_file_stems(path: list[str]) -> list[str]:
     return [os.path.splitext(os.path.split(p)[-1])[0] for p in path]
 
 
-def get_longest_substring(a: str, b: str) -> str:
+def get_longest_substring(*args: str) -> str:
     """
     I originally copied this code from
     https://www.geeksforgeeks.org/sequencematcher-in-python-for-longest-common-substring/.
@@ -50,10 +64,27 @@ def get_longest_substring(a: str, b: str) -> str:
     So I rewrote it and read the documentation. Wow, imagine that.
     """
 
-    s = SequenceMatcher(isjunk=None, a=a, b=b)
-    alo, blo, size = s.find_longest_match(0, len(a), 0, len(b))
-    assert a[alo : alo + size] == b[blo : blo + size]
-    return a[alo : alo + size]
+    def get_longest_substring_twoway(a: str, b: str) -> str:
+        s = SequenceMatcher(isjunk=None, a=a, b=b)
+        alo, blo, size = s.find_longest_match(0, len(a), 0, len(b))
+        assert a[alo : alo + size] == b[blo : blo + size]
+        return a[alo : alo + size]
+
+    # Pattern matching is your friend! Wow, that was so easy... I just
+    # hope that it actually works, haha!
+    match args:
+        case []:
+            # Maybe we should return None. I'm too tired to think.
+            return ""
+        case [x]:
+            return x
+        case [x, y]:
+            # I think this case may be redundant considering the case
+            # below, but this is more symmetric and therefore easier to
+            # reason about.
+            return get_longest_substring_twoway(x, y)
+        case [x, y, *z]:
+            return get_longest_substring(get_longest_substring_twoway(x, y), *z)
 
 
 def get_trace_read_time_from_log(text: str, path: Path) -> float:
@@ -96,9 +127,13 @@ def get_compute_time_from_log(text: str, path: Path) -> dict[str, float]:
     return {l.group(1): float(l.group(5)) for l in matching_lines}
 
 
-def plot_runtime(inputs: list[Path], extensions: list[str], outputs: list[Path]):
-    emap_times = {}
-    fss_times = {}
+def plot_runtime(
+    inputs: list[Path],
+    extensions: list[str],
+    outputs: list[Path],
+    algorithms: list[str],
+):
+    all_compute_times = {algo: {} for algo in algorithms}
     for file in get_file_tree(inputs):
         if file.suffix not in extensions:
             continue
@@ -110,27 +145,30 @@ def plot_runtime(inputs: list[Path], extensions: list[str], outputs: list[Path])
             print(
                 f"Times for {str(file)}:{algo} -- Trace read: {ttime} | Total compute: {ctime}"
             )
-            if algo == "Evicting-Map":
-                emap_times[str(file)] = ctime
-            elif algo == "Fixed-Size-SHARDS":
-                fss_times[str(file)] = ctime
-    emap_times = {k: v for k, v in sorted(emap_times.items())}
-    fss_times = {k: v for k, v in sorted(fss_times.items())}
+            if algo in algorithms:
+                all_compute_times[algo][str(file)] = ctime
+    all_compute_times = {
+        algo: {k: v for k, v in sorted(times_.items())}
+        for algo, times_ in all_compute_times.items()
+    }
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Runtimes by Trace")
     fig.supxlabel("Trace Name")
     fig.supylabel("Runtimes [seconds]")
-    axs.plot([t for t in emap_times.values()], label="Evicting Map")
-    axs.plot([t for t in fss_times.values()], label="Fixed-Size SHARDS")
+    for algo, times_ in all_compute_times.items():
+        pretty_label = algo.replace("-", " ")
+        axs.plot([t for t in times_.values()], label=pretty_label)
     axs.legend()
 
     # Add labels to the axis
-    emap_stems = get_file_stems(emap_times.keys())
-    fss_stems = get_file_stems(fss_times.keys())
+    all_stems = {
+        algo: get_file_stems(times_.keys())
+        for algo, times_ in all_compute_times.items()
+    }
     labels = [
-        get_longest_substring(emap_stem, fss_stem).strip(" \t_-./")
-        for emap_stem, fss_stem in zip(emap_stems, fss_stems)
+        get_longest_substring(*stems).strip(" \t_-./")
+        for stems in zip(*all_stems.values())
     ]
     axs.set_xticks(
         range(len(labels)),
@@ -225,6 +263,13 @@ def main():
         help="specifying this will plot runtime. Default: time.pdf (ignore what Python says). You can replace this with your own custom names!",
     )
     parser.add_argument(
+        "--olken-time",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="specifying this will plot Olken runtime. Default: olken-time.pdf (ignore what Python says). You can replace this with your own custom names!",
+    )
+    parser.add_argument(
         "--accuracy",
         nargs="*",
         type=Path,
@@ -233,9 +278,19 @@ def main():
     )
     args = parser.parse_args()
 
+    if not check_no_matches(*args.time, *args.accuracy, *args.olken_time):
+        raise ValueError(
+            f"duplicate values in {args.time, args.accuracy, args.olken_time}"
+        )
+
     if args.time is not None:
         outputs = [Path("time.pdf")] if args.time == [] else args.time
-        plot_runtime(args.inputs, args.extensions, outputs)
+        plot_runtime(
+            args.inputs, args.extensions, outputs, ["Evicting-Map", "Fixed-Size-SHARDS"]
+        )
+    if args.olken_time is not None:
+        outputs = [Path("olken-time.pdf")] if args.olken_time == [] else args.olken_time
+        plot_runtime(args.inputs, args.extensions, outputs, ["Olken"])
     if args.accuracy is not None:
         outputs = [Path("accuracy.pdf")] if args.accuracy == [] else args.accuracy
         plot_accuracy(args.inputs, args.extensions, outputs)
