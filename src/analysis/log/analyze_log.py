@@ -8,6 +8,7 @@ from pathlib import Path
 from warnings import warn
 
 import matplotlib.pyplot as plt
+import numpy as np
 from tqdm import tqdm
 
 
@@ -47,8 +48,8 @@ def get_file_tree(path: Path | list[Path]) -> list[Path]:
     ]
 
 
-def get_file_stems(path: list[str]) -> list[str]:
-    return [os.path.splitext(os.path.split(p)[-1])[0] for p in path]
+def get_file_stem(path: str) -> str:
+    return os.path.splitext(os.path.split(path)[-1])[0]
 
 
 def get_longest_substring(*args: str) -> str:
@@ -85,6 +86,10 @@ def get_longest_substring(*args: str) -> str:
             return get_longest_substring_twoway(x, y)
         case [x, y, *z]:
             return get_longest_substring(get_longest_substring_twoway(x, y), *z)
+
+
+def get_x_axis_labels(file_names: list[str]) -> list[str]:
+    return [get_file_stem(f) for f in file_names]
 
 
 def get_trace_read_time_from_log(text: str, path: Path) -> float:
@@ -132,44 +137,46 @@ def plot_runtime(
     extensions: list[str],
     outputs: list[Path],
     algorithms: list[str],
+    plot_trace_read_times: bool,
 ):
-    all_compute_times = {algo: {} for algo in algorithms}
-    for file in get_file_tree(inputs):
-        if file.suffix not in extensions:
-            continue
+    """
+    @note   I combined the runtime and the trace time simply so I
+            wouldn't have to copy and paste this function another time.
+            They aren't closely related or anything. If you can cleverly
+            refactor the boilerplate logic out, I'd encourage you to
+            split these two in the future."""
+    assert all(isinstance(x, str) for x in algorithms)
+    files = sorted(
+        [f for f in get_file_tree(inputs) if f.suffix in extensions], key=get_file_stem
+    )
+    compute_times = {algo: np.full_like(files, np.nan) for algo in algorithms}
+    trace_read_times = np.full_like(files, np.nan)
+    for i, file in tqdm(enumerate(files)):
         with file.open() as f:
             text = f.read()
         ttime = get_trace_read_time_from_log(text, file)
+        trace_read_times[i] = ttime
         ctimes = get_compute_time_from_log(text, file)
         for algo, ctime in ctimes.items():
             print(
                 f"Times for {str(file)}:{algo} -- Trace read: {ttime} | Total compute: {ctime}"
             )
             if algo in algorithms:
-                all_compute_times[algo][str(file)] = ctime
-    all_compute_times = {
-        algo: {k: v for k, v in sorted(times_.items())}
-        for algo, times_ in all_compute_times.items()
-    }
+                compute_times[algo][i] = ctime
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Runtimes by Trace")
     fig.supxlabel("Trace Name")
     fig.supylabel("Runtimes [seconds]")
-    for algo, times_ in all_compute_times.items():
+    if plot_trace_read_times:
+        axs.plot(trace_read_times, label="Trace Read Times")
+    for algo, times in compute_times.items():
         pretty_label = algo.replace("-", " ")
-        axs.plot([t for t in times_.values()], label=pretty_label)
+        axs.plot(times, label=pretty_label)
     axs.legend()
 
     # Add labels to the axis
-    all_stems = {
-        algo: get_file_stems(times_.keys())
-        for algo, times_ in all_compute_times.items()
-    }
-    labels = [
-        get_longest_substring(*stems).strip(" \t_-./")
-        for stems in zip(*all_stems.values())
-    ]
+    labels = get_x_axis_labels([str(f) for f in files])
     axs.set_xticks(
         range(len(labels)),
         labels,
@@ -205,21 +212,19 @@ def plot_accuracy(
     outputs: list[Path],
     algorithms: list[str],
 ):
-    mean_absolute_errors = {algo: {} for algo in algorithms}
-    for file in tqdm(get_file_tree(inputs)):
-        if file.suffix not in extensions:
-            continue
+    assert all(isinstance(x, str) for x in algorithms)
+    files = sorted(
+        [f for f in get_file_tree(inputs) if f.suffix in extensions], key=get_file_stem
+    )
+    mean_absolute_errors = {algo: np.full_like(files, np.nan) for algo in algorithms}
+    for i, file in tqdm(enumerate(files)):
         with file.open() as f:
             text = f.read()
         accuracies = get_accuracy_from_log(text, file)
         for algo, (mae, mse) in accuracies.items():
             print(f"Accuracies for {str(file)}:{algo} -- MAE: {mae} | MSE: {mse}")
             if algo in algorithms:
-                mean_absolute_errors[algo][str(file)] = mae
-    mean_absolute_errors = {
-        algo: {k: v for k, v in sorted(accuracies.items())}
-        for algo, accuracies in mean_absolute_errors.items()
-    }
+                mean_absolute_errors[algo][i] = mae
     fig, axs = plt.subplots()
     fig.set_size_inches(12, 8)
     fig.suptitle("Mean Absolute Error (MAE) by Trace")
@@ -227,19 +232,9 @@ def plot_accuracy(
     fig.supylabel("Mean Absolute Error (MAE) [%]")
     for algo, accuracies in mean_absolute_errors.items():
         pretty_label = algo.replace("-", " ")
-        axs.plot(
-            [100 * x for x in accuracies.values()],
-            label=pretty_label,
-        )
+        axs.plot(100 * accuracies, label=pretty_label)
 
-    all_stems = {
-        algo: get_file_stems(times_.keys())
-        for algo, times_ in mean_absolute_errors.items()
-    }
-    labels = [
-        get_longest_substring(*stems).strip(" \t_-./")
-        for stems in zip(*all_stems.values())
-    ]
+    labels = get_x_axis_labels([str(f) for f in files])
     axs.set_xticks(
         range(len(labels)),
         labels,
@@ -274,7 +269,14 @@ def main():
         nargs="*",
         type=Path,
         default=None,
-        help="specifying this will plot Olken runtime. Default: olken-time.pdf (ignore what Python says). You can replace this with your own custom names!",
+        help="specifying this will plot Olken runtime and/or trace read time. Default: olken-time.pdf (ignore what Python says). You can replace this with your own custom names!",
+    )
+    parser.add_argument(
+        "--trace-time",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="specifying this will plot trace read time. Default: olken-time.pdf (ignore what Python says). You can replace this with your own custom names!",
     )
     parser.add_argument(
         "--accuracy",
@@ -285,19 +287,31 @@ def main():
     )
     args = parser.parse_args()
 
-    if not check_no_matches(*args.time, *args.accuracy, *args.olken_time):
+    if not check_no_matches(
+        *args.time if args.time is not None else [],
+        *args.accuracy if args.accuracy is not None else [],
+        *args.olken_time if args.olken_time is not None else [],
+        *args.trace_time if args.trace_time is not None else [],
+    ):
         raise ValueError(
-            f"duplicate values in {args.time, args.accuracy, args.olken_time}"
+            f"duplicate values in {args.time, args.accuracy, args.olken_time, args.trace_time}"
         )
 
     if args.time is not None:
         outputs = [Path("time.pdf")] if args.time == [] else args.time
         plot_runtime(
-            args.inputs, args.extensions, outputs, ["Evicting-Map", "Fixed-Size-SHARDS"]
+            args.inputs,
+            args.extensions,
+            outputs,
+            ["Evicting-Map", "Fixed-Size-SHARDS"],
+            False,
         )
     if args.olken_time is not None:
         outputs = [Path("olken-time.pdf")] if args.olken_time == [] else args.olken_time
-        plot_runtime(args.inputs, args.extensions, outputs, ["Olken"])
+        plot_runtime(args.inputs, args.extensions, outputs, ["Olken"], False)
+    if args.trace_time is not None:
+        outputs = [Path("trace-time.pdf")] if args.trace_time == [] else args.trace_time
+        plot_runtime(args.inputs, args.extensions, outputs, [], True)
     if args.accuracy is not None:
         outputs = [Path("accuracy.pdf")] if args.accuracy == [] else args.accuracy
         plot_accuracy(
