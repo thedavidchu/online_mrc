@@ -30,7 +30,11 @@ sudo apt upgrade
 sudo apt install python3 python3-pip python3-setuptools \
     python3-wheel ninja-build meson
 sudo apt install python3-numpy python3-matplotlib python3-tqdm
-sudo apt install pkg-config libglib2.0-dev libboost-all-dev
+sudo apt install pkg-config libglib2.0-dev
+# Depending on your OS version, this may default to 1.74. In this case,
+# follow the instructions to install a backport. I found the package
+# called 'libboost1.81-dev' worked.
+sudo apt install libboost-all-dev
 
 # Install environment niceties
 sudo apt install clang-format clangd
