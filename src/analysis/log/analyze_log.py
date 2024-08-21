@@ -276,7 +276,7 @@ def main():
         nargs="*",
         type=Path,
         default=None,
-        help="specifying this will plot trace read time. Default: olken-time.pdf (ignore what Python says). You can replace this with your own custom names!",
+        help="specifying this will plot trace read time. Default: trace-time.pdf (ignore what Python says). You can replace this with your own custom names!",
     )
     parser.add_argument(
         "--accuracy",
