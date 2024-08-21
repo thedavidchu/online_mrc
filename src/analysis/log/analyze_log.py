@@ -1,8 +1,11 @@
 """Analyze a log file for timing information."""
 
 import argparse
-import re
+import math
 import os
+import re
+from collections import Counter
+from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 from warnings import warn
@@ -30,9 +33,24 @@ PATH_PATTERN = r"[a-zA-Z0-9_./\\-]+"
 FLOAT_PATTERN = r"\d+[.]\d+"
 
 
-def get_log_pattern(level: str, pattern: str) -> str:
+def get_log_pattern(
+    level: str,
+    pattern: str,
+    *,
+    capture_time: bool = False,
+    capture_path: bool = False,
+    capture_error: bool = False,
+) -> str:
+    def optionally_bracket(target: str, bracket: bool) -> str:
+        return f"({target})" if bracket else target
+
+    # NOTE  This is not an efficient way of checking, but it is easier
+    #       on the eyes than constructing a set of individual strings.
     assert level in "VERBOSE,TRACE,DEBUG,INFO,WARN,ERROR,FATAL".split(",")
-    return rf"^\[{level}\] \[\d+-\d+-\d+ \d+:\d+:\d+\] \[ {PATH_PATTERN}:\d+ \] \[errno \d+: [^\]]*\] {pattern}"
+    time_pattern = optionally_bracket(r"\d+-\d+-\d+ \d+:\d+:\d+", capture_time)
+    path_pattern = optionally_bracket(rf"{PATH_PATTERN}:\d+", capture_path)
+    error_pattern = optionally_bracket(r"errno \d+: [^\]]+", capture_error)
+    return rf"^\[{level}\] \[{time_pattern}\] \[ {path_pattern} \] \[{error_pattern}\] {pattern}"
 
 
 def get_file_tree(path: Path | list[Path]) -> list[Path]:
@@ -245,6 +263,126 @@ def plot_accuracy(
         fig.savefig(output)
 
 
+def get_runner_arguments_from_log(
+    text: str, path: Path
+) -> list[dict[str, bool | float | int | str | None]]:
+    def str2bool(boolstr: str) -> bool:
+        if boolstr == "true":
+            return True
+        elif boolstr == "false":
+            return False
+        else:
+            raise ValueError(f"unexpected boolean string {boolstr}")
+
+    pattern = re.compile(
+        rf"RunnerArguments\("
+        rf"algorithm=([\w-]+), "
+        rf"mrc=(\(?{PATH_PATTERN}\)?), "
+        rf"hist=(\(?{PATH_PATTERN}\)?), "
+        # This can be a float or an int. It may also be in the format
+        # '1e-3' so I shouldn't try constraining it.
+        rf"sampling=([^,]+), "
+        rf"num_bins=(\d+), "
+        rf"bin_size=(\d+), "
+        rf"max_size=(\d+), "
+        rf"mode=(\w+), "
+        rf"adj=(true|false), "
+        rf"qmrc_size=(\d+)"
+        rf"\)"
+    )
+    matching_lines = [
+        re.match(pattern, line)
+        for line in text.splitlines()
+        if re.match(pattern, line) is not None
+    ]
+    if len(matching_lines) == 0:
+        warn(f"log {path} has no runner arguments")
+    return [
+        dict(
+            # These are alphabetic with dashes.
+            algorithm=m.group(1),
+            mrc=None if m.group(2) == "(null)" else Path(m.group(2)),
+            hist=None if m.group(3) == "(null)" else Path(m.group(3)),
+            sampling=float(m.group(4)),
+            num_bins=int(m.group(5)),
+            bin_size=int(m.group(6)),
+            max_size=int(m.group(7)),
+            # These are alphabetic with underscores.
+            mode=m.group(8),
+            adj=str2bool(m.group(9)),
+            qmrc_size=int(m.group(10)),
+        )
+        for m in matching_lines
+    ]
+
+
+def get_throughput_from_log(text: str, path: Path) -> list[dict[datetime, int]]:
+    pattern = re.compile(
+        get_log_pattern("TRACE", rf"Finished (\d+) / (\d+)", capture_time=True)
+    )
+    matching_lines = [
+        re.match(pattern, line)
+        for line in text.splitlines()
+        if re.match(pattern, line) is not None
+    ]
+    if len(matching_lines) == 0:
+        warn(f"log {path} has no throughput")
+        return []
+    r = [
+        (
+            datetime.strptime(m.group(1), r"%Y-%m-%d %H:%M:%S").timestamp(),
+            int(m.group(2)),
+            int(m.group(3)),
+        )
+        for m in matching_lines
+    ]
+    # Group the matches.
+    accum = []
+    for time, numerator, denominator in r:
+        if numerator == 0:
+            base = time
+            accum.append([])
+        else:
+            accum[-1].append(time - base)
+    # Count the number of identical timestamps in each group.
+    accum = [{time: count for time, count in sorted(Counter(i).items())} for i in accum]
+    return accum
+
+
+def plot_throughput(
+    inputs: list[Path],
+    extensions: list[str],
+    outputs: list[Path],
+):
+    """
+    @brief  Count the number of millions of entries processed per second.
+    @note   As is good engineering practice, we simplify the
+            implementation as much as possible.
+    """
+    files = sorted(
+        [f for f in get_file_tree(inputs) if f.suffix in extensions], key=get_file_stem
+    )
+    data = []
+    for i, file in tqdm(enumerate(files)):
+        with file.open() as f:
+            text = f.read()
+        runner_args = get_runner_arguments_from_log(text, file)
+        throughput = get_throughput_from_log(text, file)
+        data.append((runner_args, throughput))
+    fig, axs = plt.subplots()
+    fig.set_size_inches(12, 8)
+    fig.suptitle("Throughput vs Time")
+    fig.supxlabel("Time from Start [seconds]")
+    fig.supylabel("Throughput [millions of entries processed]")
+    for file, (runner_args, throughputs) in zip(files, data):
+        for runner_arg, throughput in zip(runner_args, throughputs):
+            pretty_label = f"{str(file)}:{runner_arg["algorithm"]}"
+            axs.plot(throughput.keys(), throughput.values(), label=pretty_label)
+    axs.legend()
+    for output in outputs:
+        fig.savefig(output)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -285,6 +423,13 @@ def main():
         default=None,
         help="specifying this will plot accuracy. Default: accuracy.pdf (ignore what Python says). You can replace this with your own custom names!",
     )
+    parser.add_argument(
+        "--throughput",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="specifying this will plot throughput. Default: throughput.pdf (ignore what Python says). You can replace this with your own custom names!",
+    )
     args = parser.parse_args()
 
     if not check_no_matches(
@@ -292,9 +437,10 @@ def main():
         *args.accuracy if args.accuracy is not None else [],
         *args.olken_time if args.olken_time is not None else [],
         *args.trace_time if args.trace_time is not None else [],
+        *args.throughput if args.throughput is not None else [],
     ):
         raise ValueError(
-            f"duplicate values in {args.time, args.accuracy, args.olken_time, args.trace_time}"
+            f"duplicate values in {args.time, args.accuracy, args.olken_time, args.trace_time, args.throughput}"
         )
 
     if args.time is not None:
@@ -317,6 +463,9 @@ def main():
         plot_accuracy(
             args.inputs, args.extensions, outputs, ["Evicting-Map", "Fixed-Size-SHARDS"]
         )
+    if args.throughput is not None:
+        outputs = [Path("throughput.pdf")] if args.throughput == [] else args.throughput
+        plot_throughput(args.inputs, args.extensions, outputs)
 
 
 if __name__ == "__main__":
