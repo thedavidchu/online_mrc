@@ -19,6 +19,9 @@ project(
         'buildtype=debugoptimized',
         # Enable link-time optimizations
         'b_lto=true',
+        # Disable profile guided optimization
+        'b_pgo=off',
+        'b_pie=false',
     ],
 )
 
@@ -45,14 +48,14 @@ glib_dep = dependency(
 #       https://stackoverflow.com/questions/2146082/valgrind-profiling-timer-expired
 use_gprof = false
 if use_gprof
-    add_project_arguments('-pg', '-no-pie', language: 'c')
+    add_project_arguments('-pg', '-no-pie', language: ['c', 'cpp'])
     # NOTE  I have no idea why this is
-    add_project_link_arguments('-pg', '-no-pie', language: 'c')
+    add_project_link_arguments('-pg', '-no-pie', language: ['c', 'cpp'])
 endif
 
 analyze_time_intervals = false
 if analyze_time_intervals
-    add_project_arguments('-DINTERVAL_STATISTICS', language: 'c')
+    add_project_arguments('-DINTERVAL_STATISTICS', language: ['c', 'cpp'])
 endif
 
 fs = import('fs')
