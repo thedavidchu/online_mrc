@@ -28,9 +28,9 @@ git submodule update --init --recursive
 sudo apt update
 sudo apt upgrade
 sudo apt install python3 python3-pip python3-setuptools \
-                       python3-wheel ninja-build meson
+    python3-wheel ninja-build meson
 sudo apt install python3-numpy python3-matplotlib python3-tqdm
-sudo apt install pkg-config libglib2.0-dev
+sudo apt install pkg-config libglib2.0-dev libboost-all-dev
 
 # Install environment niceties
 sudo apt install clang-format clangd

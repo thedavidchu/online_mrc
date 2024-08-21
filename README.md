@@ -18,6 +18,7 @@ This project depends on the following:
     - This requires pkg-config
     - Thre requires Python's `packaging` module
     - Requires `apt install ninja-build`
+- The Boost library (version 1.81 or newer)
 - A C99 compiler that supports:
     - `#pragma once` (see Note)
     - __sync_bool_compare_and_swap(...)
@@ -40,13 +41,22 @@ Project Structure
 |--examples/            : Example usage and scripts.
 |--scripts/             : Directory for simple scripts and examples.
 |--src/
-|  |--lib/              : Common utilities (types and a logger)
-|  `--mrc/              : Miss Rate Curve algorithms
+|  |--analysis/         : Scripts for analyzing data.
+|  |--lib/              : Common utilities (types and a logger).
+|  `--mrc/              : Miss Rate Curve algorithms.
 |
-`--test/
-   |--include/test/     : Testing header library
-   |--lib_test/         : Test general common utilities
-   `--mrc_test/         : Unit tests for our MRC algorithms
+|--test/
+|  |--include/test/     : Testing header library.
+|  |--lib_test/         : Test general common utilities.
+|  `--mrc_test/         : Unit tests for our MRC algorithms.
+|--.clang-format        : Formatting file for clangd. Please use this if you
+|                         wish to make a pull request.
+|--.clang-tidy          : Static analysis file.
+|--INSTALLME.sh         : Run this script to install the dependencies for this
+|                         project!
+|--LICENSE              : MIT license.
+|--meson.build          : Top-level build directory folder.
+`--README.md            : Me!
 ```
 
 You will notice that the `.gitignore` ignores `/mydata/`, `myresults/`, and
