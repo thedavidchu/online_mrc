@@ -11,7 +11,7 @@ from pathlib import Path
 from shlex import split
 from subprocess import run, CompletedProcess
 
-EXE = "/home/david/projects/online_mrc/build/src/analysis/mrc/generate_mrc_exe"
+EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
 def sh(cmd: str, **kwargs) -> CompletedProcess[str]:

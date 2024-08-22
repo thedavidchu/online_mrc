@@ -5,3 +5,6 @@ subdir('mrc')
 
 # NOTE  This depends on 'lib' and 'mrc'.
 subdir('analysis')
+
+# NOTE  This depends on 'lib' and 'mrc'.
+subdir('run')
