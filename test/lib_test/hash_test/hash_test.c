@@ -46,7 +46,7 @@ test_uint64_hash_to_uint128(void)
 ///         between hash functions (e.g. I used to have it that the 64
 ///         bit hash function would be the first half of the 128 bit).
 static bool
-test_my_murmur_hash_wrappers(void)
+test_hash(void)
 {
     uint64_t const zero = 0;
     g_assert_cmpuint(Hash32Bit(zero), ==, Hash32Bit(zero));
@@ -72,6 +72,6 @@ main(void)
 {
     ASSERT_FUNCTION_RETURNS_TRUE(test_string_hash_to_uint32());
     ASSERT_FUNCTION_RETURNS_TRUE(test_uint64_hash_to_uint128());
-    ASSERT_FUNCTION_RETURNS_TRUE(test_my_murmur_hash_wrappers());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_hash());
     return 0;
 }
