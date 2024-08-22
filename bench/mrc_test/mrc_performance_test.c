@@ -5,7 +5,6 @@
 
 #include "math/positive_ceiling_divide.h"
 #include "random/zipfian_random.h"
-#include "test/mytester.h"
 
 #include "evicting_map/evicting_map.h"
 #include "mimir/mimir.h"

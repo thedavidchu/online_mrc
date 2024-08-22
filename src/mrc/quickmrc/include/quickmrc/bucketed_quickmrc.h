@@ -1,3 +1,4 @@
+/** @brief  My QuickMRC implementation using the evicting hash table. */
 #pragma once
 
 #include <stdbool.h>

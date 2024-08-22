@@ -1,3 +1,4 @@
+/** @brief  My implementation of QuickMRC. */
 #pragma once
 
 #include <stdbool.h>
@@ -11,7 +12,6 @@
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "quickmrc/buckets.h"
 #include "types/entry_type.h"
-#include "unused/mark_unused.h"
 
 struct QuickMRC {
     struct HashTable hash_table;
