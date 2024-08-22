@@ -196,7 +196,7 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = Hash64bit(key);
+    Hash64BitType hash = Hash64Bit(key);
     if (hash > me->global_threshold)
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 

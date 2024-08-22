@@ -37,7 +37,7 @@ test_uint64_hash_to_uint128(void)
     g_assert_cmpuint(hash[1], ==, 17462001654787800658ULL);
 
     // Test hash() wrapper
-    g_assert_cmpuint(hash[0], ==, Hash64bit(0));
+    g_assert_cmpuint(hash[0], ==, Hash64Bit(0));
     return true;
 }
 
@@ -47,13 +47,13 @@ test_my_murmur_hash_wrappers(void)
     // NOTE I'm mostly checking to avoid segmentation faults.
     uint64_t input = 0;
 
-    g_assert_cmpuint(Hash32bit(input), ==, 1669671676UL);
-    g_assert_cmpuint(Hash64bit(input), ==, 2945182322382062539ULL);
-    g_assert_cmpuint(Hash128bit(input).hash[0], ==, 2945182322382062539ULL);
-    g_assert_cmpuint(Hash128bit(input).hash[1], ==, 17462001654787800658ULL);
+    g_assert_cmpuint(Hash32Bit(input), ==, 1669671676UL);
+    g_assert_cmpuint(Hash64Bit(input), ==, 2945182322382062539ULL);
+    g_assert_cmpuint(Hash128Bit(input).hash[0], ==, 2945182322382062539ULL);
+    g_assert_cmpuint(Hash128Bit(input).hash[1], ==, 17462001654787800658ULL);
 
     // NOTE The 64 bit hash is just the first 8 bytes of the 128 bit hash!
-    g_assert_cmpuint(Hash64bit(input), ==, Hash128bit(input).hash[0]);
+    g_assert_cmpuint(Hash64Bit(input), ==, Hash128Bit(input).hash[0]);
 
     return true;
 }

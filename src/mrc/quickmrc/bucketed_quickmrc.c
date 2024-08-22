@@ -129,7 +129,7 @@ BucketedQuickMRC__access_item(struct BucketedQuickMRC *me, EntryType entry)
         return false;
     }
 
-    if (Hash64bit(entry) > me->threshold)
+    if (Hash64Bit(entry) > me->threshold)
         return true;
 
     // This assumes there won't be any errors further on.

@@ -106,7 +106,7 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
     if (me == NULL)
         return false;
     ++me->num_entries_seen;
-    if (Hash64bit(entry) > me->threshold)
+    if (Hash64Bit(entry) > me->threshold)
         return true;
     ++me->num_entries_processed;
     cache_insert(me->cache, entry);

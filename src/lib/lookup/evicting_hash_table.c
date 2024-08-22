@@ -80,7 +80,7 @@ EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key)
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = Hash64bit(key);
+    Hash64BitType hash = Hash64Bit(key);
     if (hash > me->global_threshold)
         return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 
@@ -106,7 +106,7 @@ EvictingHashTable__put(struct EvictingHashTable *me,
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledPutReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = Hash64bit(key);
+    Hash64BitType hash = Hash64Bit(key);
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
 
     ++me->num_inserted;

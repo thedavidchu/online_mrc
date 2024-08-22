@@ -9,7 +9,7 @@
 
 /// @brief  Wrapper around MurmurHash3.
 static inline Hash32BitType
-Hash32bit(KeyType key)
+Hash32Bit(KeyType key)
 {
     uint32_t hash = 0;
     MurmurHash3_x86_32(&key, sizeof(key), 0, &hash);
@@ -18,7 +18,7 @@ Hash32bit(KeyType key)
 
 /// @brief  Wrapper around MurmurHash3.
 static inline Hash64BitType
-Hash64bit(KeyType key)
+Hash64Bit(KeyType key)
 {
     uint64_t hash[2] = {0, 0};
     MurmurHash3_x64_128(&key, sizeof(key), 0, hash);
@@ -27,7 +27,7 @@ Hash64bit(KeyType key)
 
 /// @brief  Wrapper around MurmurHash3.
 static inline struct Hash128BitType
-Hash128bit(KeyType key)
+Hash128Bit(KeyType key)
 {
     struct Hash128BitType hash = {0};
     MurmurHash3_x64_128(&key, sizeof(key), 0, &hash.hash);
