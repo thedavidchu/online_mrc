@@ -9,7 +9,7 @@
 #include "test/mytester.h"
 #include "types/key_type.h"
 
-#define HASH_FUNCTION(key) Hash64bit(key)
+#define HASH_FUNCTION(key) Hash64Bit(key)
 #define LENGTH             8
 #define UNIQUE_KEYS        11
 
