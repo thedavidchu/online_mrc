@@ -5,38 +5,57 @@
 
 #include "arrays/array_size.h"
 #include "hash/hash.h"
-#include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
-#include "lookup/hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
 #include "shards/fixed_size_shards.h"
 #include "test/mytester.h"
+#include "types/entry_type.h"
 #include "unused/mark_unused.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const uint64_t TRACE_LENGTH = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.99;
 
+/// @note   This function may in theory never terminate. However,
+///         probabilistically, it should terminate fairly quickly (after
+///         no more than a few tens or thousands or hashes, depending on
+///         the threshold). That's why I bounded the search space.
+static EntryType
+find_accepted_entry(EntryType threshold)
+{
+    EntryType const MAX_SEARCH_SPACE = 10000;
+    for (EntryType i = 0; i < MAX_SEARCH_SPACE; ++i) {
+        if (Hash64Bit(i) < threshold) {
+            return i;
+        }
+    }
+    assert(0 && "we couldn't find a small enough hash in the search space!");
+}
+
 static bool
 access_same_key_five_times(void)
 {
-    EntryType entries[5] = {933, 933, 933, 933, 933};
-    uint64_t hist_bkt_oracle[11] = {4000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    EntryType entries[5] = {0};
+    uint64_t hist_bkt_oracle[11] = {40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct Histogram histogram_oracle = {
         .histogram = hist_bkt_oracle,
         .num_bins = ARRAY_SIZE(hist_bkt_oracle),
         .bin_size = 1,
         .false_infinity = 0,
-        .infinity = 1 * 1000,
-        .running_sum = ARRAY_SIZE(entries) * 1000,
+        .infinity = 1 * 10,
+        .running_sum = ARRAY_SIZE(entries) * 10,
     };
 
     struct FixedSizeShards me = {0};
     g_assert_true(
-        FixedSizeShards__init(&me, 1e-3, 1, histogram_oracle.num_bins, 1));
+        FixedSizeShards__init(&me, 1e-1, 1, histogram_oracle.num_bins, 1));
+    EntryType accepted_entry = find_accepted_entry(me.sampler.threshold);
+    for (size_t i = 0; i < ARRAY_SIZE(entries); ++i) {
+        entries[i] = accepted_entry;
+    }
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         FixedSizeShards__access_item(&me, entries[i]);
     }
@@ -118,7 +137,10 @@ long_accuracy_trace_test(void)
     MissRateCurve__init_from_histogram(&mrc, &me.olken.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.01);
+    // NOTE The MSE is as follows for various hashes:
+    //      - MurmurHash3: MSE <= 0.01
+    //      - splitmix64: MSE <= 0.018
+    g_assert_cmpfloat(mse, <=, 0.018);
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
