@@ -49,6 +49,7 @@ Project Structure
 |  |--include/test/     : Testing header library.
 |  |--lib_test/         : Test general common utilities.
 |  `--mrc_test/         : Unit tests for our MRC algorithms.
+|
 |--.clang-format        : Formatting file for clangd. Please use this if you
 |                         wish to make a pull request.
 |--.clang-tidy          : Static analysis file.
