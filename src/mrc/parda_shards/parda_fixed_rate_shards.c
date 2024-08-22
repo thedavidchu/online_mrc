@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "parda.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
 #include "types/entry_type.h"

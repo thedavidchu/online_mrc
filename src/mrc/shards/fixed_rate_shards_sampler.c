@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "hash/types.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"

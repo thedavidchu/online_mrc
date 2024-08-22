@@ -4,7 +4,7 @@
 
 #include <glib.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "lookup/evicting_hash_table.h"
 #include "test/mytester.h"
 #include "types/key_type.h"

@@ -8,7 +8,7 @@
 
 #include <glib.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "lookup/evicting_hash_table.h"

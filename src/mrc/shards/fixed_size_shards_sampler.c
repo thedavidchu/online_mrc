@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "math/ratio.h"

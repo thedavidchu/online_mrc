@@ -7,7 +7,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "histogram/histogram.h"
 #include "lookup/evicting_hash_table.h"
 #include "math/ratio.h"

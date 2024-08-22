@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "hash/MurmurHash3.h"
+#include "hash/splitmix64.h"
 #include "hash/types.h"
 #include "types/key_type.h"
 

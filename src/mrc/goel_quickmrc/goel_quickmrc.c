@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include "goel_quickmrc/goel_quickmrc.h"
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
 #include "miss_rate_curve/miss_rate_curve.h"

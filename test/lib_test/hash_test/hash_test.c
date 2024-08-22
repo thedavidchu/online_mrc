@@ -7,7 +7,7 @@
 #include <glib.h>
 
 #include "hash/MurmurHash3.h"
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "logger/logger.h"
 #include "test/mytester.h"
 
@@ -36,7 +36,7 @@ test_uint64_hash_to_uint128(void)
     g_assert_cmpuint(hash[0], ==, 2945182322382062539ULL);
     g_assert_cmpuint(hash[1], ==, 17462001654787800658ULL);
 
-    // Test MyMurmurHash3() wrapper
+    // Test hash() wrapper
     g_assert_cmpuint(hash[0], ==, Hash64bit(0));
     return true;
 }

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "hash/types.h"
 #include "histogram/histogram.h"
 #ifdef INTERVAL_STATISTICS
