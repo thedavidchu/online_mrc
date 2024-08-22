@@ -16,7 +16,6 @@
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
-#include "unused/mark_unused.h"
 
 /// Source: https://en.wikipedia.org/wiki/HyperLogLog#Practical_considerations
 static double
