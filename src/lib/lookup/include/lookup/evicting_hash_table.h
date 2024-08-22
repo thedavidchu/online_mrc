@@ -102,6 +102,8 @@ EvictingHashTable__refresh_threshold(struct EvictingHashTable *me);
 
 /// @brief  Count leading zeros in a uint64_t.
 /// @note   The value of __builtin_clzll(0) is undefined, as per GCC's docs.
+/// @note   This function is general-purpose enough that I don't feel
+///         the need to prefix it with 'EvictingHashTable__' or 'EHT__'.
 static inline int
 clz(uint64_t x)
 {
@@ -109,11 +111,11 @@ clz(uint64_t x)
 }
 
 static inline struct SampledTryPutReturn
-insert_new_element(struct EvictingHashTable *me,
-                   KeyType key,
-                   ValueType value,
-                   struct EvictingHashTableNode *incumbent,
-                   Hash64BitType hash)
+EHT__insert_new_element(struct EvictingHashTable *me,
+                        KeyType key,
+                        ValueType value,
+                        struct EvictingHashTableNode *incumbent,
+                        Hash64BitType hash)
 {
     *incumbent = (struct EvictingHashTableNode){.key = key,
                                                 .hash = hash,
@@ -128,11 +130,11 @@ insert_new_element(struct EvictingHashTable *me,
 }
 
 static inline struct SampledTryPutReturn
-replace_incumbent_element(struct EvictingHashTable *me,
-                          KeyType key,
-                          ValueType value,
-                          struct EvictingHashTableNode *incumbent,
-                          Hash64BitType hash)
+EHT__replace_incumbent_element(struct EvictingHashTable *me,
+                               KeyType key,
+                               ValueType value,
+                               struct EvictingHashTableNode *incumbent,
+                               Hash64BitType hash)
 {
     struct SampledTryPutReturn r = (struct SampledTryPutReturn){
         .status = SAMPLED_REPLACED,
@@ -156,11 +158,11 @@ replace_incumbent_element(struct EvictingHashTable *me,
 }
 
 static inline struct SampledTryPutReturn
-update_incumbent_element(struct EvictingHashTable *me,
-                         KeyType key,
-                         ValueType value,
-                         struct EvictingHashTableNode *incumbent,
-                         Hash64BitType hash)
+EHT__update_incumbent_element(struct EvictingHashTable *me,
+                              KeyType key,
+                              ValueType value,
+                              struct EvictingHashTableNode *incumbent,
+                              Hash64BitType hash)
 {
     UNUSED(me);
     struct SampledTryPutReturn r = (struct SampledTryPutReturn){
@@ -175,6 +177,8 @@ update_incumbent_element(struct EvictingHashTable *me,
 }
 
 /// @brief  Try to put a value into the hash table.
+/// @return A structure of the new hash value and the evicted data (if
+///         applicable).
 /// @note   This combines the lookup and put traditionally used by the
 ///         MRC algorithm. I haven't thought too hard about whether all
 ///         other MRC algorithms could similarly combine the lookup and
@@ -182,7 +186,8 @@ update_incumbent_element(struct EvictingHashTable *me,
 /// @note   Defining this as a `static inline` function improves performance
 ///         dramatically. In fact, without it, performance is much worse
 ///         than the separate lookup and put. I'm not exactly sure why, but
-///         this has a much more complex return type.
+///         this has a much more complex return type. The performance is
+///         better this way than enabling link-time optimizations too.
 static inline struct SampledTryPutReturn
 EvictingHashTable__try_put(struct EvictingHashTable *me,
                            KeyType key,
@@ -197,15 +202,15 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
 
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
     if (incumbent->hash == UINT64_MAX) {
-        return insert_new_element(me, key, value, incumbent, hash);
+        return EHT__insert_new_element(me, key, value, incumbent, hash);
     }
     if (hash < incumbent->hash) {
-        return replace_incumbent_element(me, key, value, incumbent, hash);
+        return EHT__replace_incumbent_element(me, key, value, incumbent, hash);
     }
     // NOTE If the key comparison is expensive, then one could first
     //      compare the hashes. However, in this case, they are not expensive.
     if (key == incumbent->key) {
-        return update_incumbent_element(me, key, value, incumbent, hash);
+        return EHT__update_incumbent_element(me, key, value, incumbent, hash);
     }
     return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 }
@@ -215,6 +220,8 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
 /// @param  V: uint64_t const
 ///             Number of registers equal to zero. We cannot get an
 ///             accurate estimate of the linear count if this V is zero.
+/// @note   This function is general-purpose enough that I don't feel
+///         the need to prefix it with 'EvictingHashTable__' or 'EHT__'.
 static double
 linear_counting(uint64_t const m, uint64_t const V)
 {
@@ -223,7 +230,7 @@ linear_counting(uint64_t const m, uint64_t const V)
 }
 
 static inline double
-estimate_num_unique(struct EvictingHashTable const *const me)
+EHT__estimate_num_unique(struct EvictingHashTable const *const me)
 {
     if (me == NULL || me->data == NULL || me->length == 0)
         return 0.0;
@@ -236,9 +243,8 @@ estimate_num_unique(struct EvictingHashTable const *const me)
         me->running_denominator,
         raw_estimate);
     uint64_t const num_empty = me->length - me->num_inserted;
-    // NOTE Because of the initial SHARDS sampling we are performing, we
-    //      need to account for this when deciding whether to use
-    //      linear counting or the hyperloglog.
+    // NOTE We need to account for the initial SHARDS sampling when
+    //      deciding between linear counting and hyperloglog.
     if (raw_estimate * me->init_sampling_ratio < 2.5 * me->length &&
         num_empty != 0) {
         return linear_counting(me->length, num_empty) / me->init_sampling_ratio;
@@ -253,7 +259,7 @@ static inline double
 EvictingHashTable__estimate_scale_factor(
     struct EvictingHashTable const *const me)
 {
-    return estimate_num_unique(me) / me->num_inserted;
+    return EHT__estimate_num_unique(me) / me->num_inserted;
 }
 
 void
