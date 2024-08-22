@@ -18,7 +18,7 @@ project(
         # Build with -O2 -g
         'buildtype=debugoptimized',
         # Enable link-time optimizations
-        'b_lto=true',
+        'b_lto=false',
         # Disable profile guided optimization
         'b_pgo=off',
         'b_pie=false',
