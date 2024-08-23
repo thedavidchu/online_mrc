@@ -8,7 +8,7 @@
  *          know, I have a love-hate relationship with link-time
  *          optimizations.
  *
- *  Source: https://www.partow.net/programming/hashfunctions/#RSHashFunction
+ *  Source: https://www.partow.net/programming/hashfunctions/
  */
 #pragma once
 
