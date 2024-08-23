@@ -98,8 +98,7 @@ ELFHash(char const *str, size_t const length)
     return hash;
 }
 
-/// @note   This hash function comes from Brian Kernighan and Dennis
-/// Ritchie's
+/// @note   This hash function comes from Brian Kernighan and Dennis Ritchie's
 ///         book "The C Programming Language". It is a simple hash function
 ///         using a strange set of possible seeds which all constitute a
 ///         pattern of 31....31...31 etc, it seems to be very similar to the
