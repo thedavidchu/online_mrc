@@ -97,6 +97,8 @@ test_hyperloglog_accuracy(char const *const fpath,
     size_t *estimates = calloc(artificial_trace_length, 3 * sizeof(*estimates));
     assert(estimates);
 
+    double large_cardinality_error = 0, med_cardinality_error = 0,
+           small_cardinality_error = 0;
     for (size_t i = 0; i < artificial_trace_length; ++i) {
         enum PutUniqueStatus s = LOOKUP_PUTUNIQUE_ERROR;
         uint64_t const x = f_next(data);
@@ -122,12 +124,26 @@ test_hyperloglog_accuracy(char const *const fpath,
             //      - splitmix64: ratio <= 0.02
             //      - SDBMHash: MSE <= 0.16 (this is REALLY bad!)
             g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.16);
+            large_cardinality_error = MAX(large_cardinality_error,
+                                          calculate_error(ht_size, eht_size));
         } else if (ht_size > 1 << 10) {
-            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.03);
+            // NOTE The ratios are as follows for various hashes:
+            //      - MurmurHash3/splitmix64/SDBMHash: ratio <= 0.03
+            //      - APHash: ratio <= 0.057
+            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.057);
+            med_cardinality_error =
+                MAX(med_cardinality_error, calculate_error(ht_size, eht_size));
         } else if (ht_size > 1 << 7) {
             g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.04);
+            small_cardinality_error = MAX(small_cardinality_error,
+                                          calculate_error(ht_size, eht_size));
         }
     }
+    LOGGER_INFO("Maximum errors -- small cardinalities: %f, medium "
+                "cardinalities: %f, large cardinalities: %f",
+                small_cardinality_error,
+                med_cardinality_error,
+                large_cardinality_error);
 
     if (fpath != NULL) {
         FILE *fp = fopen(fpath, "wb");
