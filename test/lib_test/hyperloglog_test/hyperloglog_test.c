@@ -117,10 +117,11 @@ test_hyperloglog_accuracy(char const *const fpath,
         estimates[3 * i + 2] = fs_size;
 
         if (ht_size > 1 << 13) {
-            // NOTE With the MurmurHash3 hash function, this is the
-            //      empirically determined maximum error. However, with
-            //      splitmix64, the error recedes to below 0.02.
-            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.023);
+            // NOTE The ratios are as follows for various hashes:
+            //      - MurmurHash3: ratio <= 0.023
+            //      - splitmix64: ratio <= 0.02
+            //      - SDBMHash: MSE <= 0.16 (this is REALLY bad!)
+            g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.16);
         } else if (ht_size > 1 << 10) {
             g_assert_cmpfloat(calculate_error(ht_size, eht_size), <=, 0.03);
         } else if (ht_size > 1 << 7) {

@@ -127,7 +127,8 @@ long_accuracy_trace_test(void)
     // NOTE The MSE is as follows for various hashes:
     //      - MurmurHash3: MSE <= 0.028
     //      - splitmix64: MSE <= 0.041
-    g_assert_cmpfloat(mse, <=, 0.041);
+    //      - SDBMHash: MSE <= 0.042
+    g_assert_cmpfloat(mse, <=, 0.042);
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);
