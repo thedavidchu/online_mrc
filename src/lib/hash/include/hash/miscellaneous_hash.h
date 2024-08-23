@@ -10,9 +10,9 @@
  * @note    Some of these hash functions are stronger than splitmix64;
  *          others are weaker (i.e. break my tests by causing higher
  *          mean squared errors). Here's the breakdown:
- *          - Stronger: RSHash,
+ *          - Stronger: RSHash
  *          - Mostly OK: SDBMHash (really bad for HyperLogLog), APHash
- *          - Weaker: JSHash, PJWHash, ELFHash, BKDRHash, DJBHash, DEKHash,
+ *          - Weaker: JSHash, PJWHash, ELFHash, BKDRHash, DJBHash, DEKHash
  *
  *  Source: https://www.partow.net/programming/hashfunctions/
  */
