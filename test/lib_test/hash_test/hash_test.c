@@ -8,6 +8,7 @@
 
 #include "hash/MurmurHash3.h"
 #include "hash/hash.h"
+#include "hash/miscellaneous_hash.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "test/mytester.h"
@@ -36,6 +37,27 @@ test_uint64_hash_to_uint128(void)
                 hash[1]);
     g_assert_cmpuint(hash[0], ==, 2945182322382062539ULL);
     g_assert_cmpuint(hash[1], ==, 17462001654787800658ULL);
+
+    return true;
+}
+
+/// @brief  Check for hashing consistency.
+static bool
+test_miscellaneous_hash(void)
+{
+    char const *const str = "Hello, World!";
+    size_t const length = strlen(str);
+
+    // Test for consistency.
+    g_assert_cmpuint(RSHash(str, length), ==, RSHash(str, length));
+    g_assert_cmpuint(JSHash(str, length), ==, JSHash(str, length));
+    g_assert_cmpuint(PJWHash(str, length), ==, PJWHash(str, length));
+    g_assert_cmpuint(ELFHash(str, length), ==, ELFHash(str, length));
+    g_assert_cmpuint(BKDRHash(str, length), ==, BKDRHash(str, length));
+    g_assert_cmpuint(SDBMHash(str, length), ==, SDBMHash(str, length));
+    g_assert_cmpuint(DJBHash(str, length), ==, DJBHash(str, length));
+    g_assert_cmpuint(DEKHash(str, length), ==, DEKHash(str, length));
+    g_assert_cmpuint(RSHash(str, length), ==, RSHash(str, length));
 
     return true;
 }
@@ -72,6 +94,7 @@ main(void)
 {
     ASSERT_FUNCTION_RETURNS_TRUE(test_string_hash_to_uint32());
     ASSERT_FUNCTION_RETURNS_TRUE(test_uint64_hash_to_uint128());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_miscellaneous_hash());
     ASSERT_FUNCTION_RETURNS_TRUE(test_hash());
     return 0;
 }
