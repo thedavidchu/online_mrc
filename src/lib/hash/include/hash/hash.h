@@ -10,7 +10,7 @@
 #include "types/key_type.h"
 
 #ifndef HASH_FUNCTION_SELECT
-#define HASH_FUNCTION_SELECT 0
+#define HASH_FUNCTION_SELECT 2
 #endif
 
 static inline Hash32BitType
@@ -24,22 +24,28 @@ Hash32Bit(KeyType const key)
 static inline Hash64BitType
 Hash64Bit(KeyType const key)
 {
-#if HASH_FUNCTION_SELECT == 0
-    uint64_t hash[2] = {0, 0};
-    MurmurHash3_x64_128(&key, sizeof(key), 0, hash);
-    return hash[0];
-#elif HASH_FUNCTION_SELECT == 1
-    return splitmix64_hash(key);
-#elif HASH_FUNCTION_SELECT == 2
-    return RSHash((void const *)&key, sizeof(key));
-#elif HASH_FUNCTION_SELECT == 3
-    return SDBMHash((void const *)&key, sizeof(key));
-#elif HASH_FUNCTION_SELECT == 4
-    return APHash((void const *)&key, sizeof(key));
-#else
+    switch (HASH_FUNCTION_SELECT) {
+    case 0: {
+        uint64_t hash[2] = {0, 0};
+        MurmurHash3_x64_128(&key, sizeof(key), 0, hash);
+        return hash[0];
+    }
+    case 1:
+        return splitmix64_hash(key);
+    case 2:
+        return RSHash((void const *)&key, sizeof(key));
+    case 3:
+        return SDBMHash((void const *)&key, sizeof(key));
+    case 4:
+        return APHash((void const *)&key, sizeof(key));
+    default:
+#if HASH_FUNCTION_SELECT < 0 || HASH_FUNCTION_SELECT > 4
+// NOTE This could go anywhere, but I decided to stick it with the code
+//      that would be generated in this case.
 #error "invalid value for HASH_FUNCTION_SELECT selected!"
-    return key;
 #endif
+        return key;
+    }
 }
 
 static inline struct Hash128BitType
