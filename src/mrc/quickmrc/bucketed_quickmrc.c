@@ -7,7 +7,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "histogram/histogram.h"
 #include "lookup/evicting_hash_table.h"
 #include "math/ratio.h"
@@ -129,7 +129,7 @@ BucketedQuickMRC__access_item(struct BucketedQuickMRC *me, EntryType entry)
         return false;
     }
 
-    if (Hash64bit(entry) > me->threshold)
+    if (Hash64Bit(entry) > me->threshold)
         return true;
 
     // This assumes there won't be any errors further on.

@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "parda.h"
 #include "parda_shards/parda_fixed_rate_shards.h"
 #include "types/entry_type.h"
@@ -29,7 +29,7 @@ PardaFixedRateShards__access_item(struct PardaFixedRateShards *me,
     if (me == NULL) {
         return;
     }
-    if (Hash64bit(entry) > UINT64_MAX * me->sampling_ratio) {
+    if (Hash64Bit(entry) > UINT64_MAX * me->sampling_ratio) {
         return;
     }
     // I need to convert it to a string because Parda will strdup(...) it.

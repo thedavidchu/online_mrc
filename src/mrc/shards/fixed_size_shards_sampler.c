@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
@@ -100,7 +100,7 @@ FixedSizeShardsSampler__sample(struct FixedSizeShardsSampler *me,
     ++me->num_entries_seen;
     // Skip items above the threshold. Note that we accept items that are equal
     // to the threshold because the maximum hash is the threshold.
-    if (Hash64bit((uint64_t)entry) > me->threshold) {
+    if (Hash64Bit((uint64_t)entry) > me->threshold) {
         return false;
     }
     ++me->num_entries_processed;
@@ -116,7 +116,7 @@ FixedSizeShardsSampler__insert(struct FixedSizeShardsSampler *me,
     if (Heap__is_full(&me->pq)) {
         make_room(me, eviction_hook, eviction_data);
     }
-    if (!Heap__insert_if_room(&me->pq, Hash64bit(entry), entry)) {
+    if (!Heap__insert_if_room(&me->pq, Hash64Bit(entry), entry)) {
         return false;
     }
     return true;

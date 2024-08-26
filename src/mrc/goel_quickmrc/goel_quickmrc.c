@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include "goel_quickmrc/goel_quickmrc.h"
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -106,7 +106,7 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
     if (me == NULL)
         return false;
     ++me->num_entries_seen;
-    if (Hash64bit(entry) > me->threshold)
+    if (Hash64Bit(entry) > me->threshold)
         return true;
     ++me->num_entries_processed;
     cache_insert(me->cache, entry);

@@ -7,7 +7,7 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
@@ -67,7 +67,7 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
     }
 
     ++me->total_entries_seen;
-    if (Hash64bit(entry) > me->threshold)
+    if (Hash64Bit(entry) > me->threshold)
         return true;
     // This assumes there won't be any errors further on.
     ++me->total_entries_processed;

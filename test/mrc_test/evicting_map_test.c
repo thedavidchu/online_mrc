@@ -106,7 +106,10 @@ long_accuracy_trace_test(void)
     MissRateCurve__init_from_histogram(&mrc, &me.histogram);
     double mse = MissRateCurve__mean_squared_error(&oracle_mrc, &mrc);
     LOGGER_INFO("Mean-Squared Error: %lf", mse);
-    g_assert_cmpfloat(mse, <=, 0.02);
+    // NOTE The MSE is as follows for various hashes:
+    //      - MurmurHash3: MSE <= 0.02
+    //      - splitmix64: MSE <= 0.032
+    g_assert_cmpfloat(mse, <=, 0.032);
 
     ZipfianRandom__destroy(&zrng);
     Olken__destroy(&oracle);

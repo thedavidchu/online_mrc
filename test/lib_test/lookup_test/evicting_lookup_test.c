@@ -4,14 +4,13 @@
 
 #include <glib.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "lookup/evicting_hash_table.h"
 #include "test/mytester.h"
 #include "types/key_type.h"
 
-#define HASH_FUNCTION(key) Hash64bit(key)
-#define LENGTH             8
-#define UNIQUE_KEYS        11
+#define LENGTH      8
+#define UNIQUE_KEYS 11
 
 static bool
 sampled_test(void)
@@ -33,7 +32,7 @@ sampled_test(void)
         KeyType key = i;
         struct SampledLookupReturn s = EvictingHashTable__lookup(&me, key);
         if (s.status == SAMPLED_FOUND) {
-            g_assert_cmpuint(s.hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(s.hash, ==, Hash64Bit(key));
             g_assert_cmpuint(s.timestamp, ==, first_val);
             keys[i] = true;
             ++num_keys;
@@ -49,11 +48,11 @@ sampled_test(void)
             EvictingHashTable__put(&me, key, second_val);
         if (keys[i]) {
             g_assert_cmpuint(r.status, ==, SAMPLED_UPDATED);
-            g_assert_cmpuint(r.new_hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(r.new_hash, ==, Hash64Bit(key));
             g_assert_cmpuint(r.old_timestamp, ==, 0);
             struct SampledLookupReturn s = EvictingHashTable__lookup(&me, key);
             g_assert_cmpuint(s.status, ==, SAMPLED_FOUND);
-            g_assert_cmpuint(s.hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(s.hash, ==, Hash64Bit(key));
             g_assert_cmpuint(s.timestamp, ==, second_val);
         } else {
             g_assert_cmpuint(r.status, ==, SAMPLED_IGNORED);
@@ -84,7 +83,7 @@ sampled_try_put_test(void)
         KeyType key = i;
         struct SampledLookupReturn s = EvictingHashTable__lookup(&me, key);
         if (s.status == SAMPLED_FOUND) {
-            g_assert_cmpuint(s.hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(s.hash, ==, Hash64Bit(key));
             g_assert_cmpuint(s.timestamp, ==, first_val);
             keys[i] = true;
             ++num_keys;
@@ -100,13 +99,13 @@ sampled_try_put_test(void)
             EvictingHashTable__try_put(&me, key, second_val);
         if (keys[i]) {
             g_assert_cmpuint(r.status, ==, SAMPLED_UPDATED);
-            g_assert_cmpuint(r.new_hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(r.new_hash, ==, Hash64Bit(key));
             g_assert_cmpuint(r.old_key, ==, key);
-            g_assert_cmpuint(r.old_hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(r.old_hash, ==, Hash64Bit(key));
             g_assert_cmpuint(r.old_value, ==, first_val);
             struct SampledLookupReturn s = EvictingHashTable__lookup(&me, key);
             g_assert_cmpuint(s.status, ==, SAMPLED_FOUND);
-            g_assert_cmpuint(s.hash, ==, HASH_FUNCTION(key));
+            g_assert_cmpuint(s.hash, ==, Hash64Bit(key));
             g_assert_cmpuint(s.timestamp, ==, second_val);
         } else {
             g_assert_cmpuint(r.status, ==, SAMPLED_IGNORED);

@@ -24,7 +24,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "hash/MyMurmurHash3.h"
+#include "hash/hash.h"
 #include "hash/types.h"
 #include "logger/logger.h"
 #include "types/key_type.h"
@@ -196,7 +196,7 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
     if (me == NULL || me->data == NULL || me->length == 0)
         return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
 
-    Hash64BitType hash = Hash64bit(key);
+    Hash64BitType hash = Hash64Bit(key);
     if (hash > me->global_threshold)
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 
