@@ -9,7 +9,9 @@ EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
 def sh(cmd: str, **kwargs) -> CompletedProcess[str]:
-    return run(split(cmd), capture_output=True, text=True, **kwargs)
+    """Automatically run nohup on every script. This is because I have
+    a bad habit of killing my scripts on hangup."""
+    return run(split(f"nohup {cmd}"), capture_output=True, text=True, **kwargs)
 
 
 def practice_sh(cmd: str, **kwargs) -> CompletedProcess[str]:
@@ -73,13 +75,13 @@ def run_trace(
         return os.path.join(str(output_), "hist", f"{input_.stem}-{algo}-hist.bin")
 
     log = sh(
-        f"nohup {EXE} "
+        f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
-        f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})"'
+        f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})" '
         f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true)" '
         f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192)" '
-        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)"'
+        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)" '
     )
 
     with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
