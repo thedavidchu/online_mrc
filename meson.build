@@ -16,7 +16,7 @@ project(
         # see them when I use gprof.
         'default_library=static',
         # Build with -O2 -g
-        'buildtype=debugoptimized',
+        'buildtype=release',
         # Enable link-time optimizations
         'b_lto=false',
         # Disable profile guided optimization
