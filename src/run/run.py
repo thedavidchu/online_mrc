@@ -5,9 +5,6 @@ from pathlib import Path
 from shlex import split
 from subprocess import run, CompletedProcess
 
-from ..analysis.log.analyze_log import analyze_log
-from ..analysis.plot.plot_mrc import plot_mrc
-
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
@@ -125,38 +122,12 @@ def main():
     for f in files:
         run_trace(f, args.format, args.output)
 
-    plot_dir = os.path.join(str(args.output), "plot")
-    for f in files:
-        input_ = f
-        output_ = args.output
-
-        def mrc(algo: str):
-            # Yes, I just copied this verbatim from above. Yes, I'm
-            # violating DRY for the sake of expediency.
-            return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
-
-        plot_mrc(
-            oracle_path=mrc("Olken"),
-            input_paths=[
-                mrc("Fixed-Rate-SHARDS"),
-                mrc("Fixed-Size-SHARDS"),
-                mrc("Evicting-Map"),
-            ],
-            output_paths=os.path.join(plot_dir, f"{input_.stem}-mrc.pdf"),
-            debug=False,
-        )
-
+    hist_dir = os.path.join(str(args.output), "hist")
     log_dir = os.path.join(str(args.output), "log")
+    mrc_dir = os.path.join(str(args.output), "mrc")
+    plot_dir = os.path.join(str(args.output), "plot")
 
-    analyze_log(
-        inputs=log_dir,
-        extensions=[".log"],
-        time_=[os.path.join(plot_dir, "time.pdf")],
-        olken_time=[os.path.join(plot_dir, "olken-time.pdf")],
-        trace_time=[os.path.join(plot_dir, "trace-time.pdf")],
-        accuracy=[os.path.join(plot_dir, "accuracy.pdf")],
-        throughput=[os.path.join(plot_dir, "throughput.pdf")],
-    )
+    print(f"{hist_dir, log_dir, mrc_dir, plot_dir}")
 
 
 if __name__ == "__main__":
