@@ -13,8 +13,9 @@ def sh(cmd: str, **kwargs) -> CompletedProcess[str]:
 
 
 def practice_sh(cmd: str, **kwargs) -> CompletedProcess[str]:
-    print(cmd)
-    return CompletedProcess(args="test", returncode=0, stdout="test", stderr="test")
+    # Adding the '--help' flag should call the executable but return
+    # very quickly!
+    return sh(cmd=f"{cmd} --help", **kwargs)
 
 
 def setup_env(output_dir: Path):
