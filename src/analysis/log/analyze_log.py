@@ -1,7 +1,6 @@
 """Analyze a log file for timing information."""
 
 import argparse
-import math
 import os
 import re
 from collections import Counter
@@ -376,11 +375,56 @@ def plot_throughput(
     fig.supylabel("Throughput [millions of entries processed]")
     for file, (runner_args, throughputs) in zip(files, data):
         for runner_arg, throughput in zip(runner_args, throughputs):
-            pretty_label = f"{str(file)}:{runner_arg["algorithm"]}"
+            pretty_label = f"{str(file)}:{runner_arg['algorithm']}"
             axs.plot(throughput.keys(), throughput.values(), label=pretty_label)
     axs.legend()
     for output in outputs:
         fig.savefig(output)
+
+
+def analyze_log(
+    inputs: list[Path],
+    extensions: list[str],
+    time_: list[Path],
+    accuracy: list[Path],
+    olken_time: list[Path],
+    trace_time: list[Path],
+    throughput: list[Path],
+):
+    if not check_no_matches(
+        *time_ if time_ is not None else [],
+        *accuracy if accuracy is not None else [],
+        *time_ if olken_time is not None else [],
+        *trace_time if trace_time is not None else [],
+        *throughput if throughput is not None else [],
+    ):
+        raise ValueError(
+            f"duplicate values in {time_, accuracy, olken_time, trace_time, throughput}"
+        )
+
+    if time_ is not None:
+        outputs = [Path("time.pdf")] if time_ == [] else time_
+        plot_runtime(
+            inputs,
+            extensions,
+            outputs,
+            ["Evicting-Map", "Fixed-Size-SHARDS"],
+            False,
+        )
+    if olken_time is not None:
+        outputs = [Path("olken-time.pdf")] if olken_time == [] else olken_time
+        plot_runtime(inputs, extensions, outputs, ["Olken"], False)
+    if trace_time is not None:
+        outputs = [Path("trace-time.pdf")] if trace_time == [] else trace_time
+        plot_runtime(inputs, extensions, outputs, [], True)
+    if accuracy is not None:
+        outputs = [Path("accuracy.pdf")] if accuracy == [] else accuracy
+        plot_accuracy(
+            inputs, extensions, outputs, ["Evicting-Map", "Fixed-Size-SHARDS"]
+        )
+    if throughput is not None:
+        outputs = [Path("throughput.pdf")] if throughput == [] else throughput
+        plot_throughput(inputs, extensions, outputs)
 
 
 def main():
@@ -432,40 +476,15 @@ def main():
     )
     args = parser.parse_args()
 
-    if not check_no_matches(
-        *args.time if args.time is not None else [],
-        *args.accuracy if args.accuracy is not None else [],
-        *args.olken_time if args.olken_time is not None else [],
-        *args.trace_time if args.trace_time is not None else [],
-        *args.throughput if args.throughput is not None else [],
-    ):
-        raise ValueError(
-            f"duplicate values in {args.time, args.accuracy, args.olken_time, args.trace_time, args.throughput}"
-        )
-
-    if args.time is not None:
-        outputs = [Path("time.pdf")] if args.time == [] else args.time
-        plot_runtime(
-            args.inputs,
-            args.extensions,
-            outputs,
-            ["Evicting-Map", "Fixed-Size-SHARDS"],
-            False,
-        )
-    if args.olken_time is not None:
-        outputs = [Path("olken-time.pdf")] if args.olken_time == [] else args.olken_time
-        plot_runtime(args.inputs, args.extensions, outputs, ["Olken"], False)
-    if args.trace_time is not None:
-        outputs = [Path("trace-time.pdf")] if args.trace_time == [] else args.trace_time
-        plot_runtime(args.inputs, args.extensions, outputs, [], True)
-    if args.accuracy is not None:
-        outputs = [Path("accuracy.pdf")] if args.accuracy == [] else args.accuracy
-        plot_accuracy(
-            args.inputs, args.extensions, outputs, ["Evicting-Map", "Fixed-Size-SHARDS"]
-        )
-    if args.throughput is not None:
-        outputs = [Path("throughput.pdf")] if args.throughput == [] else args.throughput
-        plot_throughput(args.inputs, args.extensions, outputs)
+    analyze_log(
+        inputs=args.inputs,
+        extensions=args.extensions,
+        time_=args.time,
+        accuracy=args.accuracy,
+        olken_time=args.olken_time,
+        trace_time=args.trace_time,
+        throughput=args.throughput,
+    )
 
 
 if __name__ == "__main__":

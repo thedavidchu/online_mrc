@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path
 from warnings import warn
 
 import numpy as np
@@ -25,9 +26,9 @@ def timing(f):
     return wrap
 
 
-def read_and_plot_mrc(path: str, label: str, debug: bool, separator: str):
-    if not os.path.exists(path) or not os.path.isfile(path):
-        warn(f"{path} DNE")
+def read_and_plot_mrc(path: Path, label: str, debug: bool, separator: str):
+    if not path.exists or not path.is_file:
+        warn(f"{str(path)} DNE")
         return
     dt = np.dtype([("index", np.uint64), ("miss-rate", np.float64)])
     with open(path, "rb") as f:
@@ -46,61 +47,59 @@ def read_and_plot_mrc(path: str, label: str, debug: bool, separator: str):
 
 
 @timing
-def plot_from_path(path: str, *, label: str = None, debug: bool = False):
-    # We take the basename so that we don't print the file path in the
-    # label for the plot.
-    basename = os.path.basename(path)
-    root, ext = os.path.splitext(basename)
-
+def plot_from_path(path: Path, *, label: str | None = None, debug: bool = False):
     # Set the label to the root of the file name if the user hasn't
     # specified a custom label. I do this so then I can label the oracle.
     if label is None:
-        label = root
-
-    if ext == ".bin":
+        label = path.stem
+    if path.suffix == ".bin":
         read_and_plot_mrc(path, label, debug, separator="")
-    elif ext == ".dat":
+    elif path.suffix == ".dat":
         read_and_plot_mrc(path, label, debug, separator=",")
     else:
         raise ValueError(
-            f"unrecognized file type for '{path}'. Expecting {{.bin,.dat}}, got {ext}"
+            f"unrecognized file type for '{path}'. Expecting {{.bin,.dat}}, got {path.suffix}"
         )
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--oracle", type=str, required=False, help="path to oracle")
-    parser.add_argument(
-        "--input", "-i", nargs="+", type=str, required=True, help="input path(s)"
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        nargs="*",
-        type=str,
-        default=["mrc.pdf"],
-        help="output path(s)",
-    )
-    parser.add_argument("--debug", action="store_true")
-    args = parser.parse_args()
-
-    oracle_path = args.oracle
-    input_paths: list[str] = args.input
-    output_paths: list[str] = args.output
-
+def plot_mrc(
+    oracle_path: Path | None,
+    input_paths: list[Path],
+    output_paths: list[Path],
+    debug: bool,
+):
     plt.figure(figsize=(12, 8), dpi=300)
     plt.title("Miss-Rate Curve")
     plt.xlabel("Number of key-value pairs")
     plt.ylabel("Miss-rate")
     plt.ylim(0, 1.01)
     if oracle_path is not None:
-        root, _ = os.path.splitext(oracle_path)
-        plot_from_path(oracle_path, label=f"Oracle ({root})", debug=args.debug)
+        plot_from_path(oracle_path, label=f"Oracle ({oracle_path.stem})", debug=debug)
     for input_path in input_paths:
-        plot_from_path(input_path, debug=args.debug)
+        plot_from_path(input_path, debug=debug)
     plt.legend()
     for output_path in output_paths:
         plt.savefig(output_path)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--oracle", type=Path, required=False, help="path to oracle")
+    parser.add_argument(
+        "--input", "-i", nargs="+", type=Path, required=True, help="input path(s)"
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        nargs="*",
+        type=Path,
+        default=["mrc.pdf"],
+        help="output path(s)",
+    )
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    plot_mrc(args.oracle, args.input, args.output, args.debug)
 
 
 if __name__ == "__main__":
