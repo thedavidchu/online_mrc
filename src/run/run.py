@@ -5,6 +5,9 @@ from pathlib import Path
 from shlex import split
 from subprocess import run, CompletedProcess
 
+from ..analysis.log.analyze_log import analyze_log
+from ..analysis.plot.plot_mrc import plot_mrc
+
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
@@ -30,6 +33,7 @@ def setup_env(output_dir: Path):
     os.mkdir(os.path.join(output_dir, "mrc"))
     os.mkdir(os.path.join(output_dir, "hist"))
     os.mkdir(os.path.join(output_dir, "log"))
+    os.mkdir(os.path.join(output_dir, "plot"))
 
     os.chdir(build_dir)
     sh("meson setup --wipe")
@@ -65,18 +69,13 @@ def run_trace(
     format: str,
     output_: Path,
 ):
-    def get_stem(path: Path) -> str:
-        return os.path.splitext(os.path.split(str(path))[-1])[0]
-
     def mrc(algo: str):
-        input_stem = get_stem(input_)
-        return os.path.join(str(output_), "mrc", f"{input_stem}-{algo}-mrc.bin")
+        return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
 
     def hist(algo: str):
-        input_stem = get_stem(input_)
-        return os.path.join(str(output_), "hist", f"{input_stem}-{algo}-hist.bin")
+        return os.path.join(str(output_), "hist", f"{input_.stem}-{algo}-hist.bin")
 
-    log = practice_sh(
+    log = sh(
         f"nohup {EXE} "
         f"--input {input_} "
         f"--format {format} "
@@ -86,7 +85,7 @@ def run_trace(
         f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)"'
     )
 
-    with open(os.path.join(output_, "log", f"{get_stem(input_)}.log"), "w") as f:
+    with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
         # I write the stderr first since it is flushed first.
         f.write(log.stderr)
         f.write(log.stdout)
@@ -125,6 +124,39 @@ def main():
 
     for f in files:
         run_trace(f, args.format, args.output)
+
+    plot_dir = os.path.join(str(args.output), "plot")
+    for f in files:
+        input_ = f
+        output_ = args.output
+
+        def mrc(algo: str):
+            # Yes, I just copied this verbatim from above. Yes, I'm
+            # violating DRY for the sake of expediency.
+            return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
+
+        plot_mrc(
+            oracle_path=mrc("Olken"),
+            input_paths=[
+                mrc("Fixed-Rate-SHARDS"),
+                mrc("Fixed-Size-SHARDS"),
+                mrc("Evicting-Map"),
+            ],
+            output_paths=os.path.join(plot_dir, f"{input_.stem}-mrc.pdf"),
+            debug=False,
+        )
+
+    log_dir = os.path.join(str(args.output), "log")
+
+    analyze_log(
+        inputs=log_dir,
+        extensions=[".log"],
+        time_=[os.path.join(plot_dir, "time.pdf")],
+        olken_time=[os.path.join(plot_dir, "olken-time.pdf")],
+        trace_time=[os.path.join(plot_dir, "trace-time.pdf")],
+        accuracy=[os.path.join(plot_dir, "accuracy.pdf")],
+        throughput=[os.path.join(plot_dir, "throughput.pdf")],
+    )
 
 
 if __name__ == "__main__":
