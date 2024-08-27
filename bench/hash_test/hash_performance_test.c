@@ -23,7 +23,7 @@
 #define TIME_HASH(f)         time_hash(f, #f)
 #define TEST_DISTRIBUTION(f) test_hash_distribution(f, #f)
 
-size_t const NUM_VALUES_FOR_PERF = 1 << 28;
+size_t const NUM_VALUES_FOR_PERF = 1 << 27;
 size_t const NUM_VALUES_FOR_DISTRIBUTION = 1 << 20;
 
 ////////////////////////////////////////////////////////////////////////////////
