@@ -1,40 +1,47 @@
 #!/usr/bin/python3
 import argparse
 import os
+from getpass import getpass
 from pathlib import Path
-from shlex import split
+from shlex import split, quote
 from subprocess import run, CompletedProcess
+from warnings import warn
 
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
-def sh(cmd: str, **kwargs) -> CompletedProcess[str]:
-    return run(split(cmd), capture_output=True, text=True, **kwargs)
+def sh(cmd: str, **kwargs) -> CompletedProcess:
+    """Automatically run nohup on every script. This is because I have
+    a bad habit of killing my scripts on hangup."""
+    return run(split(f"nohup {cmd}"), capture_output=True, text=True, **kwargs)
 
 
-def practice_sh(cmd: str, **kwargs) -> CompletedProcess[str]:
+def practice_sh(cmd: str, **kwargs) -> CompletedProcess:
     # Adding the '--help' flag should call the executable but return
     # very quickly!
     return sh(cmd=f"{cmd} --help", **kwargs)
 
 
-def setup_env(output_dir: Path):
-    top_level_dir = sh("git rev-parse --show-toplevel", timeout=60).stdout.strip()
-    build_dir = os.path.join(top_level_dir, "build")
-
-    # Setup output_dir
-    if os.path.exists(output_dir) and os.listdir(output_dir):
-        raise FileExistsError("cannot overwrite old data")
-    if not os.path.exists(output_dir):
+def setup_env(
+    *,
+    output_dir: Path | None = None,
+    setup_output: bool = True,
+    setup_build: bool = True,
+):
+    top_level_dir = sh("git rev-parse --show-toplevel").stdout.strip()
+    if setup_output:
+        if os.path.exists(output_dir):
+            raise FileExistsError(f"{str(output_dir)} exists")
         os.mkdir(output_dir)
-    os.mkdir(os.path.join(output_dir, "mrc"))
-    os.mkdir(os.path.join(output_dir, "hist"))
-    os.mkdir(os.path.join(output_dir, "log"))
-
-    os.chdir(build_dir)
-    sh("meson setup --wipe")
-    sh("meson compile")
-
+        os.mkdir(output_dir / "mrc")
+        os.mkdir(output_dir / "hist")
+        os.mkdir(output_dir / "log")
+        os.mkdir(output_dir / "plot")
+    if setup_build:
+        build_dir = os.path.join(top_level_dir, "build")
+        os.chdir(build_dir)
+        sh("meson setup --wipe")
+        sh("meson compile")
     os.chdir(top_level_dir)
 
 
@@ -60,36 +67,71 @@ def sort_files_by_size(files: list[Path]) -> list[Path]:
     return sorted(files, key=lambda f: os.path.getsize(f))
 
 
+def get_filtered_sorted_files(path: Path, extensions: list[str]) -> list[Path]:
+    files = get_file_tree(path)
+    files = filter_files_by_extension(files, extensions)
+    files = sort_files_by_size(files)
+    return files
+
+
 def run_trace(
     input_: Path,
     format: str,
     output_: Path,
 ):
-    def get_stem(path: Path) -> str:
-        return os.path.splitext(os.path.split(str(path))[-1])[0]
-
     def mrc(algo: str):
-        input_stem = get_stem(input_)
-        return os.path.join(str(output_), "mrc", f"{input_stem}-{algo}-mrc.bin")
+        return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
 
     def hist(algo: str):
-        input_stem = get_stem(input_)
-        return os.path.join(str(output_), "hist", f"{input_stem}-{algo}-hist.bin")
+        return os.path.join(str(output_), "hist", f"{input_.stem}-{algo}-hist.bin")
 
-    log = practice_sh(
-        f"nohup {EXE} "
+    log = sh(
+        f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
-        f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})"'
+        f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})" '
         f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true)" '
         f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192)" '
-        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)"'
+        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)" '
     )
 
-    with open(os.path.join(output_, "log", f"{get_stem(input_)}.log"), "w") as f:
+    with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
         # I write the stderr first since it is flushed first.
         f.write(log.stderr)
         f.write(log.stdout)
+
+
+def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
+    oracle_path = mrc_dir / f"{f.stem}-Olken-mrc.bin"
+    frs_path = mrc_dir / f"{f.stem}-Fixed-Rate-SHARDS-mrc.bin"
+    emap_path = mrc_dir / f"{f.stem}-Evicting-Map-mrc.bin"
+    fss_path = mrc_dir / f"{f.stem}-Fixed-Size-SHARDS-mrc.bin"
+    output_path = plot_dir / f"{f.stem}-mrc.pdf"
+    r = sh(
+        f"python3 src/analysis/plot/plot_mrc.py "
+        f"--oracle {oracle_path} "
+        f"--input {frs_path} {emap_path} {fss_path} "
+        f"--output {output_path}"
+    )
+    if r.returncode != 0:
+        print(r.stderr)
+        print(r.stdout)
+        r.check_returncode()
+
+
+def analyze_log(output_dir: Path, log_dir: Path):
+    r = sh(
+        f"python3 src/analysis/log/analyze_log.py "
+        f"--input {str(log_dir)} "
+        f"--time {str(output_dir / 'time.pdf')} "
+        f"--olken-time {str(output_dir / 'olken-time.pdf')} "
+        f"--trace-time {str(output_dir / 'trace-time.pdf')} "
+        f"--accuracy {str(output_dir / 'accuracy.pdf')} "
+    )
+    if r.returncode != 0:
+        print(r.stderr)
+        print(r.stdout)
+        r.check_returncode()
 
 
 def main():
@@ -115,16 +157,44 @@ def main():
         required=True,
         help="format of the input traces",
     )
+    parser.add_argument("--sudo", action="store_true", help="run as sudo")
+    parser.add_argument("--run-plot-mrc", action="store_true", help="run MRC plotters")
+    parser.add_argument(
+        "--run-analyze-log", action="store_true", help="run log analyzer"
+    )
     args = parser.parse_args()
 
-    setup_env(args.output)
+    if args.sudo:
+        warn("the 'sudo' option doesn't do anything... yet!")
+        # NOTE  I try to replicate sudo's interface.
+        sudo_password = getpass(prompt=f"[sudo] password for {os.getlogin()}: ")
+        # NOTE  You need to quote the password to prevent arbitrary
+        #       string injection attacks.
+        sh(f"echo {quote( sudo_password )} | sudo -S echo Testing sudo password")
 
-    files = get_file_tree(args.input)
-    files = filter_files_by_extension(files, args.extensions)
-    files = sort_files_by_size(files)
+    run_traces: bool = not (args.run_plot_mrc or args.run_analyze_log)
+    setup_env(
+        output_dir=args.output,
+        setup_output=run_traces,
+        setup_build=run_traces,
+    )
+    # Recall Python's pathlib syntax for concatenating file names. Yes,
+    # it's weird. And yes, I don't actually need this comment.
+    hist_dir = args.output / "hist"
+    log_dir = args.output / "log"
+    mrc_dir = args.output / "mrc"
+    plot_dir = args.output / "plot"
 
-    for f in files:
-        run_trace(f, args.format, args.output)
+    files = get_filtered_sorted_files(args.input, args.extensions)
+
+    if run_traces:
+        for f in files:
+            run_trace(f, args.format, args.output)
+    if args.run_plot_mrc:
+        for f in files:
+            plot_mrc(f, mrc_dir, plot_dir)
+    if args.run_analyze_log:
+        analyze_log(args.output, log_dir)
 
 
 if __name__ == "__main__":

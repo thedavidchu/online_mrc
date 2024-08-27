@@ -12,16 +12,9 @@ murmur_hash_3_lib = library(
     ],
 )
 
-splitmix64_lib = library(
-    'splitmix64_lib',
-    'splitmix64.c',
-    include_directories: hash_inc,
-)
-
 hash_dep = declare_dependency(
     link_with: [
         murmur_hash_3_lib,
-        splitmix64_lib,
     ],
     include_directories: hash_inc,
     dependencies: [
