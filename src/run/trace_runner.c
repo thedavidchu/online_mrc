@@ -39,7 +39,7 @@ trace_runner(void *const runner_data,
     struct MissRateCurve mrc = {0};
     struct Histogram const *hist = NULL;
 
-    double t0 = get_wall_time_sec();
+    double const t0 = get_wall_time_sec();
     for (size_t i = 0; i < trace->length; ++i) {
         // NOTE I really, really, really hope that the compiler is smart
         //      enough to inline this function!!!
@@ -48,9 +48,9 @@ trace_runner(void *const runner_data,
             LOGGER_TRACE("Finished %zu / %zu", i, trace->length);
         }
     }
-    double t1 = get_wall_time_sec();
+    double const t1 = get_wall_time_sec();
     postprocess_func(runner_data);
-    double t2 = get_wall_time_sec();
+    double const t2 = get_wall_time_sec();
     // NOTE We do NOT own the histogram data through the 'hist' object.
     //      The 'runner_data' object maintains ownership of the data.
     if (!hist_func(runner_data, &hist)) {
@@ -61,14 +61,14 @@ trace_runner(void *const runner_data,
         LOGGER_ERROR("MRC initialization failed");
         goto cleanup;
     }
-    double t3 = get_wall_time_sec();
+    double const t3 = get_wall_time_sec();
     LOGGER_INFO("%s -- Histogram Time: %f | Post-Process Time: %f | MRC Time: "
                 "%f | Total Time: %f",
                 algorithm_names[args->algorithm],
-                (double)(t1 - t0),
-                (double)(t2 - t1),
-                (double)(t3 - t2),
-                (double)(t3 - t0));
+                t1 - t0,
+                t2 - t1,
+                t3 - t2,
+                t3 - t0);
     if (args->hist_path != NULL) {
         if (!Histogram__save(hist, args->hist_path)) {
             LOGGER_WARN("failed to save histogram in '%s'", args->hist_path);

@@ -452,9 +452,9 @@ main(int argc, char **argv)
     }
 
     // Read in trace. This can be a very slow process.
-    double t0 = get_wall_time_sec();
+    double const t0 = get_wall_time_sec();
     struct Trace trace = get_trace(args);
-    double t1 = get_wall_time_sec();
+    double const t1 = get_wall_time_sec();
     LOGGER_INFO("Trace Read Time: %f sec", t1 - t0);
     if (trace.trace == NULL || trace.length == 0) {
         // I cast to (void *) so that it doesn't complain about printing it.
