@@ -394,7 +394,7 @@ def analyze_log(
     if not check_no_matches(
         *time_ if time_ is not None else [],
         *accuracy if accuracy is not None else [],
-        *time_ if olken_time is not None else [],
+        *olken_time if olken_time is not None else [],
         *trace_time if trace_time is not None else [],
         *throughput if throughput is not None else [],
     ):
