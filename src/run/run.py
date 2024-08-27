@@ -10,13 +10,13 @@ from warnings import warn
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
-def sh(cmd: str, **kwargs) -> CompletedProcess[str]:
+def sh(cmd: str, **kwargs) -> CompletedProcess:
     """Automatically run nohup on every script. This is because I have
     a bad habit of killing my scripts on hangup."""
     return run(split(f"nohup {cmd}"), capture_output=True, text=True, **kwargs)
 
 
-def practice_sh(cmd: str, **kwargs) -> CompletedProcess[str]:
+def practice_sh(cmd: str, **kwargs) -> CompletedProcess:
     # Adding the '--help' flag should call the executable but return
     # very quickly!
     return sh(cmd=f"{cmd} --help", **kwargs)
@@ -107,16 +107,20 @@ def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
     emap_path = mrc_dir / f"{f.stem}-Evicting-Map-mrc.bin"
     fss_path = mrc_dir / f"{f.stem}-Fixed-Size-SHARDS-mrc.bin"
     output_path = plot_dir / f"{f.stem}-mrc.pdf"
-    sh(
+    r = sh(
         f"python3 src/analysis/plot/plot_mrc.py "
         f"--oracle {oracle_path} "
         f"--input {frs_path} {emap_path} {fss_path} "
         f"--output {output_path}"
     )
+    if r.returncode != 0:
+        print(r.stderr)
+        print(r.stdout)
+        r.check_returncode()
 
 
 def analyze_log(output_dir: Path, log_dir: Path):
-    sh(
+    r = sh(
         f"python3 src/analysis/log/analyze_log.py "
         f"--input {str(log_dir)} "
         f"--time {str(output_dir / 'time.pdf')} "
@@ -124,6 +128,10 @@ def analyze_log(output_dir: Path, log_dir: Path):
         f"--trace-time {str(output_dir / 'trace-time.pdf')} "
         f"--accuracy {str(output_dir / 'accuracy.pdf')} "
     )
+    if r.returncode != 0:
+        print(r.stderr)
+        print(r.stdout)
+        r.check_returncode()
 
 
 def main():
