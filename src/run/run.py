@@ -124,12 +124,36 @@ def main():
     for f in files:
         run_trace(f, args.format, args.output)
 
-    hist_dir = os.path.join(str(args.output), "hist")
-    log_dir = os.path.join(str(args.output), "log")
-    mrc_dir = os.path.join(str(args.output), "mrc")
-    plot_dir = os.path.join(str(args.output), "plot")
+    # Recall Python's pathlib syntax for concatenating file names. Yes,
+    # it's weird. And yes, I don't actually need this comment.
+    hist_dir = args.output / "hist"
+    log_dir = args.output / "log"
+    mrc_dir = args.output / "mrc"
+    plot_dir = args.output / "plot"
 
     print(f"{hist_dir, log_dir, mrc_dir, plot_dir}")
+
+    for f in files:
+        oracle_path = mrc_dir / f"{f.stem}-Olken-mrc.bin"
+        frs_path = mrc_dir / f"{f.stem}-Fixed-Rate-SHARDS-mrc.bin"
+        emap_path = mrc_dir / f"{f.stem}-Evicting-Map-mrc.bin"
+        fss_path = mrc_dir / f"{f.stem}-Fixed-Size-SHARDS-mrc.bin"
+        output_path = plot_dir / f"{f.stem}-mrc.pdf"
+        sh(
+            f"python3 src/analysis/plot/plot_mrc.py "
+            f"--oracle {oracle_path} "
+            f"--input {frs_path} {emap_path} {fss_path} "
+            f"--output {output_path}"
+        )
+
+    sh(
+        f"python3 src/analysis/log/analyze_log.py "
+        f"--input {log_dir} "
+        f"--time {args.output / 'time.pdf'} "
+        f"--olken-time {args.output / 'olken-time.pdf'} "
+        f"--trace-time {args.output / 'trace-time.pdf'} "
+        f"--accuracy {args.output / 'accuracy.pdf'} "
+    )
 
 
 if __name__ == "__main__":
