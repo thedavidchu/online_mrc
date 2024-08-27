@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 import argparse
 import os
+from getpass import getpass
 from pathlib import Path
-from shlex import split
+from shlex import split, quote
 from subprocess import run, CompletedProcess
 
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
@@ -113,7 +114,15 @@ def main():
         required=True,
         help="format of the input traces",
     )
+    parser.add_argument("--sudo", action="store_true", help="run as sudo")
     args = parser.parse_args()
+
+    if args.sudo:
+        # NOTE  I try to replicate sudo's interface.
+        sudo_password = getpass(prompt=f"[sudo] password for {os.getlogin()}: ")
+        # NOTE  You need to quote the password to prevent arbitrary
+        #       string injection attacks.
+        sh(f"echo {quote( sudo_password )} | sudo -S echo Testing sudo password")
 
     setup_env(args.output)
 
