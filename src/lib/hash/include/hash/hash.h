@@ -10,7 +10,7 @@
 #include "types/key_type.h"
 
 #ifndef HASH_FUNCTION_SELECT
-#define HASH_FUNCTION_SELECT 2
+#define HASH_FUNCTION_SELECT 1
 #endif
 
 static inline Hash32BitType
@@ -26,11 +26,13 @@ Hash64Bit(KeyType const key)
 {
     switch (HASH_FUNCTION_SELECT) {
     case 0: {
+        // NOTE MurmurHash3 is the slowest hashing algorithm currently.
         uint64_t hash[2] = {0, 0};
         MurmurHash3_x64_128(&key, sizeof(key), 0, hash);
         return hash[0];
     }
     case 1:
+        // NOTE splitmix64 is the fastest hashing algorithm currently.
         return splitmix64_hash(key);
     case 2:
         return RSHash((void const *)&key, sizeof(key));
