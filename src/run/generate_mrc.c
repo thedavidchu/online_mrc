@@ -510,7 +510,7 @@ main(int argc, char **argv)
     if (args.cleanup) {
         for (size_t i = 0; i < work.length; ++i) {
             if (!run_cleanup(&work.data[i])) {
-                LOGGER_ERROR("oracle runner failed");
+                LOGGER_ERROR("cleanup failed");
                 ok = false;
             }
         }
