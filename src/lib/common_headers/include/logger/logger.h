@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -30,6 +31,38 @@ enum LoggerLevels {
 static char const *const LOGGER_LEVEL_STRINGS[] =
     {"VERBOSE", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
 
+static inline bool
+_logger_header(FILE *const stream,
+               enum LoggerLevels const threshold_level,
+               enum LoggerLevels const log_level,
+               int const errno_,
+               char const *const file,
+               int const line)
+{
+    time_t t = {0};
+    if (log_level < threshold_level) {
+        return false;
+    }
+    t = time(NULL);
+    struct tm tm = *localtime(&t);
+    fprintf(stream,
+            "[%s] [%d-%02d-%02d %02d:%02d:%02d] [ %s:%d ] [errno %d: %s] ",
+            LOGGER_LEVEL_STRINGS[log_level],
+            tm.tm_year + 1900,
+            tm.tm_mon + 1,
+            tm.tm_mday,
+            tm.tm_hour,
+            tm.tm_min,
+            tm.tm_sec,
+            file,
+            line,
+            // NOTE I print this even where there is no error to make
+            //      the log easier to parse.
+            errno_,
+            strerror(errno_));
+    return true;
+}
+
 // NOTE I intentionally make all of the parameters verbose instead of
 //      packing some of them into a structure. This is because then we
 //      are not reliant on the structure if I decide I no longer like it.
@@ -46,25 +79,8 @@ _logger(FILE *const stream,
         ...)
 {
     va_list ap;
-    time_t t = {0};
-    if (log_level < threshold_level) {
+    if (!_logger_header(stream, threshold_level, log_level, errno_, file, line))
         return;
-    }
-    t = time(NULL);
-    struct tm tm = *localtime(&t);
-    fprintf(stream, "[%s] ", LOGGER_LEVEL_STRINGS[log_level]);
-    fprintf(stream,
-            "[%d-%02d-%02d %02d:%02d:%02d] ",
-            tm.tm_year + 1900,
-            tm.tm_mon + 1,
-            tm.tm_mday,
-            tm.tm_hour,
-            tm.tm_min,
-            tm.tm_sec);
-    fprintf(stream, "[ %s:%d ] ", file, line);
-    // NOTE I print this even where there is no error to make the log
-    //      easier to parse.
-    fprintf(stream, "[errno %d: %s] ", errno_, strerror(errno_));
     va_start(ap, format);
     vfprintf(stream, format, ap);
     va_end(ap);
