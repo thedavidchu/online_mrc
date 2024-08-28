@@ -27,6 +27,7 @@
 #include "hash/hash.h"
 #include "hash/types.h"
 #include "logger/logger.h"
+#include "math/count_leading_zeros.h"
 #include "types/key_type.h"
 #include "types/time_stamp_type.h"
 #include "types/value_type.h"
@@ -99,16 +100,6 @@ EvictingHashTable__put(struct EvictingHashTable *me,
 ///         how the Splay Tree priority queue is so fast...
 void
 EvictingHashTable__refresh_threshold(struct EvictingHashTable *me);
-
-/// @brief  Count leading zeros in a uint64_t.
-/// @note   The value of __builtin_clzll(0) is undefined, as per GCC's docs.
-/// @note   This function is general-purpose enough that I don't feel
-///         the need to prefix it with 'EvictingHashTable__' or 'EHT__'.
-static inline int
-clz(uint64_t x)
-{
-    return x == 0 ? 8 * sizeof(x) : __builtin_clzll(x);
-}
 
 static inline struct SampledTryPutReturn
 EHT__insert_new_element(struct EvictingHashTable *me,
