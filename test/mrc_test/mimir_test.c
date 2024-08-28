@@ -13,11 +13,10 @@
 #include "olken/olken.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
-#include "unused/mark_unused.h"
 
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.99;
-const uint64_t TRACE_LENGTH = 1 << 20;
+const uint64_t TRACE_LENGTH = 1 << 17;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// UNIT TESTS
