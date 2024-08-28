@@ -20,7 +20,7 @@
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.5;
 const uint64_t RANDOM_SEED = 0;
-const uint64_t TRACE_LENGTH = 1 << 20;
+const uint64_t TRACE_LENGTH = 1 << 18;
 
 #define PERFORMANCE_TEST(MRCStructType,                                        \
                          mrc_var_name,                                         \
