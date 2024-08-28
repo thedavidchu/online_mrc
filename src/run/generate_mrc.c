@@ -507,6 +507,9 @@ main(int argc, char **argv)
         MissRateCurve__destroy(&oracle_mrc);
     }
 
+    // NOTE We clean up the MRC and histogram files when we test because
+    //      we don't like to pollute our file system every time we run
+    //      our tests!
     if (args.cleanup) {
         for (size_t i = 0; i < work.length; ++i) {
             if (!run_cleanup(&work.data[i])) {
