@@ -40,7 +40,7 @@ parse_algorithm_string(char const *const str)
     return MRC_ALGORITHM_INVALID;
 }
 
-static inline bool
+static bool
 parse_bool(bool *value, char const *const str)
 {
     for (size_t i = 0; i < ARRAY_SIZE(BOOLEAN_STRINGS); ++i) {
@@ -52,7 +52,7 @@ parse_bool(bool *value, char const *const str)
     return false;
 }
 
-static inline bool
+static bool
 parse_positive_size(size_t *size, char const *const str)
 {
     char *endptr = NULL;
@@ -72,7 +72,7 @@ parse_positive_size(size_t *size, char const *const str)
     return true;
 }
 
-static inline bool
+static bool
 parse_positive_double(double *value, char const *const str)
 {
     char *endptr = NULL;
