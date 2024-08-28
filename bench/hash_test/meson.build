@@ -5,6 +5,7 @@ hash_performance_test_exe = executable(
         mytester_include,
     ],
     dependencies: [
+        array_dep,
         common_dep,
         hash_dep,
         timer_dep,

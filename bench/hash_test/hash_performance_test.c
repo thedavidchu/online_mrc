@@ -12,11 +12,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "array/print_array.h"
 #include "arrays/array_size.h"
 #include "hash/MurmurHash3.h"
 #include "hash/miscellaneous_hash.h"
 #include "hash/splitmix64.h"
 #include "logger/logger.h"
+#include "math/count_leading_zeros.h"
 #include "timer/timer.h"
 #include "unused/mark_unused.h"
 
@@ -125,9 +127,13 @@ test_hash_distribution(uint64_t (*const f)(uint64_t const key),
     //      I still feel a little bit sketched out by this. I love using
     //      large sizes for my integers.
     int counts[100] = {0};
+    // NOTE I need to be able to count from 0 up to and including 64.
+    int nlz[65] = {0};
     double const t0 = get_wall_time_sec();
     for (size_t i = 0; i < NUM_VALUES_FOR_DISTRIBUTION; ++i) {
-        ++counts[f(i) % ARRAY_SIZE(counts)];
+        uint64_t const x = f(i);
+        ++counts[x % ARRAY_SIZE(counts)];
+        ++nlz[clz(x)];
     }
     qsort(counts, ARRAY_SIZE(counts), sizeof(*counts), compare_ints);
     int const min_collisions = counts[0];
@@ -141,6 +147,7 @@ test_hash_distribution(uint64_t (*const f)(uint64_t const key),
                 max_collisions,
                 median_collisions,
                 min_collisions);
+    print_array(stdout, nlz, ARRAY_SIZE(nlz), sizeof(*nlz), true, _print_int);
 }
 
 int
