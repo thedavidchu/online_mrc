@@ -15,6 +15,32 @@
 #include "helper.h"
 #include "runner_arguments.h"
 
+// NOTE This corresponds to the same order as RunnerMode so that we can
+//      simply use the enumeration to print the correct string!
+static char *runner_mode_names[] = {
+    "INVALID",
+    "run",
+    "tryread",
+};
+
+static bool
+parse_runner_mode_string(enum RunnerMode *value, char const *const str)
+{
+    if (value == NULL || str == NULL) {
+        LOGGER_ERROR("cannot parse or return value");
+        return false;
+    }
+    for (size_t i = 1; i < ARRAY_SIZE(runner_mode_names); ++i) {
+        if (strcmp(runner_mode_names[i], str) == 0) {
+            *value = (enum RunnerMode)i;
+            return true;
+        }
+    }
+    LOGGER_ERROR("unparsable runner mode string: '%s'", str);
+    *value = RUNNER_MODE_INVALID;
+    return false;
+}
+
 void
 print_available_algorithms(FILE *stream)
 {
@@ -98,15 +124,20 @@ print_help(void)
             ">>> Welcome to a tutorial on my very simple parser!\n");
     fprintf(LOGGER_STREAM,
             "    Format: "
-            "<Algorithm>(mrc=<file>,hist=<file>,sampling=<float64-in-[0,1]>,"
-            "num_bins=<positive-int>,bin_size=<positive-int>,"
-            "max_size=<positive-int>,mode={allow_overflow,merge_bins,realloc},"
-            "adj={true,false},qmrc_size=<positive-int>)\n");
-    fprintf(
-        LOGGER_STREAM,
-        "    Example: "
-        "Olken(mrc=olken-mrc.bin,hist=olken-hist.bin,sampling=1.0,num_bins="
-        "100,bin_size=100,max_size=8000,mode=realloc,adj=false,qmrc_size=1)\n");
+            "<Algorithm>(runmode={run,tryread},mrc=<file>,hist=<file>,"
+            "sampling=<float64-in-[0,1]>,num_bins=<positive-int>,bin_size=<"
+            "positive-int>,max_size=<positive-int>,mode={allow_overflow,merge_"
+            "bins,realloc},adj={true,false},qmrc_size=<positive-int>)\n");
+    fprintf(LOGGER_STREAM,
+            "    Example: "
+            "Olken(runmode=run,mrc=olken-mrc.bin,hist=olken-hist.bin,sampling="
+            "1.0,num_bins=100,bin_size=100,max_size=8000,mode=realloc,adj="
+            "false,qmrc_size=1)\n");
+    fprintf(LOGGER_STREAM,
+            "    Default: "
+            "<INVALID>(runmode=run,mrc=(null),hist=(null),sampling=1.0,num_"
+            "bins=1048576,bin_size=1,max_size=8192,mode=realloc,adj=true,qmrc_"
+            "size=128)\n");
     fprintf(LOGGER_STREAM,
             "    Notes: we reserve the use of the characters '(),='. "
             "White spaces are not stripped.\n");
@@ -119,72 +150,70 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
     // default rather than an unknown value.
     *no_more_args = false;
     char *param = strtok(NULL, "=");
+    char *value = NULL;
     // If this is the case, then we have no arguments!
     if (param == NULL || strcmp(param, ")") == 0) {
         *no_more_args = true;
         return true;
     }
-    if (strcmp(param, "mrc") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+    if (strcmp(param, "runmode") == 0) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
+            LOGGER_ERROR("invalid value for parameter '%s'", param);
+            return false;
+        }
+        return parse_runner_mode_string(&me->run_mode, value);
+    } else if (strcmp(param, "mrc") == 0) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         me->mrc_path = strdup(value);
         return true;
     } else if (strcmp(param, "hist") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         me->hist_path = strdup(value);
         return true;
     } else if (strcmp(param, "sampling") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         return parse_positive_double(&me->sampling_rate, value);
     } else if (strcmp(param, "num_bins") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         return parse_positive_size(&me->num_bins, value);
     } else if (strcmp(param, "bin_size") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         return parse_positive_size(&me->bin_size, value);
     } else if (strcmp(param, "max_size") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         return parse_positive_size(&me->max_size, value);
     } else if (strcmp(param, "mode") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         return HistogramOutOfBoundsMode__parse(&me->out_of_bounds_mode, value);
     } else if (strcmp(param, "adj") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
         return parse_bool(&me->shards_adj, value);
     } else if (strcmp(param, "qmrc_size") == 0) {
-        char *value = strtok(NULL, ",)");
-        if (value == NULL) {
+        if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
             return false;
         }
@@ -213,6 +242,7 @@ RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
     //      hash table for the Evicting Map).
     *me = (struct RunnerArguments){
         .ok = false,
+        .run_mode = RUNNER_MODE_RUN,
         .algorithm = MRC_ALGORITHM_INVALID,
         .mrc_path = NULL,
         .hist_path = NULL,
@@ -238,6 +268,10 @@ RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
         goto cleanup;
     }
     me->algorithm = parse_algorithm_string(algo_str);
+    if (me->run_mode == RUNNER_MODE_INVALID) {
+        LOGGER_ERROR("invalid runner mode '%s'", algo_str);
+        goto cleanup;
+    }
     if (me->algorithm == MRC_ALGORITHM_INVALID) {
         LOGGER_ERROR("invalid algorithm '%s'", algo_str);
         goto cleanup;

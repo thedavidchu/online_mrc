@@ -7,6 +7,15 @@
 
 #include "histogram/histogram.h"
 
+enum RunnerMode {
+    RUNNER_MODE_INVALID,
+    // Run normally (meaning: overwrite any files)
+    RUNNER_MODE_RUN,
+    // Try to read the existing files instead of running. If they are
+    // not found, fall back to running.
+    RUNNER_MODE_TRY_READ,
+};
+
 enum MRCAlgorithm {
     MRC_ALGORITHM_INVALID,
     MRC_ALGORITHM_OLKEN,
@@ -60,6 +69,7 @@ print_available_algorithms(FILE *stream);
 ///     - Histogram overflow strategy [optional. Default = overflow]
 struct RunnerArguments {
     bool ok;
+    enum RunnerMode run_mode;
 
     enum MRCAlgorithm algorithm;
     // The path to save the generated MRC.

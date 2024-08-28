@@ -7,6 +7,7 @@
 
 #include "evicting_map/evicting_map.h"
 #include "evicting_quickmrc/evicting_quickmrc.h"
+#include "file/file.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -39,6 +40,24 @@ trace_runner(void *const runner_data,
     struct MissRateCurve mrc = {0};
     struct Histogram const *hist = NULL;
 
+    if (runner_data == NULL || args == NULL || trace == NULL ||
+        access_func == NULL || postprocess_func == NULL || hist_func == NULL ||
+        destroy_func == NULL) {
+        LOGGER_ERROR("arguments cannot be NULL!");
+        return false;
+    }
+
+    if (args->run_mode == RUNNER_MODE_TRY_READ) {
+        if (file_exists(args->mrc_path) && file_exists(args->hist_path)) {
+            LOGGER_INFO("skipping %s to read existing files",
+                        algorithm_names[args->algorithm]);
+            goto ok_cleanup;
+        } else {
+            LOGGER_INFO(
+                "MRC and/or histogram files don't exist, so running normally");
+        }
+    }
+
     double const t0 = get_wall_time_sec();
     for (size_t i = 0; i < trace->length; ++i) {
         // NOTE I really, really, really hope that the compiler is smart
@@ -49,17 +68,21 @@ trace_runner(void *const runner_data,
         }
     }
     double const t1 = get_wall_time_sec();
-    postprocess_func(runner_data);
+    // NOTE In the future, we will not require users to create a post-
+    //      process function, but rather let it be NULL.
+    if (postprocess_func != NULL) {
+        postprocess_func(runner_data);
+    }
     double const t2 = get_wall_time_sec();
     // NOTE We do NOT own the histogram data through the 'hist' object.
     //      The 'runner_data' object maintains ownership of the data.
     if (!hist_func(runner_data, &hist)) {
         LOGGER_ERROR("histogram getter failed");
-        goto cleanup;
+        goto error_cleanup;
     }
     if (!MissRateCurve__init_from_histogram(&mrc, hist)) {
         LOGGER_ERROR("MRC initialization failed");
-        goto cleanup;
+        goto error_cleanup;
     }
     double const t3 = get_wall_time_sec();
     LOGGER_INFO("%s -- Histogram Time: %f | Post-Process Time: %f | MRC Time: "
@@ -70,20 +93,28 @@ trace_runner(void *const runner_data,
                 t3 - t2,
                 t3 - t0);
     if (args->hist_path != NULL) {
-        if (!Histogram__save(hist, args->hist_path)) {
+        bool save_hist = true;
+        if (file_exists(args->hist_path)) {
+            LOGGER_WARN("file '%s' already exists!", args->hist_path);
+        }
+        if (save_hist && !Histogram__save(hist, args->hist_path)) {
             LOGGER_WARN("failed to save histogram in '%s'", args->hist_path);
         }
     }
     if (args->mrc_path != NULL) {
-        if (!MissRateCurve__save(&mrc, args->mrc_path)) {
+        bool save_mrc = true;
+        if (file_exists(args->mrc_path)) {
+            LOGGER_WARN("file '%s' already exists!", args->mrc_path);
+        }
+        if (save_mrc && !MissRateCurve__save(&mrc, args->mrc_path)) {
             LOGGER_WARN("failed to save MRC in '%s'", args->mrc_path);
         }
     }
-
+ok_cleanup:
     destroy_func(runner_data);
     MissRateCurve__destroy(&mrc);
     return true;
-cleanup:
+error_cleanup:
     destroy_func(runner_data);
     MissRateCurve__destroy(&mrc);
     return false;
