@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "arrays/array_size.h"
+#include "arrays/is_last.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 
@@ -21,7 +22,7 @@ print_available_algorithms(FILE *stream)
     // NOTE We want to skip the "INVALID" algorithm name (i.e. 0).
     for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
         fprintf(stream, "%s", algorithm_names[i]);
-        if (i != ARRAY_SIZE(algorithm_names) - 1) {
+        if (!is_last(i, ARRAY_SIZE(algorithm_names))) {
             fprintf(stream, ",");
         }
     }
