@@ -77,7 +77,7 @@ time_hash(uint64_t (*const f)(uint64_t const key), char const *const fname)
 
 /// @note   Taken from the cppreference website.
 ///         Source: https://en.cppreference.com/w/c/algorithm/qsort
-int
+static int
 compare_ints(const void *a, const void *b)
 {
     int arg1 = *(const int *)a;
@@ -97,22 +97,22 @@ compare_ints(const void *a, const void *b)
     // integer overflow, such as with INT_MIN here
 }
 
-int
-get_median(int const *const counts, size_t const length)
+static int
+get_median(int const *const array, size_t const length)
 {
-    if (length == 0) {
+    if (array == NULL || length == 0) {
         return 0;
     }
     if (length == 1) {
-        return counts[0];
+        return array[0];
     }
     if (length % 2 == 0) {
-        return (counts[length / 2] + counts[length / 2 + 1]) / 2;
+        return (array[length / 2] + array[length / 2 + 1]) / 2;
     }
     // NOTE This is correct. Take this as an example:
     //      counts = [ 0 1 2 3 4 ], length = 5
     //      => length / 2 = floor(div(length, 2)) = 2. QED.
-    return counts[length / 2];
+    return array[length / 2];
 }
 
 /// @brief  Test the distribution of hash functions in a hash table.
