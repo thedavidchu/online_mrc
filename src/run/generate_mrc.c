@@ -478,8 +478,10 @@ main(int argc, char **argv)
     if (args.oracle != NULL) {
         LOGGER_TRACE("Comparing against oracle");
         struct MissRateCurve oracle_mrc = {0};
-        if (!MissRateCurve__load(&oracle_mrc, work.data[0].mrc_path)) {
-            LOGGER_ERROR("failed to load oracle MRC");
+        char const *const oracle_mrc_path = work.data[0].mrc_path;
+        if (!MissRateCurve__load(&oracle_mrc, oracle_mrc_path)) {
+            LOGGER_ERROR("failed to load oracle MRC at '%s'",
+                         oracle_mrc_path ? oracle_mrc_path : "(null)");
             goto cleanup_trace;
         }
 
@@ -488,10 +490,11 @@ main(int argc, char **argv)
         //      not NULL. However, I admit that this is confusing and
         //      therefore sketchy.
         for (size_t i = 1; i < work.length; ++i) {
+            char const *const mrc_path = work.data[i].mrc_path;
             struct MissRateCurve mrc = {0};
-            if (!MissRateCurve__load(&mrc, work.data[i].mrc_path)) {
+            if (!MissRateCurve__load(&mrc, mrc_path)) {
                 LOGGER_ERROR("failed to load MRC from '%s'",
-                             work.data[i].mrc_path);
+                             mrc_path ? mrc_path : "(null)");
                 ok = false;
                 continue;
             }
