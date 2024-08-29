@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,6 +19,8 @@
 #include "unused/mark_unused.h"
 
 #include "evicting_map/evicting_map.h"
+
+#define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
 static bool
 initialize(struct EvictingMap *const me,
@@ -190,6 +193,19 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     if (me == NULL)
         return false;
     ValueType timestamp = me->current_time_stamp;
+    if (timestamp % THRESHOLD_SAMPLING_PERIOD == 0) {
+        size_t max_hash = 0, min_hash = SIZE_MAX;
+        for (size_t i = 0; i < me->hash_table.length; ++i) {
+            max_hash = MAX(max_hash, me->hash_table.hashes[i]);
+            min_hash = MIN(min_hash, me->hash_table.hashes[i]);
+        }
+        LOGGER_TRACE("time: %" PRIu64 " | global threshold: %" PRIu64
+                     " | max hash: %" PRIu64 "| min hash: %" PRIu64,
+                     timestamp,
+                     me->hash_table.global_threshold,
+                     max_hash,
+                     min_hash);
+    }
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
     switch (r.status) {

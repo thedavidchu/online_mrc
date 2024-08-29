@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -17,6 +18,8 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
+
+#define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
 static bool
 initialize(struct FixedSizeShards *const me,
@@ -155,6 +158,12 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     //      data structure has been initialized.
     if (me == NULL) {
         return false;
+    }
+
+    if (me->olken.current_time_stamp % THRESHOLD_SAMPLING_PERIOD == 0) {
+        LOGGER_INFO("time: %" PRIu64 " | max hash: %" PRIu64,
+                    me->olken.current_time_stamp,
+                    me->sampler.threshold);
     }
 
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
