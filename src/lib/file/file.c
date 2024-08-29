@@ -45,6 +45,13 @@ write_buffer(char const *const file_name,
 bool
 file_exists(char const *const file_name)
 {
+    // NOTE This case is (empirically) handled by the 'access' function,
+    //      however, I do not want to rely on standard library functions
+    //      handling NULL correctly.
+    if (file_name == NULL) {
+        return false;
+    }
+
     int const prev_errno = errno;
     errno = 0;
     // Source:
