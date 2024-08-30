@@ -23,6 +23,21 @@ static char *runner_mode_names[] = {
     "tryread",
 };
 
+// NOTE This corresponds to the same order as MRCAlgorithm so that we can
+//      simply use the enumeration to print the correct string!
+char *algorithm_names[10] = {
+    "INVALID",
+    "Olken",
+    "Fixed-Rate-SHARDS",
+    "Fixed-Size-SHARDS",
+    "QuickMRC",
+    "Goel-QuickMRC",
+    "Evicting-Map",
+    "Evicting-QuickMRC",
+    "Average-Eviction-Time",
+    "Their-Average-Eviction-Time",
+};
+
 static bool
 parse_runner_mode_string(enum RunnerMode *value, char const *const str)
 {

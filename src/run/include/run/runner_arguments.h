@@ -29,20 +29,8 @@ enum MRCAlgorithm {
     MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME,
 };
 
-// NOTE This corresponds to the same order as MRCAlgorithm so that we can
-//      simply use the enumeration to print the correct string!
-static char *algorithm_names[] = {
-    "INVALID",
-    "Olken",
-    "Fixed-Rate-SHARDS",
-    "Fixed-Size-SHARDS",
-    "QuickMRC",
-    "Goel-QuickMRC",
-    "Evicting-Map",
-    "Evicting-QuickMRC",
-    "Average-Eviction-Time",
-    "Their-Average-Eviction-Time",
-};
+/// @note   Importers will not be able to see the size of this array!
+extern char *algorithm_names[];
 
 /// @brief  Print algorithms by name in format: "{Olken,Fixed-Rate-SHARDS,...}".
 /// @note   Why is the function here? No good reason except that it uses

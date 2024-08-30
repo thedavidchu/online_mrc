@@ -37,6 +37,10 @@ run_dep = declare_dependency(
         runner_arguments_lib,
         trace_runner_lib,
     ],
+    dependencies: [
+        histogram_dep,
+        trace_dep,
+    ],
 )
 
 generate_mrc_exe = executable(
