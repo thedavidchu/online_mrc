@@ -31,3 +31,16 @@ splitmix64_hash(const uint64_t key)
     k = (k >> 31) ^ k;
     return k;
 }
+
+/// @brief  Reverse the splitmix64_hash function.
+/// @note   Source:
+///         https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
+static inline uint64_t
+reverse_splitmix64_hash(Hash64BitType const hash)
+{
+    uint64_t h = hash;
+    h = (h ^ (h >> 31) ^ (h >> 62)) * UINT64_C(0x319642b2d24d8ec3);
+    h = (h ^ (h >> 27) ^ (h >> 54)) * UINT64_C(0x96de1b173f119089);
+    h = h ^ (h >> 30) ^ (h >> 60);
+    return h - UINT64_C(0x9e3779b97f4a7c15);
+}
