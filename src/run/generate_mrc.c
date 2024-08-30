@@ -18,9 +18,9 @@
 #include "trace/reader.h"
 #include "trace/trace.h"
 
-#include "helper.h"
-#include "runner_arguments.h"
-#include "trace_runner.h"
+#include "run/helper.h"
+#include "run/runner_arguments.h"
+#include "run/trace_runner.h"
 
 struct CommandLineArguments {
     char *executable;

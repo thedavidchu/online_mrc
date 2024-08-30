@@ -1,7 +1,9 @@
+run_inc = include_directories('include')
+
 runner_arguments_lib = library(
     'runner_arguments_lib',
     'runner_arguments.c',
-    include_directories: include_directories('.'),
+    include_directories: run_inc,
     dependencies: [
         common_dep,
         histogram_dep,
@@ -11,7 +13,7 @@ runner_arguments_lib = library(
 trace_runner_lib = library(
     'trace_runner_lib',
     'trace_runner.c',
-    include_directories: include_directories('.'),
+    include_directories: run_inc,
     dependencies: [
         average_eviction_time_dep,
         evicting_map_dep,
@@ -29,6 +31,14 @@ trace_runner_lib = library(
     ],
 )
 
+run_dep = declare_dependency(
+    include_directories: run_inc,
+    link_with: [
+        runner_arguments_lib,
+        trace_runner_lib,
+    ],
+)
+
 generate_mrc_exe = executable(
     'generate_mrc_exe',
     'generate_mrc.c',
@@ -36,7 +46,7 @@ generate_mrc_exe = executable(
         runner_arguments_lib,
         trace_runner_lib,
     ],
-    include_directories: [include_directories('.')],
+    include_directories: run_inc,
     dependencies: [
         average_eviction_time_dep,
         evicting_map_dep,

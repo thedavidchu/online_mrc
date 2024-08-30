@@ -12,8 +12,8 @@
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 
-#include "helper.h"
-#include "runner_arguments.h"
+#include "run/helper.h"
+#include "run/runner_arguments.h"
 
 // NOTE This corresponds to the same order as RunnerMode so that we can
 //      simply use the enumeration to print the correct string!
