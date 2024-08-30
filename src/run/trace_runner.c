@@ -18,7 +18,7 @@
 #include "trace/generator.h"
 #include "trace/trace.h"
 
-#include "runner_arguments.h"
+#include "run/runner_arguments.h"
 
 /// @note   The keyword 'inline' prevents a compiler warning as per:
 ///         https://stackoverflow.com/questions/32432596/warning-always-inline-function-might-not-be-inlinable-wattributes

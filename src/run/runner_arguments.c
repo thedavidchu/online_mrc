@@ -12,8 +12,8 @@
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 
-#include "helper.h"
-#include "runner_arguments.h"
+#include "run/helper.h"
+#include "run/runner_arguments.h"
 
 // NOTE This corresponds to the same order as RunnerMode so that we can
 //      simply use the enumeration to print the correct string!
@@ -21,6 +21,21 @@ static char *runner_mode_names[] = {
     "INVALID",
     "run",
     "tryread",
+};
+
+// NOTE This corresponds to the same order as MRCAlgorithm so that we can
+//      simply use the enumeration to print the correct string!
+char *algorithm_names[10] = {
+    "INVALID",
+    "Olken",
+    "Fixed-Rate-SHARDS",
+    "Fixed-Size-SHARDS",
+    "QuickMRC",
+    "Goel-QuickMRC",
+    "Evicting-Map",
+    "Evicting-QuickMRC",
+    "Average-Eviction-Time",
+    "Their-Average-Eviction-Time",
 };
 
 static bool

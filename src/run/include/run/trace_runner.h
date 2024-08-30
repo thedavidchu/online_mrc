@@ -1,7 +1,7 @@
 #pragma once
 #include <stdbool.h>
 
-#include "runner_arguments.h"
+#include "run/runner_arguments.h"
 #include "trace/trace.h"
 
 bool
