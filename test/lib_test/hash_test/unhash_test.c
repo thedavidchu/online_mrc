@@ -40,12 +40,12 @@ test_unhash(uint64_t (*const hash)(uint64_t),
         //      2. hash: 0 -- unhash(0) => 1
         //      3. unhash: 1 -- hash(1) => 0
         //      4. hash: 0 -- unhash(0) => 1
-        LOGGER_DEBUG("key: %" PRIu64 " | hash: %" PRIu64 " | unhash: %" PRIu64
-                     " | hash(unhash): %" PRIu64,
-                     x,
-                     x_hashed,
-                     x_unhashed,
-                     hash(x_unhashed));
+        LOGGER_VERBOSE("key: %" PRIu64 " | hash: %" PRIu64 " | unhash: %" PRIu64
+                       " | hash(unhash): %" PRIu64,
+                       x,
+                       x_hashed,
+                       x_unhashed,
+                       hash(x_unhashed));
         g_assert_cmpuint(x_hashed, ==, hash(x_unhashed));
         x = 3 * x + 1;
     }
