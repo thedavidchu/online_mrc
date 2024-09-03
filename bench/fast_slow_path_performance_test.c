@@ -83,17 +83,18 @@ main(void)
     char const *runner_args_array[] = {"Evicting-Map(sampling=1e-1)",
                                        "Fixed-Size-SHARDS(sampling=1e-1)",
                                        NULL};
+    bool const run_hammer = true, run_fast = true, run_slow = true;
     // Test fastest trace
     trace = generate_trace(trace_length, hammer_single_element);
-    if (!run_trace(runner_args_array, &trace)) {
-        LOGGER_ERROR("fast path failed");
+    if (run_hammer && !run_trace(runner_args_array, &trace)) {
+        LOGGER_ERROR("single-element hammer failed");
         exit(EXIT_FAILURE);
     }
     Trace__destroy(&trace);
 
     // Test fast trace
     trace = generate_trace(trace_length, increasing_hashes);
-    if (!run_trace(runner_args_array, &trace)) {
+    if (run_fast && !run_trace(runner_args_array, &trace)) {
         LOGGER_ERROR("fast path failed");
         exit(EXIT_FAILURE);
     }
@@ -101,7 +102,7 @@ main(void)
 
     // Test slow trace
     trace = generate_trace(trace_length, decreasing_hashes);
-    if (!run_trace(runner_args_array, &trace)) {
+    if (run_slow && !run_trace(runner_args_array, &trace)) {
         LOGGER_ERROR("slow path failed");
         exit(EXIT_FAILURE);
     }
