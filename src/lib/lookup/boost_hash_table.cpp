@@ -65,11 +65,12 @@ BoostHashTable__put(struct BoostHashTable *const me,
     if (me == NULL) {
         return LOOKUP_PUTUNIQUE_ERROR;
     }
-    if (!me->private_->hash_table.contains(key)) {
+    auto x = me->private_->hash_table.find(key);
+    if (x == me->private_->hash_table.end()) {
         me->private_->hash_table[key] = value;
         return LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE;
     }
-    me->private_->hash_table[key] = value;
+    x->second = value;
     return LOOKUP_PUTUNIQUE_REPLACE_VALUE;
 }
 
