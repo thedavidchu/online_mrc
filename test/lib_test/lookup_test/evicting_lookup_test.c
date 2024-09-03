@@ -12,6 +12,7 @@
 #define LENGTH      8
 #define UNIQUE_KEYS 11
 
+/// @brief   Test that a consistent subset is sampled by the hash table.
 static bool
 sampled_test(void)
 {
@@ -25,7 +26,7 @@ sampled_test(void)
         EvictingHashTable__put(&me, key, first_val);
     }
 
-    bool keys[UNIQUE_KEYS] = {0};
+    bool key_is_present[UNIQUE_KEYS] = {0};
     unsigned num_keys = 0;
 
     for (size_t i = 0; i < UNIQUE_KEYS; ++i) {
@@ -34,7 +35,7 @@ sampled_test(void)
         if (s.status == SAMPLED_FOUND) {
             g_assert_cmpuint(s.hash, ==, Hash64Bit(key));
             g_assert_cmpuint(s.timestamp, ==, first_val);
-            keys[i] = true;
+            key_is_present[i] = true;
             ++num_keys;
         }
     }
@@ -46,7 +47,7 @@ sampled_test(void)
         KeyType key = i;
         struct SampledPutReturn r =
             EvictingHashTable__put(&me, key, second_val);
-        if (keys[i]) {
+        if (key_is_present[i]) {
             g_assert_cmpuint(r.status, ==, SAMPLED_UPDATED);
             g_assert_cmpuint(r.new_hash, ==, Hash64Bit(key));
             g_assert_cmpuint(r.old_timestamp, ==, 0);
