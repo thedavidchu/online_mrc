@@ -51,14 +51,19 @@ EvictingHashTable__init(struct EvictingHashTable *me,
         LOGGER_ERROR("failed to initialize with length %zu", length);
         return false;
     }
-    // NOTE There is no way to allow us to sample values with a hash of
-    //      UINT64_MAX because we reserve this as the "invalid" hash value.
-    for (size_t i = 0; i < length; ++i) {
-        data[i].hash = UINT64_MAX;
+    Hash64BitType *hashes = malloc(length * sizeof(*hashes));
+    if (hashes == NULL) {
+        LOGGER_ERROR("failed to initialize hashes with length %zu", length);
+        return false;
     }
+    // NOTE I'm not sure what the best way of representing all 1's. I
+    //      don't want to rely on two's complement. I think it's safest
+    //      to assume that 0 is represented by all zeros.
+    memset(hashes, ~0, length * sizeof(*hashes));
 
     *me = (struct EvictingHashTable){
         .data = data,
+        .hashes = hashes,
         .length = length,
         .init_sampling_ratio = init_sampling_ratio,
         // HACK Set the threshold to some low number to begin
@@ -85,16 +90,20 @@ EvictingHashTable__lookup(struct EvictingHashTable *me, KeyType key)
         return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
-    if (incumbent->hash == UINT64_MAX)
+    Hash64BitType const old_hash = me->hashes[hash % me->length];
+    if (old_hash == UINT64_MAX)
         return (struct SampledLookupReturn){.status = SAMPLED_HITHERTOEMPTY};
-    if (hash < incumbent->hash)
-        return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
     // NOTE If the key comparison is expensive, then one could first
     //      compare the hashes. However, in this case, they are not expensive.
+    // NOTE Because the key is so cheap to compare, I test for the case
+    //      of matching first because I think it's more likely that it
+    //      matches than it doesn't match.
     if (key == incumbent->key)
         return (struct SampledLookupReturn){.status = SAMPLED_FOUND,
-                                            .hash = incumbent->hash,
+                                            .hash = old_hash,
                                             .timestamp = incumbent->value};
+    if (hash < old_hash)
+        return (struct SampledLookupReturn){.status = SAMPLED_NOTFOUND};
     return (struct SampledLookupReturn){.status = SAMPLED_IGNORED};
 }
 
@@ -108,6 +117,8 @@ EvictingHashTable__put(struct EvictingHashTable *me,
 
     Hash64BitType hash = Hash64Bit(key);
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
+    Hash64BitType *const hash_ptr = &me->hashes[hash % me->length];
+    Hash64BitType const old_hash = *hash_ptr;
 
     ++me->num_inserted;
     if (me->num_inserted == me->length) {
@@ -115,20 +126,18 @@ EvictingHashTable__put(struct EvictingHashTable *me,
     }
     // HACK Note that the hash value of UINT64_MAX is reserved to mark
     //      the bucket as "invalid" (i.e. no valid element has been inserted).
-    if (incumbent->hash == UINT64_MAX) {
+    if (old_hash == UINT64_MAX) {
         TimeStampType old_timestamp = incumbent->value;
-        *incumbent = (struct EvictingHashTableNode){.key = key,
-                                                    .hash = hash,
-                                                    .value = value};
+        *incumbent = (struct EvictingHashTableNode){.key = key, .value = value};
+        *hash_ptr = hash;
         return (struct SampledPutReturn){.status = SAMPLED_INSERTED,
                                          .new_hash = hash,
                                          .old_timestamp = old_timestamp};
     }
-    if (hash < incumbent->hash) {
+    if (hash < old_hash) {
         TimeStampType old_timestamp = incumbent->value;
-        *incumbent = (struct EvictingHashTableNode){.key = key,
-                                                    .hash = hash,
-                                                    .value = value};
+        *incumbent = (struct EvictingHashTableNode){.key = key, .value = value};
+        *hash_ptr = hash;
         return (struct SampledPutReturn){.status = SAMPLED_REPLACED,
                                          .new_hash = hash,
                                          .old_timestamp = old_timestamp};
@@ -150,7 +159,7 @@ EvictingHashTable__refresh_threshold(struct EvictingHashTable *me)
 {
     Hash64BitType max_hash = 0;
     for (size_t i = 0; i < me->length; ++i) {
-        Hash64BitType hash = me->data[i].hash;
+        Hash64BitType hash = me->hashes[i];
         if (hash > max_hash)
             max_hash = hash;
     }
@@ -159,14 +168,15 @@ EvictingHashTable__refresh_threshold(struct EvictingHashTable *me)
 
 static void
 print_EvictingHashTableNode(struct EvictingHashTableNode *me,
+                            Hash64BitType const hash,
                             uint64_t invalid_hash)
 {
-    if (me->hash == invalid_hash) {
+    if (hash == invalid_hash) {
         printf("null");
     } else {
         printf("[%" PRIu64 ", %" PRIu64 ", %" PRIu64 "]",
                me->key,
-               me->hash,
+               hash,
                me->value);
     }
 }
@@ -187,7 +197,7 @@ EvictingHashTable__print_as_json(struct EvictingHashTable *me)
            ", \".data\": [",
            me->length);
     for (size_t i = 0; i < me->length; ++i) {
-        print_EvictingHashTableNode(&me->data[i], UINT64_MAX);
+        print_EvictingHashTableNode(&me->data[i], me->hashes[i], UINT64_MAX);
         if (i < me->length - 1) {
             printf(", ");
         }
@@ -201,5 +211,6 @@ EvictingHashTable__destroy(struct EvictingHashTable *me)
     if (me == NULL)
         return;
     free(me->data);
+    free(me->hashes);
     *me = (struct EvictingHashTable){0};
 }

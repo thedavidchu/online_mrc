@@ -35,12 +35,12 @@
 
 struct EvictingHashTableNode {
     KeyType key;
-    Hash64BitType hash;
     ValueType value;
 };
 
 struct EvictingHashTable {
     struct EvictingHashTableNode *data;
+    Hash64BitType *hashes;
     size_t length;
     double init_sampling_ratio;
     Hash64BitType global_threshold;
@@ -106,11 +106,11 @@ EHT__insert_new_element(struct EvictingHashTable *me,
                         KeyType key,
                         ValueType value,
                         struct EvictingHashTableNode *incumbent,
+                        Hash64BitType *hash_ptr,
                         Hash64BitType hash)
 {
-    *incumbent = (struct EvictingHashTableNode){.key = key,
-                                                .hash = hash,
-                                                .value = value};
+    *incumbent = (struct EvictingHashTableNode){.key = key, .value = value};
+    *hash_ptr = hash;
     ++me->num_inserted;
     if (me->num_inserted == me->length) {
         EvictingHashTable__refresh_threshold(me);
@@ -125,22 +125,22 @@ EHT__replace_incumbent_element(struct EvictingHashTable *me,
                                KeyType key,
                                ValueType value,
                                struct EvictingHashTableNode *incumbent,
+                               Hash64BitType *hash_ptr,
                                Hash64BitType hash)
 {
+    Hash64BitType const old_hash = *hash_ptr;
     struct SampledTryPutReturn r = (struct SampledTryPutReturn){
         .status = SAMPLED_REPLACED,
         .new_hash = hash,
         .old_key = incumbent->key,
-        .old_hash = incumbent->hash,
+        .old_hash = old_hash,
         .old_value = incumbent->value,
     };
-    uint64_t const old_hash = incumbent->hash;
     // NOTE Update the incumbent before we do the scan for the maximum
     //      threshold because we want do not want to "find" that the
     //      maximum hasn't changed.
-    *incumbent = (struct EvictingHashTableNode){.key = key,
-                                                .hash = hash,
-                                                .value = value};
+    *incumbent = (struct EvictingHashTableNode){.key = key, .value = value};
+    *hash_ptr = hash;
     if (old_hash == me->global_threshold) {
         EvictingHashTable__refresh_threshold(me);
     }
@@ -153,9 +153,11 @@ EHT__update_incumbent_element(struct EvictingHashTable *me,
                               KeyType key,
                               ValueType value,
                               struct EvictingHashTableNode *incumbent,
+                              Hash64BitType *hash_ptr,
                               Hash64BitType hash)
 {
     UNUSED(me);
+    UNUSED(hash_ptr);
     struct SampledTryPutReturn r = (struct SampledTryPutReturn){
         .status = SAMPLED_UPDATED,
         .new_hash = hash,
@@ -192,16 +194,33 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 
     struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
-    if (incumbent->hash == UINT64_MAX) {
-        return EHT__insert_new_element(me, key, value, incumbent, hash);
+    Hash64BitType *const hash_ptr = &me->hashes[hash % me->length];
+    Hash64BitType const old_hash = *hash_ptr;
+    if (old_hash == UINT64_MAX) {
+        return EHT__insert_new_element(me,
+                                       key,
+                                       value,
+                                       incumbent,
+                                       hash_ptr,
+                                       hash);
     }
-    if (hash < incumbent->hash) {
-        return EHT__replace_incumbent_element(me, key, value, incumbent, hash);
+    if (hash < old_hash) {
+        return EHT__replace_incumbent_element(me,
+                                              key,
+                                              value,
+                                              incumbent,
+                                              hash_ptr,
+                                              hash);
     }
     // NOTE If the key comparison is expensive, then one could first
     //      compare the hashes. However, in this case, they are not expensive.
     if (key == incumbent->key) {
-        return EHT__update_incumbent_element(me, key, value, incumbent, hash);
+        return EHT__update_incumbent_element(me,
+                                             key,
+                                             value,
+                                             incumbent,
+                                             hash_ptr,
+                                             hash);
     }
     return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 }
