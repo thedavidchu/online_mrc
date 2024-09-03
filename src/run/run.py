@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import os
+import shutil
 from getpass import getpass
 from pathlib import Path
 from shlex import split, quote
@@ -11,9 +12,32 @@ EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 
 
 def sh(cmd: str, **kwargs) -> CompletedProcess:
-    """Automatically run nohup on every script. This is because I have
-    a bad habit of killing my scripts on hangup."""
-    return run(split(f"nohup {cmd}"), capture_output=True, text=True, **kwargs)
+    """
+    Automatically run nohup on every script. This is because I have
+    a bad habit of killing my scripts on hangup.
+
+    @note   I will echo the commands to terminal, so don't stick your
+            password in commands, obviously!
+    """
+    my_cmd = f"nohup {cmd}"
+    print(f"Running: '{my_cmd}'")
+    r = run(split(my_cmd), capture_output=True, text=True, **kwargs)
+    if r.returncode != 0:
+        print(
+            "=============================================================================="
+        )
+        print(
+            "----------------------------------- stderr -----------------------------------"
+        )
+        print(r.stderr)
+        print(
+            "----------------------------------- stdout -----------------------------------"
+        )
+        print(r.stdout)
+        print(
+            "=============================================================================="
+        )
+    return r
 
 
 def practice_sh(cmd: str, **kwargs) -> CompletedProcess:
@@ -113,10 +137,7 @@ def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
         f"--input {frs_path} {emap_path} {fss_path} "
         f"--output {output_path}"
     )
-    if r.returncode != 0:
-        print(r.stderr)
-        print(r.stdout)
-        r.check_returncode()
+    r.check_returncode()
 
 
 def analyze_log(output_dir: Path, log_dir: Path):
@@ -128,10 +149,7 @@ def analyze_log(output_dir: Path, log_dir: Path):
         f"--trace-time {str(output_dir / 'trace-time.pdf')} "
         f"--accuracy {str(output_dir / 'accuracy.pdf')} "
     )
-    if r.returncode != 0:
-        print(r.stderr)
-        print(r.stdout)
-        r.check_returncode()
+    r.check_returncode()
 
 
 def main():
@@ -162,6 +180,9 @@ def main():
     parser.add_argument(
         "--run-analyze-log", action="store_true", help="run log analyzer"
     )
+    parser.add_argument(
+        "--overwrite", action="store_true", help="overwrite ALL CONTENTS in output file"
+    )
     args = parser.parse_args()
 
     if args.sudo:
@@ -171,7 +192,11 @@ def main():
         # NOTE  You need to quote the password to prevent arbitrary
         #       string injection attacks.
         sh(f"echo {quote( sudo_password )} | sudo -S echo Testing sudo password")
+    if args.overwrite and args.output.exists():
+        shutil.rmtree(args.output)
 
+    # NOTE  We run the traces unless explicitly told by the user to only
+    #       run the plotter or analyzer.
     run_traces: bool = not (args.run_plot_mrc or args.run_analyze_log)
     setup_env(
         output_dir=args.output,
@@ -186,6 +211,8 @@ def main():
     plot_dir = args.output / "plot"
 
     files = get_filtered_sorted_files(args.input, args.extensions)
+    if not files:
+        warn(f"no files in {str(args.input)}")
 
     if run_traces:
         for f in files:
