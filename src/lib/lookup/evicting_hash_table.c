@@ -157,6 +157,7 @@ EvictingHashTable__put(struct EvictingHashTable *me,
 void
 EvictingHashTable__refresh_threshold(struct EvictingHashTable *me)
 {
+    return;
     Hash64BitType max_hash = 0;
     for (size_t i = 0; i < me->length; ++i) {
         Hash64BitType hash = me->hashes[i];
