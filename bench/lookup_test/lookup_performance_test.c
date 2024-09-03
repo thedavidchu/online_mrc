@@ -33,24 +33,28 @@ time_hash_table(char const *const name,
     }
     double const t1 = get_wall_time_sec();
     for (size_t i = 0; i < NUM_VALUES_FOR_PERF; ++i) {
-        lookup(object, i);
+        put(object, i, 2 * i);
     }
     double const t2 = get_wall_time_sec();
     for (size_t i = 0; i < NUM_VALUES_FOR_PERF; ++i) {
-        lookup(object, i + NUM_VALUES_FOR_PERF);
+        lookup(object, i);
     }
     double const t3 = get_wall_time_sec();
-    destroy(object);
+    for (size_t i = 0; i < NUM_VALUES_FOR_PERF; ++i) {
+        lookup(object, i + NUM_VALUES_FOR_PERF);
+    }
     double const t4 = get_wall_time_sec();
-    LOGGER_INFO("%s -- put time: %f | lookup time: %f | lookup miss time: %f | "
-                "destroy time: %f | "
-                "total time: %f",
+    destroy(object);
+    double const t5 = get_wall_time_sec();
+    LOGGER_INFO("%s -- insert time: %f | replace time: %f | lookup time: %f | "
+                "lookup miss time: %f | destroy time: %f | total time: %f",
                 name,
                 t1 - t0,
                 t2 - t1,
                 t3 - t2,
                 t4 - t3,
-                t4 - t0);
+                t5 - t4,
+                t5 - t0);
 }
 
 int
