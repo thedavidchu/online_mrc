@@ -47,10 +47,14 @@ BoostHashTable__destroy(struct BoostHashTable *const me)
 struct LookupReturn
 BoostHashTable__lookup(struct BoostHashTable const *const me, KeyType const key)
 {
-    if (me == NULL || !me->private_->hash_table.contains(key)) {
+    if (me == NULL) {
         return {false, 0};
     }
-    return {true, me->private_->hash_table.at(key)};
+    auto x = me->private_->hash_table.find(key);
+    if (x == me->private_->hash_table.end()) {
+        return {false, 0};
+    }
+    return {true, x->second};
 }
 
 enum PutUniqueStatus
