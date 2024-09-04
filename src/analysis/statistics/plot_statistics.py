@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 def plot_statistics(
     input_paths: list[Path], labels: list[tuple[str]], output_path: Path
 ):
+    """
+    @note   The format of the input files is as follows:
+            [<# uint64 per item>, <number * uint64>, ...]
+
+            Within each item, the first uint64 is treated as the x-axis.
+    """
     fig, ax = plt.subplots()
     fig.suptitle("Statistics")
     fig.supxlabel("Access Number")
