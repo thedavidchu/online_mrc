@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <glib.h> // for MIN()
+#include <glib.h>
 
 #include "histogram/fractional_histogram.h"
 #include "histogram/histogram.h"

@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdbool.h>
-#include <stdint.h> // uint64_t
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 

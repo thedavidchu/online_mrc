@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <glib.h> // for MIN()
+#include <glib.h>
 #include <string.h>
 #include <sys/types.h>
 
