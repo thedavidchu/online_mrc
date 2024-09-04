@@ -102,6 +102,7 @@ def run_trace(
     input_: Path,
     format: str,
     output_: Path,
+    run_oracle: bool,
 ):
     def mrc(algo: str):
         return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
@@ -113,8 +114,12 @@ def run_trace(
         f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
-        f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})" '
-        f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true)" '
+        + (
+            f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})" '
+            if run_oracle
+            else ""
+        )
+        + f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true)" '
         f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192)" '
         f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)" '
     )
@@ -175,6 +180,9 @@ def main():
         required=True,
         help="format of the input traces",
     )
+    parser.add_argument(
+        "--skip-oracle", action="store_true", help="skip running the oracle"
+    )
     parser.add_argument("--sudo", action="store_true", help="run as sudo")
     parser.add_argument("--run-plot-mrc", action="store_true", help="run MRC plotters")
     parser.add_argument(
@@ -216,7 +224,7 @@ def main():
 
     if run_traces:
         for f in files:
-            run_trace(f, args.format, args.output)
+            run_trace(f, args.format, args.output, not args.skip_oracle)
     if args.run_plot_mrc:
         for f in files:
             plot_mrc(f, mrc_dir, plot_dir)
