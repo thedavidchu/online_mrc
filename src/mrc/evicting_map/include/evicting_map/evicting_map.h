@@ -13,8 +13,6 @@
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
-
-#define THRESHOLD_STATISTICS
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif

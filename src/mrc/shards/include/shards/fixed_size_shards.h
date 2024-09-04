@@ -12,7 +12,6 @@
 #include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 
-#define THRESHOLD_STATISTICS
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
