@@ -14,6 +14,11 @@
 #include "interval_statistics/interval_statistics.h"
 #endif
 
+#define THRESHOLD_STATISTICS
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
 struct EvictingMap {
     struct Tree tree;
     struct EvictingHashTable hash_table;
@@ -21,6 +26,9 @@ struct EvictingMap {
     TimeStampType current_time_stamp;
 #ifdef INTERVAL_STATISTICS
     struct IntervalStatistics istats;
+#endif
+#ifdef THRESHOLD_STATISTICS
+    struct Statistics stats;
 #endif
 };
 

@@ -19,6 +19,14 @@
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
+#include "shards/fixed_size_shards.h"
+
+/// NOTE    This has to be below the fixed-size SHARDS include so that
+///         it sees the macro definition.
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
 #define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
 static bool
@@ -51,6 +59,11 @@ initialize(struct FixedSizeShards *const me,
     }
 #ifdef INTERVAL_STATISTICS
     if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
+        goto cleanup;
+    }
+#endif
+#ifdef THRESHOLD_STATISTICS
+    if (!Statistics__init(&me->stats, 2)) {
         goto cleanup;
     }
 #endif
@@ -159,13 +172,13 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
-
+#ifdef THRESHOLD_STATISTICS
     if (me->olken.current_time_stamp % THRESHOLD_SAMPLING_PERIOD == 0) {
-        LOGGER_INFO("time: %" PRIu64 " | max hash: %" PRIu64,
-                    me->olken.current_time_stamp,
-                    me->sampler.threshold);
+        double const data[] = {me->olken.current_time_stamp,
+                               me->sampler.threshold};
+        Statistics__append(&me->stats, data);
     }
-
+#endif
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
         unsampled_item(me);
         return false;
@@ -213,6 +226,9 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     FixedSizeShardsSampler__destroy(&me->sampler);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__destroy(&me->istats);
+#endif
+#ifdef THRESHOLD_STATISTICS
+    Statistics__destroy(&me->stats);
 #endif
     *me = (struct FixedSizeShards){0};
 }

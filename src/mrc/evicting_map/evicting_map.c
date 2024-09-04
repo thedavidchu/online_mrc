@@ -48,6 +48,11 @@ initialize(struct EvictingMap *const me,
         goto cleanup;
     }
 #endif
+#ifdef THRESHOLD_STATISTICS
+    if (!Statistics__init(&me->stats, 4)) {
+        goto cleanup;
+    }
+#endif
     me->current_time_stamp = 0;
     return true;
 
@@ -193,19 +198,20 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     if (me == NULL)
         return false;
     ValueType timestamp = me->current_time_stamp;
+#ifdef THRESHOLD_STATISTICS
     if (timestamp % THRESHOLD_SAMPLING_PERIOD == 0) {
         size_t max_hash = 0, min_hash = SIZE_MAX;
         for (size_t i = 0; i < me->hash_table.length; ++i) {
             max_hash = MAX(max_hash, me->hash_table.hashes[i]);
             min_hash = MIN(min_hash, me->hash_table.hashes[i]);
         }
-        LOGGER_TRACE("time: %" PRIu64 " | global threshold: %" PRIu64
-                     " | max hash: %" PRIu64 "| min hash: %" PRIu64,
-                     timestamp,
-                     me->hash_table.global_threshold,
-                     max_hash,
-                     min_hash);
+        double const stats[] = {timestamp,
+                                me->hash_table.global_threshold,
+                                max_hash,
+                                min_hash};
+        Statistics__append(&me->stats, stats);
     }
+#endif
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
     switch (r.status) {
@@ -272,6 +278,9 @@ EvictingMap__destroy(struct EvictingMap *me)
     Histogram__destroy(&me->histogram);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__destroy(&me->istats);
+#endif
+#ifdef THRESHOLD_STATISTICS
+    Statistics__destroy(&me->stats);
 #endif
     *me = (struct EvictingMap){0};
 }

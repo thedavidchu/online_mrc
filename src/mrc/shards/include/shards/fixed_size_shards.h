@@ -12,11 +12,19 @@
 #include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 
+#define THRESHOLD_STATISTICS
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
 struct FixedSizeShards {
     struct Olken olken;
     struct FixedSizeShardsSampler sampler;
 #ifdef INTERVAL_STATISTICS
     struct IntervalStatistics istats;
+#endif
+#ifdef THRESHOLD_STATISTICS
+    struct Statistics stats;
 #endif
 };
 
