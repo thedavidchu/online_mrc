@@ -228,6 +228,7 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     IntervalStatistics__destroy(&me->istats);
 #endif
 #ifdef THRESHOLD_STATISTICS
+    Statistics__save(&me->stats, "Fixed-Size-SHARDS-stats.bin");
     Statistics__destroy(&me->stats);
 #endif
     *me = (struct FixedSizeShards){0};

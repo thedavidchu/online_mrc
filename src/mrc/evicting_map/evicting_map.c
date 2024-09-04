@@ -20,6 +20,12 @@
 
 #include "evicting_map/evicting_map.h"
 
+// NOTE This is beneath the header include so that it inherits the macro
+//      definition.
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
 #define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
 static bool
@@ -280,6 +286,7 @@ EvictingMap__destroy(struct EvictingMap *me)
     IntervalStatistics__destroy(&me->istats);
 #endif
 #ifdef THRESHOLD_STATISTICS
+    Statistics__save(&me->stats, "Evicting-Map-stats.bin");
     Statistics__destroy(&me->stats);
 #endif
     *me = (struct EvictingMap){0};
