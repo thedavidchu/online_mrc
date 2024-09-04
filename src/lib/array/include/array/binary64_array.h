@@ -15,18 +15,20 @@
 
 #include <glib.h>
 
-struct Float64Array {
+struct Binary64Array {
     GArray *array;
 };
 
 bool
-Float64Array__init(struct Float64Array *const me);
+Binary64Array__init(struct Binary64Array *const me);
 
 void
-Float64Array__destroy(struct Float64Array *const me);
+Binary64Array__destroy(struct Binary64Array *const me);
 
 bool
-Float64Array__append(struct Float64Array *const me, double const item);
+Binary64Array__append(struct Binary64Array *const me,
+                      void const *const item_ptr);
 
 bool
-Float64Array__save(struct Float64Array const *const me, char const *const path);
+Binary64Array__save(struct Binary64Array const *const me,
+                    char const *const path);

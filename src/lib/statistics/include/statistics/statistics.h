@@ -10,12 +10,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "array/float64_array.h"
+#include "array/binary64_array.h"
 
 struct Statistics {
     // The number of fp64's per item in the statistics array.
-    size_t f64_per_item;
-    struct Float64Array stats;
+    size_t b64_per_item;
+    struct Binary64Array stats;
 };
 
 bool
@@ -25,7 +25,16 @@ void
 Statistics__destroy(struct Statistics *const me);
 
 bool
-Statistics__append(struct Statistics *const me, double const *const data);
+Statistics__append_binary64(struct Statistics *const me,
+                            void const *const data);
+
+bool
+Statistics__append_float64(struct Statistics *const me,
+                           double const *const data);
+
+bool
+Statistics__append_uint64(struct Statistics *const me,
+                          uint64_t const *const data);
 
 bool
 Statistics__save(struct Statistics const *const me, char const *const path);

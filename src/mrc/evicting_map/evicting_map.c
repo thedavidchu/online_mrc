@@ -211,11 +211,11 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
             max_hash = MAX(max_hash, me->hash_table.hashes[i]);
             min_hash = MIN(min_hash, me->hash_table.hashes[i]);
         }
-        double const stats[] = {timestamp,
-                                me->hash_table.global_threshold,
-                                max_hash,
-                                min_hash};
-        Statistics__append(&me->stats, stats);
+        uint64_t const stats[] = {timestamp,
+                                  me->hash_table.global_threshold,
+                                  max_hash,
+                                  min_hash};
+        Statistics__append_uint64(&me->stats, stats);
     }
 #endif
     struct SampledTryPutReturn r =

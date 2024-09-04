@@ -174,9 +174,9 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     }
 #ifdef THRESHOLD_STATISTICS
     if (me->olken.current_time_stamp % THRESHOLD_SAMPLING_PERIOD == 0) {
-        double const data[] = {me->olken.current_time_stamp,
-                               me->sampler.threshold};
-        Statistics__append(&me->stats, data);
+        uint64_t const data[] = {me->olken.current_time_stamp,
+                                 me->sampler.threshold};
+        Statistics__append_uint64(&me->stats, data);
     }
 #endif
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
