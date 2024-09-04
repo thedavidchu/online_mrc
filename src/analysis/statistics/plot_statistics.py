@@ -1,3 +1,8 @@
+""" @brief  This is a hacky script to plot the statistics.
+
+I was both trying to be too general and weirdly specific at the same time.
+"""
+
 from pathlib import Path
 
 import numpy as np
