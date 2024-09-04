@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "array/binary64_array.h"
+#include "array/print_array.h"
 #include "logger/logger.h"
 #include "statistics/statistics.h"
 
@@ -43,18 +44,20 @@ Statistics__destroy(struct Statistics *const me)
 bool
 Statistics__append_binary64(struct Statistics *const me, void const *const data)
 {
-    bool ok = true;
-    for (size_t i = 0; i < me->b64_per_item; ++i) {
-        // NOTE I need data to be 64 bits wide so I arbitrarily decided
-        //      to use uint64_t instead of double. The decision is based
-        //      on the fact that uint64_t has '64' in the name.
-        uint64_t const *const ptr = &((uint64_t const *const)data)[i];
-        if (!Binary64Array__append(&me->stats, ptr)) {
-            LOGGER_WARN("failed to append %" PRIx64 " to array", *ptr);
-            ok = false;
-        }
+    // NOTE I need data to be 64 bits wide so I arbitrarily decided
+    //      to use uint64_t instead of double. The decision is based
+    //      on the fact that uint64_t has '64' in the name.
+    if (!Binary64Array__append_array(&me->stats, data, me->b64_per_item)) {
+        LOGGER_WARN("failed to append array at %p to array", data);
+        print_array(LOGGER_STREAM,
+                    data,
+                    me->b64_per_item,
+                    sizeof(uint64_t),
+                    true,
+                    _print_binary64);
+        return false;
     }
-    return ok;
+    return true;
 }
 
 bool

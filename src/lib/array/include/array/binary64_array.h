@@ -30,5 +30,10 @@ Binary64Array__append(struct Binary64Array *const me,
                       void const *const item_ptr);
 
 bool
+Binary64Array__append_array(struct Binary64Array *const me,
+                            void const *const item_array,
+                            size_t const length);
+
+bool
 Binary64Array__save(struct Binary64Array const *const me,
                     char const *const path);
