@@ -1,3 +1,16 @@
+dictionary_test_exe = executable(
+    'dictionary_test_exe',
+    'dictionary_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        common_dep,
+        glib_dep,
+        lookup_dep,
+    ],
+)
+
 boost_hash_table_test_exe = executable(
     'boost_hash_table_test_exe',
     'boost_hash_table_test.c',
@@ -65,6 +78,7 @@ evicting_lookup_test_exe = executable(
     ],
 )
 
+test('dictionary_test', dictionary_test_exe)
 test('boost_hash_table_test', boost_hash_table_test_exe)
 test('k_hash_table_test', k_hash_table_test_exe)
 test('lookup_test', lookup_test_exe)
