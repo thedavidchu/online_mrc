@@ -4,6 +4,7 @@ lookup_lib = library(
     'lookup_lib',
     [
         'hash_table.c',
+        'dictionary.c',
         'parallel_hash_table.c',
         'parallel_list.c',
         'evicting_hash_table.c',
