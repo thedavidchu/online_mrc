@@ -294,7 +294,7 @@ EvictingMap__destroy(struct EvictingMap *me)
 #ifdef THRESHOLD_STATISTICS
     char const *stats_path = Dictionary__get(me->dictionary, "stats_path");
     if (stats_path == NULL) {
-        stats_path = "Evicting-Map-stats.bin"
+        stats_path = "Evicting-Map-stats.bin";
     }
     Statistics__save(&me->stats, stats_path);
     Statistics__destroy(&me->stats);
