@@ -59,6 +59,16 @@ decreasing_hashes(size_t const i, size_t const trace_length)
     return reverse_splitmix64_hash(REVERSE_INDEX(i, trace_length));
 }
 
+/// @note   This function is used to generate a series of numbers that
+///         cause a decreasing hash but are not a simple constant away
+///         from each other, in order to defeat the hardware prefetcher.
+static uint64_t
+decreasing_nonstrided_hashes(size_t const i, size_t const trace_length)
+{
+    return reverse_splitmix64_hash(
+        REVERSE_INDEX(i * i * i, trace_length * trace_length * trace_length));
+}
+
 static bool
 run_trace(char const *const *runner_args_array, struct Trace const *const trace)
 {
@@ -83,7 +93,8 @@ main(void)
     char const *runner_args_array[] = {"Evicting-Map(sampling=1e-1)",
                                        "Fixed-Size-SHARDS(sampling=1e-1)",
                                        NULL};
-    bool const run_hammer = true, run_fast = true, run_slow = true;
+    bool const run_hammer = true, run_fast = true, run_slow = true,
+               run_slowest = true;
     // Test fastest trace
     trace = generate_trace(trace_length, hammer_single_element);
     if (run_hammer && !run_trace(runner_args_array, &trace)) {
@@ -104,6 +115,14 @@ main(void)
     trace = generate_trace(trace_length, decreasing_hashes);
     if (run_slow && !run_trace(runner_args_array, &trace)) {
         LOGGER_ERROR("slow path failed");
+        exit(EXIT_FAILURE);
+    }
+    Trace__destroy(&trace);
+
+    // Test slowest trace
+    trace = generate_trace(trace_length, decreasing_nonstrided_hashes);
+    if (run_slowest && !run_trace(runner_args_array, &trace)) {
+        LOGGER_ERROR("slowest path failed");
         exit(EXIT_FAILURE);
     }
     Trace__destroy(&trace);
