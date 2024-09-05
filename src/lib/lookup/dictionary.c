@@ -78,7 +78,7 @@ Dictionary__write(struct Dictionary const *const me,
         return false;
     }
     if (me == NULL || me->hash_table == NULL) {
-        fprintf(stream, "{}%s", newline ? "\n" : "");
+        fprintf(stream, "(null)%s", newline ? "\n" : "");
         return true;
     }
     fprintf(stream, "{");

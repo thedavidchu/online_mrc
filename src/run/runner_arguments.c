@@ -11,6 +11,7 @@
 #include "arrays/is_last.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
+#include "lookup/dictionary.h"
 
 #include "run/helper.h"
 #include "run/runner_arguments.h"
@@ -156,11 +157,16 @@ print_help(void)
     fprintf(LOGGER_STREAM,
             "    Notes: we reserve the use of the characters '(),='. "
             "White spaces are not stripped.\n");
+    fprintf(LOGGER_STREAM,
+            "    Notes: any unrecognized (or misspelled) parameters will be "
+            "stored in the generic dictionary, whose values are also subject "
+            "to the same character constraints.");
 }
 
 static bool
 parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
 {
+    assert(me != NULL);
     // I just set this value so that we have some defined value by
     // default rather than an unknown value.
     *no_more_args = false;
@@ -237,9 +243,15 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
         print_help();
         return false;
     } else {
-        LOGGER_ERROR("unrecognized parameter '%s'", param);
-        print_help();
-        return false;
+        if ((value = strtok(NULL, ",)")) == NULL) {
+            LOGGER_ERROR("invalid value for parameter '%s'", param);
+            return false;
+        }
+        LOGGER_WARN("unrecognized parameter '%s' with value '%s'. Storing it "
+                    "in the dictionary!",
+                    param,
+                    value);
+        return Dictionary__put(&me->dictionary, param, value);
     }
 }
 
@@ -269,7 +281,14 @@ RunnerArguments__init(struct RunnerArguments *const me, char const *const str)
         .shards_adj = true,
         // NOTE This should give us approximately 1% error.
         .qmrc_size = 128,
+        .dictionary = (struct Dictionary){0},
     };
+
+    if (!Dictionary__init(&me->dictionary)) {
+        LOGGER_ERROR("failed to initialize dictionary");
+        return false;
+    }
+
     char *const garbage = strdup(str);
     if (garbage == NULL) {
         LOGGER_ERROR("bad strdup");
@@ -322,7 +341,7 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
     fprintf(fp,
             "RunnerArguments(algorithm=%s, mrc=%s, hist=%s, sampling=%g, "
             "num_bins=%zu, bin_size=%zu, max_size=%zu, mode=%s, adj=%s, "
-            "qmrc_size=%zu)\n",
+            "qmrc_size=%zu, dictionary=",
             algorithm_names[me->algorithm],
             maybe_string(me->mrc_path),
             maybe_string(me->hist_path),
@@ -333,13 +352,19 @@ RunnerArguments__println(struct RunnerArguments const *const me, FILE *const fp)
             HISTOGRAM_MODE_STRINGS[me->out_of_bounds_mode],
             bool_to_string(me->shards_adj),
             me->qmrc_size);
+    Dictionary__write(&me->dictionary, fp, false);
+    fprintf(fp, ")\n");
     return true;
 }
 
 void
 RunnerArguments__destroy(struct RunnerArguments *const me)
 {
+    if (me == NULL) {
+        return;
+    }
     free(me->mrc_path);
     free(me->hist_path);
+    Dictionary__destroy(&me->dictionary);
     *me = (struct RunnerArguments){0};
 }

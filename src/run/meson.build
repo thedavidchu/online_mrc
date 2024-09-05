@@ -7,6 +7,7 @@ runner_arguments_lib = library(
     dependencies: [
         common_dep,
         histogram_dep,
+        lookup_dep,
     ],
 )
 
@@ -39,6 +40,7 @@ run_dep = declare_dependency(
     ],
     dependencies: [
         histogram_dep,
+        lookup_dep,
         trace_dep,
     ],
 )

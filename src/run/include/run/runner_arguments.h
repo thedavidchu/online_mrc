@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include "histogram/histogram.h"
+#include "lookup/dictionary.h"
 
 enum RunnerMode {
     RUNNER_MODE_INVALID,
@@ -86,6 +87,8 @@ struct RunnerArguments {
     bool shards_adj;
     // The number of buckets allotted to the QuickMRC buffers.
     size_t qmrc_size;
+
+    struct Dictionary dictionary;
 };
 
 /// @brief  Parse an initialization string.
