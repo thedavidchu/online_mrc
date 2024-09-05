@@ -48,6 +48,8 @@ struct EvictingHashTable {
     size_t num_inserted;
     double running_denominator;
     double hll_alpha_m;
+
+    bool track_global_threshold;
 };
 
 enum SampledStatus {

@@ -75,6 +75,7 @@ EvictingHashTable__init(struct EvictingHashTable *me,
         //      dividing.
         .running_denominator = length * init_sampling_ratio,
         .hll_alpha_m = hll_alpha_m(length),
+        .track_global_threshold = false,
     };
     return true;
 }
@@ -157,7 +158,9 @@ EvictingHashTable__put(struct EvictingHashTable *me,
 void
 EvictingHashTable__refresh_threshold(struct EvictingHashTable *me)
 {
-    return;
+    if (me == NULL || !me->track_global_threshold) {
+        return;
+    }
     Hash64BitType max_hash = 0;
     for (size_t i = 0; i < me->length; ++i) {
         Hash64BitType hash = me->hashes[i];
