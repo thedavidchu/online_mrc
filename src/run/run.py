@@ -61,6 +61,7 @@ def setup_env(
         os.mkdir(output_dir / "hist")
         os.mkdir(output_dir / "log")
         os.mkdir(output_dir / "plot")
+        os.mkdir(output_dir / "stats")
     if setup_build:
         build_dir = os.path.join(top_level_dir, "build")
         os.chdir(build_dir)
@@ -110,18 +111,21 @@ def run_trace(
     def hist(algo: str):
         return os.path.join(str(output_), "hist", f"{input_.stem}-{algo}-hist.bin")
 
+    def stats(algo: str):
+        return output_ / "stats" / f"{input_.stem}-{algo}-stats.bin"
+
     log = sh(
         f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
         + (
-            f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})" '
+            f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")},stats_path={stats("Olken")})" '
             if run_oracle
             else ""
         )
-        + f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true)" '
-        f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192)" '
-        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)" '
+        + f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true,stats_path={stats("Fixed-Rate-SHARDS")})" '
+        f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})" '
+        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})" '
     )
 
     with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
