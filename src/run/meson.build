@@ -103,6 +103,18 @@ test(
 )
 
 test(
+    'generate_mrc_trace_dictionary_test',
+    generate_mrc_exe,
+    args: [
+        '-i', test_trace,
+        '-f', 'Kia',
+        '-r', 'Evicting-Map(a=A,b=B,c=C)',
+        '-r', 'Fixed-Size-SHARDS(a=A,b=B,c=C)',
+        '--cleanup',
+    ],
+)
+
+test(
     'generate_mrc_main_test',
     generate_mrc_exe,
     args: [
