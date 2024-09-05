@@ -206,7 +206,8 @@ run_evicting_map(struct RunnerArguments const *const args,
                                 args->max_size,
                                 args->num_bins,
                                 args->bin_size,
-                                args->out_of_bounds_mode)) {
+                                args->out_of_bounds_mode,
+                                &args->dictionary)) {
         LOGGER_ERROR("initialization failed!");
         return false;
     }

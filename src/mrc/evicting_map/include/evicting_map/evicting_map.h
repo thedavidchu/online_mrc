@@ -22,6 +22,7 @@ struct EvictingMap {
     struct EvictingHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
+    struct Dictionary const *dictionary;
 #ifdef INTERVAL_STATISTICS
     struct IntervalStatistics istats;
 #endif
@@ -43,7 +44,8 @@ EvictingMap__init_full(struct EvictingMap *const me,
                        uint64_t const num_hash_buckets,
                        uint64_t const histogram_num_bins,
                        uint64_t const histogram_bin_size,
-                       enum HistogramOutOfBoundsMode const out_of_bounds_mode);
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+                       struct Dictionary const *const dictionary);
 
 bool
 EvictingMap__access_item(struct EvictingMap *me, EntryType entry);

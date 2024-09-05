@@ -9,6 +9,7 @@
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
+#include "lookup/dictionary.h"
 #include "lookup/evicting_hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/basic_tree.h"
@@ -34,7 +35,8 @@ initialize(struct EvictingMap *const me,
            uint64_t const num_hash_buckets,
            uint64_t const histogram_num_bins,
            uint64_t const histogram_bin_size,
-           enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+           struct Dictionary const *const dictionary)
 {
     if (me == NULL)
         return false;
@@ -49,6 +51,7 @@ initialize(struct EvictingMap *const me,
                          histogram_bin_size,
                          out_of_bounds_mode))
         goto cleanup;
+    me->dictionary = dictionary;
 #ifdef INTERVAL_STATISTICS
     if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
         goto cleanup;
@@ -79,7 +82,8 @@ EvictingMap__init(struct EvictingMap *const me,
                       num_hash_buckets,
                       histogram_num_bins,
                       histogram_bin_size,
-                      HistogramOutOfBoundsMode__allow_overflow);
+                      HistogramOutOfBoundsMode__allow_overflow,
+                      NULL);
 }
 
 bool
@@ -88,14 +92,16 @@ EvictingMap__init_full(struct EvictingMap *const me,
                        uint64_t const num_hash_buckets,
                        uint64_t const histogram_num_bins,
                        uint64_t const histogram_bin_size,
-                       enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+                       struct Dictionary const *const dictionary)
 {
     return initialize(me,
                       init_sampling_ratio,
                       num_hash_buckets,
                       histogram_num_bins,
                       histogram_bin_size,
-                      out_of_bounds_mode);
+                      out_of_bounds_mode,
+                      dictionary);
 }
 
 /// @brief  Do no work (besides simple book-keeping).
@@ -286,7 +292,11 @@ EvictingMap__destroy(struct EvictingMap *me)
     IntervalStatistics__destroy(&me->istats);
 #endif
 #ifdef THRESHOLD_STATISTICS
-    Statistics__save(&me->stats, "Evicting-Map-stats.bin");
+    char const *stats_path = Dictionary__get(me->dictionary, "stats_path");
+    if (stats_path == NULL) {
+        stats_path = "Evicting-Map-stats.bin"
+    }
+    Statistics__save(&me->stats, stats_path);
     Statistics__destroy(&me->stats);
 #endif
     *me = (struct EvictingMap){0};
