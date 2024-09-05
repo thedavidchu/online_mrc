@@ -42,7 +42,9 @@ Dictionary__get(struct Dictionary const *const me, char const *const key)
 }
 
 enum PutUniqueStatus
-Dictionary__put(struct Dictionary *const me, char *const key, char *const value)
+Dictionary__put(struct Dictionary *const me,
+                char const *const key,
+                char const *const value)
 {
     if (me == NULL || me->hash_table == NULL || key == NULL || value == NULL) {
         return LOOKUP_PUTUNIQUE_ERROR;
@@ -50,7 +52,8 @@ Dictionary__put(struct Dictionary *const me, char *const key, char *const value)
     // NOTE The `g_hash_table_replace` replaces the current key with the
     //      passed key as well. Basically, it is identical except for
     //      some memory management stuff.
-    gboolean r = g_hash_table_insert(me->hash_table, key, value);
+    gboolean r =
+        g_hash_table_insert(me->hash_table, g_strdup(key), g_strdup(value));
     return r ? LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE
              : LOOKUP_PUTUNIQUE_REPLACE_VALUE;
 }

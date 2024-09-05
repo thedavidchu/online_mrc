@@ -1,5 +1,8 @@
 /** @brief  An associative string-string lookup where this data structure
  *          owns the strings.
+ *  @note   This copies strings by value, so any strings passed in remain
+ *          owned by the caller. Any strings returned by this library are
+ *          merely borrowed.
  */
 #pragma once
 
@@ -26,8 +29,8 @@ Dictionary__get(struct Dictionary const *const me, char const *const key);
 
 enum PutUniqueStatus
 Dictionary__put(struct Dictionary *const me,
-                char *const key,
-                char *const value);
+                char const *const key,
+                char const *const value);
 
 bool
 Dictionary__remove(struct Dictionary *const me, char const *const key);
