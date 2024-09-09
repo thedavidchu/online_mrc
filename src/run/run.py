@@ -14,7 +14,13 @@ from shlex import split, quote
 from subprocess import run, CompletedProcess
 from warnings import warn
 
+
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
+
+
+def abspath(path: str | Path) -> Path:
+    """Create an absolute path."""
+    return Path(path).resolve()
 
 
 def sh(cmd: str, **kwargs) -> CompletedProcess:
@@ -170,7 +176,7 @@ def analyze_log(output_dir: Path, log_dir: Path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", "-i", type=Path, required=True, help="directory of inputs"
+        "--input", "-i", type=abspath, required=True, help="directory of inputs"
     )
     parser.add_argument(
         "--extensions",
@@ -181,7 +187,7 @@ def main():
         help="list of extensions to include (e.g. '.bin .dat')",
     )
     parser.add_argument(
-        "--output", "-o", type=Path, required=True, help="directory for outputs"
+        "--output", "-o", type=abspath, required=True, help="directory for outputs"
     )
     parser.add_argument(
         "--format",
