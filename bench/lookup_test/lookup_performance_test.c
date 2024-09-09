@@ -1,4 +1,13 @@
 /** @brief  Test the performance and distribution of various lookup utilities.
+ *
+ *  @note   Perform memory tests on the various algorithms by running
+ *          the following:
+ *          `/usr/bin/time -v <exe> {boost,k,g}
+ *          Look for the 'Maximum resident set size (kbytes)'.
+ *          It is important to type the full path '/usr/bin/time' since
+ *          you do not want to confuse it with Bash's built-in 'time'.
+ *          Source:
+ *          https://stackoverflow.com/questions/774556/peak-memory-usage-of-a-linux-unix-process
  */
 
 #include <stddef.h>
@@ -57,41 +66,87 @@ time_hash_table(char const *const name,
                 t5 - t0);
 }
 
-int
-main(void)
+enum LookupType {
+    BOOST_HASH_TABLE,
+    K_HASH_TABLE,
+    G_HASH_TABLE,
+};
+
+void
+run(enum LookupType const lookup_type)
 {
-    struct BoostHashTable bht = {0};
-    BoostHashTable__init(&bht);
-    time_hash_table(
-        "Boost Hash Table",
-        &bht,
-        (enum PutUniqueStatus(*)(void *const, uint64_t const, uint64_t const))
-            BoostHashTable__put,
-        (struct LookupReturn(*)(void const *const,
-                                uint64_t const))BoostHashTable__lookup,
-        (void (*)(void *const))BoostHashTable__destroy);
+    switch (lookup_type) {
+    case BOOST_HASH_TABLE: {
+        struct BoostHashTable bht = {0};
+        BoostHashTable__init(&bht);
+        time_hash_table(
+            "Boost Hash Table",
+            &bht,
+            (enum PutUniqueStatus(*)(void *const,
+                                     uint64_t const,
+                                     uint64_t const))BoostHashTable__put,
+            (struct LookupReturn(*)(void const *const,
+                                    uint64_t const))BoostHashTable__lookup,
+            (void (*)(void *const))BoostHashTable__destroy);
+        break;
+    }
+    case K_HASH_TABLE: {
+        struct KHashTable kht = {0};
+        KHashTable__init(&kht);
+        time_hash_table(
+            "KLib Hash Table",
+            &kht,
+            (enum PutUniqueStatus(*)(void *const,
+                                     uint64_t const,
+                                     uint64_t const))KHashTable__put,
+            (struct LookupReturn(*)(void const *const,
+                                    uint64_t const))KHashTable__lookup,
+            (void (*)(void *const))KHashTable__destroy);
+        break;
+    }
+    case G_HASH_TABLE: {
+        struct HashTable ght = {0};
+        HashTable__init(&ght);
+        time_hash_table(
+            "GLib Hash Table",
+            &ght,
+            (enum PutUniqueStatus(*)(void *const,
+                                     uint64_t const,
+                                     uint64_t const))HashTable__put,
+            (struct LookupReturn(*)(void const *const,
+                                    uint64_t const))HashTable__lookup,
+            (void (*)(void *const))HashTable__destroy);
+        break;
+    }
+    default:
+        assert(0);
+    }
+}
 
-    struct HashTable ght = {0};
-    HashTable__init(&ght);
-    time_hash_table("GLib Hash Table",
-                    &ght,
-                    (enum PutUniqueStatus(*)(void *const,
-                                             uint64_t const,
-                                             uint64_t const))HashTable__put,
-                    (struct LookupReturn(*)(void const *const,
-                                            uint64_t const))HashTable__lookup,
-                    (void (*)(void *const))HashTable__destroy);
-
-    struct KHashTable kht = {0};
-    KHashTable__init(&kht);
-    time_hash_table("KLib Hash Table",
-                    &kht,
-                    (enum PutUniqueStatus(*)(void *const,
-                                             uint64_t const,
-                                             uint64_t const))KHashTable__put,
-                    (struct LookupReturn(*)(void const *const,
-                                            uint64_t const))KHashTable__lookup,
-                    (void (*)(void *const))KHashTable__destroy);
-
+int
+main(int argc, char **argv)
+{
+    if (argc == 1) {
+        run(BOOST_HASH_TABLE);
+        run(G_HASH_TABLE);
+        run(K_HASH_TABLE);
+        return 0;
+    }
+    for (int i = 1; i < argc; ++i) {
+        assert(argv[i] != NULL);
+        if (strcmp(argv[i], "boost") == 0) {
+            run(BOOST_HASH_TABLE);
+        } else if (strcmp(argv[i], "k") == 0) {
+            run(K_HASH_TABLE);
+        } else if (strcmp(argv[i], "g") == 0) {
+            run(G_HASH_TABLE);
+        } else {
+            LOGGER_WARN("skipping unrecognized argument '%s'. Try any "
+                        "combination of 'boost', 'k', or 'g' (e.g. '%s boost k "
+                        "g'); or enter no arguments to run everything.",
+                        argv[i],
+                        argv[0]);
+        }
+    }
     return 0;
 }
