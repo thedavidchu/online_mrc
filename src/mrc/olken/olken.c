@@ -12,12 +12,15 @@
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
-#include "profile/profile.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
+
+#ifdef PROFILE_STATISTICS
+#include "profile/profile.h"
+#endif
 
 static bool
 initialize(struct Olken *const me,
