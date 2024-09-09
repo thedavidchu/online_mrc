@@ -1,4 +1,10 @@
 #!/usr/bin/python3
+"""
+@note   The plotting functions are not run by default. They need to be
+        invoked separately. I'm still trying to think of intuitive
+        semantics to run these but make sure to never overwrite data
+        that is expensive to generate.
+"""
 import argparse
 import os
 import shutil
