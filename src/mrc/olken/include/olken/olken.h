@@ -20,6 +20,12 @@ struct Olken {
     struct KHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
+#ifdef PROFILE_STATISTICS
+    uint64_t ticks_ht;
+    uint64_t ticks_lru;
+    uint64_t cnt_ht;
+    uint64_t cnt_lru;
+#endif
 };
 
 bool

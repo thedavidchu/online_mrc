@@ -12,6 +12,7 @@
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
+#include "profile/profile.h"
 #include "tree/basic_tree.h"
 #include "tree/sleator_tree.h"
 #include "types/entry_type.h"
@@ -138,9 +139,26 @@ Olken__access_item(struct Olken *const me, EntryType const entry)
         return false;
     }
 
+#ifdef PROFILE_STATISTICS
+    uint64_t start = 0;
+#endif
+#ifdef PROFILE_STATISTICS
+    start = start_rdtsc();
+#endif
     struct LookupReturn found = KHashTable__lookup(&me->hash_table, entry);
+#ifdef PROFILE_STATISTICS
+    me->ticks_ht += end_rdtsc(start);
+    ++me->cnt_ht;
+#endif
     if (found.success) {
+#ifdef PROFILE_STATISTICS
+        start = start_rdtsc();
+#endif
         uint64_t distance = Olken__update_stack(me, entry, found.timestamp);
+#ifdef PROFILE_STATISTICS
+        me->ticks_lru += end_rdtsc(start);
+        ++me->cnt_lru;
+#endif
         if (distance == UINT64_MAX) {
             return false;
         }
@@ -191,6 +209,14 @@ Olken__destroy(struct Olken *const me)
     tree__destroy(&me->tree);
     KHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
+#ifdef PROFILE_STATISTICS
+    LOGGER_INFO("profile statistics ticks -- Hash Table: %" PRIu64 "/%" PRIu64
+                " | LRU Stack: %" PRIu64 "/%" PRIu64,
+                me->ticks_ht,
+                me->cnt_ht,
+                me->ticks_lru,
+                me->cnt_lru);
+#endif
     *me = (struct Olken){0};
 }
 
