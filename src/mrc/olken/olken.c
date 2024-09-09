@@ -43,6 +43,12 @@ initialize(struct Olken *const me,
         LOGGER_ERROR("cannot initialize histogram");
         goto histogram_error;
     }
+#ifdef PROFILE_STATISTICS
+    me->ticks_ht = 0;
+    me->ticks_lru = 0;
+    me->cnt_ht = 0;
+    me->cnt_lru = 0;
+#endif
     me->current_time_stamp = 0;
     return true;
 
