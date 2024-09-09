@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "lookup/boost_hash_table.h"
 #include "lookup/hash_table.h"
 #include "lookup/k_hash_table.h"
@@ -27,15 +28,18 @@ initialize(struct Olken *const me,
         return false;
     }
     if (!tree__init(&me->tree)) {
+        LOGGER_ERROR("cannot initialize tree");
         goto tree_error;
     }
     if (!KHashTable__init(&me->hash_table)) {
+        LOGGER_ERROR("cannot initialize hash table");
         goto hash_table_error;
     }
     if (!Histogram__init(&me->histogram,
                          histogram_num_bins,
                          histogram_bin_size,
                          out_of_bounds_mode)) {
+        LOGGER_ERROR("cannot initialize histogram");
         goto histogram_error;
     }
     me->current_time_stamp = 0;
