@@ -24,6 +24,7 @@ Statistics__init(struct Statistics *const me, size_t const f64_per_item);
 void
 Statistics__destroy(struct Statistics *const me);
 
+/// @brief  Append a 64-bit value to the array.
 bool
 Statistics__append_binary64(struct Statistics *const me,
                             void const *const data);
