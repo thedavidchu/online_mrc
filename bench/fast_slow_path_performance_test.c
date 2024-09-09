@@ -22,6 +22,37 @@
 ///         https://stackoverflow.com/questions/32432596/warning-always-inline-function-might-not-be-inlinable-wattributes
 #define forceinline __attribute__((always_inline)) inline
 
+static char const *const SHORT_RUN[] = {
+    "Evicting-Map(sampling=1e-1,max_size=8192)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=8192)",
+    NULL};
+static char const *const LONG_RUN[] = {
+    "Evicting-Map(sampling=1e-1,max_size=65536)",
+    "Evicting-Map(sampling=1e-1,max_size=32768)",
+    "Evicting-Map(sampling=1e-1,max_size=16384)",
+    "Evicting-Map(sampling=1e-1,max_size=8192)",
+    "Evicting-Map(sampling=1e-1,max_size=4096)",
+    "Evicting-Map(sampling=1e-1,max_size=2048)",
+    "Evicting-Map(sampling=1e-1,max_size=1024)",
+    "Evicting-Map(sampling=1e-1,max_size=512)",
+    "Evicting-Map(sampling=1e-1,max_size=256)",
+    "Evicting-Map(sampling=1e-1,max_size=128)",
+    "Evicting-Map(sampling=1e-1,max_size=64)",
+    "Evicting-Map(sampling=1e-1,max_size=32)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=65536)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=32768)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=16384)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=8192)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=4096)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=2048)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=1024)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=512)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=256)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=128)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=64)",
+    "Fixed-Size-SHARDS(sampling=1e-1,max_size=32)",
+    NULL};
+
 /// @brief  Generate a trace from a function.
 static forceinline struct Trace
 generate_trace(size_t const trace_length,
@@ -90,9 +121,9 @@ main(void)
 {
     size_t const trace_length = 1 << 20;
     struct Trace trace = {0};
-    char const *runner_args_array[] = {"Evicting-Map(sampling=1e-1)",
-                                       "Fixed-Size-SHARDS(sampling=1e-1)",
-                                       NULL};
+    MAYBE_UNUSED(SHORT_RUN);
+    MAYBE_UNUSED(LONG_RUN);
+    char const *const *const runner_args_array = SHORT_RUN;
     bool const run_hammer = true, run_fast = true, run_slow = true,
                run_slowest = true;
     // Test fastest trace
