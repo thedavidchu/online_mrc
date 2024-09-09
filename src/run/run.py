@@ -26,6 +26,7 @@ def sh(cmd: str, **kwargs) -> CompletedProcess:
         print(
             "=============================================================================="
         )
+        print(f"Return code: {r.returncode}")
         print(
             "----------------------------------- stderr -----------------------------------"
         )
@@ -140,13 +141,12 @@ def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
     emap_path = mrc_dir / f"{f.stem}-Evicting-Map-mrc.bin"
     fss_path = mrc_dir / f"{f.stem}-Fixed-Size-SHARDS-mrc.bin"
     output_path = plot_dir / f"{f.stem}-mrc.pdf"
-    r = sh(
+    sh(
         f"python3 src/analysis/plot/plot_mrc.py "
         f"--oracle {oracle_path} "
         f"--input {frs_path} {emap_path} {fss_path} "
         f"--output {output_path}"
     )
-    r.check_returncode()
 
 
 def analyze_log(output_dir: Path, log_dir: Path):
@@ -188,9 +188,11 @@ def main():
         "--skip-oracle", action="store_true", help="skip running the oracle"
     )
     parser.add_argument("--sudo", action="store_true", help="run as sudo")
-    parser.add_argument("--run-plot-mrc", action="store_true", help="run MRC plotters")
     parser.add_argument(
-        "--run-analyze-log", action="store_true", help="run log analyzer"
+        "--run-only-plot-mrc", action="store_true", help="run MRC plotters"
+    )
+    parser.add_argument(
+        "--run-only-analyze-log", action="store_true", help="run log analyzer"
     )
     parser.add_argument(
         "--overwrite", action="store_true", help="overwrite ALL CONTENTS in output file"
@@ -209,7 +211,7 @@ def main():
 
     # NOTE  We run the traces unless explicitly told by the user to only
     #       run the plotter or analyzer.
-    run_traces: bool = not (args.run_plot_mrc or args.run_analyze_log)
+    run_traces: bool = not (args.run_only_plot_mrc or args.run_only_analyze_log)
     setup_env(
         output_dir=args.output,
         setup_output=run_traces,
@@ -229,10 +231,10 @@ def main():
     if run_traces:
         for f in files:
             run_trace(f, args.format, args.output, not args.skip_oracle)
-    if args.run_plot_mrc:
+    if args.run_only_plot_mrc:
         for f in files:
             plot_mrc(f, mrc_dir, plot_dir)
-    if args.run_analyze_log:
+    if args.run_only_analyze_log:
         analyze_log(args.output, log_dir)
 
 

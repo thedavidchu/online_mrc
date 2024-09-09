@@ -9,6 +9,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def get_file_tree(path: Path | list[Path]) -> list[Path]:
+    """
+    @brief  Return a list of all the files belonging to a directory.
+
+    @note   Modified from analyze_log.py.
+    """
+    if isinstance(path, list):
+        return sorted(
+            [file for dir_or_file in path for file in get_file_tree(dir_or_file)]
+        )
+    if path.is_file():
+        return [path]
+    return sorted(
+        [
+            (dirpath / f).absolute()
+            for dirpath, dirnames, filenames in path.resolve().walk()
+            for f in filenames
+        ]
+    )
+
+
 def plot_statistics(
     input_paths: list[Path], labels: list[tuple[str]], output_path: Path
 ):
@@ -18,26 +39,40 @@ def plot_statistics(
 
             Within each item, the first uint64 is treated as the x-axis.
     """
-    fig, ax = plt.subplots()
+    if len(input_paths) % len(labels) != 0:
+        raise ValueError(
+            "number of input paths must be a multiple of the number of labels"
+        )
+    num_plots = len(input_paths) // len(labels)
+    fig, ax = plt.subplots(1, num_plots, sharex=False, sharey=True)
+    fig.set_size_inches(6 * num_plots, 6)
     fig.suptitle("Statistics")
     fig.supxlabel("Access Number")
     fig.supylabel("Thresholds")
-    for i, input_path in enumerate(input_paths):
-        array = np.fromfile(input_path, dtype=np.uint64)
-        b64_per_item, items = int(array[0]), array[1:]
-        time = items[::b64_per_item]
-        for j in range(1, b64_per_item):
-            ax.plot(
-                time,
-                np.log10(items[j::b64_per_item]),
-                label=f"{input_path.stem}:{labels[i][j-1]}",
-            )
-    ax.legend()
+    # NOTE  I fully copied the code to group the list from Stackoverflow
+    #       and in typical ctrl-C/ctrl-V fashion, do not understand the
+    #       code... well I could understand the code but instead I took
+    #       the time to write that I don't understand the code.
+    for i, grouped_input_path in enumerate(zip(*(iter(input_paths),) * len(labels))):
+        for k, input_path in enumerate(grouped_input_path):
+            array = np.fromfile(input_path, dtype=np.uint64)
+            b64_per_item, items = int(array[0]), array[1:]
+            time = items[::b64_per_item]
+            for j in range(1, b64_per_item):
+                ax[i].plot(
+                    time,
+                    np.log10(items[j::b64_per_item]),
+                    label=f"{input_path.stem}:{labels[k][j-1]}",
+                )
+        ax[i].legend()
     fig.savefig(output_path)
 
 
 def main():
-    input_paths = [
+    input_paths = get_file_tree(
+        Path("/home/david/projects/online_mrc/myresults/data-v3-no-emap-scan/stats")
+    )
+    [
         Path("/home/david/projects/online_mrc/Evicting-Map-stats.bin"),
         Path("/home/david/projects/online_mrc/Fixed-Size-SHARDS-stats.bin"),
     ]
