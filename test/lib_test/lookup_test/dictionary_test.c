@@ -4,6 +4,7 @@
 
 #include <glib.h>
 
+#include "arrays/array_size.h"
 #include "lookup/dictionary.h"
 #include "lookup/lookup.h"
 #include "test/mytester.h"
@@ -110,9 +111,33 @@ test_dictionary(void)
     return true;
 }
 
+static bool
+test_dictionary_read(void)
+{
+    struct Dictionary me = {0};
+    char const *const dict_strings[] = {
+        "{}",
+        "{\"a\": \"A\"}",
+        "{\"trailing\": \"comma\",}",
+        "  {  \"  extra  \"  : \"  white  space  \"  ,  }  ",
+        "{\"duplicate\": \"0\", \"duplicate\": \"1\"}",
+
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(dict_strings); ++i) {
+        char const *const ending = Dictionary__read(&me, dict_strings[i]);
+        g_assert_true(ending);
+        fprintf(stdout, "Expecting %s, getting ", dict_strings[i]);
+        Dictionary__write(&me, stdout, false);
+        fprintf(stdout, " with ending '%s'\n", ending ? ending : "");
+        Dictionary__destroy(&me);
+    }
+    return true;
+}
+
 int
 main(void)
 {
     ASSERT_FUNCTION_RETURNS_TRUE(test_dictionary());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_dictionary_read());
     return EXIT_SUCCESS;
 }

@@ -40,5 +40,15 @@ Dictionary__write(struct Dictionary const *const me,
                   FILE *const stream,
                   bool const newline);
 
+/// @brief  Parse a dictionary from a string.
+///         c.f. string-only JSON objects, https://www.json.org/json-en.html
+/// @param  me: an initialized dictionary.
+/// @example    Valid: '{"abc": "123", "def": "345",}'
+/// @note   I do not support non-strings or escape sequences with '\uABCD', etc.
+/// @note   For duplicated keys, the current implementation takes the
+///         value of the second key. However, I do not guarantee this.
+char const *
+Dictionary__read(struct Dictionary *const me, char const *const str);
+
 void
 Dictionary__destroy(struct Dictionary *const me);
