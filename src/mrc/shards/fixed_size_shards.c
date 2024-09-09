@@ -22,8 +22,6 @@
 
 #include "shards/fixed_size_shards.h"
 
-/// NOTE    This has to be below the fixed-size SHARDS include so that
-///         it sees the macro definition.
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif

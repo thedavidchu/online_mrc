@@ -22,8 +22,6 @@
 
 #include "evicting_map/evicting_map.h"
 
-// NOTE This is beneath the header include so that it inherits the macro
-//      definition.
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
