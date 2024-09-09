@@ -23,6 +23,13 @@ _print_int(FILE *const stream, void const *const element_ptr)
 }
 
 bool
+_print_binary64(FILE *const stream, void const *const element_ptr)
+{
+    fprintf(stream, "%" PRIx64, *(uint64_t const *const)element_ptr);
+    return true;
+}
+
+bool
 _print_uint64(FILE *const stream, void const *const element_ptr)
 {
     fprintf(stream, "%" PRIu64, *(uint64_t const *const)element_ptr);

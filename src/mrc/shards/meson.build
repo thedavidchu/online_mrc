@@ -47,6 +47,8 @@ fixed_size_shards_lib = library(
         priority_queue_dep,
         # These are part of the interval statistics
         interval_statistics_dep,
+        # These are part of the interval statistics
+        statistics_dep,
     ],
 )
 
@@ -84,6 +86,8 @@ shards_dep = declare_dependency(
         priority_queue_dep,
         # These are part of the interval statistics
         interval_statistics_dep,
+        # These are part of the interval statistics
+        statistics_dep,
     ],
     include_directories: include_directories('include'),
 )

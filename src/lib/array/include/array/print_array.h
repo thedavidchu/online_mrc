@@ -12,6 +12,9 @@ bool
 _print_int(FILE *const stream, void const *const element_ptr);
 
 bool
+_print_binary64(FILE *const stream, void const *const element_ptr);
+
+bool
 _print_uint64(FILE *const stream, void const *const element_ptr);
 
 bool

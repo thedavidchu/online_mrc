@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -9,6 +10,7 @@
 #include "interval_statistics/interval_statistics.h"
 #endif
 #include "logger/logger.h"
+#include "lookup/dictionary.h"
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
@@ -18,13 +20,24 @@
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
+#include "shards/fixed_size_shards.h"
+
+/// NOTE    This has to be below the fixed-size SHARDS include so that
+///         it sees the macro definition.
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
+#define THRESHOLD_SAMPLING_PERIOD (1 << 20)
+
 static bool
 initialize(struct FixedSizeShards *const me,
            double const starting_sampling_ratio,
            size_t const max_size,
            size_t const histogram_num_bins,
            size_t const histogram_bin_size,
-           enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+           struct Dictionary const *const dictionary)
 {
     if (me == NULL || starting_sampling_ratio <= 0.0 ||
         1.0 < starting_sampling_ratio || max_size == 0) {
@@ -46,8 +59,14 @@ initialize(struct FixedSizeShards *const me,
         LOGGER_WARN("failed to initialize fixed-size SHARDS sampler");
         goto cleanup;
     }
+    me->dictionary = dictionary;
 #ifdef INTERVAL_STATISTICS
     if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
+        goto cleanup;
+    }
+#endif
+#ifdef THRESHOLD_STATISTICS
+    if (!Statistics__init(&me->stats, 2)) {
         goto cleanup;
     }
 #endif
@@ -69,7 +88,8 @@ FixedSizeShards__init(struct FixedSizeShards *const me,
                       max_size,
                       histogram_num_bins,
                       histogram_bin_size,
-                      HistogramOutOfBoundsMode__allow_overflow);
+                      HistogramOutOfBoundsMode__allow_overflow,
+                      NULL);
 }
 
 bool
@@ -79,14 +99,16 @@ FixedSizeShards__init_full(
     size_t const max_size,
     size_t const histogram_num_bins,
     size_t const histogram_bin_size,
-    enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+    struct Dictionary const *const dictionary)
 {
     return initialize(me,
                       starting_sampling_ratio,
                       max_size,
                       histogram_num_bins,
                       histogram_bin_size,
-                      out_of_bounds_mode);
+                      out_of_bounds_mode,
+                      dictionary);
 }
 
 static void
@@ -156,7 +178,13 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
-
+#ifdef THRESHOLD_STATISTICS
+    if (me->olken.current_time_stamp % THRESHOLD_SAMPLING_PERIOD == 0) {
+        uint64_t const data[] = {me->olken.current_time_stamp,
+                                 me->sampler.threshold};
+        Statistics__append_uint64(&me->stats, data);
+    }
+#endif
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
         unsampled_item(me);
         return false;
@@ -204,6 +232,14 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     FixedSizeShardsSampler__destroy(&me->sampler);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__destroy(&me->istats);
+#endif
+#ifdef THRESHOLD_STATISTICS
+    char const *stats_path = Dictionary__get(me->dictionary, "stats_path");
+    if (stats_path == NULL) {
+        stats_path = "Fixed-Size-SHARDS-stats.bin";
+    }
+    Statistics__save(&me->stats, stats_path);
+    Statistics__destroy(&me->stats);
 #endif
     *me = (struct FixedSizeShards){0};
 }

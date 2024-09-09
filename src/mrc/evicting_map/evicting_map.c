@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,6 +9,7 @@
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
+#include "lookup/dictionary.h"
 #include "lookup/evicting_hash_table.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "tree/basic_tree.h"
@@ -19,13 +21,22 @@
 
 #include "evicting_map/evicting_map.h"
 
+// NOTE This is beneath the header include so that it inherits the macro
+//      definition.
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
+#define THRESHOLD_SAMPLING_PERIOD (1 << 20)
+
 static bool
 initialize(struct EvictingMap *const me,
            double const init_sampling_ratio,
            uint64_t const num_hash_buckets,
            uint64_t const histogram_num_bins,
            uint64_t const histogram_bin_size,
-           enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+           enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+           struct Dictionary const *const dictionary)
 {
     if (me == NULL)
         return false;
@@ -40,8 +51,14 @@ initialize(struct EvictingMap *const me,
                          histogram_bin_size,
                          out_of_bounds_mode))
         goto cleanup;
+    me->dictionary = dictionary;
 #ifdef INTERVAL_STATISTICS
     if (!IntervalStatistics__init(&me->istats, histogram_num_bins)) {
+        goto cleanup;
+    }
+#endif
+#ifdef THRESHOLD_STATISTICS
+    if (!Statistics__init(&me->stats, 4)) {
         goto cleanup;
     }
 #endif
@@ -65,7 +82,8 @@ EvictingMap__init(struct EvictingMap *const me,
                       num_hash_buckets,
                       histogram_num_bins,
                       histogram_bin_size,
-                      HistogramOutOfBoundsMode__allow_overflow);
+                      HistogramOutOfBoundsMode__allow_overflow,
+                      NULL);
 }
 
 bool
@@ -74,14 +92,16 @@ EvictingMap__init_full(struct EvictingMap *const me,
                        uint64_t const num_hash_buckets,
                        uint64_t const histogram_num_bins,
                        uint64_t const histogram_bin_size,
-                       enum HistogramOutOfBoundsMode const out_of_bounds_mode)
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+                       struct Dictionary const *const dictionary)
 {
     return initialize(me,
                       init_sampling_ratio,
                       num_hash_buckets,
                       histogram_num_bins,
                       histogram_bin_size,
-                      out_of_bounds_mode);
+                      out_of_bounds_mode,
+                      dictionary);
 }
 
 /// @brief  Do no work (besides simple book-keeping).
@@ -190,6 +210,20 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     if (me == NULL)
         return false;
     ValueType timestamp = me->current_time_stamp;
+#ifdef THRESHOLD_STATISTICS
+    if (timestamp % THRESHOLD_SAMPLING_PERIOD == 0) {
+        size_t max_hash = 0, min_hash = SIZE_MAX;
+        for (size_t i = 0; i < me->hash_table.length; ++i) {
+            max_hash = MAX(max_hash, me->hash_table.hashes[i]);
+            min_hash = MIN(min_hash, me->hash_table.hashes[i]);
+        }
+        uint64_t const stats[] = {timestamp,
+                                  me->hash_table.global_threshold,
+                                  max_hash,
+                                  min_hash};
+        Statistics__append_uint64(&me->stats, stats);
+    }
+#endif
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
     switch (r.status) {
@@ -256,6 +290,14 @@ EvictingMap__destroy(struct EvictingMap *me)
     Histogram__destroy(&me->histogram);
 #ifdef INTERVAL_STATISTICS
     IntervalStatistics__destroy(&me->istats);
+#endif
+#ifdef THRESHOLD_STATISTICS
+    char const *stats_path = Dictionary__get(me->dictionary, "stats_path");
+    if (stats_path == NULL) {
+        stats_path = "Evicting-Map-stats.bin";
+    }
+    Statistics__save(&me->stats, stats_path);
+    Statistics__destroy(&me->stats);
 #endif
     *me = (struct EvictingMap){0};
 }

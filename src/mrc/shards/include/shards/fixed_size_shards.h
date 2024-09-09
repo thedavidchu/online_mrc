@@ -7,16 +7,25 @@
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
+#include "lookup/dictionary.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "shards/fixed_size_shards_sampler.h"
 #include "types/entry_type.h"
 
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
+
 struct FixedSizeShards {
     struct Olken olken;
     struct FixedSizeShardsSampler sampler;
+    struct Dictionary const *dictionary;
 #ifdef INTERVAL_STATISTICS
     struct IntervalStatistics istats;
+#endif
+#ifdef THRESHOLD_STATISTICS
+    struct Statistics stats;
 #endif
 };
 
@@ -40,7 +49,8 @@ FixedSizeShards__init_full(
     size_t const max_size,
     size_t const histogram_num_bins,
     size_t const histogram_bin_size,
-    enum HistogramOutOfBoundsMode const out_of_bounds_mode);
+    enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+    struct Dictionary const *const dictionary);
 
 bool
 FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry);

@@ -13,14 +13,21 @@
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
+#ifdef THRESHOLD_STATISTICS
+#include "statistics/statistics.h"
+#endif
 
 struct EvictingMap {
     struct Tree tree;
     struct EvictingHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
+    struct Dictionary const *dictionary;
 #ifdef INTERVAL_STATISTICS
     struct IntervalStatistics istats;
+#endif
+#ifdef THRESHOLD_STATISTICS
+    struct Statistics stats;
 #endif
 };
 
@@ -37,7 +44,8 @@ EvictingMap__init_full(struct EvictingMap *const me,
                        uint64_t const num_hash_buckets,
                        uint64_t const histogram_num_bins,
                        uint64_t const histogram_bin_size,
-                       enum HistogramOutOfBoundsMode const out_of_bounds_mode);
+                       enum HistogramOutOfBoundsMode const out_of_bounds_mode,
+                       struct Dictionary const *const dictionary);
 
 bool
 EvictingMap__access_item(struct EvictingMap *me, EntryType entry);

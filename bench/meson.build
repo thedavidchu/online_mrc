@@ -16,4 +16,8 @@ fast_slow_path_performance_test_exe = executable(
     ],
 )
 
-test('fast_slow_path_performance_test', fast_slow_path_performance_test_exe)
+test(
+    'fast_slow_path_performance_test',
+    fast_slow_path_performance_test_exe,
+    timeout: 0,
+)

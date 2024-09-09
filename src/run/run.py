@@ -1,4 +1,10 @@
 #!/usr/bin/python3
+"""
+@note   The plotting functions are not run by default. They need to be
+        invoked separately. I'm still trying to think of intuitive
+        semantics to run these but make sure to never overwrite data
+        that is expensive to generate.
+"""
 import argparse
 import os
 import shutil
@@ -26,6 +32,7 @@ def sh(cmd: str, **kwargs) -> CompletedProcess:
         print(
             "=============================================================================="
         )
+        print(f"Return code: {r.returncode}")
         print(
             "----------------------------------- stderr -----------------------------------"
         )
@@ -61,6 +68,7 @@ def setup_env(
         os.mkdir(output_dir / "hist")
         os.mkdir(output_dir / "log")
         os.mkdir(output_dir / "plot")
+        os.mkdir(output_dir / "stats")
     if setup_build:
         build_dir = os.path.join(top_level_dir, "build")
         os.chdir(build_dir)
@@ -102,6 +110,7 @@ def run_trace(
     input_: Path,
     format: str,
     output_: Path,
+    run_oracle: bool,
 ):
     def mrc(algo: str):
         return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
@@ -109,14 +118,21 @@ def run_trace(
     def hist(algo: str):
         return os.path.join(str(output_), "hist", f"{input_.stem}-{algo}-hist.bin")
 
+    def stats(algo: str):
+        return output_ / "stats" / f"{input_.stem}-{algo}-stats.bin"
+
     log = sh(
         f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
-        f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")})" '
-        f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true)" '
-        f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192)" '
-        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192)" '
+        + (
+            f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")},stats_path={stats("Olken")})" '
+            if run_oracle
+            else ""
+        )
+        + f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true,stats_path={stats("Fixed-Rate-SHARDS")})" '
+        f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})" '
+        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})" '
     )
 
     with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
@@ -131,13 +147,12 @@ def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
     emap_path = mrc_dir / f"{f.stem}-Evicting-Map-mrc.bin"
     fss_path = mrc_dir / f"{f.stem}-Fixed-Size-SHARDS-mrc.bin"
     output_path = plot_dir / f"{f.stem}-mrc.pdf"
-    r = sh(
+    sh(
         f"python3 src/analysis/plot/plot_mrc.py "
         f"--oracle {oracle_path} "
         f"--input {frs_path} {emap_path} {fss_path} "
         f"--output {output_path}"
     )
-    r.check_returncode()
 
 
 def analyze_log(output_dir: Path, log_dir: Path):
@@ -175,10 +190,15 @@ def main():
         required=True,
         help="format of the input traces",
     )
-    parser.add_argument("--sudo", action="store_true", help="run as sudo")
-    parser.add_argument("--run-plot-mrc", action="store_true", help="run MRC plotters")
     parser.add_argument(
-        "--run-analyze-log", action="store_true", help="run log analyzer"
+        "--skip-oracle", action="store_true", help="skip running the oracle"
+    )
+    parser.add_argument("--sudo", action="store_true", help="run as sudo")
+    parser.add_argument(
+        "--run-only-plot-mrc", action="store_true", help="run MRC plotters"
+    )
+    parser.add_argument(
+        "--run-only-analyze-log", action="store_true", help="run log analyzer"
     )
     parser.add_argument(
         "--overwrite", action="store_true", help="overwrite ALL CONTENTS in output file"
@@ -197,7 +217,7 @@ def main():
 
     # NOTE  We run the traces unless explicitly told by the user to only
     #       run the plotter or analyzer.
-    run_traces: bool = not (args.run_plot_mrc or args.run_analyze_log)
+    run_traces: bool = not (args.run_only_plot_mrc or args.run_only_analyze_log)
     setup_env(
         output_dir=args.output,
         setup_output=run_traces,
@@ -216,11 +236,11 @@ def main():
 
     if run_traces:
         for f in files:
-            run_trace(f, args.format, args.output)
-    if args.run_plot_mrc:
+            run_trace(f, args.format, args.output, not args.skip_oracle)
+    if args.run_only_plot_mrc:
         for f in files:
             plot_mrc(f, mrc_dir, plot_dir)
-    if args.run_analyze_log:
+    if args.run_only_analyze_log:
         analyze_log(args.output, log_dir)
 
 
