@@ -25,6 +25,9 @@
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
+#ifdef PROFILE_STATISTICS
+#include "profile/profile.h"
+#endif
 
 #define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
@@ -67,6 +70,16 @@ initialize(struct FixedSizeShards *const me,
     if (!Statistics__init(&me->stats, 2)) {
         goto cleanup;
     }
+#endif
+#ifdef PROFILE_STATISTICS
+    me->ticks_ignored = 0;
+    me->ticks_inserted = 0;
+    me->ticks_updated = 0;
+    me->ticks_olken = 0;
+    me->cnt_ignored = 0;
+    me->cnt_inserted = 0;
+    me->cnt_updated = 0;
+    me->cnt_olken = 0;
 #endif
     return true;
 cleanup:
@@ -183,16 +196,53 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
         Statistics__append_uint64(&me->stats, data);
     }
 #endif
+#ifdef PROFILE_STATISTICS
+    uint64_t start = 0;
+#endif
+#ifdef PROFILE_STATISTICS
+    start = start_tick_counter();
+#endif
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
         unsampled_item(me);
+#ifdef PROFILE_STATISTICS
+        me->ticks_ignored += end_tick_counter(start);
+        ++me->cnt_ignored;
+#endif
         return false;
     }
+#ifdef PROFILE_STATISTICS
+    me->ticks_ignored += end_tick_counter(start);
+    ++me->cnt_ignored;
+#endif
 
+#ifdef PROFILE_STATISTICS
+    start = start_tick_counter();
+#endif
     struct LookupReturn r = Olken__lookup(&me->olken, entry);
+#ifdef PROFILE_STATISTICS
+    me->ticks_olken += end_tick_counter(start);
+    ++me->cnt_olken;
+#endif
     if (r.success) {
-        return update_item(me, entry, r.timestamp);
+#ifdef PROFILE_STATISTICS
+        start = start_tick_counter();
+#endif
+        bool ok = update_item(me, entry, r.timestamp);
+#ifdef PROFILE_STATISTICS
+        me->ticks_updated += end_tick_counter(start);
+        ++me->cnt_updated;
+#endif
+        return ok;
     } else {
-        return insert_item(me, entry);
+#ifdef PROFILE_STATISTICS
+        start = start_tick_counter();
+#endif
+        bool ok = insert_item(me, entry);
+#ifdef PROFILE_STATISTICS
+        me->ticks_inserted += end_tick_counter(start);
+        ++me->cnt_inserted;
+#endif
+        return ok;
     }
     return true;
 }
@@ -238,6 +288,24 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     }
     Statistics__save(&me->stats, stats_path);
     Statistics__destroy(&me->stats);
+#endif
+#ifdef PROFILE_STATISTICS
+    LOGGER_INFO("profile statistics ticks -- Ignored: %" PRIu64 "/%" PRIu64
+                "=%f | Olken: %" PRIu64 "/%" PRIu64
+                "=%f | Inserted/Replaced: %" PRIu64 "/%" PRIu64
+                "=%f | Updated: %" PRIu64 "/%" PRIu64 "=%f",
+                me->ticks_ignored,
+                me->cnt_ignored,
+                (double)me->ticks_ignored / me->cnt_ignored,
+                me->ticks_olken,
+                me->cnt_olken,
+                (double)me->ticks_olken / me->cnt_olken,
+                me->ticks_inserted,
+                me->cnt_inserted,
+                (double)me->ticks_inserted / me->cnt_inserted,
+                me->ticks_updated,
+                me->cnt_updated,
+                (double)me->ticks_updated / me->cnt_updated);
 #endif
     *me = (struct FixedSizeShards){0};
 }

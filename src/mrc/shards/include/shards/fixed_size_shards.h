@@ -27,6 +27,16 @@ struct FixedSizeShards {
 #ifdef THRESHOLD_STATISTICS
     struct Statistics stats;
 #endif
+#ifdef PROFILE_STATISTICS
+    uint64_t ticks_ignored;
+    uint64_t ticks_inserted;
+    uint64_t ticks_updated;
+    uint64_t ticks_olken;
+    uint64_t cnt_ignored;
+    uint64_t cnt_inserted;
+    uint64_t cnt_updated;
+    uint64_t cnt_olken;
+#endif
 };
 
 /// @brief  Initialize the fixed-size SHARDS data structure.

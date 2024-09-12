@@ -26,9 +26,7 @@
 #include "statistics/statistics.h"
 #endif
 
-#ifdef PROFILE_STATISTICS
 #include "profile/profile.h"
-#endif
 
 #define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
@@ -239,59 +237,31 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
         Statistics__append_uint64(&me->stats, stats);
     }
 #endif
-#ifdef PROFILE_STATISTICS
-    uint64_t start = 0;
-#endif
-#ifdef PROFILE_STATISTICS
-    start = start_rdtsc();
-#endif
+    uint64_t start = start_tick_counter();
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
-#ifdef PROFILE_STATISTICS
-    me->ticks_ht += end_rdtsc(start);
-    ++me->cnt_ht;
-#endif
+    UPDATE_TICK_COUNTER(start, &me->ticks_ht, &me->cnt_ht);
     switch (r.status) {
     case SAMPLED_IGNORED:
         /* Do no work -- this is like SHARDS */
-#ifdef PROFILE_STATISTICS
-        start = start_rdtsc();
-#endif
+        start = start_tick_counter();
         handle_ignored(me, r, timestamp);
-#ifdef PROFILE_STATISTICS
-        me->ticks_ignored += end_rdtsc(start);
-        ++me->cnt_ignored;
-#endif
+        UPDATE_TICK_COUNTER(start, &me->ticks_ignored, &me->cnt_ignored);
         break;
     case SAMPLED_INSERTED:
-#ifdef PROFILE_STATISTICS
-        start = start_rdtsc();
-#endif
+        start = start_tick_counter();
         handle_inserted(me, r, timestamp);
-#ifdef PROFILE_STATISTICS
-        me->ticks_inserted += end_rdtsc(start);
-        ++me->cnt_inserted;
-#endif
+        UPDATE_TICK_COUNTER(start, &me->ticks_inserted, &me->cnt_inserted);
         break;
     case SAMPLED_REPLACED:
-#ifdef PROFILE_STATISTICS
-        start = start_rdtsc();
-#endif
+        start = start_tick_counter();
         handle_replaced(me, r, timestamp);
-#ifdef PROFILE_STATISTICS
-        me->ticks_replaced += end_rdtsc(start);
-        ++me->cnt_replaced;
-#endif
+        UPDATE_TICK_COUNTER(start, &me->ticks_replaced, &me->cnt_replaced);
         break;
     case SAMPLED_UPDATED:
-#ifdef PROFILE_STATISTICS
-        start = start_rdtsc();
-#endif
+        start = start_tick_counter();
         handle_updated(me, r, timestamp);
-#ifdef PROFILE_STATISTICS
-        me->ticks_updated += end_rdtsc(start);
-        ++me->cnt_updated;
-#endif
+        UPDATE_TICK_COUNTER(start, &me->ticks_updated, &me->cnt_updated);
         break;
     default:
         assert(0 && "impossible");
@@ -354,19 +324,24 @@ EvictingMap__destroy(struct EvictingMap *me)
 #endif
 #ifdef PROFILE_STATISTICS
     LOGGER_INFO("profile statistics ticks -- Hash Table: %" PRIu64 "/%" PRIu64
-                " | Ignored: %" PRIu64 "/%" PRIu64 " | Inserted: %" PRIu64
-                "/%" PRIu64 " | Replaced: %" PRIu64 "/%" PRIu64
-                " | Updated: %" PRIu64 "/%" PRIu64,
+                "=%f | Ignored: %" PRIu64 "/%" PRIu64 "=%f | Inserted: %" PRIu64
+                "/%" PRIu64 "=%f | Replaced: %" PRIu64 "/%" PRIu64
+                "=%f | Updated: %" PRIu64 "/%" PRIu64 "=%f",
                 me->ticks_ht,
                 me->cnt_ht,
+                (double)me->ticks_ht / me->cnt_ht,
                 me->ticks_ignored,
                 me->cnt_ignored,
+                (double)me->ticks_ignored / me->cnt_ignored,
                 me->ticks_inserted,
                 me->cnt_inserted,
+                (double)me->ticks_inserted / me->cnt_inserted,
                 me->ticks_replaced,
                 me->cnt_replaced,
+                (double)me->ticks_replaced / me->cnt_replaced,
                 me->ticks_updated,
-                me->cnt_updated);
+                me->cnt_updated,
+                (double)me->ticks_updated / me->cnt_updated);
 #endif
     *me = (struct EvictingMap){0};
 }
