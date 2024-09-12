@@ -286,7 +286,8 @@ def get_runner_arguments_from_log(
         rf"max_size=(\d+), "
         rf"mode=(\w+), "
         rf"adj=(true|false), "
-        rf"qmrc_size=(\d+)"
+        rf"qmrc_size=(\d+), "
+        rf"dictionary={{.*}}"
         rf"\)"
     )
     matching_lines = [
