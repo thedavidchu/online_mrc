@@ -18,9 +18,7 @@
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
-#ifdef PROFILE_STATISTICS
 #include "profile/profile.h"
-#endif
 
 static bool
 initialize(struct Olken *const me,

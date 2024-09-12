@@ -9,6 +9,10 @@
 #include <stdint.h>
 #include <x86intrin.h>
 
+#ifndef PROFILE_STATISTICS
+#include "unused/mark_unused.h"
+#endif
+
 /// @note   I admit the semantics are confusing.
 static inline uint64_t
 start_tick_counter(void)
