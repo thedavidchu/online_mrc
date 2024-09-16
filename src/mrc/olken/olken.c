@@ -45,10 +45,9 @@ initialize(struct Olken *const me,
         goto histogram_error;
     }
 #ifdef PROFILE_STATISTICS
-    me->ticks_ht = 0;
-    me->ticks_lru = 0;
-    me->cnt_ht = 0;
-    me->cnt_lru = 0;
+    if (!ProfileStatistics__init(&me->prof_stats)) {
+        goto cleanup;
+    }
 #endif
     me->current_time_stamp = 0;
     return true;
@@ -145,13 +144,9 @@ Olken__access_item(struct Olken *const me, EntryType const entry)
     if (me == NULL) {
         return false;
     }
-    uint64_t start = start_tick_counter();
     struct LookupReturn found = KHashTable__lookup(&me->hash_table, entry);
-    UPDATE_TICK_COUNTER(start, &me->ticks_ht, &me->cnt_ht);
     if (found.success) {
-        start = start_tick_counter();
         uint64_t distance = Olken__update_stack(me, entry, found.timestamp);
-        UPDATE_TICK_COUNTER(start, &me->ticks_lru, &me->cnt_lru);
         if (distance == UINT64_MAX) {
             return false;
         }
@@ -203,14 +198,7 @@ Olken__destroy(struct Olken *const me)
     KHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
 #ifdef PROFILE_STATISTICS
-    LOGGER_INFO("profile statistics ticks -- Hash Table: %" PRIu64 "/%" PRIu64
-                "=%f | LRU Stack: %" PRIu64 "/%" PRIu64 "=%f",
-                me->ticks_ht,
-                me->cnt_ht,
-                (double)me->ticks_ht / me->cnt_ht,
-                me->ticks_lru,
-                me->cnt_lru,
-                (double)me->ticks_lru / me->cnt_lru);
+    ProfileStatistics__destroy(&me->prof_stats);
 #endif
     *me = (struct Olken){0};
 }

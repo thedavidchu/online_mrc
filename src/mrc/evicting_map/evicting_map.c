@@ -64,16 +64,9 @@ initialize(struct EvictingMap *const me,
     }
 #endif
 #ifdef PROFILE_STATISTICS
-    me->ticks_ht = 0;
-    me->ticks_ignored = 0;
-    me->ticks_inserted = 0;
-    me->ticks_replaced = 0;
-    me->ticks_updated = 0;
-    me->cnt_ht = 0;
-    me->cnt_ignored = 0;
-    me->cnt_inserted = 0;
-    me->cnt_replaced = 0;
-    me->cnt_updated = 0;
+    if (!ProfileStatistics__init(&me->prof_stats)) {
+        goto cleanup;
+    }
 #endif
     me->current_time_stamp = 0;
     return true;
@@ -237,31 +230,21 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
         Statistics__append_uint64(&me->stats, stats);
     }
 #endif
-    uint64_t start = start_tick_counter();
     struct SampledTryPutReturn r =
         EvictingHashTable__try_put(&me->hash_table, entry, timestamp);
-    UPDATE_TICK_COUNTER(start, &me->ticks_ht, &me->cnt_ht);
     switch (r.status) {
     case SAMPLED_IGNORED:
         /* Do no work -- this is like SHARDS */
-        start = start_tick_counter();
         handle_ignored(me, r, timestamp);
-        UPDATE_TICK_COUNTER(start, &me->ticks_ignored, &me->cnt_ignored);
         break;
     case SAMPLED_INSERTED:
-        start = start_tick_counter();
         handle_inserted(me, r, timestamp);
-        UPDATE_TICK_COUNTER(start, &me->ticks_inserted, &me->cnt_inserted);
         break;
     case SAMPLED_REPLACED:
-        start = start_tick_counter();
         handle_replaced(me, r, timestamp);
-        UPDATE_TICK_COUNTER(start, &me->ticks_replaced, &me->cnt_replaced);
         break;
     case SAMPLED_UPDATED:
-        start = start_tick_counter();
         handle_updated(me, r, timestamp);
-        UPDATE_TICK_COUNTER(start, &me->ticks_updated, &me->cnt_updated);
         break;
     default:
         assert(0 && "impossible");
@@ -323,26 +306,7 @@ EvictingMap__destroy(struct EvictingMap *me)
     Statistics__destroy(&me->stats);
 #endif
 #ifdef PROFILE_STATISTICS
-    LOGGER_INFO("profile statistics ticks -- Hash Table: %" PRIu64 "/%" PRIu64
-                "=%f | Fast path: %" PRIu64 "/%" PRIu64
-                "=%f | Slow path: %" PRIu64 "/%" PRIu64
-                "=%f | Replaced: %" PRIu64 "/%" PRIu64 "=%f | Updated: %" PRIu64
-                "/%" PRIu64 "=%f",
-                me->ticks_ht,
-                me->cnt_ht,
-                (double)me->ticks_ht / me->cnt_ht,
-                me->ticks_ignored,
-                me->cnt_ignored,
-                (double)me->ticks_ignored / me->cnt_ignored,
-                me->ticks_inserted,
-                me->cnt_inserted,
-                (double)me->ticks_inserted / me->cnt_inserted,
-                me->ticks_replaced,
-                me->cnt_replaced,
-                (double)me->ticks_replaced / me->cnt_replaced,
-                me->ticks_updated,
-                me->cnt_updated,
-                (double)me->ticks_updated / me->cnt_updated);
+    ProfileStatistics__destroy(&me->prof_stats);
 #endif
     *me = (struct EvictingMap){0};
 }

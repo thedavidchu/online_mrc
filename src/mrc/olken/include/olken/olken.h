@@ -21,10 +21,9 @@ struct Olken {
     struct Histogram histogram;
     TimeStampType current_time_stamp;
 #ifdef PROFILE_STATISTICS
-    uint64_t ticks_ht;
-    uint64_t ticks_lru;
-    uint64_t cnt_ht;
-    uint64_t cnt_lru;
+    // NOTE Reading the TSC severely impacts performance, so it is best
+    //      to only measure a single part at a time.
+    struct ProfileStatistics prof_stats;
 #endif
 };
 

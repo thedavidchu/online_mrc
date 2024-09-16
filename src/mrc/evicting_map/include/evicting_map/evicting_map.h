@@ -30,16 +30,9 @@ struct EvictingMap {
     struct Statistics stats;
 #endif
 #ifdef PROFILE_STATISTICS
-    uint64_t ticks_ht;
-    uint64_t ticks_ignored;
-    uint64_t ticks_inserted;
-    uint64_t ticks_updated;
-    uint64_t ticks_replaced;
-    uint64_t cnt_ht;
-    uint64_t cnt_ignored;
-    uint64_t cnt_inserted;
-    uint64_t cnt_updated;
-    uint64_t cnt_replaced;
+    // NOTE Reading the TSC severely impacts performance, so it is best
+    //      to only measure a single part at a time.
+    struct ProfileStatistics prof_stats;
 #endif
 };
 
