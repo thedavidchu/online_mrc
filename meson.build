@@ -63,7 +63,7 @@ if analyze_thresholds
     add_project_arguments('-DTHRESHOLD_STATISTICS', language: ['c', 'cpp'])
 endif
 
-profile_statistics = true
+profile_statistics = false
 if profile_statistics
     add_project_arguments('-DPROFILE_STATISTICS', language: ['c', 'cpp'])
 endif
