@@ -324,9 +324,10 @@ EvictingMap__destroy(struct EvictingMap *me)
 #endif
 #ifdef PROFILE_STATISTICS
     LOGGER_INFO("profile statistics ticks -- Hash Table: %" PRIu64 "/%" PRIu64
-                "=%f | Ignored: %" PRIu64 "/%" PRIu64 "=%f | Inserted: %" PRIu64
-                "/%" PRIu64 "=%f | Replaced: %" PRIu64 "/%" PRIu64
-                "=%f | Updated: %" PRIu64 "/%" PRIu64 "=%f",
+                "=%f | Fast path: %" PRIu64 "/%" PRIu64
+                "=%f | Slow path: %" PRIu64 "/%" PRIu64
+                "=%f | Replaced: %" PRIu64 "/%" PRIu64 "=%f | Updated: %" PRIu64
+                "/%" PRIu64 "=%f",
                 me->ticks_ht,
                 me->cnt_ht,
                 (double)me->ticks_ht / me->cnt_ht,
