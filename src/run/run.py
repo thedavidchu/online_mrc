@@ -116,7 +116,11 @@ def run_trace(
     input_: Path,
     format: str,
     output_: Path,
-    run_oracle: bool,
+    *,
+    skip_oracle: bool,
+    skip_evicting_map: bool,
+    skip_fixed_rate_shards: bool,
+    skip_fixed_size_shards: bool,
 ):
     def mrc(algo: str):
         return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
@@ -127,18 +131,21 @@ def run_trace(
     def stats(algo: str):
         return output_ / "stats" / f"{input_.stem}-{algo}-stats.bin"
 
+    oracle_cmd = f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")},stats_path={stats("Olken")})" '
+    evicting_map_cmd = f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})" '
+    fixed_rate_shards_cmd = f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true,stats_path={stats("Fixed-Rate-SHARDS")})" '
+    fixed_size_shards_cmd = f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})" '
+
     log = sh(
         f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
-        + (
-            f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")},stats_path={stats("Olken")})" '
-            if run_oracle
-            else ""
-        )
-        + f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true,stats_path={stats("Fixed-Rate-SHARDS")})" '
-        f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})" '
-        f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})" '
+        + (oracle_cmd if not skip_oracle else "")
+        + (fixed_rate_shards_cmd if not skip_fixed_rate_shards else "")
+        # NOTE  I place evicting map between the two SHARDS so that its
+        #       cache is warmed up but also warms Fixed-Size SHARDS's.
+        + (evicting_map_cmd if not skip_evicting_map else "")
+        + (fixed_size_shards_cmd if not skip_fixed_size_shards else "")
     )
 
     with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
@@ -199,6 +206,12 @@ def main():
     parser.add_argument(
         "--skip-oracle", action="store_true", help="skip running the oracle"
     )
+    parser.add_argument(
+        "--skip",
+        nargs="*",
+        choices=["Olken", "Evicting-Map", "Fixed-Rate-SHARDS", "Fixed-Size-SHARDS"],
+        help="skip running certain algorithms",
+    )
     parser.add_argument("--sudo", action="store_true", help="run as sudo")
     parser.add_argument(
         "--run-only-plot-mrc", action="store_true", help="run MRC plotters"
@@ -242,7 +255,15 @@ def main():
 
     if run_traces:
         for f in files:
-            run_trace(f, args.format, args.output, not args.skip_oracle)
+            run_trace(
+                f,
+                args.format,
+                args.output,
+                skip_oracle=args.skip_oracle or "Olken" in args.skip,
+                skip_evicting_map="Evicting-Map" in args.skip,
+                skip_fixed_rate_shards="Fixed-Rate-SHARDS" in args.skip,
+                skip_fixed_size_shards="Fixed-Size-SHARDS" in args.skip,
+            )
     if args.run_only_plot_mrc:
         for f in files:
             plot_mrc(f, mrc_dir, plot_dir)
