@@ -214,12 +214,6 @@ def main():
     )
     parser.add_argument("--sudo", action="store_true", help="run as sudo")
     parser.add_argument(
-        "--run-only-plot-mrc", action="store_true", help="run MRC plotters"
-    )
-    parser.add_argument(
-        "--run-only-analyze-log", action="store_true", help="run log analyzer"
-    )
-    parser.add_argument(
         "--overwrite", action="store_true", help="overwrite ALL CONTENTS in output file"
     )
     args = parser.parse_args()
@@ -234,13 +228,8 @@ def main():
     if args.overwrite and args.output.exists():
         shutil.rmtree(args.output)
 
-    # NOTE  We run the traces unless explicitly told by the user to only
-    #       run the plotter or analyzer.
-    run_traces: bool = not (args.run_only_plot_mrc or args.run_only_analyze_log)
     setup_env(
         output_dir=args.output,
-        setup_output=run_traces,
-        setup_build=run_traces,
     )
     # Recall Python's pathlib syntax for concatenating file names. Yes,
     # it's weird. And yes, I don't actually need this comment.
@@ -253,22 +242,19 @@ def main():
     if not files:
         warn(f"no files in {str(args.input)}")
 
-    if run_traces:
-        for f in files:
-            run_trace(
-                f,
-                args.format,
-                args.output,
-                skip_oracle=args.skip_oracle or "Olken" in args.skip,
-                skip_evicting_map="Evicting-Map" in args.skip,
-                skip_fixed_rate_shards="Fixed-Rate-SHARDS" in args.skip,
-                skip_fixed_size_shards="Fixed-Size-SHARDS" in args.skip,
-            )
-    if args.run_only_plot_mrc:
-        for f in files:
-            plot_mrc(f, mrc_dir, plot_dir)
-    if args.run_only_analyze_log:
-        analyze_log(args.output, log_dir)
+    for f in files:
+        run_trace(
+            f,
+            args.format,
+            args.output,
+            skip_oracle=args.skip_oracle or "Olken" in args.skip,
+            skip_evicting_map="Evicting-Map" in args.skip,
+            skip_fixed_rate_shards="Fixed-Rate-SHARDS" in args.skip,
+            skip_fixed_size_shards="Fixed-Size-SHARDS" in args.skip,
+        )
+    for f in files:
+        plot_mrc(f, mrc_dir, plot_dir)
+    analyze_log(args.output, log_dir)
 
 
 if __name__ == "__main__":
