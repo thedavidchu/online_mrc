@@ -7,6 +7,7 @@
 
 #include <immintrin.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <x86intrin.h>
@@ -29,16 +30,19 @@ ProfileStatistics__init(struct ProfileStatistics *const me)
 }
 
 static inline bool
-ProfileStatistics__log(struct ProfileStatistics const *const me)
+ProfileStatistics__log(struct ProfileStatistics const *const me,
+                       char const *const msg)
 {
     if (me == NULL) {
         return false;
     }
-    LOGGER_INFO("profile statistics -- TSC Count: %" PRIu64
-                " | Hit Count: %" PRIu64 " | Average TSC per Hit: %f",
-                me->tsc_counter,
-                me->hit_counter,
-                (double)me->tsc_counter / me->hit_counter);
+    LOGGER_INFO(
+        "'%s' profile statistics -- TSC Count: %" PRIu64
+        " | Hit Count: %" PRIu64 " | Average TSC per Hit: %f",
+        msg ? msg : "unlabelled",
+        me->tsc_counter,
+        me->hit_counter,
+        me->hit_counter == 0 ? NAN : (double)me->tsc_counter / me->hit_counter);
     return true;
 }
 
