@@ -1,7 +1,9 @@
-/** @brief  Functions to start and end the cycle counter. If the macro
- *          'PROFILE_STATISTICS' is not defined, then I try to make all
- *          of these no-ops. This was to make the files I'm profiling
- *          cleaner.
+/** @brief  Track the number of cycles and hits for an area of code. If
+ *          'PROFILE_STATISTICS' is not defined, then I try to make the
+ *          helper function 'start_tick_counter()' and macro
+ *          'UPDATE_PROFILE_STATISTICS()' into no-ops. Functions that
+ *          require the 'struct ProfileStatistics' parameter must be
+ *          enclosed in '#ifdef'/'#endif'.
  */
 #pragma once
 
@@ -16,7 +18,9 @@
 #include "unused/mark_unused.h"
 
 struct ProfileStatistics {
+    // Number of "timestamps" (i.e. clock-cycles, sort of...)
     uint64_t tsc_counter;
+    // Number of invocations
     uint64_t hit_counter;
 };
 
