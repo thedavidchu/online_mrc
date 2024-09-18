@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
@@ -21,11 +22,11 @@
 
 #include "evicting_map/evicting_map.h"
 
-// NOTE This is beneath the header include so that it inherits the macro
-//      definition.
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
+
+#include "profile/profile.h"
 
 #define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
@@ -59,6 +60,14 @@ initialize(struct EvictingMap *const me,
 #endif
 #ifdef THRESHOLD_STATISTICS
     if (!Statistics__init(&me->stats, 4)) {
+        goto cleanup;
+    }
+#endif
+#ifdef PROFILE_STATISTICS
+    if (!ProfileStatistics__init(&me->prof_stats_fast)) {
+        goto cleanup;
+    }
+    if (!ProfileStatistics__init(&me->prof_stats_slow)) {
         goto cleanup;
     }
 #endif
@@ -209,6 +218,7 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
 {
     if (me == NULL)
         return false;
+    uint64_t const start = start_tick_counter();
     ValueType timestamp = me->current_time_stamp;
 #ifdef THRESHOLD_STATISTICS
     if (timestamp % THRESHOLD_SAMPLING_PERIOD == 0) {
@@ -230,15 +240,19 @@ EvictingMap__access_item(struct EvictingMap *me, EntryType entry)
     case SAMPLED_IGNORED:
         /* Do no work -- this is like SHARDS */
         handle_ignored(me, r, timestamp);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_fast, start);
         break;
     case SAMPLED_INSERTED:
         handle_inserted(me, r, timestamp);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_slow, start);
         break;
     case SAMPLED_REPLACED:
         handle_replaced(me, r, timestamp);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_slow, start);
         break;
     case SAMPLED_UPDATED:
         handle_updated(me, r, timestamp);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_slow, start);
         break;
     default:
         assert(0 && "impossible");
@@ -298,6 +312,12 @@ EvictingMap__destroy(struct EvictingMap *me)
     }
     Statistics__save(&me->stats, stats_path);
     Statistics__destroy(&me->stats);
+#endif
+#ifdef PROFILE_STATISTICS
+    ProfileStatistics__log(&me->prof_stats_fast, "fast Evicting Map");
+    ProfileStatistics__log(&me->prof_stats_slow, "slow Evicting Map");
+    ProfileStatistics__destroy(&me->prof_stats_fast);
+    ProfileStatistics__destroy(&me->prof_stats_slow);
 #endif
     *me = (struct EvictingMap){0};
 }

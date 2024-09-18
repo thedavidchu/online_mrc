@@ -22,11 +22,10 @@
 
 #include "shards/fixed_size_shards.h"
 
-/// NOTE    This has to be below the fixed-size SHARDS include so that
-///         it sees the macro definition.
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
+#include "profile/profile.h"
 
 #define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
@@ -67,6 +66,14 @@ initialize(struct FixedSizeShards *const me,
 #endif
 #ifdef THRESHOLD_STATISTICS
     if (!Statistics__init(&me->stats, 2)) {
+        goto cleanup;
+    }
+#endif
+#ifdef PROFILE_STATISTICS
+    if (!ProfileStatistics__init(&me->prof_stats_fast)) {
+        goto cleanup;
+    }
+    if (!ProfileStatistics__init(&me->prof_stats_slow)) {
         goto cleanup;
     }
 #endif
@@ -178,6 +185,7 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
+    uint64_t const start = start_tick_counter();
 #ifdef THRESHOLD_STATISTICS
     if (me->olken.current_time_stamp % THRESHOLD_SAMPLING_PERIOD == 0) {
         uint64_t const data[] = {me->olken.current_time_stamp,
@@ -187,16 +195,20 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
 #endif
     if (!FixedSizeShardsSampler__sample(&me->sampler, entry)) {
         unsampled_item(me);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_fast, start);
         return false;
     }
 
     struct LookupReturn r = Olken__lookup(&me->olken, entry);
     if (r.success) {
-        return update_item(me, entry, r.timestamp);
+        bool ok = update_item(me, entry, r.timestamp);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_slow, start);
+        return ok;
     } else {
-        return insert_item(me, entry);
+        bool ok = insert_item(me, entry);
+        UPDATE_PROFILE_STATISTICS(&me->prof_stats_slow, start);
+        return ok;
     }
-    return true;
 }
 
 bool
@@ -240,6 +252,12 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     }
     Statistics__save(&me->stats, stats_path);
     Statistics__destroy(&me->stats);
+#endif
+#ifdef PROFILE_STATISTICS
+    ProfileStatistics__log(&me->prof_stats_fast, "fast fixed-size SHARDS");
+    ProfileStatistics__log(&me->prof_stats_slow, "slow fixed-size SHARDS");
+    ProfileStatistics__destroy(&me->prof_stats_fast);
+    ProfileStatistics__destroy(&me->prof_stats_slow);
 #endif
     *me = (struct FixedSizeShards){0};
 }

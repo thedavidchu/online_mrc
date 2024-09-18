@@ -44,7 +44,7 @@ def plot_statistics(
             "number of input paths must be a multiple of the number of labels"
         )
     num_plots = len(input_paths) // len(labels)
-    fig, ax = plt.subplots(1, num_plots, sharex=False, sharey=True)
+    fig, ax = plt.subplots(1, num_plots, sharex=False, sharey=True, squeeze=False)
     fig.set_size_inches(6 * num_plots, 6)
     fig.suptitle("Statistics")
     fig.supxlabel("Access Number")
@@ -59,18 +59,18 @@ def plot_statistics(
             b64_per_item, items = int(array[0]), array[1:]
             time = items[::b64_per_item]
             for j in range(1, b64_per_item):
-                ax[i].plot(
+                ax[0, i].plot(
                     time,
                     np.log10(items[j::b64_per_item]),
                     label=f"{input_path.stem}:{labels[k][j-1]}",
                 )
-        ax[i].legend()
+        ax[0, i].legend()
     fig.savefig(output_path)
 
 
 def main():
     input_paths = get_file_tree(
-        Path("/home/david/projects/online_mrc/myresults/data-v3-no-emap-scan/stats")
+        Path("/home/david/projects/online_mrc/myresults/tmp/stats")
     )
     [
         Path("/home/david/projects/online_mrc/Evicting-Map-stats.bin"),

@@ -75,7 +75,7 @@ EvictingHashTable__init(struct EvictingHashTable *me,
         //      dividing.
         .running_denominator = length * init_sampling_ratio,
         .hll_alpha_m = hll_alpha_m(length),
-        .track_global_threshold = false,
+        .track_global_threshold = true,
     };
     return true;
 }

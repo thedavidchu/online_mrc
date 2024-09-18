@@ -63,6 +63,11 @@ if analyze_thresholds
     add_project_arguments('-DTHRESHOLD_STATISTICS', language: ['c', 'cpp'])
 endif
 
+profile_statistics = false
+if profile_statistics
+    add_project_arguments('-DPROFILE_STATISTICS', language: ['c', 'cpp'])
+endif
+
 fs = import('fs')
 # Define the test trace
 # HACK  I need this weird back-bending because my version of C's fopen

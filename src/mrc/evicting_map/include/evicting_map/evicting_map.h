@@ -16,6 +16,9 @@
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
+#ifdef PROFILE_STATISTICS
+#include "profile/profile.h"
+#endif
 
 struct EvictingMap {
     struct Tree tree;
@@ -28,6 +31,12 @@ struct EvictingMap {
 #endif
 #ifdef THRESHOLD_STATISTICS
     struct Statistics stats;
+#endif
+#ifdef PROFILE_STATISTICS
+    // NOTE Reading the TSC severely impacts performance, so it is best
+    //      to only measure a single part at a time.
+    struct ProfileStatistics prof_stats_fast;
+    struct ProfileStatistics prof_stats_slow;
 #endif
 };
 

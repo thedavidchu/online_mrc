@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "lookup/boost_hash_table.h"
 #include "lookup/hash_table.h"
 #include "lookup/k_hash_table.h"
@@ -17,6 +18,8 @@
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
+#include "profile/profile.h"
+
 static bool
 initialize(struct Olken *const me,
            size_t const histogram_num_bins,
@@ -27,17 +30,25 @@ initialize(struct Olken *const me,
         return false;
     }
     if (!tree__init(&me->tree)) {
+        LOGGER_ERROR("cannot initialize tree");
         goto tree_error;
     }
     if (!KHashTable__init(&me->hash_table)) {
+        LOGGER_ERROR("cannot initialize hash table");
         goto hash_table_error;
     }
     if (!Histogram__init(&me->histogram,
                          histogram_num_bins,
                          histogram_bin_size,
                          out_of_bounds_mode)) {
+        LOGGER_ERROR("cannot initialize histogram");
         goto histogram_error;
     }
+#ifdef PROFILE_STATISTICS
+    if (!ProfileStatistics__init(&me->prof_stats)) {
+        goto histogram_error;
+    }
+#endif
     me->current_time_stamp = 0;
     return true;
 
@@ -133,7 +144,6 @@ Olken__access_item(struct Olken *const me, EntryType const entry)
     if (me == NULL) {
         return false;
     }
-
     struct LookupReturn found = KHashTable__lookup(&me->hash_table, entry);
     if (found.success) {
         uint64_t distance = Olken__update_stack(me, entry, found.timestamp);
@@ -187,6 +197,10 @@ Olken__destroy(struct Olken *const me)
     tree__destroy(&me->tree);
     KHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
+#ifdef PROFILE_STATISTICS
+    ProfileStatistics__log(&me->prof_stats, "Olken");
+    ProfileStatistics__destroy(&me->prof_stats);
+#endif
     *me = (struct Olken){0};
 }
 

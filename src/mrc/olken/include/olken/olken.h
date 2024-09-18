@@ -15,11 +15,20 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
+#ifdef PROFILE_STATISTICS
+#include "profile/profile.h"
+#endif
+
 struct Olken {
     struct Tree tree;
     struct KHashTable hash_table;
     struct Histogram histogram;
     TimeStampType current_time_stamp;
+#ifdef PROFILE_STATISTICS
+    // NOTE Reading the TSC severely impacts performance, so it is best
+    //      to only measure a single part at a time.
+    struct ProfileStatistics prof_stats;
+#endif
 };
 
 bool
