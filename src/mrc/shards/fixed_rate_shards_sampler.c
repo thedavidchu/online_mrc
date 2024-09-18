@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -39,6 +40,7 @@ bool
 FixedRateShardsSampler__sample(struct FixedRateShardsSampler *me,
                                EntryType entry)
 {
+    assert(me != NULL);
     ++me->num_entries_seen;
     Hash64BitType hash = Hash64Bit(entry);
     // NOTE Taking the modulo of the hash by 1 << 24 reduces the accuracy
