@@ -15,6 +15,10 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
+#ifdef PROFILE_STATISTICS
+#include "profile/profile.h"
+#endif
+
 struct Olken {
     struct Tree tree;
     struct KHashTable hash_table;

@@ -34,7 +34,11 @@ ProfileStatistics__destroy(struct ProfileStatistics *const me)
     if (me == NULL)
         return;
 #ifdef PROFILE_STATISTICS
-    ProfileStatistics__destroy(&me->prof_stats);
+    LOGGER_INFO("profile statistics -- TSC Count: %" PRIu64
+                " | Hit Count: %" PRIu64 " | Average TSC per Hit: %f",
+                me->tsc_counter,
+                me->hit_counter,
+                (double)me->tsc_counter / me->hit_counter);
 #endif
 }
 
@@ -67,7 +71,7 @@ ProfileStatistics__update(struct ProfileStatistics *const me,
 #ifdef PROFILE_STATISTICS
 #define UPDATE_PROFILE_STATISTICS(prof_stat_ptr, start)                        \
     do {                                                                       \
-        ProfileStatistics__update((prof_stat_ptr), (start))                    \
+        ProfileStatistics__update((prof_stat_ptr), (start));                   \
     } while (0)
 #else
 // NOTE We allow the 'start' variable to exist when PROFILE_STATISTICS

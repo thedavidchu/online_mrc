@@ -16,6 +16,9 @@
 #ifdef THRESHOLD_STATISTICS
 #include "statistics/statistics.h"
 #endif
+#ifdef PROFILE_STATISTICS
+#include "profile/profile.h"
+#endif
 
 struct FixedSizeShards {
     struct Olken olken;

@@ -202,7 +202,6 @@ FixedSizeShards__access_item(struct FixedSizeShards *me, EntryType entry)
         bool ok = insert_item(me, entry);
         return ok;
     }
-    return true;
 }
 
 bool

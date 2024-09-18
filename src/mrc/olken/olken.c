@@ -46,7 +46,7 @@ initialize(struct Olken *const me,
     }
 #ifdef PROFILE_STATISTICS
     if (!ProfileStatistics__init(&me->prof_stats)) {
-        goto cleanup;
+        goto histogram_error;
     }
 #endif
     me->current_time_stamp = 0;
