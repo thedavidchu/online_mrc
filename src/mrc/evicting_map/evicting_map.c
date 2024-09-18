@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
-#include "logger/logger.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
