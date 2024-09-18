@@ -98,7 +98,7 @@ Histogram__clear(struct Histogram *const me);
 
 /// @brief  Write the Histogram as a JSON object to an arbitrary stream.
 void
-Histogram__write_as_json(FILE *stream, struct Histogram *me);
+Histogram__write_as_json(FILE *const stream, struct Histogram const *const me);
 
 /// @brief  Read the full histogram from a file.
 bool
@@ -110,7 +110,7 @@ Histogram__save(struct Histogram const *const me, char const *const path);
 
 /// @brief  Write the Histogram as a JSON object to stdout.
 void
-Histogram__print_as_json(struct Histogram *me);
+Histogram__print_as_json(struct Histogram const *const me);
 
 /// @brief  Adjust the histogram starting from the first bucket.
 /// @note   This is for the SHARDS-Adj algorithm.

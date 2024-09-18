@@ -313,7 +313,7 @@ Histogram__clear(struct Histogram *const me)
 }
 
 void
-Histogram__write_as_json(FILE *stream, struct Histogram *me)
+Histogram__write_as_json(FILE *const stream, struct Histogram const *const me)
 {
     if (me == NULL) {
         fprintf(stream, "{\"type\": null}\n");
@@ -353,7 +353,7 @@ Histogram__write_as_json(FILE *stream, struct Histogram *me)
 }
 
 void
-Histogram__print_as_json(struct Histogram *me)
+Histogram__print_as_json(struct Histogram const *const me)
 {
     Histogram__write_as_json(stdout, me);
 }
