@@ -65,6 +65,12 @@ Olken__init(struct Olken *const me,
             size_t const histogram_num_bins,
             size_t const histogram_bin_size)
 {
+    // NOTE We mark these as unused so that my IDE thinks that we are
+    //      really using all three hash table libraries.
+    // TODO Maybe remove the #includes for the unused hash table libraries.
+    UNUSED(BoostHashTable__init);
+    UNUSED(HashTable__init);
+    UNUSED(KHashTable__init);
     return initialize(me,
                       histogram_num_bins,
                       histogram_bin_size,
