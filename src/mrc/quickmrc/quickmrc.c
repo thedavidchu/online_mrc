@@ -7,17 +7,15 @@
 #include <glib.h>
 #include <pthread.h>
 
-#include "hash/hash.h"
 #include "histogram/histogram.h"
-#include "logger/logger.h"
-#include "math/ratio.h"
+#include "lookup/hash_table.h"
+#include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
-#include "quickmrc/buckets.h"
+#include "quickmrc/quickmrc.h"
+#include "quickmrc/quickmrc_buckets.h"
+#include "shards/fixed_rate_shards_sampler.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
-
-#include "lookup/hash_table.h"
-#include "quickmrc/quickmrc.h"
 
 bool
 QuickMRC__init(struct QuickMRC *me,
@@ -27,35 +25,66 @@ QuickMRC__init(struct QuickMRC *me,
                const uint64_t histogram_num_bins,
                const uint64_t histogram_bin_size)
 {
-    bool r = false;
     if (me == NULL) {
+        goto cleanup;
+    }
+    if (!HashTable__init(&me->hash_table)) {
+        goto cleanup;
+    }
+    // FIXME!!! I just stuck a random zero in
+    exit(1);
+    if (!qmrc__init(&me->buckets, 0, default_num_buckets, max_bucket_size)) {
         return false;
     }
-    r = HashTable__init(&me->hash_table);
-    if (!r) {
+    if (!Histogram__init(&me->histogram,
+                         histogram_num_bins,
+                         histogram_bin_size,
+                         false)) {
+        goto cleanup;
+    }
+    if (!FixedRateShardsSampler__init(&me->sampler, sampling_ratio, true)) {
+        goto cleanup;
+    }
+    return true;
+cleanup:
+    QuickMRC__destroy(me);
+    return false;
+}
+
+static bool
+handle_update(struct QuickMRC *me, EntryType entry, TimeStampType timestamp)
+{
+    uint64_t stack_dist = qmrc__lookup(&me->buckets, timestamp);
+    assert(stack_dist != UINT64_MAX);
+    assert(me->buckets.epochs != NULL);
+    TimeStampType new_timestamp = me->buckets.epochs[0];
+    if (HashTable__put(&me->hash_table, entry, new_timestamp) !=
+        LOOKUP_PUTUNIQUE_REPLACE_VALUE) {
         return false;
     }
-    r = QuickMRCBuckets__init(&me->buckets,
-                              default_num_buckets,
-                              max_bucket_size);
-    if (!r) {
-        HashTable__destroy(&me->hash_table);
+    if (!Histogram__insert_scaled_finite(&me->histogram,
+                                         stack_dist,
+                                         me->sampler.scale)) {
         return false;
     }
-    r = Histogram__init(&me->histogram,
-                        histogram_num_bins,
-                        histogram_bin_size,
-                        false);
-    if (!r) {
-        HashTable__destroy(&me->hash_table);
-        QuickMRCBuckets__destroy(&me->buckets);
+    return true;
+}
+
+static bool
+handle_insert(struct QuickMRC *me, EntryType entry)
+{
+    if (!qmrc__insert(&me->buckets)) {
         return false;
     }
-    me->total_entries_seen = 0;
-    me->total_entries_processed = 0;
-    me->sampling_ratio = sampling_ratio;
-    me->threshold = ratio_uint64(sampling_ratio);
-    me->scale = 1 / sampling_ratio;
+    if (!Histogram__insert_scaled_infinite(&me->histogram, me->sampler.scale)) {
+        return false;
+    }
+    assert(me->buckets.epochs != NULL);
+    TimeStampType new_timestamp = me->buckets.epochs[0];
+    if (HashTable__put(&me->hash_table, entry, new_timestamp) !=
+        LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
+        return false;
+    }
     return true;
 }
 
@@ -65,34 +94,19 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
-
-    ++me->total_entries_seen;
-    if (Hash64Bit(entry) > me->threshold)
+    if (FixedRateShardsSampler__sample(&me->sampler, entry)) {
         return true;
-    // This assumes there won't be any errors further on.
-    ++me->total_entries_processed;
-
+    }
     struct LookupReturn r = HashTable__lookup(&me->hash_table, entry);
     if (r.success) {
-        uint64_t stack_dist =
-            QuickMRCBuckets__reaccess_old(&me->buckets, r.timestamp);
-        if (stack_dist == UINT64_MAX) {
+        if (!handle_update(me, entry, r.timestamp)) {
             return false;
         }
-        TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        HashTable__put(&me->hash_table, entry, new_timestamp);
-        Histogram__insert_scaled_finite(&me->histogram, stack_dist, me->scale);
     } else {
-        if (!QuickMRCBuckets__insert_new(&me->buckets)) {
+        if (!handle_insert(me, entry)) {
             return false;
         }
-        if (!Histogram__insert_scaled_infinite(&me->histogram, me->scale)) {
-            return false;
-        }
-        TimeStampType new_timestamp = me->buckets.buckets[0].max_timestamp;
-        HashTable__put(&me->hash_table, entry, new_timestamp);
     }
-
     return true;
 }
 
@@ -100,25 +114,11 @@ void
 QuickMRC__post_process(struct QuickMRC *me)
 {
     if (me == NULL || me->histogram.histogram == NULL ||
-        me->histogram.num_bins < 1)
+        me->histogram.num_bins < 1) {
         return;
-
-    // NOTE SHARDS-Adj is part of the core algorithm, so I treat this as
-    //      mandatory for everything except for the SHARD-less implementation.
-    if (me->sampling_ratio == 1.0)
-        return;
-
-    // NOTE I need to scale the adjustment by the scale that I've been adjusting
-    //      all values. Conversely, I could just not scale any values by the
-    //      scale and I'd be equally well off (in fact, better probably,
-    //      because a smaller chance of overflowing).
-    const int64_t adjustment =
-        me->scale * (me->total_entries_seen * me->sampling_ratio -
-                     me->total_entries_processed);
-    bool r = Histogram__adjust_first_buckets(&me->histogram, adjustment);
-    if (!r) {
-        LOGGER_WARN("error in adjusting buckets");
     }
+    // TODO Have this function return a boolean value.
+    FixedRateShardsSampler__post_process(&me->sampler, &me->histogram);
 }
 
 bool
@@ -129,7 +129,7 @@ QuickMRC__to_mrc(struct QuickMRC const *const me,
 }
 
 void
-QuickMRC__print_histogram_as_json(struct QuickMRC *me)
+QuickMRC__print_histogram_as_json(struct QuickMRC const *const me)
 {
     if (me == NULL) {
         // Just pass on the NULL value and let the histogram deal with it. Maybe
@@ -147,11 +147,7 @@ QuickMRC__destroy(struct QuickMRC *me)
         return;
     }
     HashTable__destroy(&me->hash_table);
-    QuickMRCBuckets__destroy(&me->buckets);
+    qmrc__destroy(&me->buckets);
     Histogram__destroy(&me->histogram);
-    // The num_buckets is const qualified, so we do memset to sketchily avoid
-    // a compiler error (at the expense of making this undefined behaviour).
-    // ARGH, C IS SO FRUSTRATING SOMETIMES! I wish it had special provisions for
-    // initializing and destroying the structures.
-    memset(me, 0, sizeof(*me));
+    *me = (struct QuickMRC){0};
 }

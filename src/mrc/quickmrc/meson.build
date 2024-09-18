@@ -1,9 +1,16 @@
 quickmrc_buckets_dep = declare_dependency(
     link_with: library(
         'quickmrc_buckets_lib',
+        'quickmrc_buckets.c',
         'buckets.c',
         include_directories: include_directories('include'),
-        dependencies: [glib_dep, common_dep, dependency('threads')],
+        dependencies: [glib_dep, common_dep, thread_dep],
+        c_args: [
+            # NOTE  I need the compiler to support AVX and AVX2. I guess
+            #       the QuickMRC code doesn't support AVX512. I wonder
+            #       if that would prove to be faster.
+            '-mavx2',
+        ],
     ),
 )
 
@@ -20,11 +27,13 @@ quickmrc_dep = declare_dependency(
             quickmrc_buckets_dep,
             lookup_dep,
             miss_rate_curve_dep,
+            shards_dep,
         ],
     ),
     dependencies: [
         glib_dep,
         lookup_dep,
+        shards_dep,
     ],
     include_directories: include_directories('include'),
 )
