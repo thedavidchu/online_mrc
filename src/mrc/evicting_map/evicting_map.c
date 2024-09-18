@@ -306,6 +306,7 @@ EvictingMap__destroy(struct EvictingMap *me)
     Statistics__destroy(&me->stats);
 #endif
 #ifdef PROFILE_STATISTICS
+    ProfileStatistics__log(&me->prof_stats);
     ProfileStatistics__destroy(&me->prof_stats);
 #endif
     *me = (struct EvictingMap){0};

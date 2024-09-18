@@ -198,6 +198,7 @@ Olken__destroy(struct Olken *const me)
     KHashTable__destroy(&me->hash_table);
     Histogram__destroy(&me->histogram);
 #ifdef PROFILE_STATISTICS
+    ProfileStatistics__log(&me->prof_stats);
     ProfileStatistics__destroy(&me->prof_stats);
 #endif
     *me = (struct Olken){0};

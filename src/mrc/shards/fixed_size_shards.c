@@ -247,6 +247,7 @@ FixedSizeShards__destroy(struct FixedSizeShards *me)
     Statistics__destroy(&me->stats);
 #endif
 #ifdef PROFILE_STATISTICS
+    ProfileStatistics__log(&me->prof_stats);
     ProfileStatistics__destroy(&me->prof_stats);
 #endif
     *me = (struct FixedSizeShards){0};

@@ -28,18 +28,27 @@ ProfileStatistics__init(struct ProfileStatistics *const me)
     return true;
 }
 
-static inline void
-ProfileStatistics__destroy(struct ProfileStatistics *const me)
+static inline bool
+ProfileStatistics__log(struct ProfileStatistics const *const me)
 {
-    if (me == NULL)
-        return;
-#ifdef PROFILE_STATISTICS
+    if (me == NULL) {
+        return false;
+    }
     LOGGER_INFO("profile statistics -- TSC Count: %" PRIu64
                 " | Hit Count: %" PRIu64 " | Average TSC per Hit: %f",
                 me->tsc_counter,
                 me->hit_counter,
                 (double)me->tsc_counter / me->hit_counter);
-#endif
+    return true;
+}
+
+static inline void
+ProfileStatistics__destroy(struct ProfileStatistics *const me)
+{
+    if (me == NULL) {
+        return;
+    }
+    *me = (struct ProfileStatistics){0};
 }
 
 /// @note   I admit the semantics are confusing.
