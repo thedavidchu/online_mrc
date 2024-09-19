@@ -4,6 +4,7 @@ histogram_dep = declare_dependency(
         'histogram.c',
         include_directories: include_directories('include'),
         dependencies: [
+            array_dep,
             common_dep,
             glib_dep,
             io_dep,
