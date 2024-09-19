@@ -6,12 +6,13 @@
 #include <string.h>
 
 #include "evicting_map/evicting_map.h"
-#include "evicting_quickmrc/evicting_quickmrc.h"
 #include "file/file.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
+#include "quickmrc/evicting_quickmrc.h"
+#include "quickmrc/quickmrc.h"
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
 #include "timer/timer.h"
@@ -251,6 +252,33 @@ run_evicting_quickmrc(struct RunnerArguments const *const args,
         (void (*)(void *const))EvictingQuickMRC__destroy);
 }
 
+static bool
+run_quickmrc(struct RunnerArguments const *const args,
+             struct Trace const *const trace)
+{
+    struct QuickMRC me = {0};
+    if (!QuickMRC__init(&me,
+                        args->sampling_rate,
+                        args->max_size,
+                        args->qmrc_size,
+                        args->num_bins,
+                        args->bin_size,
+                        args->out_of_bounds_mode)) {
+        LOGGER_ERROR("initialization failed!");
+        return false;
+    }
+
+    return trace_runner(
+        &me,
+        args,
+        trace,
+        (bool (*)(void *const, uint64_t const))QuickMRC__access_item,
+        (bool (*)(void *const))QuickMRC__post_process,
+        (bool (*)(void *const,
+                  struct Histogram const **const))QuickMRC__get_histogram,
+        (void (*)(void *const))QuickMRC__destroy);
+}
+
 bool
 run_runner(struct RunnerArguments const *const args,
            struct Trace const *const trace)
@@ -290,6 +318,10 @@ run_runner(struct RunnerArguments const *const args,
         }
         return true;
     case MRC_ALGORITHM_QUICKMRC:
+        if (!run_quickmrc(args, trace)) {
+            LOGGER_WARN("QuickMRC failed");
+        }
+        return true;
     case MRC_ALGORITHM_GOEL_QUICKMRC:
     case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
     case MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME:

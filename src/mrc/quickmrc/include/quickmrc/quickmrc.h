@@ -22,18 +22,19 @@ struct QuickMRC {
 };
 
 bool
-QuickMRC__init(struct QuickMRC *me,
-               const double sampling_ratio,
-               const uint64_t default_num_buckets,
-               const uint64_t max_bucket_size,
-               const uint64_t histogram_num_bins,
-               const uint64_t histogram_bin_size);
+QuickMRC__init(struct QuickMRC *const me,
+               double const sampling_ratio,
+               uint64_t const default_num_buckets,
+               uint64_t const max_bucket_size,
+               uint64_t const histogram_num_bins,
+               uint64_t const histogram_bin_size,
+               enum HistogramOutOfBoundsMode const out_of_bounds_mode);
 
 bool
-QuickMRC__access_item(struct QuickMRC *me, EntryType entry);
+QuickMRC__access_item(struct QuickMRC *const me, EntryType const entry);
 
-void
-QuickMRC__post_process(struct QuickMRC *me);
+bool
+QuickMRC__post_process(struct QuickMRC *const me);
 
 bool
 QuickMRC__to_mrc(struct QuickMRC const *const me,
@@ -44,3 +45,7 @@ QuickMRC__print_histogram_as_json(struct QuickMRC const *const me);
 
 void
 QuickMRC__destroy(struct QuickMRC *const me);
+
+bool
+QuickMRC__get_histogram(struct QuickMRC const *const me,
+                        struct Histogram const **const histogram);
