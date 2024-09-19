@@ -321,7 +321,7 @@ check_no_algorithms_match(struct RunnerArguments const *const array,
     for (size_t i = 0; i < length; ++i) {
         for (size_t j = i + 1; j < length; ++j) {
             if (array[i].algorithm == array[j].algorithm) {
-                LOGGER_ERROR("algorithm '%s' is run twice",
+                LOGGER_ERROR("algorithm '%s' is run multiple times",
                              algorithm_names[array[i].algorithm]);
                 ok = false;
             }
