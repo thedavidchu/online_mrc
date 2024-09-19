@@ -127,7 +127,7 @@ QuickMRC__post_process(struct QuickMRC *const me)
     }
     // TODO Have this function return a boolean value.
     FixedRateShardsSampler__post_process(&me->sampler, &me->histogram);
-    return true
+    return true;
 }
 
 bool
