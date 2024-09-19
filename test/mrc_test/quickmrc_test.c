@@ -40,8 +40,13 @@ access_same_key_five_times(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(
-        QuickMRC__init(&me, 1.0, 60, 100, histogram_oracle.num_bins, 1));
+    g_assert_true(QuickMRC__init(&me,
+                                 1.0,
+                                 60,
+                                 100,
+                                 histogram_oracle.num_bins,
+                                 1,
+                                 HistogramOutOfBoundsMode__realloc));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
         g_assert_true(QuickMRC__access_item(&me, entries[i]));
     }
@@ -69,8 +74,13 @@ small_merge_test(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(
-        QuickMRC__init(&me, 1.0, 60, 100, histogram_oracle.num_bins, 1));
+    g_assert_true(QuickMRC__init(&me,
+                                 1.0,
+                                 60,
+                                 100,
+                                 histogram_oracle.num_bins,
+                                 1,
+                                 HistogramOutOfBoundsMode__realloc));
     for (uint64_t i = 0; i < 1000; ++i) {
         QuickMRC__access_item(&me, i);
     }
@@ -94,7 +104,13 @@ long_trace_test(void)
         ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
     ASSERT_FUNCTION_RETURNS_TRUE(
-        QuickMRC__init(&me, 1.0, 60, 100, MAX_NUM_UNIQUE_ENTRIES, 1));
+        QuickMRC__init(&me,
+                       1.0,
+                       60,
+                       100,
+                       MAX_NUM_UNIQUE_ENTRIES,
+                       1,
+                       HistogramOutOfBoundsMode__realloc));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = ZipfianRandom__next(&zrng);
@@ -120,7 +136,13 @@ mean_absolute_error_test(void)
 
     g_assert_true(ZipfianRandom__init(&zrng, MAX_NUM_UNIQUE_ENTRIES, 0.5, 0));
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(QuickMRC__init(&me, 1.0, 60, 100, MAX_NUM_UNIQUE_ENTRIES, 1));
+    g_assert_true(QuickMRC__init(&me,
+                                 1.0,
+                                 60,
+                                 100,
+                                 MAX_NUM_UNIQUE_ENTRIES,
+                                 1,
+                                 HistogramOutOfBoundsMode__realloc));
     g_assert_true(Olken__init(&olken, MAX_NUM_UNIQUE_ENTRIES, 1));
 
     for (uint64_t i = 0; i < trace_length; ++i) {
@@ -175,8 +197,13 @@ parallel_test(void)
 
     struct QuickMRC me = {0};
     // The maximum trace length is obviously the number of possible unique items
-    g_assert_true(
-        QuickMRC__init(&me, 1.0, 60, 100, histogram_oracle.num_bins, 1));
+    g_assert_true(QuickMRC__init(&me,
+                                 1.0,
+                                 60,
+                                 100,
+                                 histogram_oracle.num_bins,
+                                 1,
+                                 HistogramOutOfBoundsMode__realloc));
 
 #define THREAD_COUNT 4
     struct WorkerData data[THREAD_COUNT] = {0};

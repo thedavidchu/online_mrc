@@ -3,11 +3,11 @@
 #include <stdlib.h>
 
 #include "arrays/array_size.h"
-#include "evicting_quickmrc/evicting_quickmrc.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
+#include "quickmrc/evicting_quickmrc.h"
 #include "random/zipfian_random.h"
 #include "test/mytester.h"
 #include "unused/mark_unused.h"
