@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #include "histogram/histogram.h"
+#include "logger/logger.h"
 #include "lookup/hash_table.h"
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -31,9 +32,7 @@ QuickMRC__init(struct QuickMRC *me,
     if (!HashTable__init(&me->hash_table)) {
         goto cleanup;
     }
-    // FIXME!!! I just stuck a random zero in
-    exit(1);
-    if (!qmrc__init(&me->buckets, 0, default_num_buckets, max_bucket_size)) {
+    if (!qmrc__init(&me->buckets, default_num_buckets, max_bucket_size)) {
         return false;
     }
     if (!Histogram__init(&me->histogram,
@@ -60,6 +59,7 @@ handle_update(struct QuickMRC *me, EntryType entry, TimeStampType timestamp)
     TimeStampType new_timestamp = me->buckets.epochs[0];
     if (HashTable__put(&me->hash_table, entry, new_timestamp) !=
         LOOKUP_PUTUNIQUE_REPLACE_VALUE) {
+        LOGGER_ERROR("unexpected put return");
         return false;
     }
     if (!Histogram__insert_scaled_finite(&me->histogram,
@@ -73,16 +73,18 @@ handle_update(struct QuickMRC *me, EntryType entry, TimeStampType timestamp)
 static bool
 handle_insert(struct QuickMRC *me, EntryType entry)
 {
-    if (!qmrc__insert(&me->buckets)) {
-        return false;
-    }
+    // NOTE This returns the current epoch number. These are different
+    //      semantics than my own functions, but I'll leave it for now.
+    qmrc__insert(&me->buckets);
     if (!Histogram__insert_scaled_infinite(&me->histogram, me->sampler.scale)) {
+        LOGGER_DEBUG("histogram insertion failed");
         return false;
     }
     assert(me->buckets.epochs != NULL);
     TimeStampType new_timestamp = me->buckets.epochs[0];
     if (HashTable__put(&me->hash_table, entry, new_timestamp) !=
         LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
+        LOGGER_DEBUG("unexpected put return");
         return false;
     }
     return true;
@@ -94,7 +96,7 @@ QuickMRC__access_item(struct QuickMRC *me, EntryType entry)
     if (me == NULL) {
         return false;
     }
-    if (FixedRateShardsSampler__sample(&me->sampler, entry)) {
+    if (!FixedRateShardsSampler__sample(&me->sampler, entry)) {
         return true;
     }
     struct LookupReturn r = HashTable__lookup(&me->hash_table, entry);

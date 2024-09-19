@@ -25,8 +25,10 @@ static bool
 access_same_key_five_times(void)
 {
     EntryType entries[5] = {0, 0, 0, 0, 0};
-    // We round up the stack distance with QuickMRC
-    uint64_t histogram_oracle_array[11] = {0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // We round up the stack distance with QuickMRC.
+    // The answer for my implementation is {0, 4, 0, ...} whereas
+    // Ashvin's implementation gives {4, 0, 0, ...}. I'll defer to him.
+    uint64_t histogram_oracle_array[11] = {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     struct Histogram histogram_oracle = {
         .histogram = histogram_oracle_array,
         .num_bins = ARRAY_SIZE(histogram_oracle_array),

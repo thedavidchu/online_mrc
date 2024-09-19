@@ -43,10 +43,7 @@ struct qmrc {
 };
 
 bool
-qmrc__init(struct qmrc *qmrc,
-           size_t max_keys,
-           size_t nr_qmrc_buckets,
-           size_t epoch_limit);
+qmrc__init(struct qmrc *qmrc, size_t nr_qmrc_buckets, size_t epoch_limit);
 
 size_t
 qmrc__lookup(struct qmrc *qmrc, int epoch);

@@ -11,6 +11,8 @@
 #include <time.h>
 #include <x86intrin.h>
 
+#include "logger/logger.h"
+#include "math/is_power_of_two.h"
 #include "quickmrc/quickmrc_buckets.h"
 
 #define likely(x)      __builtin_expect(!!(x), 1)
@@ -111,24 +113,34 @@ qmrc_merge(struct qmrc *qmrc)
 }
 
 /*
- * log_hist_buckets is the log of the number of histogram buckets.
+ * max_keys is the maximum allowed distinct keys... well, not really.
  *
- * log_qmrc_buckets is the log of the number of qmrc buckets.
+ * num_buckets is the number of qmrc buckets.
  *
- * log_epoch_limit is the log of the threshold at which the current bucket is
- * considered full and a new epoch is created. If it is 0, we adapt it.
+ * epoch_limit is the threshold at which the current bucket is
+ * considered full and a new epoch is created. If it is 0, we compute it.
  */
 bool
 qmrc__init(struct qmrc *qmrc,
-           size_t max_keys,
-           size_t nr_qmrc_buckets,
+           size_t num_buckets,
+           // TODO Change this to an int type since it is capped by the
+           //       range of ints.
            size_t epoch_limit)
 {
     size_t alloc_size = 0;
-    if (!qmrc)
+    if (!qmrc) {
+        LOGGER_ERROR("qmrc is NULL");
         return false;
+    }
+    // In keeping with Ashvin's desire to keep everything as a power of
+    // two, we enforce this.
+    if (false && !is_power_of_two(num_buckets)) {
+        LOGGER_ERROR("expecting nr_qmrc_buckets (%zu) to be power of two",
+                     num_buckets);
+        return false;
+    }
 
-    qmrc->nr_buckets = nr_qmrc_buckets;
+    qmrc->nr_buckets = num_buckets;
 
     /* align buckets to cache size */
     alloc_size = qmrc->nr_buckets * sizeof(int);
@@ -142,18 +154,11 @@ qmrc__init(struct qmrc *qmrc,
     memset(qmrc->counts, 0, alloc_size);
 
     /* set initial max_keys to the number of histogram buckets */
-    qmrc->max_keys = max_keys;
+    qmrc->max_keys = num_buckets * epoch_limit;
 
     /* Choice of epoch limit is somewhat critical for performance and
      * accuracy. A smaller epoch limit will increase the number of epochs
      * being created, which will increase accuracy but lower performance.*/
-    if (epoch_limit == 0) {
-        /* increase epoch_limit as we increase max_keys */
-        qmrc->adjust_epoch_limit = true;
-        /* expected number of keys in a qmrc bucket is
-         * (max_keys / qmrc_buckets). */
-        epoch_limit = max_keys - nr_qmrc_buckets;
-    }
     assert(epoch_limit > 0);
     qmrc->epoch_limit = epoch_limit;
 
