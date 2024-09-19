@@ -123,10 +123,11 @@ QuickMRC__post_process(struct QuickMRC *const me)
 {
     if (me == NULL || me->histogram.histogram == NULL ||
         me->histogram.num_bins < 1) {
-        return;
+        return false;
     }
     // TODO Have this function return a boolean value.
     FixedRateShardsSampler__post_process(&me->sampler, &me->histogram);
+    return true
 }
 
 bool
