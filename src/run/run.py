@@ -17,6 +17,8 @@ from warnings import warn
 
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
 ALGORITHMS = [
+    # NOTE  I guarantee that "Olken" is the first algorithm in this list.
+    #       I do not make guarantees about any other order.
     "Olken",
     "Evicting-Map",
     "Fixed-Rate-SHARDS",  # With adjustment (default algorithm)
@@ -174,8 +176,9 @@ def run_trace(input_: Path, format: str, output_: Path, *, skip: set[str]):
 
 
 def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
-    oracle_path = mrc_dir / f"{f.stem}-Olken-mrc.bin"
-    input_paths = [mrc_dir / f"{f.stem}-{algo}-mrc.bin" for algo in ALGORITHMS]
+    oracle_path, *input_paths = [
+        mrc_dir / f"{f.stem}-{algo}-mrc.bin" for algo in ALGORITHMS
+    ]
     input_paths = [str(f) for f in input_paths if f.exists()]
     output_paths = [plot_dir / f"{f.stem}-mrc.png", plot_dir / f"{f.stem}-mrc.pdf"]
     sh(
