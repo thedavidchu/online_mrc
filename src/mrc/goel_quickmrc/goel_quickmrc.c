@@ -221,27 +221,37 @@ bool
 GoelQuickMRC__get_histogram(struct GoelQuickMRC *const me,
                             struct Histogram const **const histogram)
 {
-    if (!me || !histogram)
+    if (!me || !me->cache || !me->cache->qmrc || !histogram)
         return false;
     struct histogram *hist = &me->cache->qmrc->hist;
+    // Collect metadata
+    size_t const num_bins = hist->length;
+    size_t const bin_size = ((size_t)1 << hist->log_bucket_size) * me->scale;
     if (!Histogram__init(&me->histogram,
-                         hist->length,
-                         (size_t)1 << hist->log_bucket_size,
+                         num_bins,
+                         bin_size,
                          HistogramOutOfBoundsMode__merge_bins))
         return false;
+    uint64_t const total = me->num_entries_processed;
+    uint64_t const unique = me->cache->qmrc->total_keys;
     // NOTE We can't just memcpy because the data sizes are different.
-    uint64_t total = 0;
+    uint64_t count = 0;
     for (size_t i = 0; i < hist->length; ++i) {
         uint64_t hits = hist->hits[i];
-        total += hits;
         me->histogram.histogram[i] = hits;
+        count += hits;
     }
-    me->histogram.running_sum = total;
-    // This line somehow messes my MRC generator up. I think the histogram
-    // already contains all of the hits (including the infinite ones). I
-    // just don't know where they're kept.
-    if (false)
-        me->histogram.infinity = me->cache->qmrc->total_keys;
+    MAYBE_UNUSED(count);
+    assert(total - count == unique);
+    me->histogram = (struct Histogram){
+        .histogram = me->histogram.histogram,
+        .bin_size = me->histogram.bin_size,
+        .num_bins = me->histogram.num_bins,
+        .out_of_bounds_mode = me->histogram.out_of_bounds_mode,
+        .false_infinity = 0,
+        .infinity = unique,
+        .running_sum = total,
+    };
     *histogram = &me->histogram;
     return true;
 }
