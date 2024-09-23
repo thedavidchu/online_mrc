@@ -293,7 +293,6 @@ qmrc__lookup(struct qmrc *qmrc, int epoch)
     /* increment count for current epoch */
     qmrc->counts[0]++;
 
-    /* return current epoch */
     return sd;
 }
 

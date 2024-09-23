@@ -81,16 +81,14 @@ handle_insert(struct QuickMRC *const me, EntryType const entry)
 {
     // NOTE This returns the current epoch number. These are different
     //      semantics than my own functions, but I'll leave it for now.
-    qmrc__insert(&me->buckets);
-    if (!Histogram__insert_scaled_infinite(&me->histogram, me->sampler.scale)) {
-        LOGGER_DEBUG("histogram insertion failed");
-        return false;
-    }
-    assert(me->buckets.epochs != NULL);
-    TimeStampType new_timestamp = me->buckets.epochs[0];
+    TimeStampType new_timestamp = qmrc__insert(&me->buckets);
     if (HashTable__put(&me->hash_table, entry, new_timestamp) !=
         LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
         LOGGER_DEBUG("unexpected put return");
+        return false;
+    }
+    if (!Histogram__insert_scaled_infinite(&me->histogram, me->sampler.scale)) {
+        LOGGER_DEBUG("histogram insertion failed");
         return false;
     }
     return true;

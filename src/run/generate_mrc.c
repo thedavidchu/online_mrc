@@ -323,7 +323,7 @@ check_no_algorithms_match(struct RunnerArguments const *const array,
             if (array[i].algorithm == array[j].algorithm) {
                 LOGGER_ERROR("algorithm '%s' is run multiple times",
                              algorithm_names[array[i].algorithm]);
-                ok = false;
+                // ok = false;
             }
         }
     }

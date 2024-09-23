@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "histogram/histogram.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "types/entry_type.h"
 
@@ -10,6 +11,9 @@ struct cache;
 
 struct GoelQuickMRC {
     struct cache *cache;
+    // This is empty until we fill it. This is simply for a cleaner
+    // interface so we don't have to manage as much dynamic memory.
+    struct Histogram histogram;
 
     // SHARDS
     double sampling_ratio;
@@ -50,3 +54,7 @@ GoelQuickMRC__to_mrc(struct GoelQuickMRC const *const me,
 
 void
 GoelQuickMRC__destroy(struct GoelQuickMRC *me);
+
+bool
+GoelQuickMRC__get_histogram(struct GoelQuickMRC *const me,
+                            struct Histogram const **const histogram);

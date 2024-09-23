@@ -7,6 +7,7 @@
 
 #include "evicting_map/evicting_map.h"
 #include "file/file.h"
+#include "goel_quickmrc/goel_quickmrc.h"
 #include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -259,8 +260,8 @@ run_quickmrc(struct RunnerArguments const *const args,
     struct QuickMRC me = {0};
     if (!QuickMRC__init(&me,
                         args->sampling_rate,
-                        args->max_size,
                         args->qmrc_size,
+                        16,
                         args->num_bins,
                         args->bin_size,
                         args->out_of_bounds_mode)) {
@@ -277,6 +278,33 @@ run_quickmrc(struct RunnerArguments const *const args,
         (bool (*)(void *const,
                   struct Histogram const **const))QuickMRC__get_histogram,
         (void (*)(void *const))QuickMRC__destroy);
+}
+
+static bool
+run_goel_quickmrc(struct RunnerArguments const *const args,
+                  struct Trace const *const trace)
+{
+    struct GoelQuickMRC me = {0};
+    if (!GoelQuickMRC__init(&me,
+                            args->sampling_rate,
+                            args->max_size,
+                            20,
+                            6,
+                            0,
+                            args->out_of_bounds_mode)) {
+        LOGGER_ERROR("initialization failed!");
+        return false;
+    }
+
+    return trace_runner(
+        &me,
+        args,
+        trace,
+        (bool (*)(void *const, uint64_t const))GoelQuickMRC__access_item,
+        (bool (*)(void *const))GoelQuickMRC__post_process,
+        (bool (*)(void *const,
+                  struct Histogram const **const))GoelQuickMRC__get_histogram,
+        (void (*)(void *const))GoelQuickMRC__destroy);
 }
 
 bool
@@ -323,6 +351,10 @@ run_runner(struct RunnerArguments const *const args,
         }
         return true;
     case MRC_ALGORITHM_GOEL_QUICKMRC:
+        if (!run_goel_quickmrc(args, trace)) {
+            LOGGER_WARN("Goel QuickMRC failed");
+        }
+        return true;
     case MRC_ALGORITHM_AVERAGE_EVICTION_TIME:
     case MRC_ALGORITHM_THEIR_AVERAGE_EVICTION_TIME:
         LOGGER_WARN("not implemented algorithm %s",
