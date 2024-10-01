@@ -37,11 +37,6 @@
 #include "types/value_type.h"
 #include "unused/mark_unused.h"
 
-struct EvictingHashTableNode {
-    KeyType key;
-    ValueType value;
-};
-
 struct EvictingHashTable {
     Hash64BitType *hashes;
     ValueType *values;
@@ -81,7 +76,6 @@ struct SampledPutReturn {
 struct SampledTryPutReturn {
     enum SampledStatus status;
     Hash64BitType new_hash;
-    KeyType old_key;
     Hash64BitType old_hash;
     ValueType old_value;
 };
