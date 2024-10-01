@@ -16,6 +16,23 @@ from warnings import warn
 
 
 EXE = "/home/david/projects/online_mrc/build/src/run/generate_mrc_exe"
+ALGORITHMS = [
+    # NOTE  I guarantee that "Olken" is the first algorithm in this list.
+    #       I do not make guarantees about any other order.
+    "Olken",
+    "Evicting-Map",
+    "Fixed-Rate-SHARDS",  # With adjustment (default algorithm)
+    "Fixed-Rate-SHARDS-raw",  # No adjustment
+    "Fixed-Size-SHARDS",  # No adjustment (it's good enough without it)
+    "QuickMRC",  # My adaptation that uses Ashvin's
+    "QuickMRC-10",  # QuickMRC with SHARDS applied with a threshold of 1/10
+    "QuickMRC-100",
+    "QuickMRC-1000",
+    "Goel-QuickMRC",
+    "Goel-QuickMRC-10",
+    "Goel-QuickMRC-100",
+    "Goel-QuickMRC-1000",
+]
 
 
 def abspath(path: str | Path) -> Path:
@@ -112,16 +129,7 @@ def get_filtered_sorted_files(path: Path, extensions: list[str]) -> list[Path]:
     return files
 
 
-def run_trace(
-    input_: Path,
-    format: str,
-    output_: Path,
-    *,
-    skip_oracle: bool,
-    skip_evicting_map: bool,
-    skip_fixed_rate_shards: bool,
-    skip_fixed_size_shards: bool,
-):
+def run_trace(input_: Path, format: str, output_: Path, *, skip: set[str]):
     def mrc(algo: str):
         return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
 
@@ -131,21 +139,34 @@ def run_trace(
     def stats(algo: str):
         return output_ / "stats" / f"{input_.stem}-{algo}-stats.bin"
 
-    oracle_cmd = f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")},stats_path={stats("Olken")})" '
-    evicting_map_cmd = f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})" '
-    fixed_rate_shards_cmd = f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true,stats_path={stats("Fixed-Rate-SHARDS")})" '
-    fixed_size_shards_cmd = f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})" '
-
+    run_cmds = {
+        "Olken": f'--oracle "Olken(mrc={mrc("Olken")},hist={hist("Olken")},stats_path={stats("Olken")})"',
+        "Fixed-Rate-SHARDS": f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS")},hist={hist("Fixed-Rate-SHARDS")},sampling=1e-3,adj=true,stats_path={stats("Fixed-Rate-SHARDS")})"',
+        "Fixed-Rate-SHARDS-raw": f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS-raw")},hist={hist("Fixed-Rate-SHARDS-raw")},sampling=1e-3,adj=false,stats_path={stats("Fixed-Rate-SHARDS-raw")})"',
+        # NOTE  I place evicting map between the two SHARDS so that its
+        #       cache is warmed up but also warms Fixed-Size SHARDS's.
+        "Evicting-Map": f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})"',
+        "Fixed-Size-SHARDS": f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})"',
+        "Goel-QuickMRC": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC")},hist={hist("Goel-QuickMRC")},sampling=1e0,stats_path={stats("Goel-QuickMRC")})"',
+        "Goel-QuickMRC-10": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC-10")},hist={hist("Goel-QuickMRC-10")},sampling=1e-1,stats_path={stats("Goel-QuickMRC-10")})"',
+        "Goel-QuickMRC-100": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC-100")},hist={hist("Goel-QuickMRC-100")},sampling=1e-2,stats_path={stats("Goel-QuickMRC-100")})"',
+        "Goel-QuickMRC-1000": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC-1000")},hist={hist("Goel-QuickMRC-1000")},sampling=1e-3,stats_path={stats("Goel-QuickMRC-1000")})"',
+        "QuickMRC": f'--run "QuickMRC(mrc={mrc("QuickMRC")},hist={hist("QuickMRC")},sampling=1e0,stats_path={stats("QuickMRC")})"',
+        "QuickMRC-10": f'--run "QuickMRC(mrc={mrc("QuickMRC-10")},hist={hist("QuickMRC-10")},sampling=1e-1,stats_path={stats("QuickMRC-10")})"',
+        "QuickMRC-100": f'--run "QuickMRC(mrc={mrc("QuickMRC-100")},hist={hist("QuickMRC-100")},sampling=1e-2,stats_path={stats("QuickMRC-100")})"',
+        "QuickMRC-1000": f'--run "QuickMRC(mrc={mrc("QuickMRC-1000")},hist={hist("QuickMRC-1000")},sampling=1e-3,stats_path={stats("QuickMRC-1000")})"',
+    }
+    # NOTE  I want to make sure that I don't forget to add any algorithms
+    #       in one of these places. Ideally, this would be a static test
+    #       but Python isn't that nice.
+    assert set(run_cmds) == set(
+        ALGORITHMS
+    ), f"symmetric difference: {set(run_cmds) ^ set(ALGORITHMS)}"
     log = sh(
         f"{EXE} "
         f"--input {input_} "
         f"--format {format} "
-        + (oracle_cmd if not skip_oracle else "")
-        + (fixed_rate_shards_cmd if not skip_fixed_rate_shards else "")
-        # NOTE  I place evicting map between the two SHARDS so that its
-        #       cache is warmed up but also warms Fixed-Size SHARDS's.
-        + (evicting_map_cmd if not skip_evicting_map else "")
-        + (fixed_size_shards_cmd if not skip_fixed_size_shards else "")
+        f"{' '.join(cmd for algo, cmd in run_cmds.items() if algo not in skip)}"
     )
 
     with open(os.path.join(output_, "log", f"{input_.stem}.log"), "w") as f:
@@ -155,16 +176,16 @@ def run_trace(
 
 
 def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
-    oracle_path = mrc_dir / f"{f.stem}-Olken-mrc.bin"
-    frs_path = mrc_dir / f"{f.stem}-Fixed-Rate-SHARDS-mrc.bin"
-    emap_path = mrc_dir / f"{f.stem}-Evicting-Map-mrc.bin"
-    fss_path = mrc_dir / f"{f.stem}-Fixed-Size-SHARDS-mrc.bin"
-    output_path = plot_dir / f"{f.stem}-mrc.pdf"
+    oracle_path, *input_paths = [
+        mrc_dir / f"{f.stem}-{algo}-mrc.bin" for algo in ALGORITHMS
+    ]
+    input_paths = [str(f) for f in input_paths if f.exists()]
+    output_paths = [plot_dir / f"{f.stem}-mrc.png", plot_dir / f"{f.stem}-mrc.pdf"]
     sh(
         f"python3 src/analysis/plot/plot_mrc.py "
-        f"--oracle {oracle_path} "
-        f"--input {frs_path} {emap_path} {fss_path} "
-        f"--output {output_path}"
+        + (f"--oracle {oracle_path} " if oracle_path.exists() else "")
+        + (f"--input {' '.join(input_paths)} " if input_paths else "")
+        + f"--output {' '.join(str(x) for x in output_paths)}"
     )
 
 
@@ -203,14 +224,18 @@ def main():
         required=True,
         help="format of the input traces",
     )
-    parser.add_argument(
-        "--skip-oracle", action="store_true", help="skip running the oracle"
-    )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--skip",
         nargs="*",
-        choices=["Olken", "Evicting-Map", "Fixed-Rate-SHARDS", "Fixed-Size-SHARDS"],
+        choices=ALGORITHMS,
         help="skip running certain algorithms",
+    )
+    group.add_argument(
+        "--select",
+        nargs="*",
+        choices=ALGORITHMS,
+        help="select certain algorithms to run",
     )
     parser.add_argument("--sudo", action="store_true", help="run as sudo")
     parser.add_argument(
@@ -227,6 +252,13 @@ def main():
         sh(f"echo {quote( sudo_password )} | sudo -S echo Testing sudo password")
     if args.overwrite and args.output.exists():
         shutil.rmtree(args.output)
+    # Select (or skip) algorithms
+    if args.skip == [] and args.select == []:
+        skip = []
+    elif args.skip:
+        skip = args.skip
+    else:
+        skip = set(ALGORITHMS) - set(args.select)
 
     setup_env(
         output_dir=args.output,
@@ -247,10 +279,7 @@ def main():
             f,
             args.format,
             args.output,
-            skip_oracle=args.skip_oracle or "Olken" in args.skip,
-            skip_evicting_map="Evicting-Map" in args.skip,
-            skip_fixed_rate_shards="Fixed-Rate-SHARDS" in args.skip,
-            skip_fixed_size_shards="Fixed-Size-SHARDS" in args.skip,
+            skip=skip,
         )
     for f in files:
         plot_mrc(f, mrc_dir, plot_dir)
