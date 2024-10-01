@@ -14,6 +14,10 @@
  * 3. It trivially yields a HyperLogLog counter!
  *
  * @note    Changing the hash function breaks my beautiful test cases.
+ * @note    I remove the key to improve speed. Now, it is a hash-only
+ *          algorithm. There should be some correction factor because of
+ *          this, but I'm not smart enough to figure this out. See the
+ *          HyperLogLog paper.
  */
 #pragma once
 
@@ -39,8 +43,8 @@ struct EvictingHashTableNode {
 };
 
 struct EvictingHashTable {
-    struct EvictingHashTableNode *data;
     Hash64BitType *hashes;
+    ValueType *values;
     size_t length;
     double init_sampling_ratio;
     Hash64BitType global_threshold;
@@ -105,13 +109,12 @@ EvictingHashTable__refresh_threshold(struct EvictingHashTable *me);
 
 static inline struct SampledTryPutReturn
 EHT__insert_new_element(struct EvictingHashTable *me,
-                        KeyType key,
                         ValueType value,
-                        struct EvictingHashTableNode *incumbent,
+                        ValueType *value_ptr,
                         Hash64BitType *hash_ptr,
                         Hash64BitType hash)
 {
-    *incumbent = (struct EvictingHashTableNode){.key = key, .value = value};
+    *value_ptr = value;
     *hash_ptr = hash;
     ++me->num_inserted;
     if (me->num_inserted == me->length) {
@@ -124,9 +127,8 @@ EHT__insert_new_element(struct EvictingHashTable *me,
 
 static inline struct SampledTryPutReturn
 EHT__replace_incumbent_element(struct EvictingHashTable *me,
-                               KeyType key,
                                ValueType value,
-                               struct EvictingHashTableNode *incumbent,
+                               ValueType *value_ptr,
                                Hash64BitType *hash_ptr,
                                Hash64BitType hash)
 {
@@ -134,14 +136,13 @@ EHT__replace_incumbent_element(struct EvictingHashTable *me,
     struct SampledTryPutReturn r = (struct SampledTryPutReturn){
         .status = SAMPLED_REPLACED,
         .new_hash = hash,
-        .old_key = incumbent->key,
         .old_hash = old_hash,
-        .old_value = incumbent->value,
+        .old_value = *value_ptr,
     };
     // NOTE Update the incumbent before we do the scan for the maximum
     //      threshold because we want do not want to "find" that the
     //      maximum hasn't changed.
-    *incumbent = (struct EvictingHashTableNode){.key = key, .value = value};
+    *value_ptr = value;
     *hash_ptr = hash;
     if (old_hash == me->global_threshold) {
         EvictingHashTable__refresh_threshold(me);
@@ -152,9 +153,8 @@ EHT__replace_incumbent_element(struct EvictingHashTable *me,
 
 static inline struct SampledTryPutReturn
 EHT__update_incumbent_element(struct EvictingHashTable *me,
-                              KeyType key,
                               ValueType value,
-                              struct EvictingHashTableNode *incumbent,
+                              ValueType *value_ptr,
                               Hash64BitType *hash_ptr,
                               Hash64BitType hash)
 {
@@ -163,11 +163,10 @@ EHT__update_incumbent_element(struct EvictingHashTable *me,
     struct SampledTryPutReturn r = (struct SampledTryPutReturn){
         .status = SAMPLED_UPDATED,
         .new_hash = hash,
-        .old_key = key,
         .old_hash = hash,
-        .old_value = incumbent->value,
+        .old_value = *value_ptr,
     };
-    incumbent->value = value;
+    *value_ptr = value;
     return r;
 }
 
@@ -188,27 +187,21 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
                            KeyType key,
                            ValueType value)
 {
-    if (me == NULL || me->data == NULL || me->length == 0)
+    if (!me || !me->hashes || !me->values || me->length == 0)
         return (struct SampledTryPutReturn){.status = SAMPLED_NOTFOUND};
 
     Hash64BitType hash = Hash64Bit(key);
     if (hash > me->global_threshold)
         return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
 
-    struct EvictingHashTableNode *incumbent = &me->data[hash % me->length];
+    ValueType *incumbent = &me->values[hash % me->length];
     Hash64BitType *const hash_ptr = &me->hashes[hash % me->length];
     Hash64BitType const old_hash = *hash_ptr;
     if (old_hash == UINT64_MAX) {
-        return EHT__insert_new_element(me,
-                                       key,
-                                       value,
-                                       incumbent,
-                                       hash_ptr,
-                                       hash);
+        return EHT__insert_new_element(me, value, incumbent, hash_ptr, hash);
     }
     if (hash < old_hash) {
         return EHT__replace_incumbent_element(me,
-                                              key,
                                               value,
                                               incumbent,
                                               hash_ptr,
@@ -216,9 +209,8 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
     }
     // NOTE If the key comparison is expensive, then one could first
     //      compare the hashes. However, in this case, they are not expensive.
-    if (key == incumbent->key) {
+    if (hash == old_hash) {
         return EHT__update_incumbent_element(me,
-                                             key,
                                              value,
                                              incumbent,
                                              hash_ptr,
@@ -244,7 +236,8 @@ linear_counting(uint64_t const m, uint64_t const V)
 static inline double
 EHT__estimate_num_unique(struct EvictingHashTable const *const me)
 {
-    if (me == NULL || me->data == NULL || me->length == 0)
+    if (me == NULL || me->hashes == NULL || me->values == NULL ||
+        me->length == 0)
         return 0.0;
     double const raw_estimate =
         me->hll_alpha_m * me->length * me->length / me->running_denominator;
