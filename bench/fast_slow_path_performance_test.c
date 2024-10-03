@@ -77,11 +77,21 @@ hammer_single_element(size_t const i, size_t const trace_length)
     return 0;
 }
 
+/// @note   This will cause the sampling methods to run quickly because
+///         we are increasing the hashes, so later entries won't get
+///         sampled.
 static uint64_t
 increasing_hashes(size_t const i, size_t const trace_length)
 {
     UNUSED(trace_length);
     return reverse_splitmix64_hash(i);
+}
+
+static uint64_t
+random_hashes(size_t const i, size_t const trace_length)
+{
+    UNUSED(trace_length);
+    return i;
 }
 
 static uint64_t
@@ -124,8 +134,8 @@ main(void)
     MAYBE_UNUSED(SHORT_RUN);
     MAYBE_UNUSED(LONG_RUN);
     char const *const *const runner_args_array = SHORT_RUN;
-    bool const run_hammer = true, run_fast = true, run_slow = true,
-               run_slowest = true;
+    bool const run_hammer = true, run_fast = true, run_random = true,
+               run_slow = true, run_slowest = true;
     // Test fastest trace
     trace = generate_trace(trace_length, hammer_single_element);
     if (run_hammer && !run_trace(runner_args_array, &trace)) {
@@ -138,6 +148,14 @@ main(void)
     trace = generate_trace(trace_length, increasing_hashes);
     if (run_fast && !run_trace(runner_args_array, &trace)) {
         LOGGER_ERROR("fast path failed");
+        exit(EXIT_FAILURE);
+    }
+    Trace__destroy(&trace);
+
+    // Test random trace
+    trace = generate_trace(trace_length, random_hashes);
+    if (run_random && !run_trace(runner_args_array, &trace)) {
+        LOGGER_ERROR("random path failed");
         exit(EXIT_FAILURE);
     }
     Trace__destroy(&trace);
