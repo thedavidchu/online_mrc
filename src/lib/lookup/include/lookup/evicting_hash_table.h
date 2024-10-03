@@ -191,15 +191,8 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
     ValueType *incumbent = &me->values[hash % me->length];
     Hash64BitType *const hash_ptr = &me->hashes[hash % me->length];
     Hash64BitType const old_hash = *hash_ptr;
-    if (old_hash == UINT64_MAX) {
-        return EHT__insert_new_element(me, value, incumbent, hash_ptr, hash);
-    }
-    if (hash < old_hash) {
-        return EHT__replace_incumbent_element(me,
-                                              value,
-                                              incumbent,
-                                              hash_ptr,
-                                              hash);
+    if (hash > old_hash) {
+        return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
     }
     // NOTE If the key comparison is expensive, then one could first
     //      compare the hashes. However, in this case, they are not expensive.
@@ -210,7 +203,16 @@ EvictingHashTable__try_put(struct EvictingHashTable *me,
                                              hash_ptr,
                                              hash);
     }
-    return (struct SampledTryPutReturn){.status = SAMPLED_IGNORED};
+    assert(hash < old_hash);
+    if (old_hash == UINT64_MAX) {
+        return EHT__insert_new_element(me, value, incumbent, hash_ptr, hash);
+    } else {
+        return EHT__replace_incumbent_element(me,
+                                              value,
+                                              incumbent,
+                                              hash_ptr,
+                                              hash);
+    }
 }
 
 /// @param  m: uint64_t const
