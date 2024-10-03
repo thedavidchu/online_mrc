@@ -185,7 +185,6 @@ def plot_runtime(
     fig.suptitle("Runtimes by Trace")
     fig.supxlabel("Trace Name")
     fig.supylabel("Runtimes [seconds]")
-    axs.set_ylim(bottom=0)
     if plot_trace_read_times:
         axs.plot(trace_read_times, "x", label="Trace Read Times")
     for algo, times in compute_times.items():
@@ -376,7 +375,6 @@ def plot_throughput(
     fig.suptitle("Throughput vs Time")
     fig.supxlabel("Time from Start [seconds]")
     fig.supylabel("Throughput [millions of entries processed]")
-    axs.set_ylim(bottom=0)
     for file, (runner_args, throughputs) in zip(files, data):
         for runner_arg, throughput in zip(runner_args, throughputs):
             pretty_label = f"{str(file)}:{runner_arg['algorithm']}"
