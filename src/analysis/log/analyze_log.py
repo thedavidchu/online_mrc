@@ -185,12 +185,11 @@ def plot_runtime(
     fig.suptitle("Runtimes by Trace")
     fig.supxlabel("Trace Name")
     fig.supylabel("Runtimes [seconds]")
-    axs.set_ylim(bottom=0)
     if plot_trace_read_times:
-        axs.plot(trace_read_times, "x", label="Trace Read Times")
+        axs.plot(trace_read_times, "x-", label="Trace Read Times")
     for algo, times in compute_times.items():
         pretty_label = algo.replace("-", " ")
-        axs.plot(times, "x", label=pretty_label)
+        axs.plot(times, "x-", label=pretty_label)
     axs.legend()
 
     # Add labels to the axis
@@ -251,7 +250,7 @@ def plot_accuracy(
     axs.set_ylim(bottom=0)
     for algo, accuracies in mean_absolute_errors.items():
         pretty_label = algo.replace("-", " ")
-        axs.plot(100 * accuracies, "x", label=pretty_label)
+        axs.plot(100 * accuracies, "x-", label=pretty_label)
 
     labels = get_x_axis_labels([str(f) for f in files])
     axs.set_xticks(
@@ -376,11 +375,10 @@ def plot_throughput(
     fig.suptitle("Throughput vs Time")
     fig.supxlabel("Time from Start [seconds]")
     fig.supylabel("Throughput [millions of entries processed]")
-    axs.set_ylim(bottom=0)
     for file, (runner_args, throughputs) in zip(files, data):
         for runner_arg, throughput in zip(runner_args, throughputs):
             pretty_label = f"{str(file)}:{runner_arg['algorithm']}"
-            axs.plot(throughput.keys(), throughput.values(), "x", label=pretty_label)
+            axs.plot(throughput.keys(), throughput.values(), "x-", label=pretty_label)
     axs.legend()
     for output in outputs:
         fig.savefig(output)

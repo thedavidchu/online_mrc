@@ -1,7 +1,6 @@
 subdir('common_headers')
 subdir('file')
 subdir('hash')
-subdir('lookup')
 subdir('hyperloglog')
 subdir('io')
 subdir('priority_queue')
@@ -12,6 +11,9 @@ subdir('tree')
 
 # Relies on the 'file' library
 subdir('array')
+
+# Relies on 'array' library
+subdir('lookup')
 
 # Relies on the 'io' library
 subdir('histogram')

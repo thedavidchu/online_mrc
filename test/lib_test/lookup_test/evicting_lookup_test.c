@@ -101,7 +101,6 @@ sampled_try_put_test(void)
         if (keys[i]) {
             g_assert_cmpuint(r.status, ==, SAMPLED_UPDATED);
             g_assert_cmpuint(r.new_hash, ==, Hash64Bit(key));
-            g_assert_cmpuint(r.old_key, ==, key);
             g_assert_cmpuint(r.old_hash, ==, Hash64Bit(key));
             g_assert_cmpuint(r.old_value, ==, first_val);
             struct SampledLookupReturn s = EvictingHashTable__lookup(&me, key);

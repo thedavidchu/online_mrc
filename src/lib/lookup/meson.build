@@ -12,6 +12,7 @@ lookup_lib = library(
         'boost_hash_table.cpp',
     ],
     dependencies: [
+        array_dep,
         boost_dep,
         common_dep,
         glib_dep,
