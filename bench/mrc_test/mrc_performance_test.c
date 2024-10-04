@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "histogram/histogram.h"
 #include "math/positive_ceiling_divide.h"
 #include "random/zipfian_random.h"
 
@@ -91,12 +92,17 @@ test_all(void)
                      PardaFixedRateShards__access_item,
                      PardaFixedRateShards__destroy);
 
-    PERFORMANCE_TEST(
-        struct QuickMRC,
-        me,
-        QuickMRC__init(&me, 1.0, 1024, 16, hist_num_bins, hist_bin_size),
-        QuickMRC__access_item,
-        QuickMRC__destroy);
+    PERFORMANCE_TEST(struct QuickMRC,
+                     me,
+                     QuickMRC__init(&me,
+                                    1.0,
+                                    1024,
+                                    16,
+                                    hist_num_bins,
+                                    hist_bin_size,
+                                    HistogramOutOfBoundsMode__realloc),
+                     QuickMRC__access_item,
+                     QuickMRC__destroy);
 
     PERFORMANCE_TEST(
         struct FixedRateShards,
@@ -210,19 +216,29 @@ test_quickmrc(void)
         FixedRateShards__access_item,
         FixedRateShards__destroy);
 #endif
-    PERFORMANCE_TEST(
-        struct QuickMRC,
-        me,
-        QuickMRC__init(&me, 1.0, 1024, 16, hist_num_bins, hist_bin_size),
-        QuickMRC__access_item,
-        QuickMRC__destroy);
+    PERFORMANCE_TEST(struct QuickMRC,
+                     me,
+                     QuickMRC__init(&me,
+                                    1.0,
+                                    1024,
+                                    16,
+                                    hist_num_bins,
+                                    hist_bin_size,
+                                    HistogramOutOfBoundsMode__realloc),
+                     QuickMRC__access_item,
+                     QuickMRC__destroy);
 
-    PERFORMANCE_TEST(
-        struct QuickMRC,
-        me,
-        QuickMRC__init(&me, 1e-3, 1024, 16, hist_num_bins, hist_bin_size),
-        QuickMRC__access_item,
-        QuickMRC__destroy);
+    PERFORMANCE_TEST(struct QuickMRC,
+                     me,
+                     QuickMRC__init(&me,
+                                    1e-3,
+                                    1024,
+                                    16,
+                                    hist_num_bins,
+                                    hist_bin_size,
+                                    HistogramOutOfBoundsMode__realloc),
+                     QuickMRC__access_item,
+                     QuickMRC__destroy);
 
     PERFORMANCE_TEST(
         struct BucketedQuickMRC,

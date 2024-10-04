@@ -10,6 +10,7 @@
 
 #include <glib.h>
 
+#include "array/print_array.h"
 #include "arrays/array_size.h"
 #include "histogram/histogram.h"
 #include "invariants/implies.h"
@@ -398,6 +399,20 @@ Histogram__exactly_equal(struct Histogram *me, struct Histogram *other)
     if (memcmp(me->histogram,
                other->histogram,
                sizeof(*me->histogram) * me->num_bins) != 0) {
+        fprintf(stdout, "output: ");
+        print_array(stdout,
+                    me->histogram,
+                    me->num_bins,
+                    sizeof(*me->histogram),
+                    true,
+                    _print_uint64);
+        fprintf(stdout, "oracle: ");
+        print_array(stdout,
+                    other->histogram,
+                    other->num_bins,
+                    sizeof(*other->histogram),
+                    true,
+                    _print_uint64);
         return false;
     }
     return true;

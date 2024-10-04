@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "histogram/histogram.h"
+#include "math/positive_ceiling_divide.h"
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
 #endif
@@ -15,8 +16,8 @@
 #include "types/value_type.h"
 #include "unused/mark_unused.h"
 
-#include "evicting_quickmrc/evicting_quickmrc.h"
-#include "evicting_quickmrc/qmrc.h"
+#include "quickmrc/evicting_quickmrc.h"
+#include "quickmrc/quickmrc_buckets.h"
 
 static bool
 initialize(struct EvictingQuickMRC *const me,
@@ -29,7 +30,10 @@ initialize(struct EvictingQuickMRC *const me,
 {
     if (me == NULL)
         return false;
-    if (!qmrc__init(&me->qmrc, num_hash_buckets, num_qmrc__buckets, 0))
+    if (!qmrc__init(
+            &me->qmrc,
+            num_qmrc__buckets,
+            POSITIVE_CEILING_DIVIDE(num_hash_buckets, num_qmrc__buckets)))
         goto cleanup;
     if (!EvictingHashTable__init(&me->hash_table,
                                  num_hash_buckets,

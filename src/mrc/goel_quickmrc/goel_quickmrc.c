@@ -8,6 +8,7 @@
 
 #include "goel_quickmrc/goel_quickmrc.h"
 #include "hash/hash.h"
+#include "histogram/histogram.h"
 #include "logger/logger.h"
 #include "math/ratio.h"
 #include "miss_rate_curve/miss_rate_curve.h"
@@ -113,18 +114,18 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
     return true;
 }
 
-void
+bool
 GoelQuickMRC__post_process(struct GoelQuickMRC *me)
 {
     if (me == NULL || me->cache == NULL || me->cache->qmrc == NULL) {
         LOGGER_TRACE("cannot post-process uninitialized structure");
-        return;
+        return false;
     }
 
     // SHARDS-Adj seems to decrease the accuracy.
     if (!me->shards_adjustment) {
         LOGGER_TRACE("configured to skip the SHARDS adjustment");
-        return;
+        return true;
     }
 
     // NOTE I need to scale the adjustment by the scale that I've been adjusting
@@ -150,6 +151,7 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
             break;
         }
     }
+    return true;
 }
 
 void
@@ -214,4 +216,43 @@ GoelQuickMRC__destroy(struct GoelQuickMRC *me)
 {
     cache_destroy(me->cache);
     *me = (struct GoelQuickMRC){0};
+}
+
+bool
+GoelQuickMRC__get_histogram(struct GoelQuickMRC *const me,
+                            struct Histogram const **const histogram)
+{
+    if (!me || !me->cache || !me->cache->qmrc || !histogram)
+        return false;
+    struct histogram *hist = &me->cache->qmrc->hist;
+    // Collect metadata
+    size_t const num_bins = hist->length;
+    size_t const bin_size = ((size_t)1 << hist->log_bucket_size) * me->scale;
+    if (!Histogram__init(&me->histogram,
+                         num_bins,
+                         bin_size,
+                         HistogramOutOfBoundsMode__merge_bins))
+        return false;
+    uint64_t const total = me->num_entries_processed;
+    uint64_t const unique = me->cache->qmrc->total_keys;
+    // NOTE We can't just memcpy because the data sizes are different.
+    uint64_t count = 0;
+    for (size_t i = 0; i < hist->length; ++i) {
+        uint64_t hits = hist->hits[i];
+        me->histogram.histogram[i] = hits;
+        count += hits;
+    }
+    MAYBE_UNUSED(count);
+    assert(total - count == unique);
+    me->histogram = (struct Histogram){
+        .histogram = me->histogram.histogram,
+        .bin_size = me->histogram.bin_size,
+        .num_bins = me->histogram.num_bins,
+        .out_of_bounds_mode = me->histogram.out_of_bounds_mode,
+        .false_infinity = 0,
+        .infinity = unique,
+        .running_sum = total,
+    };
+    *histogram = &me->histogram;
+    return true;
 }

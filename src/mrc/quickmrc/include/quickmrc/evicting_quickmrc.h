@@ -9,7 +9,7 @@
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 
-#include "evicting_quickmrc/qmrc.h"
+#include "quickmrc/quickmrc_buckets.h"
 
 #ifdef INTERVAL_STATISTICS
 #include "interval_statistics/interval_statistics.h"
