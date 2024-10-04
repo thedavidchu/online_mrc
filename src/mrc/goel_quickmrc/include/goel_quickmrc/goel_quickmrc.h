@@ -38,7 +38,7 @@ GoelQuickMRC__init(struct GoelQuickMRC *me,
 bool
 GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry);
 
-void
+bool
 GoelQuickMRC__post_process(struct GoelQuickMRC *me);
 
 void

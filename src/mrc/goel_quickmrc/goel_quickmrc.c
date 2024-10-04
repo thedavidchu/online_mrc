@@ -114,18 +114,18 @@ GoelQuickMRC__access_item(struct GoelQuickMRC *me, EntryType entry)
     return true;
 }
 
-void
+bool
 GoelQuickMRC__post_process(struct GoelQuickMRC *me)
 {
     if (me == NULL || me->cache == NULL || me->cache->qmrc == NULL) {
         LOGGER_TRACE("cannot post-process uninitialized structure");
-        return;
+        return false;
     }
 
     // SHARDS-Adj seems to decrease the accuracy.
     if (!me->shards_adjustment) {
         LOGGER_TRACE("configured to skip the SHARDS adjustment");
-        return;
+        return true;
     }
 
     // NOTE I need to scale the adjustment by the scale that I've been adjusting
@@ -151,6 +151,7 @@ GoelQuickMRC__post_process(struct GoelQuickMRC *me)
             break;
         }
     }
+    return true;
 }
 
 void
