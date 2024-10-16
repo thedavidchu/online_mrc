@@ -50,8 +50,9 @@ MemoryMap__init(struct MemoryMap *me,
                 char const *const file_name,
                 char const *const modes)
 {
-    FILE *fp = NULL; // NOTE We transfer the ownership to the fd
+    FILE *fp = NULL;
     if (me == NULL || file_name == NULL) {
+        LOGGER_ERROR("invalid parameters");
         return false;
     }
     fp = fopen(file_name, modes);
