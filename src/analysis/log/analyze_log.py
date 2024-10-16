@@ -247,7 +247,6 @@ def plot_accuracy(
     fig.suptitle("Mean Absolute Error (MAE) by Trace")
     fig.supxlabel("Trace Name")
     fig.supylabel("Mean Absolute Error (MAE) [%]")
-    axs.set_ylim(bottom=0)
     for algo, accuracies in mean_absolute_errors.items():
         pretty_label = algo.replace("-", " ")
         axs.plot(100 * accuracies, "x-", label=pretty_label)
