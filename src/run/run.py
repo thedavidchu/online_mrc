@@ -33,6 +33,7 @@ ALGORITHMS = [
     "Goel-QuickMRC-100",
     "Goel-QuickMRC-1000",
 ]
+MAX_SIZE = 1 << 13
 
 
 def abspath(path: str | Path) -> Path:
@@ -81,6 +82,7 @@ def setup_env(
     output_dir: Path | None = None,
     setup_output: bool = True,
     setup_build: bool = True,
+    oracle_dir: Path | None = None,
 ):
     top_level_dir = sh("git rev-parse --show-toplevel").stdout.strip()
     if setup_output:
@@ -97,6 +99,14 @@ def setup_env(
         os.chdir(build_dir)
         sh("meson setup --wipe")
         sh("meson compile")
+    if oracle_dir is not None:
+        if not oracle_dir.exists():
+            os.mkdir(oracle_dir)
+        if not (oracle_dir / "hist").exists():
+            os.mkdir(oracle_dir / "hist")
+        if not (oracle_dir / "mrc").exists():
+            os.mkdir(oracle_dir / "mrc")
+
     os.chdir(top_level_dir)
 
 
@@ -129,12 +139,20 @@ def get_filtered_sorted_files(path: Path, extensions: list[str]) -> list[Path]:
     return files
 
 
-def run_trace(input_: Path, format: str, output_: Path, *, skip: set[str]):
-    def mrc(algo: str):
-        return os.path.join(str(output_), "mrc", f"{input_.stem}-{algo}-mrc.bin")
+def run_trace(
+    input_: Path, format: str, output_: Path, *, skip: set[str], oracle_path: Path
+):
+    def mrc(algo: str, path: Path | None = None):
+        """Example return: <path|output_>/mrc/clusterX-Olken-mrc.bin"""
+        if path is None:
+            path = output_
+        return os.path.join(str(path), "mrc", f"{input_.stem}-{algo}-mrc.bin")
 
-    def hist(algo: str):
-        return os.path.join(str(output_), "hist", f"{input_.stem}-{algo}-hist.bin")
+    def hist(algo: str, path: Path | None = None):
+        """Example return: <path|output_>/hist/clusterX-Olken-hist.bin"""
+        if path is None:
+            path = output_
+        return os.path.join(str(path), "hist", f"{input_.stem}-{algo}-hist.bin")
 
     def stats(algo: str):
         return output_ / "stats" / f"{input_.stem}-{algo}-stats.bin"
@@ -145,8 +163,8 @@ def run_trace(input_: Path, format: str, output_: Path, *, skip: set[str]):
         "Fixed-Rate-SHARDS-raw": f'--run "Fixed-Rate-SHARDS(mrc={mrc("Fixed-Rate-SHARDS-raw")},hist={hist("Fixed-Rate-SHARDS-raw")},sampling=1e-3,adj=false,stats_path={stats("Fixed-Rate-SHARDS-raw")})"',
         # NOTE  I place evicting map between the two SHARDS so that its
         #       cache is warmed up but also warms Fixed-Size SHARDS's.
-        "Evicting-Map": f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size=8192,stats_path={stats("Evicting-Map")})"',
-        "Fixed-Size-SHARDS": f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size=8192,stats_path={stats("Fixed-Size-SHARDS")})"',
+        "Evicting-Map": f'--run "Evicting-Map(mrc={mrc("Evicting-Map")},hist={hist("Evicting-Map")},sampling=1e-1,max_size={MAX_SIZE},stats_path={stats("Evicting-Map")})"',
+        "Fixed-Size-SHARDS": f'--run "Fixed-Size-SHARDS(mrc={mrc("Fixed-Size-SHARDS")},hist={hist("Fixed-Size-SHARDS")},sampling=1e-1,max_size={MAX_SIZE},stats_path={stats("Fixed-Size-SHARDS")})"',
         "Goel-QuickMRC": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC")},hist={hist("Goel-QuickMRC")},sampling=1e0,stats_path={stats("Goel-QuickMRC")})"',
         "Goel-QuickMRC-10": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC-10")},hist={hist("Goel-QuickMRC-10")},sampling=1e-1,stats_path={stats("Goel-QuickMRC-10")})"',
         "Goel-QuickMRC-100": f'--run "Goel-QuickMRC(mrc={mrc("Goel-QuickMRC-100")},hist={hist("Goel-QuickMRC-100")},sampling=1e-2,stats_path={stats("Goel-QuickMRC-100")})"',
@@ -156,6 +174,14 @@ def run_trace(input_: Path, format: str, output_: Path, *, skip: set[str]):
         "QuickMRC-100": f'--run "QuickMRC(mrc={mrc("QuickMRC-100")},hist={hist("QuickMRC-100")},sampling=1e-2,stats_path={stats("QuickMRC-100")})"',
         "QuickMRC-1000": f'--run "QuickMRC(mrc={mrc("QuickMRC-1000")},hist={hist("QuickMRC-1000")},sampling=1e-3,stats_path={stats("QuickMRC-1000")})"',
     }
+    # We specify a special place for the oracle to be placed. This should
+    # reduce redundant oracle computations.
+    if oracle_path:
+        # NOTE  We provide a 'stats_path' just in case we end up running
+        #       Olken again.
+        run_cmds["Olken"] = (
+            f'--oracle "Olken(runmode=tryread,mrc={mrc("Olken", oracle_path)},hist={hist("Olken", oracle_path)},stats_path={stats("Olken")})"',
+        )
     # NOTE  I want to make sure that I don't forget to add any algorithms
     #       in one of these places. Ideally, this would be a static test
     #       but Python isn't that nice.
@@ -175,10 +201,15 @@ def run_trace(input_: Path, format: str, output_: Path, *, skip: set[str]):
         f.write(log.stdout)
 
 
-def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path):
-    oracle_path, *input_paths = [
-        mrc_dir / f"{f.stem}-{algo}-mrc.bin" for algo in ALGORITHMS
-    ]
+def plot_mrc(f: Path, mrc_dir: Path, plot_dir: Path, oracle: Path | None):
+    if oracle is None:
+        oracle_path, *input_paths = [
+            mrc_dir / f"{f.stem}-{algo}-mrc.bin" for algo in ALGORITHMS
+        ]
+    else:
+        oracle_path = oracle / "mrc" / f"{f.stem}-Olken-mrc.bin"
+        input_paths = [mrc_dir / f"{f.stem}-{algo}-mrc.bin" for algo in ALGORITHMS]
+
     input_paths = [str(f) for f in input_paths if f.exists()]
     output_paths = [plot_dir / f"{f.stem}-mrc.png", plot_dir / f"{f.stem}-mrc.pdf"]
     sh(
@@ -216,6 +247,12 @@ def main():
     )
     parser.add_argument(
         "--output", "-o", type=abspath, required=True, help="directory for outputs"
+    )
+    parser.add_argument(
+        "--oracle",
+        type=abspath,
+        default=None,
+        help="path to the oracle directory (e.g. './olken-oracle/{mrc,hist}')",
     )
     parser.add_argument(
         "--format",
@@ -262,6 +299,7 @@ def main():
 
     setup_env(
         output_dir=args.output,
+        oracle_dir=args.oracle,
     )
     # Recall Python's pathlib syntax for concatenating file names. Yes,
     # it's weird. And yes, I don't actually need this comment.
@@ -280,9 +318,10 @@ def main():
             args.format,
             args.output,
             skip=skip,
+            oracle_path=args.oracle,
         )
     for f in files:
-        plot_mrc(f, mrc_dir, plot_dir)
+        plot_mrc(f, mrc_dir, plot_dir, args.oracle)
     analyze_log(args.output, log_dir)
 
 
