@@ -15,7 +15,6 @@
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
 #include "timer/timer.h"
-#include "trace/generator.h"
 #include "trace/trace.h"
 
 #include "run/runner_arguments.h"

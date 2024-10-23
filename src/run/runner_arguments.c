@@ -27,8 +27,9 @@ static char *runner_mode_names[] = {
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
 //      simply use the enumeration to print the correct string!
-char *algorithm_names[10] = {
+char *algorithm_names[] = {
     "INVALID",
+    "Oracle",
     "Olken",
     "Fixed-Rate-SHARDS",
     "Fixed-Size-SHARDS",

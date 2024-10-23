@@ -21,6 +21,9 @@ enum RunnerMode {
 
 enum MRCAlgorithm {
     MRC_ALGORITHM_INVALID,
+    // NOTE The oracle is a special case of Olken where we focus on
+    //      maximizing the chance of a successful run over speed.
+    MRC_ALGORITHM_ORACLE,
     MRC_ALGORITHM_OLKEN,
     MRC_ALGORITHM_FIXED_RATE_SHARDS,
     MRC_ALGORITHM_FIXED_SIZE_SHARDS,

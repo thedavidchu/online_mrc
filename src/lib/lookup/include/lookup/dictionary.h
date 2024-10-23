@@ -27,6 +27,9 @@ Dictionary__get_size(struct Dictionary const *const me);
 char const *
 Dictionary__get(struct Dictionary const *const me, char const *const key);
 
+bool
+Dictionary__contains(struct Dictionary const *const me, char const *const key);
+
 enum PutUniqueStatus
 Dictionary__put(struct Dictionary *const me,
                 char const *const key,
