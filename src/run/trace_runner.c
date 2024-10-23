@@ -15,7 +15,6 @@
 #include "shards/fixed_rate_shards.h"
 #include "shards/fixed_size_shards.h"
 #include "timer/timer.h"
-#include "trace/generator.h"
 #include "trace/trace.h"
 
 #include "run/runner_arguments.h"
@@ -47,14 +46,19 @@ trace_runner(void *const runner_data,
         return false;
     }
 
-    if (args->run_mode == RUNNER_MODE_TRY_READ) {
+    if (args->run_mode == RUNNER_MODE_TRY_READ ||
+        args->run_mode == RUNNER_MODE_ONLY_READ) {
         if (file_exists(args->mrc_path) && file_exists(args->hist_path)) {
             LOGGER_INFO("skipping %s to read existing files",
                         algorithm_names[args->algorithm]);
             goto ok_cleanup;
-        } else {
-            LOGGER_INFO(
-                "MRC and/or histogram files don't exist, so running normally");
+        } else if (args->run_mode == RUNNER_MODE_TRY_READ) {
+            LOGGER_INFO("MRC and/or histogram files don't exist, so running "
+                        "normally (try-read)");
+        } else if (args->run_mode == RUNNER_MODE_ONLY_READ) {
+            LOGGER_ERROR("MRC and/or histogram files don't exist, so aborting "
+                         "(read-only)");
+            return false;
         }
     }
 
@@ -266,27 +270,27 @@ run_runner(struct RunnerArguments const *const args,
     switch (args->algorithm) {
     case MRC_ALGORITHM_OLKEN:
         if (!run_olken(args, trace)) {
-            LOGGER_WARN("Olken failed");
+            LOGGER_WARN("Olken failed. Continuing...");
         }
         return true;
     case MRC_ALGORITHM_FIXED_RATE_SHARDS:
         if (!run_fixed_rate_shards(args, trace)) {
-            LOGGER_WARN("Fixed-Rate SHARDS failed");
+            LOGGER_WARN("Fixed-Rate SHARDS failed. Continuing...");
         }
         return true;
     case MRC_ALGORITHM_FIXED_SIZE_SHARDS:
         if (!run_fixed_size_shards(args, trace)) {
-            LOGGER_WARN("Fixed-Size SHARDS failed");
+            LOGGER_WARN("Fixed-Size SHARDS failed. Continuing...");
         }
         return true;
     case MRC_ALGORITHM_EVICTING_MAP:
         if (!run_evicting_map(args, trace)) {
-            LOGGER_WARN("Evicting Map failed");
+            LOGGER_WARN("Evicting Map failed. Continuing...");
         }
         return true;
     case MRC_ALGORITHM_EVICTING_QUICKMRC:
         if (!run_evicting_quickmrc(args, trace)) {
-            LOGGER_WARN("Evicting QuickMRC failed");
+            LOGGER_WARN("Evicting QuickMRC failed. Continuing...");
         }
         return true;
     case MRC_ALGORITHM_QUICKMRC:

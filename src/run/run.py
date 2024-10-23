@@ -180,7 +180,7 @@ def run_trace(
         # NOTE  We provide a 'stats_path' just in case we end up running
         #       Olken again.
         run_cmds["Olken"] = (
-            f'--oracle "Olken(runmode=tryread,mrc={mrc("Olken", oracle_path)},hist={hist("Olken", oracle_path)},stats_path={stats("Olken")})"',
+            f'--oracle "Olken(runmode=tryread,mrc={mrc("Olken", oracle_path)},hist={hist("Olken", oracle_path)},stats_path={stats("Olken")})"'
         )
     # NOTE  I want to make sure that I don't forget to add any algorithms
     #       in one of these places. Ideally, this would be a static test

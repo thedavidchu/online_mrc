@@ -52,6 +52,15 @@ Dictionary__get(struct Dictionary const *const me, char const *const key)
     return g_hash_table_lookup(me->hash_table, key);
 }
 
+bool
+Dictionary__contains(struct Dictionary const *const me, char const *const key)
+{
+    if (me == NULL || me->hash_table == NULL || key == NULL) {
+        return NULL;
+    }
+    return g_hash_table_contains(me->hash_table, key);
+}
+
 enum PutUniqueStatus
 Dictionary__put(struct Dictionary *const me,
                 char const *const key,
