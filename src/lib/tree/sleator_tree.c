@@ -1,8 +1,8 @@
 /*
            An implementation of top-down splaying with sizes
              D. Sleator <sleator@cs.cmu.edu>, January 1994.
-Modified a little by Qingpeng Niu for tracing the global chunck library memory use. Just add a
-compute sum of size from search node to the right most node.
+Modified a little by Qingpeng Niu for tracing the global chunck library memory
+use. Just add a compute sum of size from search node to the right most node.
 */
 /*
            An implementation of top-down splaying with sizes
@@ -51,6 +51,7 @@ compute sum of size from search node to the right most node.
   [4] "Data Structures, Algorithms, and Performance", Derick Wood,
        Addison-Wesley, 1993, pp 367-375
 */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -69,86 +70,97 @@ static struct Subtree *
 sleator_splay(struct Subtree *t, KeyType key);
 
 static struct Subtree *
-sleator_splay(struct Subtree *t, KeyType i)
+sleator_splay(struct Subtree *top, KeyType i)
 /* Splay using the key i (which may or may not be in the tree.) */
 /* The starting root is t, and the tree used is defined by rat  */
 /* size fields are maintained */
 {
-    struct Subtree N, *l, *r, *y;
+    struct Subtree N, *l, *r, *pivot;
     int64_t comp;
     uint64_t l_size, r_size;
-    if (t == NULL)
-        return t;
+    if (top == NULL)
+        return top;
     N.left_subtree = N.right_subtree = NULL;
     l = r = &N;
     l_size = r_size = 0;
 
     for (;;) {
-        comp = compare(i, t->key);
+        comp = compare(i, top->key);
         if (comp < 0) {
-            if (t->left_subtree == NULL)
+            if (top->left_subtree == NULL)
                 break;
-            if (compare(i, t->left_subtree->key) < 0) {
-                y = t->left_subtree; /* rotate right */
-                t->left_subtree = y->right_subtree;
-                y->right_subtree = t;
-                t->cardinality = node_size(t->left_subtree) + node_size(t->right_subtree) + 1;
-                t = y;
-                if (t->left_subtree == NULL)
+            if (compare(i, top->left_subtree->key) < 0) {
+                pivot = top->left_subtree; /* rotate right */
+                top->left_subtree = pivot->right_subtree;
+                pivot->right_subtree = top;
+                uint64_t old_top_card = top->cardinality;
+                uint64_t old_pivot_card = pivot->cardinality;
+                top->cardinality = old_top_card - old_pivot_card +
+                                   node_size(top->left_subtree);
+                pivot->cardinality = old_top_card;
+                top = pivot;
+                if (top->left_subtree == NULL)
                     break;
             }
-            r->left_subtree = t; /* link right */
-            r = t;
-            t = t->left_subtree;
-            r_size += 1 + node_size(r->right_subtree);
+            r->left_subtree = top; /* link right */
+            r = top;
+            top = top->left_subtree;
+            r_size += node_size(r) - node_size(r->left_subtree);
         } else if (comp > 0) {
-            if (t->right_subtree == NULL)
+            if (top->right_subtree == NULL)
                 break;
-            if (compare(i, t->right_subtree->key) > 0) {
-                y = t->right_subtree; /* rotate left */
-                t->right_subtree = y->left_subtree;
-                y->left_subtree = t;
-                t->cardinality = node_size(t->left_subtree) + node_size(t->right_subtree) + 1;
-                t = y;
-                if (t->right_subtree == NULL)
+            if (compare(i, top->right_subtree->key) > 0) {
+                pivot = top->right_subtree; /* rotate left */
+                top->right_subtree = pivot->left_subtree;
+                pivot->left_subtree = top;
+                uint64_t old_top_card = top->cardinality;
+                uint64_t old_pivot_card = pivot->cardinality;
+                top->cardinality = old_top_card - old_pivot_card +
+                                   node_size(top->right_subtree);
+                pivot->cardinality = old_top_card;
+                top = pivot;
+                if (top->right_subtree == NULL)
                     break;
             }
-            l->right_subtree = t; /* link left */
-            l = t;
-            t = t->right_subtree;
-            l_size += 1 + node_size(l->left_subtree);
+            l->right_subtree = top; /* link left */
+            l = top;
+            top = top->right_subtree;
+            l_size += node_size(l) - node_size(l->right_subtree);
         } else {
             break;
         }
     }
-    l_size += node_size(t->left_subtree);  /* Now l_size and r_size are the sizes of */
-    r_size += node_size(t->right_subtree); /* the left and right trees we just built.*/
-    t->cardinality = l_size + r_size + 1;
-
+    /* Now l_size and r_size are the sizes of */
+    /* the left and right trees we just built.*/
+    l_size += node_size(top->left_subtree);
+    r_size += node_size(top->right_subtree);
+    top->cardinality = l_size + r_size + top->myweight;
     l->right_subtree = r->left_subtree = NULL;
 
     /* The following two loops correct the size fields of the right path  */
     /* from the left child of the root and the right path from the left   */
     /* child of the root.                                                 */
-    for (y = N.right_subtree; y != NULL; y = y->right_subtree) {
-        y->cardinality = l_size;
-        l_size -= 1 + node_size(y->left_subtree);
+    for (pivot = N.right_subtree; pivot != NULL; pivot = pivot->right_subtree) {
+        pivot->cardinality = l_size;
+        l_size -= pivot->myweight + node_size(pivot->left_subtree);
     }
-    for (y = N.left_subtree; y != NULL; y = y->left_subtree) {
-        y->cardinality = r_size;
-        r_size -= 1 + node_size(y->right_subtree);
+    for (pivot = N.left_subtree; pivot != NULL; pivot = pivot->left_subtree) {
+        pivot->cardinality = r_size;
+        r_size -= pivot->myweight + node_size(pivot->right_subtree);
     }
 
-    l->right_subtree = t->left_subtree; /* assemble */
-    r->left_subtree = t->right_subtree;
-    t->left_subtree = N.right_subtree;
-    t->right_subtree = N.left_subtree;
+    l->right_subtree = top->left_subtree; /* assemble */
+    r->left_subtree = top->right_subtree;
+    top->left_subtree = N.right_subtree;
+    top->right_subtree = N.left_subtree;
 
-    return t;
+    return top;
 }
 
 bool
-tree__sleator_insert(struct Tree *tree, KeyType i)
+tree__sleator_insert_full(struct Tree *const tree,
+                          KeyType const i,
+                          size_t const weight)
 {
     /* Insert key i into the tree t, if it is not already there. */
     /* Return a pointer to the resulting tree.                   */
@@ -176,19 +188,27 @@ tree__sleator_insert(struct Tree *tree, KeyType i)
         new->left_subtree = t->left_subtree;
         new->right_subtree = t;
         t->left_subtree = NULL;
-        t->cardinality = 1 + node_size(t->right_subtree);
+        t->cardinality = weight + node_size(t->right_subtree);
     } else {
         new->right_subtree = t->right_subtree;
         new->left_subtree = t;
         t->right_subtree = NULL;
-        t->cardinality = 1 + node_size(t->left_subtree);
+        t->cardinality = weight + node_size(t->left_subtree);
     }
     new->key = i;
-    new->cardinality = 1 + node_size(new->left_subtree) + node_size(new->right_subtree);
+    new->myweight = weight;
+    new->cardinality =
+        weight + node_size(new->left_subtree) + node_size(new->right_subtree);
     // Update tree data structure
     tree->root = new;
     tree->cardinality = new->cardinality;
     return true;
+}
+
+bool
+tree__sleator_insert(struct Tree *tree, KeyType i)
+{
+    return tree__sleator_insert_full(tree, i, 1);
 }
 
 bool
@@ -211,39 +231,16 @@ tree__sleator_remove(struct Tree *tree, KeyType i)
             x = sleator_splay(t->left_subtree, i);
             x->right_subtree = t->right_subtree;
         }
-        free(t);
         if (x == NULL) {
             tree->cardinality = 0;
         } else {
-            x->cardinality = tree->cardinality - 1;
+            x->cardinality = tree->cardinality - t->myweight;
             tree->cardinality = x->cardinality;
         }
         tree->root = x;
+        free(t);
         return true;
     } else {
         return false; /* It wasn't there */
-    }
-}
-
-struct Subtree *
-tree__sleator_find_rank(struct Subtree *t, unsigned r)
-{
-    /* Returns a pointer to the node in the tree with the given rank.  */
-    /* Returns NULL if there is no such node.                          */
-    /* Does not change the tree.  To guarantee logarithmic behavior,   */
-    /* the node found here should be splayed to the root.              */
-    uint64_t lsize;
-    if (r >= node_size(t))
-        return NULL;
-    for (;;) {
-        lsize = node_size(t->left_subtree);
-        if (r < lsize) {
-            t = t->left_subtree;
-        } else if (r > lsize) {
-            r = r - lsize - 1;
-            t = t->right_subtree;
-        } else {
-            return t;
-        }
     }
 }
