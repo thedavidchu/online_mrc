@@ -36,3 +36,18 @@ parse_trace_format_string(char const *const format_str);
 /// @brief  Read the traces formatted by Kia and Sari.
 struct Trace
 read_trace(char const *const restrict file_name, enum TraceFormat format);
+
+/// @return Get the number of bytes per trace item.
+size_t
+get_bytes_per_trace_item(enum TraceFormat format);
+
+struct TraceItemResult {
+    bool valid;
+    struct TraceItem item;
+};
+
+/// @note   Hehe... bit twiddly hacks.
+/// Source: https://man7.org/linux/man-pages/man3/endian.3.html
+struct TraceItemResult
+construct_trace_item(uint8_t const *const restrict bytes,
+                     enum TraceFormat format);

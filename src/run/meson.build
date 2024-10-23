@@ -11,6 +11,21 @@ runner_arguments_lib = library(
     ],
 )
 
+run_oracle_lib = library(
+    'run_oracle_lib',
+    'run_oracle.c',
+    link_with: runner_arguments_lib,
+    include_directories: run_inc,
+    dependencies: [
+        common_dep,
+        histogram_dep,
+        io_dep,
+        miss_rate_curve_dep,
+        olken_dep,
+        trace_dep,
+    ],
+)
+
 trace_runner_lib = library(
     'trace_runner_lib',
     'trace_runner.c',
@@ -50,6 +65,7 @@ generate_mrc_exe = executable(
     'generate_mrc.c',
     link_with: [
         runner_arguments_lib,
+        run_oracle_lib,
         trace_runner_lib,
     ],
     include_directories: run_inc,

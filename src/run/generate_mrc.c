@@ -12,6 +12,7 @@
 #include "file/file.h"
 #include "glib.h"
 #include "logger/logger.h"
+#include "lookup/dictionary.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "timer/timer.h"
 #include "trace/generator.h"
@@ -19,6 +20,7 @@
 #include "trace/trace.h"
 
 #include "run/helper.h"
+#include "run/run_oracle.h"
 #include "run/runner_arguments.h"
 #include "run/trace_runner.h"
 
@@ -247,61 +249,57 @@ get_trace(struct CommandLineArguments args)
 }
 
 struct RunnerArgumentsArray {
+    // This is a single argument pointer.
+    struct RunnerArguments *oracle_arg;
+    // This is an array of arguments.
     struct RunnerArguments *data;
     size_t length;
 };
 
 /// @brief  Return true iff both paths are non-NULL and match.
 static bool
-non_null_paths_match(char const *const a, char const *const b)
+string_is_unique(struct Dictionary *const dict, char const *const output_path)
 {
-    if (a == NULL || b == NULL) {
+    if (output_path == NULL) {
+        return true;
+    } else if (Dictionary__contains(dict, output_path)) {
+        LOGGER_ERROR("output path already used: '%s'", output_path);
         return false;
+    } else {
+        Dictionary__put(dict, output_path, "");
+        return true;
     }
-    return strcmp(a, b) == 0;
 }
 
+/// @note   This does not do anti-aliasing of paths, so you still may
+///         end up overwriting your paths!
+///         Example: '././blah' and './blah' refer to the same file.
 static bool
-check_no_paths_match(struct RunnerArguments const *const array,
+check_no_paths_match(struct RunnerArguments const *const oracle_arg,
+                     struct RunnerArguments const *const array,
                      size_t const length)
 {
     bool ok = true;
-    // NOTE Yes, I could do this in linear time with a hash table, but
-    //      I'm too lazy to set all of that stuff up so we're going with
-    //      quadratic time! This should be quick (assuming there aren't
-    //      too many options passed in).
-    // NOTE Okay, actually since we're checking two strings, I think it
-    //      would actually be cleaner to do it with a hash table. I
-    //      unfortunately don't have a string-based hash table on hand.
-    for (size_t i = 0; i < length; ++i) {
-        if (non_null_paths_match(array[i].mrc_path, array[i].hist_path)) {
-            LOGGER_ERROR("MRC and histogram output paths match: '%s'",
-                         array[i].mrc_path);
+    struct Dictionary dict = {0};
+    if (!Dictionary__init(&dict)) {
+        LOGGER_ERROR("failed to init dictionary");
+        return false;
+    }
+    if (oracle_arg != NULL) {
+        if (!string_is_unique(&dict, oracle_arg->mrc_path) ||
+            !string_is_unique(&dict, oracle_arg->hist_path)) {
+            LOGGER_ERROR("oracle has matching output path");
             ok = false;
         }
-        for (size_t j = i + 1; j < length; ++j) {
-            if (non_null_paths_match(array[i].mrc_path, array[j].mrc_path)) {
-                LOGGER_ERROR("got two identical MRC paths '%s'",
-                             array[i].mrc_path);
-                ok = false;
-            }
-            if (non_null_paths_match(array[i].hist_path, array[j].hist_path)) {
-                LOGGER_ERROR("got two identical histogram paths '%s'",
-                             array[i].mrc_path);
-                ok = false;
-            }
-            if (non_null_paths_match(array[i].mrc_path, array[j].hist_path)) {
-                LOGGER_ERROR("got two identical MRC paths '%s'",
-                             array[i].mrc_path);
-                ok = false;
-            }
-            if (non_null_paths_match(array[i].hist_path, array[j].mrc_path)) {
-                LOGGER_ERROR("got two identical MRC paths '%s'",
-                             array[i].mrc_path);
-                ok = false;
-            }
+    }
+    for (size_t i = 0; i < length; ++i) {
+        if (!string_is_unique(&dict, array[i].mrc_path) ||
+            !string_is_unique(&dict, array[i].hist_path)) {
+            LOGGER_ERROR("something has matching output path");
+            ok = false;
         }
     }
+    Dictionary__destroy(&dict);
     return ok;
 }
 
@@ -309,24 +307,33 @@ check_no_paths_match(struct RunnerArguments const *const array,
 ///         logging isn't specific enough. I do this simply for the
 ///         convenience of not having to think too hard about how to
 ///         resolve this.
+/// @todo   I should check that the oracle's algorithm is no used either
 static bool
-check_no_algorithms_match(struct RunnerArguments const *const array,
+check_no_algorithms_match(struct RunnerArguments const *const oracle_arg,
+                          struct RunnerArguments const *const array,
                           size_t const length)
 {
     bool ok = true;
-    // NOTE Yes, I could do this in linear time with a hash table, but
-    //      I'm too lazy to set all of that stuff up so we're going with
-    //      quadratic time! This should be quick (assuming there aren't
-    //      too many options passed in).
-    for (size_t i = 0; i < length; ++i) {
-        for (size_t j = i + 1; j < length; ++j) {
-            if (array[i].algorithm == array[j].algorithm) {
-                LOGGER_ERROR("algorithm '%s' is run twice",
-                             algorithm_names[array[i].algorithm]);
-                ok = false;
-            }
+    struct Dictionary dict = {0};
+    if (!Dictionary__init(&dict)) {
+        LOGGER_ERROR("failed to init dictionary");
+        return false;
+    }
+    if (oracle_arg != NULL) {
+        char const *const algo = algorithm_names[oracle_arg->algorithm];
+        if (!string_is_unique(&dict, algo)) {
+            LOGGER_ERROR("algorithm '%s' is run twice", algo);
+            ok = false;
         }
     }
+    for (size_t i = 0; i < length; ++i) {
+        char const *const algo = algorithm_names[array[i].algorithm];
+        if (!string_is_unique(&dict, algo)) {
+            LOGGER_ERROR("algorithm '%s' is run twice", algo);
+            ok = false;
+        }
+    }
+    Dictionary__destroy(&dict);
     return ok;
 }
 
@@ -336,9 +343,11 @@ free_work_array(struct RunnerArgumentsArray *me)
     if (me == NULL) {
         return;
     }
+    RunnerArguments__destroy(me->oracle_arg);
     for (size_t i = 0; i < me->length; ++i) {
         RunnerArguments__destroy(&me->data[i]);
     }
+    free(me->oracle_arg);
     free(me->data);
     *me = (struct RunnerArgumentsArray){0};
 }
@@ -347,69 +356,66 @@ static struct RunnerArgumentsArray
 create_work_array(struct CommandLineArguments const *const args)
 {
     struct RunnerArgumentsArray r = {0};
-    // Get length of allocation required
-    size_t length = 0;
     if (args->oracle != NULL) {
-        ++length;
-    }
-    if (args->run != NULL) {
-        for (size_t i = 0; args->run[i] != NULL; ++i) {
-            ++length;
+        r.oracle_arg = calloc(1, sizeof(*r.oracle_arg));
+        if (r.oracle_arg == NULL) {
+            LOGGER_ERROR("bad calloc(%zu, %zu)", 1, sizeof(*r.data));
+            goto cleanup;
         }
-    }
-    struct RunnerArguments *array = calloc(length, sizeof(*array));
-    if (array == NULL) {
-        LOGGER_ERROR("bad calloc(%zu, %zu)", length, sizeof(*array));
-        goto cleanup;
-    }
-
-    // Initialize work data
-    if (args->oracle != NULL) {
-        if (!RunnerArguments__init(&array[0], args->oracle)) {
+        if (!RunnerArguments__init(r.oracle_arg, args->oracle)) {
             LOGGER_FATAL("failed to initialize runner arguments '%s'",
                          args->oracle);
             goto cleanup;
         }
-        if (array[0].algorithm != MRC_ALGORITHM_OLKEN) {
-            LOGGER_ERROR("Olken is the only exact method supported, not '%s'",
-                         algorithm_names[array[0].algorithm]);
+        if (r.oracle_arg->algorithm != MRC_ALGORITHM_OLKEN &&
+            r.oracle_arg->algorithm != MRC_ALGORITHM_ORACLE) {
+            LOGGER_ERROR(
+                "Oracle algorithm must be 'Oracle' or 'Olken', not '%s'",
+                algorithm_names[r.oracle_arg->algorithm]);
             goto cleanup;
         }
     }
     if (args->run != NULL) {
+        // Get length of allocation required
+        size_t length = 0;
         for (size_t i = 0; args->run[i] != NULL; ++i) {
-            // NOTE I have to check whether the oracle was provided so
-            //      I know if I take the first bucket or the second.
-            //      Maybe in the future, I should just _always_ reserve
-            //      the first bucket for the oracle regardless of
-            //      whether it actually uses it.
-            if (!RunnerArguments__init(
-                    &array[(args->oracle != NULL ? 1 : 0) + i],
-                    args->run[i])) {
+            ++length;
+        }
+        r.data = calloc(length, sizeof(*r.data));
+        if (r.data == NULL) {
+            LOGGER_ERROR("bad calloc(%zu, %zu)", length, sizeof(*r.data));
+            goto cleanup;
+        }
+        r.length = length;
+        for (size_t i = 0; args->run[i] != NULL; ++i) {
+            if (!RunnerArguments__init(&r.data[i], args->run[i])) {
                 LOGGER_FATAL("failed to initialize runner arguments '%s'",
                              args->run[i]);
                 exit(-1);
+            }
+            if (r.data[i].algorithm == MRC_ALGORITHM_ORACLE) {
+                LOGGER_ERROR("regular algorithm cannot be 'Oracle'");
+                goto cleanup;
             }
         }
     }
 
     // Verify the work array is valid and makes sense
-    if (!check_no_paths_match(array, length)) {
+    if (!check_no_paths_match(r.oracle_arg, r.data, r.length)) {
         LOGGER_ERROR("matching paths means we'd overwrite some values!");
         goto cleanup;
     }
-    if (!check_no_algorithms_match(array, length)) {
+    if (!check_no_algorithms_match(r.oracle_arg, r.data, r.length)) {
         LOGGER_ERROR(
             "matching algorithms means our logging won't be specific enough!");
         goto cleanup;
     }
     // TODO(dchu)   Add a warning when parameters are not used. For example,
     //              'Olken' does not use 'sampling' or 'max_size'.
-    return (struct RunnerArgumentsArray){.data = array, .length = length};
+    return r;
 cleanup:
     // NOTE It is OK to cleanup the array because calloc set all the
     //      pointers to NULL so we are not doing anything bad.
-    r = (struct RunnerArgumentsArray){.data = array, .length = length};
     free_work_array(&r);
     // NOTE The 'free_work_array()' function should set 'r' to '{0}',
     //      but I want to be very explicit that it will be '{0}'.
@@ -446,9 +452,14 @@ main(int argc, char **argv)
     // Parse work. This is above the trace reader because it should be
     // faster and thus a failure will fail faster.
     struct RunnerArgumentsArray work = create_work_array(&args);
-    if (work.data == NULL && work.length == 0) {
+    if (work.oracle_arg == NULL && work.data == NULL && work.length == 0) {
         LOGGER_INFO("error in creating work array");
         goto cleanup_cmdln;
+    }
+
+    if (work.oracle_arg != NULL &&
+        work.oracle_arg->algorithm == MRC_ALGORITHM_ORACLE) {
+        run_oracle(args.input_path, args.trace_format, work.oracle_arg);
     }
 
     // Read in trace. This can be a very slow process.
@@ -465,31 +476,32 @@ main(int argc, char **argv)
     }
     print_trace_summary(&args, &trace);
 
+    if (work.oracle_arg != NULL &&
+        work.oracle_arg->algorithm == MRC_ALGORITHM_OLKEN) {
+        if (!run_runner(work.oracle_arg, &trace)) {
+            LOGGER_ERROR("trace runner failed");
+            ok = false;
+        }
+    }
     for (size_t i = 0; i < work.length; ++i) {
-        // TODO(dchu)   We want to avoid rerunning the (expensive)
-        //              oracle if the files already exist.
         if (!run_runner(&work.data[i], &trace)) {
             LOGGER_ERROR("trace runner failed");
             ok = false;
         }
     }
 
-    // Optionally check MAE and MSE
+    // Optionally check MAE and MSE -- but only if '--oracle' was specified!
     if (args.oracle != NULL) {
         LOGGER_TRACE("Comparing against oracle");
         struct MissRateCurve oracle_mrc = {0};
-        char const *const oracle_mrc_path = work.data[0].mrc_path;
+        char const *const oracle_mrc_path = work.oracle_arg->mrc_path;
         if (!MissRateCurve__load(&oracle_mrc, oracle_mrc_path)) {
             LOGGER_ERROR("failed to load oracle MRC at '%s'",
                          oracle_mrc_path ? oracle_mrc_path : "(null)");
             goto cleanup_trace;
         }
 
-        // NOTE We start from 1 because the first spot is occupied by
-        //      the oracle. We know this for sure because the oracle is
-        //      not NULL. However, I admit that this is confusing and
-        //      therefore sketchy.
-        for (size_t i = 1; i < work.length; ++i) {
+        for (size_t i = 0; i < work.length; ++i) {
             char const *const mrc_path = work.data[i].mrc_path;
             struct MissRateCurve mrc = {0};
             if (!MissRateCurve__load(&mrc, mrc_path)) {

@@ -16,8 +16,7 @@
 #include "trace/reader.h"
 #include "trace/trace.h"
 
-/// @return Get the number of bytes per trace item.
-static size_t
+size_t
 get_bytes_per_trace_item(enum TraceFormat format)
 {
     switch (format) {
@@ -31,14 +30,10 @@ get_bytes_per_trace_item(enum TraceFormat format)
     }
 }
 
-struct TraceItemResult {
-    bool valid;
-    struct TraceItem item;
-};
-
 /// @note   Hehe... bit twiddly hacks.
+/// @note   I really hope the compiler inlines this for performance.
 /// Source: https://man7.org/linux/man-pages/man3/endian.3.html
-static inline struct TraceItemResult
+struct TraceItemResult
 construct_trace_item(uint8_t const *const restrict bytes,
                      enum TraceFormat format)
 {
