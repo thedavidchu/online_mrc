@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "logger/logger.h"
 #include "tree/basic_tree.h"
@@ -26,9 +27,15 @@ debug_sleator_tree(size_t const size)
         return false;
     }
     for (size_t i = 0; i < size; ++i) {
-        tree__sleator_insert(&tree, random_keys_0[i]);
-        tree__prettyprint(&tree);
-        printf("---\n");
+        tree__sleator_insert_full(&tree, random_keys_0[i], random_keys_0[i]);
+        if (true) {
+            tree__prettyprint(&tree);
+            printf("---\n");
+        }
+        if (!tree__validate(&tree)) {
+            LOGGER_ERROR("validation failed");
+            return false;
+        }
     }
     tree__destroy(&tree);
     return true;
@@ -37,6 +44,8 @@ debug_sleator_tree(size_t const size)
 int
 main(void)
 {
-    debug_sleator_tree(5);
+    if (!debug_sleator_tree(100)) {
+        return EXIT_FAILURE;
+    }
     return 0;
 }

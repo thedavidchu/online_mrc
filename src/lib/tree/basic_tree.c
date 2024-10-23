@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "logger/logger.h"
 #include "tree/basic_tree.h"
 #include "tree/types.h"
 
@@ -23,6 +24,7 @@ subtree__new(KeyType key)
     }
     subtree->key = key;
     subtree->cardinality = 1;
+    subtree->myweight = 1;
     subtree->left_subtree = NULL;
     subtree->right_subtree = NULL;
     return subtree;
@@ -344,7 +346,9 @@ subtree__validate(struct Subtree *me,
         bool r = (cardinality == 0);
         return r;
     } else if (me->cardinality != cardinality) {
-        printf("[ERROR] %s:%d\n", __FILE__, __LINE__);
+        LOGGER_ERROR("mismatching cardinalities: %zu vs %zu",
+                     me->cardinality,
+                     cardinality);
         return false;
     }
 
@@ -363,6 +367,15 @@ subtree__validate(struct Subtree *me,
         (me->left_subtree ? me->left_subtree->cardinality : 0);
     const uint64_t right_cardinality =
         (me->right_subtree ? me->right_subtree->cardinality : 0);
+    if (me->cardinality !=
+        left_cardinality + right_cardinality + me->myweight) {
+        LOGGER_ERROR("cardinalities don't add up! %zu != %zu + %zu + %zu",
+                     me->cardinality,
+                     left_cardinality,
+                     right_cardinality,
+                     me->myweight);
+        return false;
+    }
     if (me->left_subtree != NULL) {
         bool r = subtree__validate(me->left_subtree,
                                    cardinality - right_cardinality - 1,

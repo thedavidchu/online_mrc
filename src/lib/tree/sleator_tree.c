@@ -105,7 +105,7 @@ sleator_splay(struct Subtree *top, KeyType i)
             r->left_subtree = top; /* link right */
             r = top;
             top = top->left_subtree;
-            r_size += 1 + node_size(r->right_subtree);
+            r_size += node_size(r) - node_size(r->left_subtree);
         } else if (comp > 0) {
             if (top->right_subtree == NULL)
                 break;
@@ -125,7 +125,7 @@ sleator_splay(struct Subtree *top, KeyType i)
             l->right_subtree = top; /* link left */
             l = top;
             top = top->right_subtree;
-            l_size += 1 + node_size(l->left_subtree);
+            l_size += node_size(l) - node_size(l->right_subtree);
         } else {
             break;
         }
@@ -134,7 +134,7 @@ sleator_splay(struct Subtree *top, KeyType i)
     /* the left and right trees we just built.*/
     l_size += node_size(top->left_subtree);
     r_size += node_size(top->right_subtree);
-    top->cardinality = l_size + r_size + 1;
+    top->cardinality = l_size + r_size + top->myweight;
     l->right_subtree = r->left_subtree = NULL;
 
     /* The following two loops correct the size fields of the right path  */
@@ -142,11 +142,11 @@ sleator_splay(struct Subtree *top, KeyType i)
     /* child of the root.                                                 */
     for (pivot = N.right_subtree; pivot != NULL; pivot = pivot->right_subtree) {
         pivot->cardinality = l_size;
-        l_size -= 1 + node_size(pivot->left_subtree);
+        l_size -= pivot->myweight + node_size(pivot->left_subtree);
     }
     for (pivot = N.left_subtree; pivot != NULL; pivot = pivot->left_subtree) {
         pivot->cardinality = r_size;
-        r_size -= 1 + node_size(pivot->right_subtree);
+        r_size -= pivot->myweight + node_size(pivot->right_subtree);
     }
 
     l->right_subtree = top->left_subtree; /* assemble */
@@ -188,14 +188,15 @@ tree__sleator_insert_full(struct Tree *const tree,
         new->left_subtree = t->left_subtree;
         new->right_subtree = t;
         t->left_subtree = NULL;
-        t->cardinality = 1 + node_size(t->right_subtree);
+        t->cardinality = weight + node_size(t->right_subtree);
     } else {
         new->right_subtree = t->right_subtree;
         new->left_subtree = t;
         t->right_subtree = NULL;
-        t->cardinality = 1 + node_size(t->left_subtree);
+        t->cardinality = weight + node_size(t->left_subtree);
     }
     new->key = i;
+    new->myweight = weight;
     new->cardinality =
         weight + node_size(new->left_subtree) + node_size(new->right_subtree);
     // Update tree data structure
@@ -230,39 +231,16 @@ tree__sleator_remove(struct Tree *tree, KeyType i)
             x = sleator_splay(t->left_subtree, i);
             x->right_subtree = t->right_subtree;
         }
-        free(t);
         if (x == NULL) {
             tree->cardinality = 0;
         } else {
-            x->cardinality = tree->cardinality - 1;
+            x->cardinality = tree->cardinality - t->myweight;
             tree->cardinality = x->cardinality;
         }
         tree->root = x;
+        free(t);
         return true;
     } else {
         return false; /* It wasn't there */
-    }
-}
-
-struct Subtree *
-tree__sleator_find_rank(struct Subtree *t, unsigned r)
-{
-    /* Returns a pointer to the node in the tree with the given rank.  */
-    /* Returns NULL if there is no such node.                          */
-    /* Does not change the tree.  To guarantee logarithmic behavior,   */
-    /* the node found here should be splayed to the root.              */
-    uint64_t lsize;
-    if (r >= node_size(t))
-        return NULL;
-    for (;;) {
-        lsize = node_size(t->left_subtree);
-        if (r < lsize) {
-            t = t->left_subtree;
-        } else if (r > lsize) {
-            r = r - lsize - 1;
-            t = t->right_subtree;
-        } else {
-            return t;
-        }
     }
 }

@@ -10,6 +10,7 @@ struct Subtree;
 struct Subtree {
     KeyType key;
     uint64_t cardinality;
+    uint64_t myweight;
     struct Subtree *left_subtree;
     struct Subtree *right_subtree;
 };
