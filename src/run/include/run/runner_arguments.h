@@ -15,6 +15,8 @@ enum RunnerMode {
     // Try to read the existing files instead of running. If they are
     // not found, fall back to running.
     RUNNER_MODE_TRY_READ,
+    // Only try to read. If the files cannot be found, then abort!
+    RUNNER_MODE_ONLY_READ,
 };
 
 enum MRCAlgorithm {

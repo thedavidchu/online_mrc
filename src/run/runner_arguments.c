@@ -22,6 +22,7 @@ static char *runner_mode_names[] = {
     "INVALID",
     "run",
     "tryread",
+    "onlyread",
 };
 
 // NOTE This corresponds to the same order as MRCAlgorithm so that we can
@@ -140,7 +141,7 @@ print_help(void)
             ">>> Welcome to a tutorial on my very simple parser!\n");
     fprintf(LOGGER_STREAM,
             "    Format: "
-            "<Algorithm>(runmode={run,tryread},mrc=<file>,hist=<file>,"
+            "<Algorithm>(runmode={run,tryread,onlyread},mrc=<file>,hist=<file>,"
             "sampling=<float64-in-[0,1]>,num_bins=<positive-int>,bin_size=<"
             "positive-int>,max_size=<positive-int>,mode={allow_overflow,merge_"
             "bins,realloc},adj={true,false},qmrc_size=<positive-int>)\n");

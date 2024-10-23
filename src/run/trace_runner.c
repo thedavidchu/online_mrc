@@ -47,14 +47,18 @@ trace_runner(void *const runner_data,
         return false;
     }
 
-    if (args->run_mode == RUNNER_MODE_TRY_READ) {
+    if (args->run_mode == RUNNER_MODE_TRY_READ ||
+        args->run_mode == RUNNER_MODE_ONLY_READ) {
         if (file_exists(args->mrc_path) && file_exists(args->hist_path)) {
             LOGGER_INFO("skipping %s to read existing files",
                         algorithm_names[args->algorithm]);
             goto ok_cleanup;
-        } else {
+        } else if (args->run_mode == RUNNER_MODE_TRY_READ) {
             LOGGER_INFO(
                 "MRC and/or histogram files don't exist, so running normally");
+        } else if (args->run_mode == RUNNER_MODE_ONLY_READ) {
+            LOGGER_ERROR("MRC and/or histogram files don't exist, so aborting");
+            return false;
         }
     }
 
