@@ -73,6 +73,64 @@ construct_trace_item(uint8_t const *const restrict bytes,
     }
 }
 
+struct FullTraceItem
+construct_full_trace_item(uint8_t const *const restrict bytes,
+                          enum TraceFormat format)
+{
+    if (bytes == NULL) {
+        LOGGER_ERROR("got NULL");
+        return (struct FullTraceItem){0};
+    }
+
+    // We perform memcpy because the bytes may not be aligned, so we cannot do
+    // simple assignment.
+    switch (format) {
+    case TRACE_FORMAT_KIA: {
+        /* Timestamp at byte 0, Command at byte 8, Key at byte 9, Object size at
+         * byte 17, Time-to-live at byte 21 */
+        struct FullTraceItem trace = {0};
+        memcpy(&trace.timestamp, &bytes[0], sizeof(trace.timestamp));
+        trace.command = bytes[8];
+        memcpy(&trace.key, &bytes[9], sizeof(trace.key));
+        memcpy(&trace.size, &bytes[17], sizeof(trace.size));
+        memcpy(&trace.time_to_live, &bytes[21], sizeof(trace.time_to_live));
+        return (struct FullTraceItem){.timestamp = le64toh(trace.timestamp),
+                                      .command = trace.command,
+                                      .key = le64toh(trace.key),
+                                      .size = le32toh(trace.size),
+                                      .time_to_live =
+                                          le32toh(trace.time_to_live)};
+    }
+    case TRACE_FORMAT_SARI: {
+        /* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
+         * byte 16 */
+        struct FullTraceItem trace = {0};
+        // NOTE Sari's format uses uint32 timestamps. This means that we
+        //      need to read 4 bytes and interpret this as a little-
+        //      endian uint32 before sticking this in the uint64 in the
+        //      data structure.
+        uint32_t timestamp = 0;
+        memcpy(&timestamp, &bytes[0], 4);
+        memcpy(&trace.key, &bytes[4], sizeof(trace.key));
+        memcpy(&trace.size, &bytes[12], sizeof(trace.size));
+        memcpy(&trace.time_to_live, &bytes[16], sizeof(trace.time_to_live));
+        return (struct FullTraceItem){
+            // We need to stick the little-endian uint32 into the
+            // host's uint64.
+            .timestamp = le32toh(timestamp),
+            // Sari's format only contains 'get' requests as far as I know.
+            .command = 0,
+            .key = le64toh(trace.key),
+            .size = le32toh(trace.size),
+            .time_to_live = le32toh(trace.time_to_live),
+        };
+    }
+    default:
+        LOGGER_ERROR("unrecognized format %d", format);
+        return (struct FullTraceItem){0};
+    }
+}
+
 void
 print_available_trace_formats(FILE *stream)
 {

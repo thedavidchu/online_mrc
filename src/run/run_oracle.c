@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 
+#include "file/file.h"
 #include "histogram/histogram.h"
 #include "io/io.h"
 #include "logger/logger.h"

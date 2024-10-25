@@ -51,3 +51,7 @@ struct TraceItemResult {
 struct TraceItemResult
 construct_trace_item(uint8_t const *const restrict bytes,
                      enum TraceFormat format);
+
+struct FullTraceItem
+construct_full_trace_item(uint8_t const *const restrict bytes,
+                          enum TraceFormat format);

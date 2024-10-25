@@ -19,6 +19,7 @@ run_oracle_lib = library(
     dependencies: [
         common_dep,
         histogram_dep,
+        file_dep,
         io_dep,
         miss_rate_curve_dep,
         olken_dep,

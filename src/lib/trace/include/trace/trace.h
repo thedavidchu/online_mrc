@@ -11,11 +11,14 @@ struct TraceItem {
 
 struct FullTraceItem {
     uint64_t timestamp;
-    uint8_t command; /* Only Kia stores whether it is a get/set request */
+    // Only Kia stores whether it is a get/set request. I assume Sari filters
+    // out the set requests.
+    uint8_t command;
     uint64_t key;
-    uint32_t object_size;
-    uint32_t time_to_live; /* Kia stores TTL rather than expiry time */
-    uint32_t expiry_time;  /* Sari stores expiry time rather than the TTL */
+    uint32_t size;
+    // Kia stores TTL rather than expiry time; Sari stores expiry time rather
+    // than the TTL.
+    uint32_t time_to_live;
 };
 
 struct Trace {
