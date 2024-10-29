@@ -80,6 +80,9 @@ def create_ttl_vs_size_histogram(
     if trace_format == "Kia":
         # NOTE  We only want 'put' commands, which have the value 1,
         #       since only 'puts' have a TTL.
+        # NOTE  If Twitter's policy that all puts should have a TTL is
+        #       true, then the set of all puts (for the Twitter traces)
+        #       should have a non-zero TTL.
         puts = data[:]["command"] == 1
         # NOTE  We only want entries where the TTL is set. Otherwise,
         #       small TTLs are grouped with very small TTLs despite the
