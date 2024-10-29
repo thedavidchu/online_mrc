@@ -91,14 +91,24 @@ def plot_ttl_vs_size(
     plot_path: Path,
     histogram_path: Path,
 ):
-    hist, ttl_edges, size_edges = create_ttl_vs_size_histogram(
-        trace_path, trace_format, stride
-    )
+    if not histogram_path.exists():
+        logger.info(f"Creating histogram from {str(trace_path)}")
+        hist, ttl_edges, size_edges = create_ttl_vs_size_histogram(
+            trace_path, trace_format, stride
+        )
+        np.savez(
+            histogram_path, histogram=hist, ttl_edges=ttl_edges, size_edges=size_edges
+        )
+        logger.info(f"Saved histogram to {str(histogram_path)}")
+    else:
+        logger.info(f"Loading histogram from {str(histogram_path)}")
+        npz = np.load(histogram_path)
+        hist = npz["histogram"]
+        ttl_edges = npz["ttl_edges"]
+        size_edges = npz["size_edges"]
     logger.debug(f"{ttl_edges=}")
     logger.debug(f"{size_edges=}")
-    np.save(histogram_path, hist)
 
-    logger.info(f"Saved histogram to {str(histogram_path)}")
     plt.figure()
     plt.pcolormesh(size_edges, ttl_edges, hist, norm="log")
     plt.title("Object Time-to-Live (TTL) vs Size")
@@ -111,7 +121,7 @@ def plot_ttl_vs_size(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", "-i", nargs="+", type=Path, required=True, help="input trace path(s)"
+        "--input", "-i", nargs="+", type=Path, help="input trace path(s)"
     )
     parser.add_argument(
         "--format",
@@ -122,15 +132,12 @@ def main():
         help="input trace format",
     )
     parser.add_argument("--stride", type=int, default=1000, help="stride to sample")
-    parser.add_argument(
-        "--plot", nargs="+", type=Path, required=True, help="output plot path(s)"
-    )
+    parser.add_argument("--plot", nargs="+", type=Path, help="output plot path(s)")
     parser.add_argument(
         "--histogram",
         nargs="+",
         type=Path,
-        required=True,
-        help="output histogram path(s)",
+        help="output histogram path(s). This should end in '.npz'.",
     )
     args = parser.parse_args()
     if not (len(args.input) == len(args.plot) == len(args.histogram)):
@@ -141,10 +148,10 @@ def main():
         if not input_.exists():
             logger.warning(f"{str(input_)} DNE")
             continue
-        logger.info(f"Processing {str( input_ ), str(plot), str( histogram )}")
+        logger.info(f"Processing {str(input_), str(plot), str(histogram)}")
         plot_ttl_vs_size(input_, args.format, args.stride, plot, histogram)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     main()
