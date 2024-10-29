@@ -98,7 +98,7 @@ def plot_ttl_vs_size(
 
     print(f"Saved histogram to {str(histogram_path)}")
     plt.figure()
-    plt.pcolormesh(size_edges, ttl_edges, hist)
+    plt.pcolormesh(size_edges, ttl_edges, hist, norm="log")
     plt.title("Object Time-to-Live (TTL) vs Size")
     plt.ylabel("Object Time-to-Live (TTL) [seconds]")
     plt.xlabel("Object Size [bytes]")
