@@ -24,6 +24,7 @@ of TTLs:
 
 import argparse
 from pathlib import Path
+import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,6 +50,8 @@ TRACE_DTYPES: dict[str, np.dtype] = {
     ),
 }
 
+logger = logging.getLogger(__name__)
+
 
 def create_ttl_vs_size_histogram(
     trace_path: Path,
@@ -61,11 +64,10 @@ def create_ttl_vs_size_histogram(
             garbage collected ASAP. This is because I'm worried about
             running out of memory when processing the traces.
     """
-    print(f"Reading from {str(trace_path)} with {trace_format}'s format")
+    logger.info(f"Reading from {str(trace_path)} with {trace_format}'s format")
     data = np.memmap(trace_path, dtype=TRACE_DTYPES[trace_format], mode="readonly")
-    print(data[:10])
     if trace_format == "Sari":
-        print(f"{data=}")
+        logger.debug(f"{data=}")
         # NOTE  The local traces differ from the format published in
         #       Sari's paper, "TTLs Matter". On the local traces, the
         #       'Eviction Time' column seems to be the regular TTL.
@@ -75,7 +77,7 @@ def create_ttl_vs_size_histogram(
         # We only want 'put' commands, which have the value 1 because
         # these are the commands that have an associated TTL.
         data = data[data[:]["command"] == 1]
-        print(f"{data=}")
+        logger.debug(f"{data=}")
         ttl = data[::stride]["ttl"]
         size = data[::stride]["size"]
     hist, ttl_edges, size_edges = np.histogram2d(ttl, size, bins=50)
@@ -92,18 +94,18 @@ def plot_ttl_vs_size(
     hist, ttl_edges, size_edges = create_ttl_vs_size_histogram(
         trace_path, trace_format, stride
     )
-    print(f"{ttl_edges=}")
-    print(f"{size_edges=}")
+    logger.debug(f"{ttl_edges=}")
+    logger.debug(f"{size_edges=}")
     np.save(histogram_path, hist)
 
-    print(f"Saved histogram to {str(histogram_path)}")
+    logger.info(f"Saved histogram to {str(histogram_path)}")
     plt.figure()
     plt.pcolormesh(size_edges, ttl_edges, hist, norm="log")
     plt.title("Object Time-to-Live (TTL) vs Size")
     plt.ylabel("Object Time-to-Live (TTL) [seconds]")
     plt.xlabel("Object Size [bytes]")
     plt.savefig(plot_path)
-    print(f"Saved plot to {str(plot_path)}")
+    logger.info(f"Saved plot to {str(plot_path)}")
 
 
 def main():
@@ -136,8 +138,13 @@ def main():
             "we require the same number of input, plot, and histogram paths"
         )
     for input_, plot, histogram in zip(args.input, args.plot, args.histogram):
+        if not input_.exists():
+            logger.warning(f"{str(input_)} DNE")
+            continue
+        logger.info(f"Processing {str( input_ ), str(plot), str( histogram )}")
         plot_ttl_vs_size(input_, args.format, args.stride, plot, histogram)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     main()
