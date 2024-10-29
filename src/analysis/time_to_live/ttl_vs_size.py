@@ -72,7 +72,8 @@ def create_ttl_vs_size_histogram(
         ttl = data[::stride]["eviction_time"]  # - data[::stride]["timestamp"]
         size = data[::stride]["size"]
     if trace_format == "Kia":
-        # We only want 'get' commands, which have the value 0.
+        # We only want 'put' commands, which have the value 1 because
+        # these are the commands that have an associated TTL.
         data = data[data[:]["command"] == 1]
         print(f"{data=}")
         ttl = data[::stride]["ttl"]
