@@ -1,5 +1,6 @@
 #pragma once
 
+#include "logger/logger.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -20,3 +21,8 @@ file_exists(char const *const file_name);
 ///         purpose of this function in the first place LOL!
 char *
 get_absolute_path(char const *const relative_path);
+
+/// Source:
+/// https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
+size_t
+get_file_size(char const *const relative_path);

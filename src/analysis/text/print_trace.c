@@ -1,3 +1,19 @@
+/** @brief  Print some lines from the trace file.
+ *
+ *  @example
+ *  ```bash
+ *  # Print the first 100 lines.
+ *  ./build/src/analysis/text/print_trace_exe \
+ *      -i ./data/src2.bin -f Kia -s 0 -l 100
+ *  ```
+ *
+ *  @todo
+ *  1. Allow negative indexing (c.f. Python). A negative '--start' would
+ *      count from the back; a negative '--length' would count backwards.
+ *      But what to do if we get `--start -1 --length 2`? Would this
+ *      produce an error, wrap around, or truncate? Or wrap around with
+ *      a warning?
+ */
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -19,6 +35,50 @@ struct CommandLineArguments {
     gint64 start;
     gint64 length;
 };
+
+static bool
+validate_start_and_length(struct CommandLineArguments const *const args)
+{
+    if (args == NULL) {
+        LOGGER_ERROR("args is NULL");
+        return false;
+    }
+    if (args->start < 0) {
+        // TODO(dchu):  Maybe we can support wraparound, similarly to
+        //              Python's indexing.
+        LOGGER_ERROR("cannot start at a negative index!");
+        return false;
+    }
+    if (args->length <= 0) {
+        LOGGER_ERROR("must have positive length!");
+        return false;
+    }
+    // Check that this doesn't exceed the bounds of the array. We'd want
+    // to do it now so that we fail early, rather than waiting 10
+    // minutes to fail.
+    size_t const file_size = get_file_size(args->input_path);
+    size_t const item_size = get_bytes_per_trace_item(args->trace_format);
+    if (item_size == 0) {
+        LOGGER_ERROR("unrecognized trace format '%d'", args->trace_format);
+        return false;
+    }
+    size_t const num_entries = file_size / item_size;
+    size_t const start = args->start;
+    size_t const length = args->length;
+    size_t const end = args->start + args->length;
+    // NOTE We will always report an error when trying to read an empty
+    //      file, even with `--start 0 --length 0`, since
+    //      `(start=0) >= (num_entries=0)`.
+    if (start >= num_entries || end > num_entries) {
+        LOGGER_ERROR(
+            "invalid start (%zu) or length (%zu) for number of entries (%zu)",
+            start,
+            length,
+            num_entries);
+        return false;
+    }
+    return true;
+}
 
 /// @note   Copired from '//src/run/generate_mrc.c'. Adapted for this use case.
 static struct CommandLineArguments
@@ -96,16 +156,8 @@ parse_command_line_arguments(int argc, char *argv[])
         // NOTE If 'trace_format' is NULL, the we remain with the default.
         LOGGER_TRACE("using default trace format");
     }
-    if (args.start < 0) {
-        // TODO(dchu):  We can support wraparound, similarly to Python's
-        //              indexing.
-        LOGGER_ERROR("cannot start at a negative index!");
-        goto cleanup;
-    }
-    if (args.length <= 0) {
-        // TODO(dchu):  Check that this doesn't exceed the bounds of the
-        //              array.
-        LOGGER_ERROR("must have positive length!");
+    if (!validate_start_and_length(&args)) {
+        LOGGER_ERROR("error in start and/or length");
         goto cleanup;
     }
 
@@ -167,12 +219,13 @@ run(struct CommandLineArguments const *const args)
     start = args->start;
     length = args->length;
     end = args->start + args->length;
-    if (start >= num_entries || start + length > num_entries) {
+    if (start >= num_entries || end > num_entries) {
         LOGGER_ERROR(
             "invalid start (%zu) or length (%zu) for number of entries (%zu)",
             start,
             length,
             num_entries);
+        goto cleanup_error;
     }
     fprintf(stdout, "Timestamp Command Key Size TTL\n");
     for (size_t i = start; i < end; ++i) {

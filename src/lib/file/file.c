@@ -112,3 +112,19 @@ get_absolute_path(char const *const path)
         return NULL;
     }
 }
+
+size_t
+get_file_size(char const *const relative_path)
+{
+    FILE *fp = fopen(relative_path, "rb");
+    size_t size_in_bytes = 0;
+    if (fp == NULL) {
+        return 0;
+    }
+    fseek(fp, 0L, SEEK_END);
+    size_in_bytes = ftell(fp);
+    if (fclose(fp) != 0) {
+        LOGGER_WARN("could not close '%s'", relative_path);
+    }
+    return size_in_bytes;
+}
