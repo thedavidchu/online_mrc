@@ -171,8 +171,11 @@ def main():
 if __name__ == "__main__":
     # NOTE  Default date format is: datefmt=r"%Y-%m-%d %H:%M:%S"
     #       according to https://docs.python.org/3/howto/logging.html#formatters.
+    #       However, there is some number (maybe milliseconds) tacked
+    #       onto the end. That's why I explicitly specify it.
     logging.basicConfig(
-        format="[%(levelname)s] [%(asctime)s] [ %(pathname)s:%(lineno)d ] [errno 0: n/a] %(message)s",
+        format="[%(levelname)s] [%(asctime)s] [ %(pathname)s:%(lineno)d ] [errno 0: Success] %(message)s",
         level=logging.INFO,
+        datefmt=r"%Y-%m-%d %H:%M:%S",
     )
     main()
