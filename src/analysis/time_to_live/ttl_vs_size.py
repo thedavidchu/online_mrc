@@ -109,7 +109,7 @@ def plot_ttl_vs_size(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", "-i", type=Path, required=True, help="input trace path"
+        "--input", "-i", nargs="+", type=Path, required=True, help="input trace path(s)"
     )
     parser.add_argument(
         "--format",
@@ -120,12 +120,23 @@ def main():
         help="input trace format",
     )
     parser.add_argument("--stride", type=int, default=1000, help="stride to sample")
-    parser.add_argument("--plot", type=Path, required=True, help="output plot path")
     parser.add_argument(
-        "--histogram", type=Path, required=True, help="output histogram path"
+        "--plot", nargs="+", type=Path, required=True, help="output plot path(s)"
+    )
+    parser.add_argument(
+        "--histogram",
+        nargs="+",
+        type=Path,
+        required=True,
+        help="output histogram path(s)",
     )
     args = parser.parse_args()
-    plot_ttl_vs_size(args.input, args.format, args.stride, args.plot, args.histogram)
+    if not (len(args.input) == len(args.plot) == len(args.histogram)):
+        raise ValueError(
+            "we require the same number of input, plot, and histogram paths"
+        )
+    for input_, plot, histogram in zip(args.input, args.plot, args.histogram):
+        plot_ttl_vs_size(input_, args.format, args.stride, plot, histogram)
 
 
 if __name__ == "__main__":
