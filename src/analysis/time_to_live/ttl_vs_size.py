@@ -67,6 +67,10 @@ def create_ttl_vs_size_histogram(
     logger.info(f"Reading from {str(trace_path)} with {trace_format}'s format")
     data = np.memmap(trace_path, dtype=TRACE_DTYPES[trace_format], mode="readonly")
     if trace_format == "Sari":
+        # NOTE  We only want entries where the TTL is set. Otherwise,
+        #       small TTLs are grouped with very small TTLs despite the
+        #       large semantic difference.
+        data = data[data[:]["ttl"] != 0]
         logger.debug(f"{data=}")
         # NOTE  The local traces differ from the format published in
         #       Sari's paper, "TTLs Matter". On the local traces, the
@@ -74,9 +78,18 @@ def create_ttl_vs_size_histogram(
         ttl = data[::stride]["eviction_time"]  # - data[::stride]["timestamp"]
         size = data[::stride]["size"]
     if trace_format == "Kia":
-        # We only want 'put' commands, which have the value 1 because
-        # these are the commands that have an associated TTL.
-        data = data[data[:]["command"] == 1]
+        # NOTE  We only want 'put' commands, which have the value 1,
+        #       since only 'puts' have a TTL.
+        puts = data[:]["command"] == 1
+        # NOTE  We only want entries where the TTL is set. Otherwise,
+        #       small TTLs are grouped with very small TTLs despite the
+        #       large semantic difference.
+        mortals = data[:]["ttl"] != 0
+        # NOTE  The documentation says I should be able to write
+        #       'puts & mortals', but this leads to the error:
+        #       'ValueError: The truth value of an array with more than
+        #       one element is ambiguous. Use a.any() or a.all()'.
+        data = data[np.logical_and(puts, mortals)]
         logger.debug(f"{data=}")
         ttl = data[::stride]["ttl"]
         size = data[::stride]["size"]
