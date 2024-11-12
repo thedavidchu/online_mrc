@@ -24,6 +24,8 @@ struct Heap {
     size_t length;
     size_t capacity;
     bool (*cmp)(KeyType const lhs, KeyType const rhs);
+    // The key that causes an item to be moved to the bottom of the heap.
+    size_t bottom_key;
 };
 
 bool
@@ -34,6 +36,9 @@ Heap__write_as_json(FILE *stream, struct Heap const *const me);
 
 bool
 Heap__init_max_heap(struct Heap *me, size_t const max_size);
+
+bool
+Heap__init_min_heap(struct Heap *me, size_t const max_size);
 
 bool
 Heap__is_full(struct Heap const *const me);

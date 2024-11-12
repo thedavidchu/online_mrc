@@ -101,6 +101,34 @@ test_big_static_max_heap(void)
     g_assert_cmpuint(me.length, ==, 0);
 }
 
+static void
+test_big_dynamic_min_heap(void)
+{
+    size_t const original_heap_size = 1 << 4;
+    size_t const full_heap_size = 1 << 12;
+    struct Heap me = {0};
+    g_assert_true(Heap__init_min_heap(&me, original_heap_size));
+
+    for (size_t i = 0; i < full_heap_size; ++i) {
+        g_assert_true(Heap__insert(&me, i, i));
+    }
+
+    // NOTE This is true because we resize by factors of two. This is
+    //      not otherwise necessary to maintain the heap property.
+    g_assert_true(Heap__is_full(&me));
+    g_assert_cmpuint(Heap__get_top_key(&me), ==, 0);
+    for (size_t i = 0; i < full_heap_size; ++i) {
+        size_t max_key = i;
+        size_t max_val = 0;
+        g_assert_cmpuint(Heap__get_top_key(&me), ==, max_key);
+        g_assert_true(Heap__remove(&me, max_key, &max_val));
+        g_assert_cmpuint(max_val, ==, max_key);
+        g_assert_false(Heap__is_full(&me));
+    }
+
+    g_assert_cmpuint(me.length, ==, 0);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -108,5 +136,7 @@ main(int argc, char **argv)
     g_test_add_func("/priority_queue_test/heap__test", test_static_max_heap);
     g_test_add_func("/priority_queue_test/heap__big_test",
                     test_big_static_max_heap);
+    g_test_add_func("/priority_queue_test/heap__big_dynamic_min_test",
+                    test_big_dynamic_min_heap);
     return g_test_run();
 }
