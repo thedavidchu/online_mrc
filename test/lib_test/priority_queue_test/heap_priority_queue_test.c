@@ -15,11 +15,11 @@
 // TODO Call this function with g_test_add(...) which includes facilities
 //      for cleanup.
 static void
-test_heap_priority_queue(void)
+test_static_max_heap(void)
 {
     struct Heap pq;
 
-    g_assert_true(Heap__init(&pq, 10));
+    g_assert_true(Heap__init_max_heap(&pq, 10));
 
     for (Hash64BitType i = 0; i < 10; ++i) {
         // The pq should not be full until we reach the end of this loop!
@@ -34,7 +34,7 @@ test_heap_priority_queue(void)
     g_assert_false(Heap__insert_if_room(&pq, (Hash64BitType)10, (EntryType)10));
 
     // Get maximum
-    Hash64BitType hash = Heap__get_max_key(&pq);
+    Hash64BitType hash = Heap__get_top_key(&pq);
     g_assert_cmpuint(hash, ==, 9);
 
     // Remove maximum
@@ -49,13 +49,13 @@ test_heap_priority_queue(void)
     g_assert_false(Heap__is_full(&pq));
     g_assert_true(Heap__insert_if_room(&pq, hash, entry));
     EntryType entry_0, entry_1;
-    hash = Heap__get_max_key(&pq);
+    hash = Heap__get_top_key(&pq);
     g_assert_cmpuint(hash, ==, 8);
     g_assert_true(Heap__remove(&pq, hash, &entry_0));
-    hash = Heap__get_max_key(&pq);
+    hash = Heap__get_top_key(&pq);
     g_assert_cmpuint(hash, ==, 8);
     g_assert_true(Heap__remove(&pq, hash, &entry_1));
-    hash = Heap__get_max_key(&pq);
+    hash = Heap__get_top_key(&pq);
     g_assert_cmpuint(hash, ==, 7);
     g_assert_true((entry_0 == 8 && entry_1 == 9) ||
                   (entry_0 == 9 && entry_1 == 8));
@@ -63,13 +63,13 @@ test_heap_priority_queue(void)
     for (uint64_t i = 0; i < 7; ++i) {
         Hash64BitType expected_max_hash = 7 - i;
         g_assert_false(Heap__is_full(&pq));
-        hash = Heap__get_max_key(&pq);
+        hash = Heap__get_top_key(&pq);
         g_assert_cmpuint(hash, ==, expected_max_hash);
         // Remove
         g_assert_true(Heap__remove(&pq, expected_max_hash, &entry));
         g_assert_cmpuint(entry, ==, (EntryType)expected_max_hash);
         // Try another removal that should fail
-        hash = Heap__get_max_key(&pq);
+        hash = Heap__get_top_key(&pq);
         g_assert_cmpuint(hash, ==, expected_max_hash - 1);
         g_assert_false(Heap__remove(&pq, expected_max_hash, &entry));
     }
@@ -77,22 +77,22 @@ test_heap_priority_queue(void)
 }
 
 static void
-test_big_heap(void)
+test_big_static_max_heap(void)
 {
     size_t const heap_size = 1 << 12;
     struct Heap me = {0};
-    g_assert_true(Heap__init(&me, heap_size));
+    g_assert_true(Heap__init_max_heap(&me, heap_size));
 
     for (size_t i = 0; i < 1 << 12; ++i) {
         g_assert_true(Heap__insert_if_room(&me, i, i));
     }
 
     g_assert_true(Heap__is_full(&me));
-    g_assert_cmpuint(Heap__get_max_key(&me), ==, heap_size - 1);
+    g_assert_cmpuint(Heap__get_top_key(&me), ==, heap_size - 1);
     for (size_t i = 0; i < heap_size; ++i) {
         size_t max_key = REVERSE_INDEX(i, heap_size);
         size_t max_val = 0;
-        g_assert_cmpuint(Heap__get_max_key(&me), ==, max_key);
+        g_assert_cmpuint(Heap__get_top_key(&me), ==, max_key);
         g_assert_true(Heap__remove(&me, max_key, &max_val));
         g_assert_cmpuint(max_val, ==, max_key);
         g_assert_false(Heap__is_full(&me));
@@ -105,8 +105,8 @@ int
 main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
-    g_test_add_func("/priority_queue_test/heap__test",
-                    test_heap_priority_queue);
-    g_test_add_func("/priority_queue_test/heap__big_test", test_big_heap);
+    g_test_add_func("/priority_queue_test/heap__test", test_static_max_heap);
+    g_test_add_func("/priority_queue_test/heap__big_test",
+                    test_big_static_max_heap);
     return g_test_run();
 }

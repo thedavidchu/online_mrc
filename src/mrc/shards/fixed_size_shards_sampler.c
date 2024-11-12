@@ -21,7 +21,7 @@ FixedSizeShardsSampler__init(struct FixedSizeShardsSampler *const me,
         LOGGER_WARN("bad input");
         return false;
     }
-    if (!Heap__init(&me->pq, max_size)) {
+    if (!Heap__init_max_heap(&me->pq, max_size)) {
         LOGGER_WARN("failed to initialize priority queue");
         goto cleanup;
     }
@@ -78,7 +78,7 @@ make_room(struct FixedSizeShardsSampler *me,
     if (me == NULL) {
         return;
     }
-    Hash64BitType max_hash = Heap__get_max_key(&me->pq);
+    Hash64BitType max_hash = Heap__get_top_key(&me->pq);
     while (Heap__remove(&me->pq, max_hash, &entry)) {
         // This is where one would remove the entry/time-stamp from the
         // hash table and tree.
@@ -88,7 +88,7 @@ make_room(struct FixedSizeShardsSampler *me,
     }
     // No more elements with the old max_hash. Now we can update the new
     //  sampling_ratio, threshold, and scale!
-    Hash64BitType new_max_hash = Heap__get_max_key(&me->pq);
+    Hash64BitType new_max_hash = Heap__get_top_key(&me->pq);
     set_sampling_rate(me, new_max_hash);
     return;
 }

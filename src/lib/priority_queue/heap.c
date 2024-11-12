@@ -18,10 +18,15 @@
 #include "types/key_type.h"
 
 /// @brief  Returns if lhs is greater than rhs.
-/// @note   I define a greater-than function so that it is easy to
-///         refactor this into a min-heap.
 static inline bool
 gt(KeyType const lhs, KeyType const rhs)
+{
+    return lhs > rhs;
+}
+
+/// @brief  Returns if lhs is less than rhs.
+static inline bool
+lt(KeyType const lhs, KeyType const rhs)
 {
     return lhs > rhs;
 }
@@ -109,7 +114,7 @@ sift_down(struct Heap *const me, size_t const idx)
 
 /// @note   This is expensive, since we are validating the entire heap.
 static bool
-validate_max_heap_property(struct Heap const *const me)
+validate_heap_property(struct Heap const *const me)
 {
     assert(implies(me->length != 0, me->data != NULL));
     assert(me->length <= me->capacity);
@@ -170,7 +175,7 @@ Heap__validate(struct Heap const *const me)
         LOGGER_ERROR("invalid heap metadata");
         return false;
     }
-    if (!validate_max_heap_property(me)) {
+    if (!validate_heap_property(me)) {
         LOGGER_ERROR("invalid max heap");
         return false;
     }
@@ -218,7 +223,7 @@ Heap__write_as_json(FILE *stream, struct Heap const *const me)
 }
 
 bool
-Heap__init(struct Heap *me, size_t const max_size)
+Heap__init_max_heap(struct Heap *me, size_t const max_size)
 {
     if (me == NULL) {
         return false;
@@ -226,7 +231,27 @@ Heap__init(struct Heap *me, size_t const max_size)
 
     *me = (struct Heap){.data = calloc(max_size, sizeof(struct HeapItem)),
                         .length = 0,
-                        .capacity = max_size};
+                        .capacity = max_size,
+                        .cmp = gt};
+
+    if (!validate_metadata(me)) {
+        LOGGER_ERROR("init failed");
+        return false;
+    }
+    return true;
+}
+
+bool
+Heap__init_min_heap(struct Heap *me, size_t const max_size)
+{
+    if (me == NULL) {
+        return false;
+    }
+
+    *me = (struct Heap){.data = calloc(max_size, sizeof(struct HeapItem)),
+                        .length = 0,
+                        .capacity = max_size,
+                        .cmp = lt};
 
     if (!validate_metadata(me)) {
         LOGGER_ERROR("init failed");
@@ -264,8 +289,33 @@ Heap__insert_if_room(struct Heap *const me,
     return true;
 }
 
+bool
+Heap__insert(struct Heap *const me, const KeyType key, const ValueType value)
+{
+    if (me == NULL) {
+        return false;
+    }
+    if (Heap__is_full(me)) {
+        struct HeapItem *const tmp =
+            realloc(me->data, 2 * me->capacity * sizeof(*tmp));
+        if (tmp == NULL) {
+            LOGGER_ERROR("failed to reallocate");
+            return false;
+        }
+        me->data = tmp;
+        me->capacity = 2 * me->capacity;
+    }
+
+    size_t target = me->length;
+    ++(me->length);
+
+    me->data[target] = (struct HeapItem){.key = key, .value = value};
+    sift_up(me, target);
+    return true;
+}
+
 KeyType
-Heap__get_max_key(struct Heap *me)
+Heap__get_top_key(struct Heap *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0) {
         return 0;
