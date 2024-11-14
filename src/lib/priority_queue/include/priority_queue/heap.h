@@ -57,8 +57,13 @@ Heap__insert(struct Heap *const me, const KeyType key, const ValueType value);
 KeyType
 Heap__get_top_key(struct Heap *me);
 
+/// @brief  Remove the top key from the heap if it matches the 'rm_key'.
+/// @todo   Consider changing the semantics of this to delete the key
+///         even without an exact match to the 'rm_key'. For example, in
+///         a max-heap, this function would delete a key if it is
+///         greater-than-or-equal-to 'rm_key'.
 bool
-Heap__remove(struct Heap *me, KeyType largest_key, ValueType *value_return);
+Heap__remove(struct Heap *me, KeyType rm_key, ValueType *value_return);
 
 void
 Heap__destroy(struct Heap *me);

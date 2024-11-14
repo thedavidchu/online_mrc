@@ -334,13 +334,13 @@ Heap__get_top_key(struct Heap *me)
 }
 
 bool
-Heap__remove(struct Heap *me, KeyType largest_key, ValueType *value_return)
+Heap__remove(struct Heap *me, KeyType rm_key, ValueType *value_return)
 {
     if (me == NULL || me->length == 0) {
         return false;
     }
 
-    if (me->data[0].key != largest_key)
+    if (me->data[0].key != rm_key)
         return false;
     *value_return = me->data[0].value;
     size_t const last = me->length - 1;
