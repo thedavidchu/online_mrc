@@ -17,13 +17,8 @@ struct OlkenWithTTL {
     struct Dictionary const *dictionary;
 };
 
-/// @brief  Initialize the fixed-size SHARDS data structure.
-/// @param  starting_scale: This is the original ratio at which we sample.
-/// @param  max_size    :   The maximum number of elements that we will track.
-///                         Additional elements will be removed.
 bool
 OlkenWithTTL__init(struct OlkenWithTTL *const me,
-                   size_t const max_size,
                    size_t const histogram_num_bins,
                    size_t const histogram_bin_size);
 
@@ -31,7 +26,6 @@ OlkenWithTTL__init(struct OlkenWithTTL *const me,
 /// @note   The interface is less stable than 'OlkenWithTTL__init'.
 bool
 OlkenWithTTL__init_full(struct OlkenWithTTL *const me,
-                        size_t const max_size,
                         size_t const histogram_num_bins,
                         size_t const histogram_bin_size,
                         enum HistogramOutOfBoundsMode const out_of_bounds_mode,
@@ -39,8 +33,8 @@ OlkenWithTTL__init_full(struct OlkenWithTTL *const me,
 
 bool
 OlkenWithTTL__access_item(struct OlkenWithTTL *const me,
-                          TimeStampType const timestamp,
                           EntryType const entry,
+                          TimeStampType const timestamp,
                           TimeStampType const ttl);
 
 bool

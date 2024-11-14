@@ -17,15 +17,16 @@
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
 
+size_t const DEFAULT_HEAP_SIZE = 1 << 20;
+
 static bool
 initialize(struct OlkenWithTTL *const me,
-           size_t const max_size,
            size_t const histogram_num_bins,
            size_t const histogram_bin_size,
            enum HistogramOutOfBoundsMode const out_of_bounds_mode,
            struct Dictionary const *const dictionary)
 {
-    if (me == NULL || max_size == 0) {
+    if (me == NULL) {
         LOGGER_WARN("bad input");
         return false;
     }
@@ -37,8 +38,8 @@ initialize(struct OlkenWithTTL *const me,
         LOGGER_WARN("failed to initialize Olken");
         goto cleanup;
     }
-    if (!Heap__init_min_heap(&me->pq, max_size)) {
-        LOGGER_WARN("failed to initialize fixed-size SHARDS sampler");
+    if (!Heap__init_min_heap(&me->pq, DEFAULT_HEAP_SIZE)) {
+        LOGGER_WARN("failed to init TTL heap");
         goto cleanup;
     }
     me->dictionary = dictionary;
@@ -50,12 +51,10 @@ cleanup:
 
 bool
 OlkenWithTTL__init(struct OlkenWithTTL *const me,
-                   size_t const max_size,
                    size_t const histogram_num_bins,
                    size_t const histogram_bin_size)
 {
     return initialize(me,
-                      max_size,
                       histogram_num_bins,
                       histogram_bin_size,
                       HistogramOutOfBoundsMode__allow_overflow,
@@ -64,14 +63,12 @@ OlkenWithTTL__init(struct OlkenWithTTL *const me,
 
 bool
 OlkenWithTTL__init_full(struct OlkenWithTTL *const me,
-                        size_t const max_size,
                         size_t const histogram_num_bins,
                         size_t const histogram_bin_size,
                         enum HistogramOutOfBoundsMode const out_of_bounds_mode,
                         struct Dictionary const *const dictionary)
 {
     return initialize(me,
-                      max_size,
                       histogram_num_bins,
                       histogram_bin_size,
                       out_of_bounds_mode,
@@ -115,7 +112,7 @@ insert_item(struct OlkenWithTTL *const me,
             TimeStampType const eviction_time)
 {
     if (!Heap__insert(&me->pq, entry, eviction_time)) {
-        LOGGER_ERROR("fixed-size SHARDS sampler insertion failed");
+        LOGGER_ERROR("TTL heap insertion failed");
         return false;
     }
     if (!Olken__insert_stack(&me->olken, entry)) {
@@ -128,8 +125,8 @@ insert_item(struct OlkenWithTTL *const me,
 
 bool
 OlkenWithTTL__access_item(struct OlkenWithTTL *const me,
-                          TimeStampType const timestamp,
                           EntryType const entry,
+                          TimeStampType const timestamp,
                           TimeStampType const ttl)
 {
     // NOTE I use the nullness of the hash table as a proxy for whether this
