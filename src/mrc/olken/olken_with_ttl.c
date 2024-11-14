@@ -9,6 +9,7 @@
 #include "logger/logger.h"
 #include "lookup/dictionary.h"
 #include "lookup/lookup.h"
+#include "math/saturation_arithmetic.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "olken/olken_with_ttl.h"
@@ -140,7 +141,8 @@ OlkenWithTTL__access_item(struct OlkenWithTTL *const me,
         bool ok = update_item(me, entry, r.timestamp);
         return ok;
     } else {
-        bool ok = insert_item(me, entry, timestamp + ttl);
+        TimeStampType eviction_time = saturation_add(timestamp, ttl);
+        bool ok = insert_item(me, entry, eviction_time);
         return ok;
     }
 }
