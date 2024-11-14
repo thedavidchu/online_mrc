@@ -5,21 +5,11 @@
 
 #include <glib.h>
 
-#ifdef INTERVAL_STATISTICS
-#include "interval_statistics/interval_statistics.h"
-#endif
 #include "lookup/dictionary.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
 #include "priority_queue/heap.h"
 #include "types/entry_type.h"
-
-#ifdef THRESHOLD_STATISTICS
-#include "statistics/statistics.h"
-#endif
-#ifdef PROFILE_STATISTICS
-#include "profile/profile.h"
-#endif
 
 struct OlkenWithTTL {
     struct Olken olken;

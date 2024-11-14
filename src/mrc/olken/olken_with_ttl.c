@@ -6,26 +6,16 @@
 #include <glib.h>
 
 #include "histogram/histogram.h"
-#include "priority_queue/heap.h"
-#ifdef INTERVAL_STATISTICS
-#include "interval_statistics/interval_statistics.h"
-#endif
 #include "logger/logger.h"
 #include "lookup/dictionary.h"
 #include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "olken/olken.h"
-#include "shards/olken_with_ttl.h"
+#include "olken/olken_with_ttl.h"
+#include "priority_queue/heap.h"
 #include "types/entry_type.h"
 #include "types/time_stamp_type.h"
 #include "unused/mark_unused.h"
-
-#ifdef THRESHOLD_STATISTICS
-#include "statistics/statistics.h"
-#endif
-#include "profile/profile.h"
-
-#define THRESHOLD_SAMPLING_PERIOD (1 << 20)
 
 static bool
 initialize(struct OlkenWithTTL *const me,
