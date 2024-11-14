@@ -138,7 +138,8 @@ long_trace_test(void)
 
     for (uint64_t i = 0; i < trace_length; ++i) {
         uint64_t key = ZipfianRandom__next(&zrng);
-        OlkenWithTTL__access_item(&me, key, i, SIZE_MAX);
+        uint64_t ttl = ZipfianRandom__next(&zrng) % (1 << 10);
+        OlkenWithTTL__access_item(&me, key, i, ttl);
     }
 
     if (PRINT_HISTOGRAM) {
