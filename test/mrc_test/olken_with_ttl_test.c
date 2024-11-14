@@ -17,6 +17,12 @@ const bool PRINT_HISTOGRAM = false;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.99;
 
+// NOTE This value is larger than the time range, so it will never expire,
+//      but it is not sufficiently large that it will overflow even with
+//      a large time range. This means it should be roughly in the middle
+//      of possible values for size_t (i.e. SIZE_MAX / 2).
+const size_t DO_NOT_EXPIRE = (size_t)1 << 40;
+
 static bool
 access_same_key_five_times(void)
 {
@@ -35,7 +41,7 @@ access_same_key_five_times(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(OlkenWithTTL__init(&me, histogram_oracle.num_bins, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        OlkenWithTTL__access_item(&me, entries[i], i, SIZE_MAX);
+        OlkenWithTTL__access_item(&me, entries[i], i, DO_NOT_EXPIRE);
     }
     g_assert_true(
         Histogram__exactly_equal(&me.olken.histogram, &histogram_oracle));
@@ -70,7 +76,7 @@ small_exact_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(OlkenWithTTL__init(&me, histogram_oracle.num_bins, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        OlkenWithTTL__access_item(&me, entries[i], i, SIZE_MAX);
+        OlkenWithTTL__access_item(&me, entries[i], i, DO_NOT_EXPIRE);
     }
     g_assert_true(
         Histogram__exactly_equal(&me.olken.histogram, &histogram_oracle));
@@ -107,7 +113,7 @@ small_inexact_trace_test(void)
     // The maximum trace length is obviously the number of possible unique items
     g_assert_true(OlkenWithTTL__init(&me, histogram_oracle.num_bins, 1));
     for (uint64_t i = 0; i < ARRAY_SIZE(entries); ++i) {
-        OlkenWithTTL__access_item(&me, entries[i], i, SIZE_MAX);
+        OlkenWithTTL__access_item(&me, entries[i], i, DO_NOT_EXPIRE);
     }
     g_assert_true(
         Histogram__exactly_equal(&me.olken.histogram, &histogram_oracle));
