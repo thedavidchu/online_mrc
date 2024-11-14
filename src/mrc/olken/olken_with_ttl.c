@@ -86,7 +86,7 @@ evict_expired_items(struct OlkenWithTTL *const me, TimeStampType current_time)
         bool r = true;
         KeyType oldest_expiry_time = Heap__get_top_key(&me->pq);
         EntryType rm_entry = 0;
-        if (oldest_expiry_time >= current_time) {
+        if (oldest_expiry_time >= current_time || me->pq.length == 0) {
             break;
         }
         r = Heap__remove(&me->pq, oldest_expiry_time, &rm_entry);
