@@ -17,11 +17,12 @@ const bool PRINT_HISTOGRAM = false;
 const uint64_t MAX_NUM_UNIQUE_ENTRIES = 1 << 20;
 const double ZIPFIAN_RANDOM_SKEW = 0.99;
 
-// NOTE This value is larger than the time range, so it will never expire,
-//      but it is not sufficiently large that it will overflow even with
-//      a large time range. This means it should be roughly in the middle
-//      of possible values for size_t (i.e. SIZE_MAX / 2).
-const size_t DO_NOT_EXPIRE = (size_t)1 << 40;
+// NOTE I use a 'saturation add' when adding the TTL and the timestamp.
+//      This means that it will not overflow to a small number, which
+//      means that the eviction time will be _at least_ as large as the
+//      MAX(TTL, timestamp) time. This is an improvement from before,
+//      where I had to carefully select TTLs to ensure no overflow.
+const size_t DO_NOT_EXPIRE = SIZE_MAX;
 
 static bool
 access_same_key_five_times(void)
