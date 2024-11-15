@@ -178,6 +178,7 @@ def create_ttl_histogram(
     # Read input data into mmap region
     logger.info(f"Reading from {str(trace_path)} with {trace_format}'s format")
     data = np.memmap(trace_path, dtype=dtype, mode="readonly")
+    logger.debug(f"Temporary prefix: {tmp_prefix}")
     # Save the relevant entries into mmap region
     with TemporaryDirectory(prefix=tmp_prefix) as t:
         tmpdir = Path(t)
@@ -360,7 +361,8 @@ def main():
             f"--format {args.format} "
             f"--stride {args.stride} "
             f"--plot {abspath(plot)} "
-            f"--histogram {abspath(histogram)}"
+            f"--histogram {abspath(histogram)} "
+            f"--tmp-dir {abspath(tmpdir)} "
         )
 
 
