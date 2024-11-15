@@ -13,7 +13,25 @@ struct Oracle {
     size_t answer;
 };
 
-bool
+/// @brief  Test a binary operation that works on two size_t
+///         operands.
+static bool
+test_binary_op_on_size_t(struct Oracle const *const array,
+                         size_t const length,
+                         bool const test_commute,
+                         size_t (*op)(size_t const, size_t const))
+{
+    for (size_t i = 0; i < length; ++i) {
+        g_assert_cmpuint(op(array[i].a, array[i].b), ==, array[i].answer);
+        // Test commutativity
+        if (test_commute) {
+            g_assert_cmpuint(op(array[i].b, array[i].a), ==, array[i].answer);
+        }
+    }
+    return true;
+}
+
+static bool
 test_saturation_add(void)
 {
     struct Oracle stuff[] = {
@@ -50,22 +68,60 @@ test_saturation_add(void)
         // SIZE_MAX
         {SIZE_MAX, SIZE_MAX, SIZE_MAX},
     };
+    return test_binary_op_on_size_t(stuff,
+                                    ARRAY_SIZE(stuff),
+                                    true,
+                                    saturation_add);
+}
 
-    for (size_t i = 0; i < ARRAY_SIZE(stuff); ++i) {
-        g_assert_cmpuint(saturation_add(stuff[i].a, stuff[i].b),
-                         ==,
-                         stuff[i].answer);
-        // Test commutativity
-        g_assert_cmpuint(saturation_add(stuff[i].b, stuff[i].a),
-                         ==,
-                         stuff[i].answer);
-    }
-    return true;
+static bool
+test_saturation_multiply(void)
+{
+    struct Oracle stuff[] = {
+        // Zero and small numbers
+        {0, 0, 0},
+        {0, 1, 0},
+        {0, 2, 0},
+        // Small numbers
+        {1, 1, 1},
+        {1, 2, 2},
+        {2, 2, 4},
+
+        // Zero and near-to SIZE_MAX
+        {0, SIZE_MAX - 1, 0},
+        {0, SIZE_MAX - 2, 0},
+        // Small numbers an near-to SIZE_MAX
+        {1, SIZE_MAX - 1, SIZE_MAX - 1},
+        {1, SIZE_MAX - 2, SIZE_MAX - 2},
+        {2, SIZE_MAX - 1, SIZE_MAX},
+        {2, SIZE_MAX - 2, SIZE_MAX},
+        // Near-to SIZE_MAX
+        {SIZE_MAX - 1, SIZE_MAX - 1, SIZE_MAX},
+        {SIZE_MAX - 1, SIZE_MAX - 2, SIZE_MAX},
+        {SIZE_MAX - 2, SIZE_MAX - 2, SIZE_MAX},
+
+        // Zero and SIZE_MAX
+        {0, SIZE_MAX, 0},
+        // Small numbers and SIZE_MAX
+        {1, SIZE_MAX, SIZE_MAX},
+        {2, SIZE_MAX, SIZE_MAX},
+        // Near-to SIZE_MAX and SIZE_MAX
+        {SIZE_MAX - 1, SIZE_MAX, SIZE_MAX},
+        {SIZE_MAX - 2, SIZE_MAX, SIZE_MAX},
+        // SIZE_MAX
+        {SIZE_MAX, SIZE_MAX, SIZE_MAX},
+    };
+
+    return test_binary_op_on_size_t(stuff,
+                                    ARRAY_SIZE(stuff),
+                                    true,
+                                    saturation_multiply);
 }
 
 int
 main(void)
 {
     ASSERT_FUNCTION_RETURNS_TRUE(test_saturation_add());
+    ASSERT_FUNCTION_RETURNS_TRUE(test_saturation_multiply());
     return 0;
 }
