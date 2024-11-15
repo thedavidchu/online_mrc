@@ -67,6 +67,55 @@ your personal data, results, and scripts.
 If you create a very useful, generalizable script, feel free to move it to the
 global `/scripts/` directory and share it!
 
+Binary Structures
+--------------------------------------------------------------------------------
+
+I support a number of binary data serializations/deserializations.
+The endianness is machine dependent; in my case, little endian.
+
+I express my data in a self-referential C-style structure format,
+where there is no padding and data fields may refer to the data stored
+in previous data fields.
+
+### Histogram
+
+I save my histograms (i.e. 'struct Histogram') in a sparse format as
+follows:
+
+```c
+// Little-endian (on my machine)
+struct SparseMissRateCurve {
+    size_t num_bins;    // Number of sparse bins, 8 bytes on my system.
+    size_t bin_size;    // Size of each bin, 8 bytes on my system.
+    size_t false_infinity;  // Number of overflows (i.e. larger than the
+                            // maximum bin in the histogram), 8 bytes on
+                            // my system.
+    size_t infinity;    // Number of infinite values, 8 bytes on my system.
+    size_t running_sum; // Total number of entries in the histogram.
+                        // 8 bytes on my system.
+    struct SparseEntry {
+        size_t scaled_idx;
+        size_t frequency;
+    } data[num_bins];   // The data in sparse format, 16 bytes on my system
+};
+```
+### Miss-Rate Curve
+
+I save my miss-rate curves (i.e. 'struct MissRateCurve') in a sparse
+format as follows:
+
+```c
+// Little-endian (on my machine)
+struct SparseMissRateCurve {
+    size_t num_bins;    // Number of sparse bins, 8 bytes on my system
+    size_t bin_size;    // Size of each bin, 8 bytes on my system
+    struct SparseEntry {
+        size_t scaled_idx;
+        double miss_rate;
+    } data[num_bins];   // The data in sparse format, 16 bytes on my system
+};
+```
+
 Historic Notes
 --------------------------------------------------------------------------------
 
