@@ -127,21 +127,22 @@ insert_item(struct OlkenWithTTL *const me,
 bool
 OlkenWithTTL__access_item(struct OlkenWithTTL *const me,
                           EntryType const entry,
-                          TimeStampType const timestamp,
-                          TimeStampType const ttl)
+                          TimeStampType const timestamp_ms,
+                          TimeStampType const ttl_s)
 {
     // NOTE I use the nullness of the hash table as a proxy for whether this
     //      data structure has been initialized.
     if (me == NULL) {
         return false;
     }
-    evict_expired_items(me, timestamp);
+    evict_expired_items(me, timestamp_ms);
     struct LookupReturn r = Olken__lookup(&me->olken, entry);
     if (r.success) {
         bool ok = update_item(me, entry, r.timestamp);
         return ok;
     } else {
-        TimeStampType eviction_time = saturation_add(timestamp, ttl);
+        TimeStampType eviction_time =
+            saturation_add(timestamp_ms, saturation_multiply(1000, ttl_s));
         bool ok = insert_item(me, entry, eviction_time);
         return ok;
     }

@@ -34,8 +34,8 @@ OlkenWithTTL__init_full(struct OlkenWithTTL *const me,
 bool
 OlkenWithTTL__access_item(struct OlkenWithTTL *const me,
                           EntryType const entry,
-                          TimeStampType const timestamp,
-                          TimeStampType const ttl);
+                          TimeStampType const timestamp_ms,
+                          TimeStampType const ttl_s);
 
 bool
 OlkenWithTTL__post_process(struct OlkenWithTTL *me);
