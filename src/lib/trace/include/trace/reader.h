@@ -6,7 +6,7 @@ enum TraceFormat {
     TRACE_FORMAT_INVALID,
     /// So the data format is basically each access occupies 25 bytes in this
     /// order:
-    /// 8 bytes -> u64 -> timestamp (unix timestamp)
+    /// 8 bytes -> u64 -> timestamp (unix timestamp, in milliseconds)
     /// 1 byte -> u8 -> command (0 is get, 1 is set)
     /// 8 bytes -> u64 -> key
     /// 4 bytes -> u32 -> object size
