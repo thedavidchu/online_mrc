@@ -261,17 +261,25 @@ def plot_ttl(
 
     # Plot TTL vs Size
     ttl_vs_size = np.sum(hist, axis=2)
-    ax0.pcolormesh(size_edges, ttl_edges, ttl_vs_size, norm="log")
+    heatmap_a = ax0.pcolormesh(size_edges, ttl_edges, ttl_vs_size, norm="log")
     ax0.set_title("Object Time-to-Live (TTL) vs Size")
     ax0.set_ylabel("Object Time-to-Live (TTL) [seconds]")
     ax0.set_xlabel("Object Size [bytes]")
 
     # Plot TTL vs Timestamp
     ttl_vs_timestamp = np.sum(hist, axis=1)
-    ax1.pcolormesh(timestamp_edges, ttl_edges, ttl_vs_timestamp, norm="log")
+    heatmap_b = ax1.pcolormesh(timestamp_edges, ttl_edges, ttl_vs_timestamp, norm="log")
     ax1.set_title("Object Time-to-Live (TTL) vs Timestamp")
     ax1.set_ylabel("Object Time-to-Live (TTL) [seconds]")
-    ax1.set_xlabel("Timestamp [seconds]")
+    ax1.set_xlabel("Timestamp [milliseconds]")
+
+    # Set the y_lim after plotting so that it doesn't cause it to be capped at 1.
+    # TODO Actively share y-axis between ax0 and ax1
+    ax0.set_ylim(ymin=0)
+    ax1.set_ylim(ymin=0)
+
+    fig.colorbar(heatmap_a)
+    fig.colorbar(heatmap_b)
 
     fig.savefig(plot_path)
     logger.info(f"Saved plot to {str(plot_path)}")
