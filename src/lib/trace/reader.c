@@ -88,18 +88,19 @@ construct_full_trace_item(uint8_t const *const restrict bytes,
     case TRACE_FORMAT_KIA: {
         /* Timestamp at byte 0, Command at byte 8, Key at byte 9, Object size at
          * byte 17, Time-to-live at byte 21 */
-        struct FullTraceItem trace = {0};
-        memcpy(&trace.timestamp, &bytes[0], sizeof(trace.timestamp));
-        trace.command = bytes[8];
-        memcpy(&trace.key, &bytes[9], sizeof(trace.key));
-        memcpy(&trace.size, &bytes[17], sizeof(trace.size));
-        memcpy(&trace.time_to_live, &bytes[21], sizeof(trace.time_to_live));
-        return (struct FullTraceItem){.timestamp = le64toh(trace.timestamp),
-                                      .command = trace.command,
-                                      .key = le64toh(trace.key),
-                                      .size = le32toh(trace.size),
-                                      .time_to_live =
-                                          le32toh(trace.time_to_live)};
+        uint64_t timestamp_ms = 0, key = 0;
+        uint32_t size = 0, ttl = 0;
+        uint8_t command = 0;
+        memcpy(&timestamp_ms, &bytes[0], sizeof(timestamp_ms));
+        command = bytes[8];
+        memcpy(&key, &bytes[9], sizeof(key));
+        memcpy(&size, &bytes[17], sizeof(size));
+        memcpy(&ttl, &bytes[21], sizeof(ttl));
+        return (struct FullTraceItem){.timestamp_ms = le64toh(timestamp_ms),
+                                      .command = command,
+                                      .key = le64toh(key),
+                                      .size = le32toh(size),
+                                      .ttl_s = le32toh(ttl)};
     }
     case TRACE_FORMAT_SARI: {
         /* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
@@ -109,20 +110,21 @@ construct_full_trace_item(uint8_t const *const restrict bytes,
         //      need to read 4 bytes and interpret this as a little-
         //      endian uint32 before sticking this in the uint64 in the
         //      data structure.
-        uint32_t timestamp = 0;
-        memcpy(&timestamp, &bytes[0], 4);
-        memcpy(&trace.key, &bytes[4], sizeof(trace.key));
-        memcpy(&trace.size, &bytes[12], sizeof(trace.size));
-        memcpy(&trace.time_to_live, &bytes[16], sizeof(trace.time_to_live));
+        uint32_t timestamp_s = 0;
+        uint64_t key = 0, size = 0, eviction_time = 0;
+        memcpy(&timestamp_s, &bytes[0], 4);
+        memcpy(&key, &bytes[4], sizeof(key));
+        memcpy(&size, &bytes[12], sizeof(size));
+        memcpy(&eviction_time, &bytes[16], sizeof(eviction_time));
         return (struct FullTraceItem){
             // We need to stick the little-endian uint32 into the
             // host's uint64.
-            .timestamp = le32toh(timestamp),
+            .timestamp_ms = 1000 * (uint64_t)le32toh(timestamp_s),
             // Sari's format only contains 'get' requests as far as I know.
             .command = 0,
             .key = le64toh(trace.key),
             .size = le32toh(trace.size),
-            .time_to_live = le32toh(trace.time_to_live),
+            .ttl_s = le32toh(trace.ttl_s) - le32toh(timestamp_s),
         };
     }
     default:

@@ -177,11 +177,11 @@ print_trace_entry(struct FullTraceItem const item)
     fprintf(stdout,
             "%20" PRIu64 " | %7" PRIu8 " | %20" PRIu64 " | %10" PRIu32
             " | %10" PRIu32 "\n",
-            item.timestamp,
+            item.timestamp_ms,
             item.command,
             item.key,
             item.size,
-            item.time_to_live);
+            item.ttl_s);
 }
 
 static bool
