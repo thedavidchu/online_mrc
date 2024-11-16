@@ -23,6 +23,8 @@ run_oracle_lib = library(
         io_dep,
         miss_rate_curve_dep,
         olken_dep,
+        olken_with_ttl_dep,
+        priority_queue_dep,
         trace_dep,
     ],
 )

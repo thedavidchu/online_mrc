@@ -43,6 +43,7 @@ struct CommandLineArguments {
     //      - Histogram overflow strategy [optional. Default = overflow]
     //      - SHARDS adjustment [optional. Default = true for Fixed-Rate SHARDS]
     gchar **run;
+    // This is the runner for the TTL algorithms.
 
     // NOTE This string contains the following information:
     //      - MRC path [both input/output]
@@ -51,6 +52,7 @@ struct CommandLineArguments {
     //      - Size of histogram bins [optional. Default = 1]
     //      - Histogram overflow strategy [optional. Default = overflow]
     gchar *oracle;
+    gchar *ttl_oracle;
 
     // NOTE The 'gboolean' and 'bool' sizes are different so if these
     //      are regular 'bool', then they can get clobbered!
@@ -161,6 +163,13 @@ parse_command_line_arguments(int argc, char *argv[])
          &args.oracle,
          "arguments for the oracle",
          NULL},
+        {"ttl-oracle",
+         't',
+         0,
+         G_OPTION_ARG_STRING,
+         &args.ttl_oracle,
+         "arguments for the TTL runner",
+         NULL},
         {"cleanup",
          0,
          0,
@@ -211,7 +220,7 @@ parse_command_line_arguments(int argc, char *argv[])
         // NOTE If 'trace_format' is NULL, the we remain with the default.
         LOGGER_TRACE("using default trace format");
     }
-    if (args.run == NULL && args.oracle == NULL) {
+    if (args.run == NULL && args.oracle == NULL && args.ttl_oracle == NULL) {
         LOGGER_ERROR("expected at least some work!");
         goto cleanup;
     }
@@ -318,6 +327,9 @@ struct RunnerArgumentsArray {
     // This is an array of arguments.
     struct RunnerArguments *data;
     size_t length;
+
+    // This is the array of TTL runner arguments
+    struct RunnerArguments *ttl_oracle_arg;
 };
 
 /// @brief  Return true iff both paths are non-NULL and match.
@@ -439,6 +451,25 @@ create_work_array(struct CommandLineArguments const *const args)
             goto cleanup;
         }
     }
+    if (args->ttl_oracle != NULL) {
+        r.ttl_oracle_arg = calloc(1, sizeof(*r.ttl_oracle_arg));
+        if (r.ttl_oracle_arg == NULL) {
+            LOGGER_ERROR("bad calloc(%zu, %zu)", 1, sizeof(*r.data));
+            goto cleanup;
+        }
+        if (!RunnerArguments__init(r.ttl_oracle_arg, args->ttl_oracle)) {
+            LOGGER_FATAL("failed to initialize runner arguments '%s'",
+                         args->oracle);
+            goto cleanup;
+        }
+        if (r.ttl_oracle_arg->algorithm != MRC_ALGORITHM_OLKEN &&
+            r.ttl_oracle_arg->algorithm != MRC_ALGORITHM_ORACLE) {
+            LOGGER_ERROR(
+                "Oracle algorithm must be 'Oracle' or 'Olken', not '%s'",
+                algorithm_names[r.oracle_arg->algorithm]);
+            goto cleanup;
+        }
+    }
     if (args->run != NULL) {
         // Get length of allocation required
         size_t length = 0;
@@ -503,24 +534,18 @@ run_cleanup(struct RunnerArguments const *const args)
     return true;
 }
 
-int
-main(int argc, char **argv)
+/// @brief  Run the non-TTL-aware uniform block-size simulators.
+static bool
+run_simple_simulation(struct CommandLineArguments args,
+                      struct RunnerArgumentsArray work)
 {
     // This variable is for things that are not critical failures but
     // indicate we didn't succeed.
     bool ok = true;
-    struct CommandLineArguments args = {0};
-    args = parse_command_line_arguments(argc, argv);
-    print_command_line_arguments(&args);
 
-    // Parse work. This is above the trace reader because it should be
-    // faster and thus a failure will fail faster.
-    struct RunnerArgumentsArray work = create_work_array(&args);
-    if (work.oracle_arg == NULL && work.data == NULL && work.length == 0) {
-        LOGGER_INFO("error in creating work array");
-        goto cleanup_cmdln;
-    }
-
+    // NOTE This may appear to be identical to the Olken runner below,
+    //      but this runs the (probably... but I never benchmarked)
+    //      slower (but less memory-intensive) oracle runner.
     if (work.oracle_arg != NULL &&
         work.oracle_arg->algorithm == MRC_ALGORITHM_ORACLE) {
         run_oracle(args.input_path, args.trace_format, work.oracle_arg);
@@ -536,10 +561,13 @@ main(int argc, char **argv)
         LOGGER_ERROR("invalid trace {.trace = %p, .length = %zu}",
                      (void *)trace.trace,
                      trace.length);
-        goto cleanup_work;
+        goto cleanup;
     }
     print_trace_summary(&args, &trace);
 
+    // NOTE This may appear to be identical to the oracle runner above,
+    //      but this runs the (probably... but I never benchmarked)
+    //      faster (but more memory-intensive) Olken runner.
     if (work.oracle_arg != NULL &&
         work.oracle_arg->algorithm == MRC_ALGORITHM_OLKEN) {
         if (!run_runner(work.oracle_arg, &trace)) {
@@ -562,7 +590,7 @@ main(int argc, char **argv)
         if (!MissRateCurve__load(&oracle_mrc, oracle_mrc_path)) {
             LOGGER_ERROR("failed to load oracle MRC at '%s'",
                          oracle_mrc_path ? oracle_mrc_path : "(null)");
-            goto cleanup_trace;
+            goto cleanup;
         }
 
         for (size_t i = 0; i < work.length; ++i) {
@@ -590,6 +618,12 @@ main(int argc, char **argv)
     //      we don't like to pollute our file system every time we run
     //      our tests!
     if (args.cleanup) {
+        if (work.oracle_arg != NULL) {
+            if (!run_cleanup(work.oracle_arg)) {
+                LOGGER_ERROR("cleanup failed");
+                ok = false;
+            }
+        }
         for (size_t i = 0; i < work.length; ++i) {
             if (!run_cleanup(&work.data[i])) {
                 LOGGER_ERROR("cleanup failed");
@@ -598,22 +632,82 @@ main(int argc, char **argv)
         }
     }
 
+    Trace__destroy(&trace);
+    return ok;
+cleanup:
+    Trace__destroy(&trace);
+    return false;
+}
+
+/// @brief  Run the TTL-aware uniform block-size simulators.
+static bool
+run_ttl_simulation(struct CommandLineArguments args,
+                   struct RunnerArgumentsArray work)
+{
+    // This variable is for things that are not critical failures but
+    // indicate we didn't succeed.
+    bool ok = true;
+
+    if (work.ttl_oracle_arg != NULL &&
+        (work.ttl_oracle_arg->algorithm == MRC_ALGORITHM_ORACLE ||
+         work.ttl_oracle_arg->algorithm == MRC_ALGORITHM_OLKEN)) {
+        run_oracle_with_ttl(args.input_path,
+                            args.trace_format,
+                            work.ttl_oracle_arg);
+    }
+
+    // NOTE We clean up the MRC and histogram files when we test because
+    //      we don't like to pollute our file system every time we run
+    //      our tests!
+    if (args.cleanup) {
+        if (work.oracle_arg != NULL) {
+            if (!run_cleanup(work.oracle_arg)) {
+                LOGGER_ERROR("cleanup failed");
+                ok = false;
+            }
+        }
+    }
+
+    return ok;
+}
+
+int
+main(int argc, char **argv)
+{
+    struct CommandLineArguments args = {0};
+    args = parse_command_line_arguments(argc, argv);
+    print_command_line_arguments(&args);
+
+    // Parse work. This is above the trace reader because it should be
+    // faster and thus a failure will fail faster.
+    struct RunnerArgumentsArray work = create_work_array(&args);
+    if (work.oracle_arg == NULL && work.data == NULL && work.length == 0 &&
+        work.ttl_oracle_arg == NULL) {
+        LOGGER_INFO("error in creating work array");
+        goto cleanup_cmdln;
+    }
+
+    if (work.oracle_arg != NULL || work.data != NULL) {
+        if (!run_simple_simulation(args, work)) {
+            LOGGER_ERROR("simple simulator failed!");
+            goto cleanup;
+        }
+    }
+    if (work.ttl_oracle_arg != NULL) {
+        if (!run_ttl_simulation(args, work)) {
+            LOGGER_ERROR("TTL simulator failed!");
+            goto cleanup;
+        }
+    }
+
     free_work_array(&work);
     free_command_line_arguments(&args);
-    Trace__destroy(&trace);
-
-    if (!ok) {
-        goto cleanup;
-    }
     LOGGER_INFO("=== SUCCESS ===");
     return EXIT_SUCCESS;
-cleanup_trace:
-    Trace__destroy(&trace);
-cleanup_work:
-    free_work_array(&work);
 cleanup_cmdln:
     free_command_line_arguments(&args);
 cleanup:
+    free_work_array(&work);
     // NOTE I don't cleanup the memory because I count on the OS doing
     //      it and because some of the goto statements jump over
     //      variable declarations, which would cause errors.

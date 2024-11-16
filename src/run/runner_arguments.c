@@ -247,6 +247,7 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
     } else {
         if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
+            print_help();
             return false;
         }
         LOGGER_WARN("unrecognized parameter '%s' with value '%s'. Storing it "
