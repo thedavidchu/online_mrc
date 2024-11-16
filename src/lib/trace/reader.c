@@ -144,7 +144,10 @@ construct_full_trace_item(uint8_t const *const restrict bytes,
             0,
             le64toh(key),
             le32toh(size),
-            le32toh(eviction_time_s) - le32toh(timestamp_s));
+            // NOTE According to Sari's TTLs Matter paper, the format is:
+            //      `le32toh(eviction_time_s) - le32toh(timestamp_s)`,
+            //      but that's not what I empirically observe.
+            le32toh(eviction_time_s));
     }
     default:
         LOGGER_ERROR("unrecognized format %d", format);
