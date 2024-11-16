@@ -276,7 +276,9 @@ def plot_ttl(
 
     # Set the y_lim after plotting so that it doesn't cause it to be capped at 1.
     # TODO Actively share y-axis between ax0 and ax1
+    ax0.set_xlim(xmin=0)
     ax0.set_ylim(ymin=0)
+    ax1.set_xlim(xmin=0)
     ax1.set_ylim(ymin=0)
 
     fig.colorbar(heatmap_a)
