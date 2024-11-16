@@ -46,12 +46,17 @@ struct TraceItemResult {
     struct TraceItem item;
 };
 
+struct FullTraceItemResult {
+    bool valid;
+    struct FullTraceItem item;
+};
+
 /// @note   Hehe... bit twiddly hacks.
 /// Source: https://man7.org/linux/man-pages/man3/endian.3.html
 struct TraceItemResult
 construct_trace_item(uint8_t const *const restrict bytes,
                      enum TraceFormat format);
 
-struct FullTraceItem
+struct FullTraceItemResult
 construct_full_trace_item(uint8_t const *const restrict bytes,
                           enum TraceFormat format);

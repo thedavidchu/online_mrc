@@ -73,13 +73,14 @@ construct_trace_item(uint8_t const *const restrict bytes,
     }
 }
 
-struct FullTraceItem
+struct FullTraceItemResult
 construct_full_trace_item(uint8_t const *const restrict bytes,
                           enum TraceFormat format)
 {
     if (bytes == NULL) {
         LOGGER_ERROR("got NULL");
-        return (struct FullTraceItem){0};
+        return (struct FullTraceItemResult){.valid = false,
+                                            .item = (struct FullTraceItem){0}};
     }
 
     // We perform memcpy because the bytes may not be aligned, so we cannot do

@@ -239,10 +239,11 @@ run(struct CommandLineArguments const *const args)
             "---------------------|---------|----------------------|-----------"
             "-|-----------\n");
     for (size_t i = start; i < end; ++i) {
-        struct FullTraceItem item = construct_full_trace_item(
+        struct FullTraceItemResult r = construct_full_trace_item(
             &((uint8_t *)mm.buffer)[i * bytes_per_trace_item],
             args->trace_format);
-        print_trace_entry(item);
+        assert(r.valid);
+        print_trace_entry(r.item);
     }
 
     MemoryMap__destroy(&mm);
