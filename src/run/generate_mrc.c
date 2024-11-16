@@ -2,6 +2,7 @@
  *  @brief  This file provides a runner for various MRC generation algorithms.
  */
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -9,10 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "arrays/array_size.h"
 #include "file/file.h"
 #include "glib.h"
 #include "logger/logger.h"
 #include "lookup/dictionary.h"
+#include "lookup/lookup.h"
 #include "miss_rate_curve/miss_rate_curve.h"
 #include "timer/timer.h"
 #include "trace/generator.h"
@@ -49,8 +52,61 @@ struct CommandLineArguments {
     //      - Histogram overflow strategy [optional. Default = overflow]
     gchar *oracle;
 
-    bool cleanup;
+    // NOTE The 'gboolean' and 'bool' sizes are different so if these
+    //      are regular 'bool', then they can get clobbered!
+    gboolean cleanup;
 };
+
+/// @note   This should be a static check, but I do it dynamically
+///         because of the limitations of C.
+static bool
+validate_parameters(GOptionEntry const *const entries, size_t const nentries)
+{
+    bool ok = true;
+    bool short_options[256] = {0};
+    struct Dictionary long_options = {0};
+
+    if (!Dictionary__init(&long_options)) {
+        LOGGER_ERROR("failed to init dictionary");
+        return false;
+    }
+
+    short_options['h'] = true;
+    if (Dictionary__put(&long_options, "help", "") !=
+        LOOKUP_PUTUNIQUE_INSERT_KEY_VALUE) {
+        LOGGER_ERROR("failed to put '--help' into long options");
+        return false;
+    }
+
+    for (size_t i = 0; i < nentries; ++i) {
+        // NOTE We use an 'unsigned char' type so that we don't index
+        //      with negative numbers!
+        unsigned char const s_opt = entries[i].short_name;
+        char const *const l_opt = entries[i].long_name;
+
+        if (s_opt == 0) { // OK, since this means no short option.
+        } else if (!isprint(s_opt)) {
+            // NOTE The bit-wise 'and' is not necessary since I already
+            //      use an 'unsigned char' type. However, a little bit
+            //      of redundancy for safety doesn't hurt.
+            LOGGER_ERROR("unprintable short option 0x%x", s_opt & 0xff);
+            ok = false;
+        } else if (short_options[s_opt]) {
+            LOGGER_ERROR("short option '-%c' already used", s_opt);
+            ok = false;
+        }
+        short_options[s_opt] = true;
+        enum PutUniqueStatus r = Dictionary__put(&long_options, l_opt, "");
+        if (r == LOOKUP_PUTUNIQUE_ERROR) {
+            LOGGER_ERROR("putting long option '--%s' caused an error", l_opt);
+            ok = false;
+        } else if (r == LOOKUP_PUTUNIQUE_REPLACE_VALUE) {
+            LOGGER_ERROR("long option '--%s' already used", l_opt);
+            ok = false;
+        }
+    }
+    return ok;
+}
 
 static struct CommandLineArguments
 parse_command_line_arguments(int argc, char *argv[])
@@ -114,6 +170,14 @@ parse_command_line_arguments(int argc, char *argv[])
          NULL},
         G_OPTION_ENTRY_NULL,
     };
+
+    if (!validate_parameters(entries, ARRAY_SIZE(entries) - 1)) {
+        LOGGER_ERROR("invalid parameters! This should be a compile-time error, "
+                     "but C doesn't support such advanced compile-time checks, "
+                     "so the user will get this at run-time. If this is you, "
+                     "whoever compiled this is a goof and made a mistake.");
+        exit(1);
+    }
 
     GError *error = NULL;
     GOptionContext *context;
