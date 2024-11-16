@@ -175,7 +175,8 @@ static void
 print_trace_entry(struct FullTraceItem const item)
 {
     fprintf(stdout,
-            "%" PRIu64 " %" PRIu8 " %" PRIu64 " %" PRIu32 " %" PRIu32 "\n",
+            "%20" PRIu64 " | %7" PRIu8 " | %20" PRIu64 " | %10" PRIu32
+            " | %10" PRIu32 "\n",
             item.timestamp,
             item.command,
             item.key,
@@ -227,7 +228,16 @@ run(struct CommandLineArguments const *const args)
             num_entries);
         goto cleanup_error;
     }
-    fprintf(stdout, "Timestamp Command Key Size TTL\n");
+    fprintf(stdout,
+            "%20s | %1s | %20s | %10s | %10s\n",
+            "Timestamp [ms]",
+            "Command",
+            "Key",
+            "Size [B]",
+            "TTL [s]");
+    fprintf(stdout,
+            "---------------------|---------|----------------------|-----------"
+            "-|-----------\n");
     for (size_t i = start; i < end; ++i) {
         struct FullTraceItem item = construct_full_trace_item(
             &((uint8_t *)mm.buffer)[i * bytes_per_trace_item],
