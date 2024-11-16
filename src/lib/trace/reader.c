@@ -73,14 +73,33 @@ construct_trace_item(uint8_t const *const restrict bytes,
     }
 }
 
+/// @brief  A thin wrapper to return a valid 'struct FullTraceItemResult'.
+/// @note   I find this return type to be very verbose so this hopefully
+///         hides it. I admit this may be more confusing (and ugly) than
+///         simply returning the type plainly.
+static struct FullTraceItemResult
+construct_valid_full_trace_item_result(uint64_t const timestamp_ms,
+                                       uint8_t const command,
+                                       uint64_t const key,
+                                       uint32_t const size,
+                                       uint32_t const ttl_s)
+{
+    return (struct FullTraceItemResult){
+        .valid = true,
+        .item = (struct FullTraceItem){.timestamp_ms = timestamp_ms,
+                                       .command = command,
+                                       .key = key,
+                                       .size = size,
+                                       .ttl_s = ttl_s}};
+}
+
 struct FullTraceItemResult
 construct_full_trace_item(uint8_t const *const restrict bytes,
                           enum TraceFormat format)
 {
     if (bytes == NULL) {
         LOGGER_ERROR("got NULL");
-        return (struct FullTraceItemResult){.valid = false,
-                                            .item = (struct FullTraceItem){0}};
+        goto error_cleanup;
     }
 
     // We perform memcpy because the bytes may not be aligned, so we cannot do
@@ -90,48 +109,51 @@ construct_full_trace_item(uint8_t const *const restrict bytes,
         /* Timestamp at byte 0, Command at byte 8, Key at byte 9, Object size at
          * byte 17, Time-to-live at byte 21 */
         uint64_t timestamp_ms = 0, key = 0;
-        uint32_t size = 0, ttl = 0;
+        uint32_t size = 0, ttl_s = 0;
         uint8_t command = 0;
         memcpy(&timestamp_ms, &bytes[0], sizeof(timestamp_ms));
         command = bytes[8];
         memcpy(&key, &bytes[9], sizeof(key));
         memcpy(&size, &bytes[17], sizeof(size));
-        memcpy(&ttl, &bytes[21], sizeof(ttl));
-        return (struct FullTraceItem){.timestamp_ms = le64toh(timestamp_ms),
-                                      .command = command,
-                                      .key = le64toh(key),
-                                      .size = le32toh(size),
-                                      .ttl_s = le32toh(ttl)};
+        memcpy(&ttl_s, &bytes[21], sizeof(ttl_s));
+        return construct_valid_full_trace_item_result(le64toh(timestamp_ms),
+                                                      command,
+                                                      le64toh(key),
+                                                      le32toh(size),
+                                                      le32toh(ttl_s));
     }
     case TRACE_FORMAT_SARI: {
         /* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
          * byte 16 */
-        struct FullTraceItem trace = {0};
         // NOTE Sari's format uses uint32 timestamps. This means that we
         //      need to read 4 bytes and interpret this as a little-
         //      endian uint32 before sticking this in the uint64 in the
         //      data structure.
         uint32_t timestamp_s = 0;
-        uint64_t key = 0, size = 0, eviction_time = 0;
+        uint64_t key = 0, size = 0, eviction_time_s = 0;
         memcpy(&timestamp_s, &bytes[0], 4);
         memcpy(&key, &bytes[4], sizeof(key));
         memcpy(&size, &bytes[12], sizeof(size));
-        memcpy(&eviction_time, &bytes[16], sizeof(eviction_time));
-        return (struct FullTraceItem){
+        memcpy(&eviction_time_s, &bytes[16], sizeof(eviction_time_s));
+
+        return construct_valid_full_trace_item_result(
             // We need to stick the little-endian uint32 into the
             // host's uint64.
-            .timestamp_ms = 1000 * (uint64_t)le32toh(timestamp_s),
+            1000 * (uint64_t)le32toh(timestamp_s),
             // Sari's format only contains 'get' requests as far as I know.
-            .command = 0,
-            .key = le64toh(trace.key),
-            .size = le32toh(trace.size),
-            .ttl_s = le32toh(trace.ttl_s) - le32toh(timestamp_s),
-        };
+            0,
+            le64toh(key),
+            le32toh(size),
+            le32toh(eviction_time_s) - le32toh(timestamp_s));
     }
     default:
         LOGGER_ERROR("unrecognized format %d", format);
-        return (struct FullTraceItem){0};
+        goto error_cleanup;
     }
+    assert(0 && "impossible");
+error_cleanup:
+    return (struct FullTraceItemResult){.valid = false,
+                                        .item = (struct FullTraceItem){0}};
 }
 
 void
