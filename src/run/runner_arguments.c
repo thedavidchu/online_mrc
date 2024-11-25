@@ -59,6 +59,26 @@ parse_runner_mode_string(enum RunnerMode *value, char const *const str)
     return false;
 }
 
+static void
+print_algorithms_help_message(FILE *const stream)
+{
+    fprintf(stream, "Available algorithms are: ");
+    // NOTE algorithm_names[0] == "INVALID", so we skip this one.
+    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
+        fprintf(stream,
+                "%s%s",
+                algorithm_names[i],
+                // Clever trick for printing non-trailing commas :D
+                is_last(i, ARRAY_SIZE(algorithm_names)) ? "" : ", ");
+    }
+    fprintf(stream, "\n");
+    fprintf(
+        stream,
+        "In normal mode, Olken uses the regular trace reader, while Oracle "
+        "uses a page-by-page trace reader. In TTL mode, these are the same.\n");
+    fflush(stream);
+}
+
 void
 print_available_algorithms(FILE *stream)
 {
@@ -81,7 +101,7 @@ parse_algorithm_string(char const *const str)
             return (enum MRCAlgorithm)i;
     }
     LOGGER_ERROR("unparsable algorithm string: '%s'", str);
-    print_available_algorithms(stdout);
+    print_algorithms_help_message(stdout);
     return MRC_ALGORITHM_INVALID;
 }
 
@@ -164,26 +184,6 @@ print_help(void)
             "    Notes: any unrecognized (or misspelled) parameters will be "
             "stored in the generic dictionary, whose values are also subject "
             "to the same character constraints.");
-}
-
-static void
-print_algorithms(FILE *const stream)
-{
-    fprintf(stream, "Available algorithms are: ");
-    // NOTE algorithm_names[0] == "INVALID", so we skip this one.
-    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
-        fprintf(stream,
-                "%s%s",
-                algorithm_names[i],
-                // Clever trick for printing non-trailing commas :D
-                is_last(i, ARRAY_SIZE(algorithm_names)) ? "" : ", ");
-    }
-    fprintf(stream, "\n");
-    fprintf(
-        stream,
-        "In normal mode, Olken uses the regular trace reader, while Oracle "
-        "uses a page-by-page trace reader. In TTL mode, these are the same.\n");
-    fflush(stream);
 }
 
 static bool
