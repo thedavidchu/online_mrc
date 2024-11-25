@@ -228,6 +228,7 @@ run(struct CommandLineArguments const *const args)
             num_entries);
         goto cleanup_error;
     }
+    LOGGER_INFO("length [entries]: %zu", num_entries);
     fprintf(stdout,
             "%20s | %1s | %20s | %10s | %10s\n",
             "Timestamp [ms]",
