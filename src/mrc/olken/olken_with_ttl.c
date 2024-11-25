@@ -91,7 +91,11 @@ evict_expired_items(struct OlkenWithTTL *const me, TimeStampType current_time)
             break;
         }
         r = Heap__remove(&me->pq, oldest_expiry_time, &rm_entry);
+        // NOTE We don't put the 'Heap__remove' into the 'assert' since
+        //      then it wouldn't even be called if we compiled with
+        //      no debug symbols (i.e. 'NDEBUG').
         assert(r);
+        MAYBE_UNUSED(r);
         Olken__remove_item(&me->olken, rm_entry);
     }
 }
@@ -110,9 +114,9 @@ update_item(struct OlkenWithTTL *me, EntryType entry, TimeStampType timestamp)
 static bool
 insert_item(struct OlkenWithTTL *const me,
             EntryType const entry,
-            TimeStampType const eviction_time)
+            TimeStampType const eviction_time_ms)
 {
-    if (!Heap__insert(&me->pq, entry, eviction_time)) {
+    if (!Heap__insert(&me->pq, eviction_time_ms, entry)) {
         LOGGER_ERROR("TTL heap insertion failed");
         return false;
     }
@@ -141,9 +145,9 @@ OlkenWithTTL__access_item(struct OlkenWithTTL *const me,
         bool ok = update_item(me, entry, r.timestamp);
         return ok;
     } else {
-        TimeStampType eviction_time =
+        TimeStampType eviction_time_ms =
             saturation_add(timestamp_ms, saturation_multiply(1000, ttl_s));
-        bool ok = insert_item(me, entry, eviction_time);
+        bool ok = insert_item(me, entry, eviction_time_ms);
         return ok;
     }
 }
