@@ -62,20 +62,16 @@ parse_runner_mode_string(enum RunnerMode *value, char const *const str)
 static void
 print_algorithms_help_message(FILE *const stream)
 {
-    fprintf(stream, "Available algorithms are: ");
+    // NOTE I prefix the lines with '>' just so it's easier to read.
+    fprintf(stream, "> Available algorithms are:\n");
     // NOTE algorithm_names[0] == "INVALID", so we skip this one.
     for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
-        fprintf(stream,
-                "%s%s",
-                algorithm_names[i],
-                // Clever trick for printing non-trailing commas :D
-                is_last(i, ARRAY_SIZE(algorithm_names)) ? "" : ", ");
+        fprintf(stream, "> \t- %s\n", algorithm_names[i]);
     }
-    fprintf(stream, "\n");
-    fprintf(
-        stream,
-        "In normal mode, Olken uses the regular trace reader, while Oracle "
-        "uses a page-by-page trace reader. In TTL mode, these are the same.\n");
+    fprintf(stream,
+            "> In oracle- or run-mode, 'Olken' uses the regular trace reader,\n"
+            "> while 'Oracle' uses a page-by-page trace reader.\n"
+            "> In TTL-mode, these are the same.\n");
     fflush(stream);
 }
 
@@ -184,6 +180,7 @@ print_help(void)
             "    Notes: any unrecognized (or misspelled) parameters will be "
             "stored in the generic dictionary, whose values are also subject "
             "to the same character constraints.");
+    print_algorithms_help_message(LOGGER_STREAM);
 }
 
 static bool
