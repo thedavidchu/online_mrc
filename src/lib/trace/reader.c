@@ -30,6 +30,81 @@ get_bytes_per_trace_item(enum TraceFormat format)
     }
 }
 
+/// @brief  Read a trace item in Kia's format.
+///
+/// @note   Kia's binary format is as follows:
+///
+///         Field Name  | Size (bytes)  | Offset (bytes)
+///         ------------|---------------|---------------
+///         Timestamp   | u64 (8 bytes) | 0
+///         Command     | u64 (1 byte)  | 8
+///         Key         | u64 (8 bytes) | 9
+///         Object size | u32 (4 bytes) | 17
+///         Time-to-live| u32 (4 bytes) | 21
+///
+///         N.B. Everything is little-endian.
+static struct FullTraceItem
+read_kia_trace_item(uint8_t const *const restrict bytes)
+{
+    uint64_t timestamp_ms = 0, key = 0;
+    uint32_t size = 0, ttl_s = 0;
+    uint8_t command = 0;
+    memcpy(&timestamp_ms, &bytes[0], sizeof(timestamp_ms));
+    command = bytes[8];
+    memcpy(&key, &bytes[9], sizeof(key));
+    memcpy(&size, &bytes[17], sizeof(size));
+    memcpy(&ttl_s, &bytes[21], sizeof(ttl_s));
+    return (struct FullTraceItem){.timestamp_ms = le64toh(timestamp_ms),
+                                  .command = command,
+                                  .key = le64toh(key),
+                                  .size = le32toh(size),
+                                  .ttl_s = le32toh(ttl_s)};
+}
+
+/// @brief  Read a trace item in Sari's format.
+///
+/// @note   Sari's binary format on the disks uses TTL rather than
+///         eviction time (as in the TTLs Matter paper).
+/// @note   Sari's binary format is as follows:
+///
+///         Field Name  | Size (bytes)  | Offset (bytes)
+///         ------------|---------------|---------------
+///         Timestamp   | u32 (4 bytes) | 0
+///         Key         | u64 (8 bytes) | 4
+///         Object size | u32 (4 bytes) | 12
+///         Time-to-live| u32 (4 bytes) | 16
+///
+///         N.B. Everything is little-endian as far as I can tell.
+/* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
+ * byte 16 */
+static struct FullTraceItem
+read_sari_trace_item(uint8_t const *const restrict bytes)
+{
+    // NOTE Sari's format uses uint32 timestamps. This means that we
+    //      need to read 4 bytes and interpret this as a little-
+    //      endian uint32 before sticking this in the uint64 in the
+    //      data structure.
+    uint32_t timestamp_s = 0, size = 0, ttl_s = 0;
+    uint64_t key = 0;
+    memcpy(&timestamp_s, &bytes[0], sizeof(timestamp_s));
+    memcpy(&key, &bytes[4], sizeof(key));
+    memcpy(&size, &bytes[12], sizeof(size));
+    memcpy(&ttl_s, &bytes[16], sizeof(ttl_s));
+
+    return (struct FullTraceItem){
+        // We need to stick the little-endian uint32 into the
+        // host's uint64.
+        .timestamp_ms = 1000 * (uint64_t)le32toh(timestamp_s),
+        // Sari's format only contains 'get' requests as far as I know.
+        .command = 0,
+        .key = le64toh(key),
+        .size = le32toh(size),
+        // NOTE According to Sari's TTLs Matter paper, the format is:
+        //      `le32toh(eviction_time_s) - le32toh(timestamp_s)`,
+        //      but that's not what I empirically observe.
+        .ttl_s = le32toh(ttl_s)};
+}
+
 /// @note   Hehe... bit twiddly hacks.
 /// @note   I really hope the compiler inlines this for performance.
 /// Source: https://man7.org/linux/man-pages/man3/endian.3.html
@@ -43,29 +118,22 @@ construct_trace_item(uint8_t const *const restrict bytes,
         return invalid_result;
     }
 
-    // We perform memcpy because the bytes may not be aligned, so we cannot do
-    // simple assignment.
+    // We perform memcpy because the bytes may not be aligned,
+    // so we cannot do simple assignment.
     switch (format) {
     case TRACE_FORMAT_KIA: {
-        /* Timestamp at byte 0, Command at byte 8, Key at byte 9, Object size at
-         * byte 17, Time-to-live at byte 21 */
-        uint8_t const cmd = bytes[8];
-        struct TraceItem trace = {0};
-        memcpy(&trace.key, &bytes[9], sizeof(trace.key));
+        struct FullTraceItem item = read_kia_trace_item(bytes);
         return (struct TraceItemResult){
             // We want to filter for gets, which have the value 0.
-            .valid = !cmd,
-            .item = (struct TraceItem){.key = le64toh(trace.key)}};
+            .valid = !item.command,
+            .item = (struct TraceItem){.key = item.key}};
     }
     case TRACE_FORMAT_SARI: {
-        /* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
-         * byte 16 */
-        struct TraceItem trace = {0};
-        memcpy(&trace.key, &bytes[4], sizeof(trace.key));
+        struct FullTraceItem item = read_sari_trace_item(bytes);
         return (struct TraceItemResult){
             // Sari's format only contains get entries as far as I know
             .valid = true,
-            .item = (struct TraceItem){.key = le64toh(trace.key)}};
+            .item = (struct TraceItem){.key = item.key}};
     }
     default:
         LOGGER_ERROR("unrecognized format %d", format);
@@ -73,62 +141,35 @@ construct_trace_item(uint8_t const *const restrict bytes,
     }
 }
 
-struct FullTraceItem
+struct FullTraceItemResult
 construct_full_trace_item(uint8_t const *const restrict bytes,
                           enum TraceFormat format)
 {
     if (bytes == NULL) {
         LOGGER_ERROR("got NULL");
-        return (struct FullTraceItem){0};
+        goto error_cleanup;
     }
 
-    // We perform memcpy because the bytes may not be aligned, so we cannot do
-    // simple assignment.
+    // We perform memcpy because the bytes may not be aligned,
+    // so we cannot do simple assignment.
     switch (format) {
     case TRACE_FORMAT_KIA: {
-        /* Timestamp at byte 0, Command at byte 8, Key at byte 9, Object size at
-         * byte 17, Time-to-live at byte 21 */
-        struct FullTraceItem trace = {0};
-        memcpy(&trace.timestamp, &bytes[0], sizeof(trace.timestamp));
-        trace.command = bytes[8];
-        memcpy(&trace.key, &bytes[9], sizeof(trace.key));
-        memcpy(&trace.size, &bytes[17], sizeof(trace.size));
-        memcpy(&trace.time_to_live, &bytes[21], sizeof(trace.time_to_live));
-        return (struct FullTraceItem){.timestamp = le64toh(trace.timestamp),
-                                      .command = trace.command,
-                                      .key = le64toh(trace.key),
-                                      .size = le32toh(trace.size),
-                                      .time_to_live =
-                                          le32toh(trace.time_to_live)};
+        return (struct FullTraceItemResult){.valid = true,
+                                            .item = read_kia_trace_item(bytes)};
     }
     case TRACE_FORMAT_SARI: {
-        /* Timestamp at byte 0, Key at byte 4, Size at byte 12, Eviction time at
-         * byte 16 */
-        struct FullTraceItem trace = {0};
-        // NOTE Sari's format uses uint32 timestamps. This means that we
-        //      need to read 4 bytes and interpret this as a little-
-        //      endian uint32 before sticking this in the uint64 in the
-        //      data structure.
-        uint32_t timestamp = 0;
-        memcpy(&timestamp, &bytes[0], 4);
-        memcpy(&trace.key, &bytes[4], sizeof(trace.key));
-        memcpy(&trace.size, &bytes[12], sizeof(trace.size));
-        memcpy(&trace.time_to_live, &bytes[16], sizeof(trace.time_to_live));
-        return (struct FullTraceItem){
-            // We need to stick the little-endian uint32 into the
-            // host's uint64.
-            .timestamp = le32toh(timestamp),
-            // Sari's format only contains 'get' requests as far as I know.
-            .command = 0,
-            .key = le64toh(trace.key),
-            .size = le32toh(trace.size),
-            .time_to_live = le32toh(trace.time_to_live),
-        };
+        return (struct FullTraceItemResult){.valid = true,
+                                            .item =
+                                                read_sari_trace_item(bytes)};
     }
     default:
         LOGGER_ERROR("unrecognized format %d", format);
-        return (struct FullTraceItem){0};
+        goto error_cleanup;
     }
+    assert(0 && "impossible");
+error_cleanup:
+    return (struct FullTraceItemResult){.valid = false,
+                                        .item = (struct FullTraceItem){0}};
 }
 
 void

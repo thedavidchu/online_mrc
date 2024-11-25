@@ -59,6 +59,22 @@ parse_runner_mode_string(enum RunnerMode *value, char const *const str)
     return false;
 }
 
+static void
+print_algorithms_help_message(FILE *const stream)
+{
+    // NOTE I prefix the lines with '>' just so it's easier to read.
+    fprintf(stream, "> Available algorithms are:\n");
+    // NOTE algorithm_names[0] == "INVALID", so we skip this one.
+    for (size_t i = 1; i < ARRAY_SIZE(algorithm_names); ++i) {
+        fprintf(stream, "> \t- %s\n", algorithm_names[i]);
+    }
+    fprintf(stream,
+            "> In oracle- or run-mode, 'Olken' uses the regular trace reader,\n"
+            "> while 'Oracle' uses a page-by-page trace reader.\n"
+            "> In TTL-mode, these are the same.\n");
+    fflush(stream);
+}
+
 void
 print_available_algorithms(FILE *stream)
 {
@@ -81,6 +97,7 @@ parse_algorithm_string(char const *const str)
             return (enum MRCAlgorithm)i;
     }
     LOGGER_ERROR("unparsable algorithm string: '%s'", str);
+    print_algorithms_help_message(stdout);
     return MRC_ALGORITHM_INVALID;
 }
 
@@ -163,6 +180,7 @@ print_help(void)
             "    Notes: any unrecognized (or misspelled) parameters will be "
             "stored in the generic dictionary, whose values are also subject "
             "to the same character constraints.");
+    print_algorithms_help_message(LOGGER_STREAM);
 }
 
 static bool
@@ -247,6 +265,7 @@ parse_argument_string(struct RunnerArguments *const me, bool *no_more_args)
     } else {
         if ((value = strtok(NULL, ",)")) == NULL) {
             LOGGER_ERROR("invalid value for parameter '%s'", param);
+            print_help();
             return false;
         }
         LOGGER_WARN("unrecognized parameter '%s' with value '%s'. Storing it "

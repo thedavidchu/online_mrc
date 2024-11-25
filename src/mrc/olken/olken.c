@@ -88,14 +88,27 @@ Olken__init_full(struct Olken *const me,
                       histogram_bin_size,
                       out_of_bounds_mode);
 }
+
 bool
 Olken__remove_item(struct Olken *me, EntryType entry)
 {
+    bool ok = true;
+    size_t size = 0;
+    MAYBE_UNUSED(size);
+    if (!me) {
+        return false;
+    }
+    size = KHashTable__get_size(&me->hash_table);
     struct LookupReturn r = KHashTable__remove(&me->hash_table, entry);
     if (!r.success) {
         return false;
     }
-    return tree__sleator_remove(&me->tree, r.timestamp);
+    assert(KHashTable__get_size(&me->hash_table) + 1 == size);
+
+    size = me->tree.cardinality;
+    ok = tree__sleator_remove(&me->tree, r.timestamp);
+    assert(me->tree.cardinality + 1 == size);
+    return ok;
 }
 
 void

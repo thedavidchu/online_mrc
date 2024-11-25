@@ -22,3 +22,8 @@ bool
 run_oracle(char const *const restrict trace_path,
            enum TraceFormat const format,
            struct RunnerArguments const *const args);
+
+bool
+run_oracle_with_ttl(char const *const restrict trace_path,
+                    enum TraceFormat const format,
+                    struct RunnerArguments const *const args);

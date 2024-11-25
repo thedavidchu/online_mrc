@@ -11,6 +11,19 @@ olken_test_exe = executable(
     ],
 )
 
+olken_with_ttl_test_exe = executable(
+    'olken_with_ttl_test_exe',
+    'olken_with_ttl_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        glib_dep,
+        olken_with_ttl_dep,
+        zipfian_random_dep,
+    ],
+)
+
 fixed_size_shards_test_exe = executable(
     'fixed_size_shards_test_exe',
     'fixed_size_shards_test.c',
@@ -168,6 +181,7 @@ average_eviction_time_test_exe = executable(
 )
 
 test('olken_test', olken_test_exe)
+test('olken_with_ttl_test', olken_with_ttl_test_exe)
 test('fixed_size_shards_test', fixed_size_shards_test_exe)
 
 test('mimir_unit_test', mimir_test_exe, args: ['unit'])

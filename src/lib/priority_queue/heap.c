@@ -18,12 +18,17 @@
 #include "types/key_type.h"
 
 /// @brief  Returns if lhs is greater than rhs.
-/// @note   I define a greater-than function so that it is easy to
-///         refactor this into a min-heap.
 static inline bool
 gt(KeyType const lhs, KeyType const rhs)
 {
     return lhs > rhs;
+}
+
+/// @brief  Returns if lhs is less than rhs.
+static inline bool
+lt(KeyType const lhs, KeyType const rhs)
+{
+    return lhs < rhs;
 }
 
 static inline size_t
@@ -69,7 +74,7 @@ sift_up(struct Heap *const me, size_t const idx)
     assert(me);
     if (idx == 0)
         return;
-    if (me->data[idx].key <= me->data[get_parent(idx)].key)
+    if (!me->cmp(me->data[idx].key, me->data[get_parent(idx)].key))
         return;
     swap(me, idx, get_parent(idx));
     sift_up(me, get_parent(idx));
@@ -84,23 +89,25 @@ sift_down(struct Heap *const me, size_t const idx)
     assert(me);
     if (idx >= me->length - 1)
         return;
-    KeyType my_priority = get_priority_or(me, idx, 0);
+    KeyType my_priority = get_priority_or(me, idx, me->bottom_key);
     // We may either have: 2 children, a left child, or no children.
     size_t const left_child = get_left_child(idx);
     size_t const right_child = get_right_child(idx);
-    KeyType left_child_priority = get_priority_or(me, left_child, 0);
-    KeyType right_child_priority = get_priority_or(me, right_child, 0);
+    KeyType left_child_priority =
+        get_priority_or(me, left_child, me->bottom_key);
+    KeyType right_child_priority =
+        get_priority_or(me, right_child, me->bottom_key);
 
     // NOTE I bias toward searching the right size (if they are equal)
-    //      simply because I want to use the 'gt()' function in the
+    //      simply because I want to use the 'cmp()' function in the
     //      simplist way possible.
-    if (gt(left_child_priority, right_child_priority)) {
-        if (gt(left_child_priority, my_priority)) {
+    if (me->cmp(left_child_priority, right_child_priority)) {
+        if (me->cmp(left_child_priority, my_priority)) {
             swap(me, idx, left_child);
             sift_down(me, left_child);
         }
     } else {
-        if (gt(right_child_priority, my_priority)) {
+        if (me->cmp(right_child_priority, my_priority)) {
             swap(me, idx, right_child);
             sift_down(me, right_child);
         }
@@ -109,18 +116,23 @@ sift_down(struct Heap *const me, size_t const idx)
 
 /// @note   This is expensive, since we are validating the entire heap.
 static bool
-validate_max_heap_property(struct Heap const *const me)
+validate_heap_property(struct Heap const *const me)
 {
+    assert(me != NULL && me->cmp != NULL);
     assert(implies(me->length != 0, me->data != NULL));
+    assert(implies(me->cmp == gt, me->bottom_key == 0));
+    assert(implies(me->cmp == lt, me->bottom_key == SIZE_MAX));
     assert(me->length <= me->capacity);
 
     bool ok = true;
     for (size_t i = 0; i < me->length; ++i) {
-        KeyType my_priority = get_priority_or(me, i, 0);
-        KeyType left_priority = get_priority_or(me, get_left_child(i), 0);
-        KeyType right_priority = get_priority_or(me, get_right_child(i), 0);
+        KeyType my_priority = get_priority_or(me, i, me->bottom_key);
+        KeyType left_priority =
+            get_priority_or(me, get_left_child(i), me->bottom_key);
+        KeyType right_priority =
+            get_priority_or(me, get_right_child(i), me->bottom_key);
 
-        if (!gt(my_priority, left_priority)) {
+        if (!me->cmp(my_priority, left_priority)) {
             LOGGER_ERROR(
                 "at position %zu, my priority (%" PRIu64
                 ") must be greater than left child's priority (%" PRIu64 ")",
@@ -129,7 +141,7 @@ validate_max_heap_property(struct Heap const *const me)
                 left_priority);
             ok = false;
         }
-        if (!gt(my_priority, right_priority)) {
+        if (!me->cmp(my_priority, right_priority)) {
             LOGGER_ERROR(
                 "at position %zu, my priority (%" PRIu64
                 ") must be greater than right child's priority (%" PRIu64 ")",
@@ -170,7 +182,7 @@ Heap__validate(struct Heap const *const me)
         LOGGER_ERROR("invalid heap metadata");
         return false;
     }
-    if (!validate_max_heap_property(me)) {
+    if (!validate_heap_property(me)) {
         LOGGER_ERROR("invalid max heap");
         return false;
     }
@@ -218,7 +230,7 @@ Heap__write_as_json(FILE *stream, struct Heap const *const me)
 }
 
 bool
-Heap__init(struct Heap *me, size_t const max_size)
+Heap__init_max_heap(struct Heap *me, size_t const max_size)
 {
     if (me == NULL) {
         return false;
@@ -226,7 +238,29 @@ Heap__init(struct Heap *me, size_t const max_size)
 
     *me = (struct Heap){.data = calloc(max_size, sizeof(struct HeapItem)),
                         .length = 0,
-                        .capacity = max_size};
+                        .capacity = max_size,
+                        .cmp = gt,
+                        .bottom_key = 0};
+
+    if (!validate_metadata(me)) {
+        LOGGER_ERROR("init failed");
+        return false;
+    }
+    return true;
+}
+
+bool
+Heap__init_min_heap(struct Heap *me, size_t const max_size)
+{
+    if (me == NULL) {
+        return false;
+    }
+
+    *me = (struct Heap){.data = calloc(max_size, sizeof(struct HeapItem)),
+                        .length = 0,
+                        .capacity = max_size,
+                        .cmp = lt,
+                        .bottom_key = SIZE_MAX};
 
     if (!validate_metadata(me)) {
         LOGGER_ERROR("init failed");
@@ -264,8 +298,33 @@ Heap__insert_if_room(struct Heap *const me,
     return true;
 }
 
+bool
+Heap__insert(struct Heap *const me, const KeyType key, const ValueType value)
+{
+    if (me == NULL) {
+        return false;
+    }
+    if (Heap__is_full(me)) {
+        struct HeapItem *const tmp =
+            realloc(me->data, 2 * me->capacity * sizeof(*tmp));
+        if (tmp == NULL) {
+            LOGGER_ERROR("failed to reallocate");
+            return false;
+        }
+        me->data = tmp;
+        me->capacity = 2 * me->capacity;
+    }
+
+    size_t target = me->length;
+    ++(me->length);
+
+    me->data[target] = (struct HeapItem){.key = key, .value = value};
+    sift_up(me, target);
+    return true;
+}
+
 KeyType
-Heap__get_max_key(struct Heap *me)
+Heap__get_top_key(struct Heap *me)
 {
     if (me == NULL || me->data == NULL || me->length == 0) {
         return 0;
@@ -275,13 +334,13 @@ Heap__get_max_key(struct Heap *me)
 }
 
 bool
-Heap__remove(struct Heap *me, KeyType largest_key, ValueType *value_return)
+Heap__remove(struct Heap *me, KeyType rm_key, ValueType *value_return)
 {
     if (me == NULL || me->length == 0) {
         return false;
     }
 
-    if (me->data[0].key != largest_key)
+    if (me->data[0].key != rm_key)
         return false;
     *value_return = me->data[0].value;
     size_t const last = me->length - 1;

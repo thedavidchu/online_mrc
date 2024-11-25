@@ -6,7 +6,7 @@ enum TraceFormat {
     TRACE_FORMAT_INVALID,
     /// So the data format is basically each access occupies 25 bytes in this
     /// order:
-    /// 8 bytes -> u64 -> timestamp (unix timestamp)
+    /// 8 bytes -> u64 -> timestamp (unix timestamp, in milliseconds)
     /// 1 byte -> u8 -> command (0 is get, 1 is set)
     /// 8 bytes -> u64 -> key
     /// 4 bytes -> u32 -> object size
@@ -46,12 +46,17 @@ struct TraceItemResult {
     struct TraceItem item;
 };
 
+struct FullTraceItemResult {
+    bool valid;
+    struct FullTraceItem item;
+};
+
 /// @note   Hehe... bit twiddly hacks.
 /// Source: https://man7.org/linux/man-pages/man3/endian.3.html
 struct TraceItemResult
 construct_trace_item(uint8_t const *const restrict bytes,
                      enum TraceFormat format);
 
-struct FullTraceItem
+struct FullTraceItemResult
 construct_full_trace_item(uint8_t const *const restrict bytes,
                           enum TraceFormat format);
