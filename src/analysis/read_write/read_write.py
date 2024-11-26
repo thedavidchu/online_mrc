@@ -49,6 +49,9 @@ def plot_rw_frequency(i: int, trace_path: Path, plot_path: Path):
     axs[1].set_xlim(xmin=0)
     axs[2].set_xlim(xmin=0)
     fig.savefig(plot_path)
+    # This closes the figure, since there is a sort-of maximum of 20
+    # before you get a warning.
+    plt.close(fig)
 
 
 def run_plotter_over_dir(trace_dir: Path, plot_dir: Path):
