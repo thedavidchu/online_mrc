@@ -5,6 +5,10 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* !__cplusplus */
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -67,3 +71,7 @@ Heap__remove(struct Heap *me, KeyType rm_key, ValueType *value_return);
 
 void
 Heap__destroy(struct Heap *me);
+
+#ifdef __cplusplus
+}
+#endif /* !__cplusplus */
