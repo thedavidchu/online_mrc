@@ -111,7 +111,9 @@ run_oracle(char const *const restrict trace_path,
         struct TraceItemResult r = construct_trace_item(
             &((uint8_t *)mm.buffer)[i * bytes_per_trace_item],
             format);
-        assert(r.valid);
+        if (!r.valid) {
+            continue;
+        }
         Olken__access_item(&olken, r.item.key);
     }
 
