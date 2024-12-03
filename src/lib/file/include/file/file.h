@@ -1,6 +1,9 @@
 #pragma once
 
-#include "logger/logger.h"
+#ifdef __cplusplus
+extern "C" {
+#endif /* !__cplusplus */
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -26,3 +29,7 @@ get_absolute_path(char const *const relative_path);
 /// https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
 size_t
 get_file_size(char const *const relative_path);
+
+#ifdef __cplusplus
+}
+#endif /* !__cplusplus */

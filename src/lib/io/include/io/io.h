@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* !__cplusplus */
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -25,3 +29,7 @@ write_buffer(char const *const file_name,
              void const *const buffer,
              size_t const nmemb,
              size_t size);
+
+#ifdef __cplusplus
+}
+#endif /* !__cplusplus */
