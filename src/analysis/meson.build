@@ -1,4 +1,5 @@
 subdir('cardinality')
 subdir('compare')
 subdir('interval')
+subdir('read_write')
 subdir('text')
