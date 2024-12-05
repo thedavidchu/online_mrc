@@ -33,7 +33,7 @@ run_ttl_lru_cache(char const *const trace_path,
                   enum TraceFormat const format,
                   uint64_t const capacity)
 {
-    LOGGER_TRACE("running 'run_ttl_lru()");
+    LOGGER_TRACE("running 'run_ttl_lru_cache()");
     size_t const bytes_per_trace_item = get_bytes_per_trace_item(format);
 
     // This initializes everything to the default, i.e. 0.
