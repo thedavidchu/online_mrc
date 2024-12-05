@@ -29,9 +29,9 @@ struct TTLForLRU {
 };
 
 static double
-run_ttl_lru(char const *const trace_path,
-            enum TraceFormat const format,
-            uint64_t const capacity)
+run_ttl_lru_cache(char const *const trace_path,
+                  enum TraceFormat const format,
+                  uint64_t const capacity)
 {
     LOGGER_TRACE("running 'run_ttl_lru()");
     size_t const bytes_per_trace_item = get_bytes_per_trace_item(format);
@@ -207,9 +207,21 @@ cleanup_error:
 int
 main(int argc, char *argv[])
 {
+    bool run_clock = false, run_fifo = false, run_ttl_lru = false,
+         run_ttl_fifo = false;
     std::cout << "Hello, World!" << std::endl;
     for (int i = 0; i < argc && *argv != NULL; ++i, ++argv) {
-        std::cout << "Arg " << i << ": '" << *argv << "'" << std::endl;
+        std::string arg = std::string(*argv);
+        std::cout << "Arg " << i << ": '" << arg << "'" << std::endl;
+        if (arg == "fifo") {
+            run_fifo = true;
+        } else if (arg == "clock") {
+            run_clock = true;
+        } else if (arg == "ttl-lru") {
+            run_ttl_lru = true;
+        } else if (arg == "ttl-fifo") {
+            run_ttl_fifo = true;
+        }
     }
 
     std::vector<std::size_t> sizes = {
@@ -218,20 +230,40 @@ main(int argc, char *argv[])
         80000,  90000,  100000, 200000, 300000, 310000, 320000, 330000,
         340000, 350000, 360000, 370000, 380000, 390000, 400000,
     };
-    std::vector<std::pair<std::uint64_t, double>> ttl_lru_mrc = {};
-    std::vector<std::pair<std::uint64_t, double>> ttl_fifo_mrc = {};
+    std::vector<std::pair<std::uint64_t, double>> ttl_lru_mrc;
+    std::vector<std::pair<std::uint64_t, double>> ttl_fifo_mrc;
+    std::vector<std::pair<std::uint64_t, double>> clock_mrc;
+    std::vector<std::pair<std::uint64_t, double>> fifo_mrc;
 
-    std::vector<std::pair<std::uint64_t, double>> clock_mrc =
-        generate_mrc<ClockCache>(
-            "/home/david/projects/online_mrc/data/src2.bin",
-            TRACE_FORMAT_KIA,
-            sizes)
-            .value_or(std::vector<std::pair<std::uint64_t, double>>());
-    std::vector<std::pair<std::uint64_t, double>> fifo_mrc =
-        generate_mrc<FIFOCache>("/home/david/projects/online_mrc/data/src2.bin",
-                                TRACE_FORMAT_KIA,
-                                sizes)
-            .value_or(std::vector<std::pair<std::uint64_t, double>>());
+    if (run_ttl_lru) {
+        for (auto sz : sizes) {
+            double mr = run_ttl_lru_cache(
+                "/home/david/projects/online_mrc/data/src2.bin",
+                TRACE_FORMAT_KIA,
+                sz);
+            assert(mr != -1.0);
+            ttl_lru_mrc.push_back({sz, mr});
+        }
+    }
+    if (run_ttl_fifo) {
+        LOGGER_WARN("TTL-FIFO not implemented!");
+    }
+    if (run_clock) {
+        clock_mrc =
+            generate_mrc<ClockCache>(
+                "/home/david/projects/online_mrc/data/src2.bin",
+                TRACE_FORMAT_KIA,
+                sizes)
+                .value_or(std::vector<std::pair<std::uint64_t, double>>());
+    }
+    if (run_fifo) {
+        fifo_mrc =
+            generate_mrc<FIFOCache>(
+                "/home/david/projects/online_mrc/data/src2.bin",
+                TRACE_FORMAT_KIA,
+                sizes)
+                .value_or(std::vector<std::pair<std::uint64_t, double>>());
+    }
 
     std::cout << ClockCache::name << std::endl;
     for (auto [sz, mr] : clock_mrc) {
@@ -239,6 +271,15 @@ main(int argc, char *argv[])
     }
     std::cout << FIFOCache::name << std::endl;
     for (auto [sz, mr] : fifo_mrc) {
+        std::cout << sz << "," << mr << std::endl;
+    }
+
+    std::cout << "TTL-LRU" << std::endl;
+    for (auto [sz, mr] : ttl_lru_mrc) {
+        std::cout << sz << "," << mr << std::endl;
+    }
+    std::cout << "TTL-FIFO" << std::endl;
+    for (auto [sz, mr] : ttl_fifo_mrc) {
         std::cout << sz << "," << mr << std::endl;
     }
     return 0;
