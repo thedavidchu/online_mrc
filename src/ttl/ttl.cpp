@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -11,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "cache_statistics.hpp"
 #include "clock_cache.hpp"
 #include "fifo_cache.hpp"
 #include "io/io.h"
@@ -38,12 +40,9 @@ run_ttl_lru(char const *const trace_path,
     struct MemoryMap mm = {};
     size_t num_entries = 0;
     std::unordered_map<uint64_t, struct TTLForLRU> map;
-    struct Heap min_heap = {};
+    std::multimap<std::uint64_t, std::uint64_t> expiration_queue;
+    CacheStatistics statistics;
     uint64_t ttl_s = 1 << 30;
-
-    size_t hits = 0;
-    size_t misses = 0;
-    size_t total_accesses = 0;
 
     if (trace_path == NULL || bytes_per_trace_item == 0) {
         LOGGER_ERROR("invalid input", format);
@@ -56,11 +55,6 @@ run_ttl_lru(char const *const trace_path,
         goto cleanup_error;
     }
     num_entries = mm.num_bytes / bytes_per_trace_item;
-
-    if (!Heap__init_min_heap(&min_heap, 1 << 20)) {
-        LOGGER_ERROR("failed to initialize min heap");
-        goto cleanup_error;
-    }
 
     // Run trace
     for (size_t i = 0; i < num_entries; ++i) {
@@ -77,26 +71,25 @@ run_ttl_lru(char const *const trace_path,
             continue;
         }
 
+        assert(map.size() == expiration_queue.size());
         if (map.size() >= capacity) {
-            // Evict
-            while (true) {
-                uint64_t key = 0;
-                uint64_t min_eviction_time_ms = Heap__get_top_key(&min_heap);
-                bool r = Heap__remove(&min_heap, min_eviction_time_ms, &key);
-                assert(r);
-                // If unaccessed since last sweep, remove!
-                struct TTLForLRU &s = map[key];
-                uint64_t evict_tm =
-                    saturation_add(s.last_access_time_ms,
-                                   saturation_multiply(1000, s.ttl_s));
-                if (min_eviction_time_ms == evict_tm) {
-                    size_t i = map.erase(key);
-                    assert(i == 1);
-                    break;
-                } else {
-                    bool r = Heap__insert(&min_heap, evict_tm, key);
-                    assert(r);
-                }
+            auto const x = expiration_queue.begin();
+            std::uint64_t eviction_time_ms = x->first;
+            std::uint64_t victim_key = x->second;
+            expiration_queue.erase(x);
+            // If unaccessed since last sweep, remove!
+            struct TTLForLRU &s = map[victim_key];
+            std::uint64_t new_eviction_time_ms =
+                saturation_add(s.last_access_time_ms,
+                               saturation_multiply(1000, s.ttl_s));
+            if (eviction_time_ms == new_eviction_time_ms) {
+                std::size_t i = map.erase(victim_key);
+                assert(i == 1);
+            } else {
+                auto x =
+                    expiration_queue.emplace(new_eviction_time_ms, victim_key);
+                assert(x->first == new_eviction_time_ms &&
+                       x->second == victim_key);
             }
         }
 
@@ -105,39 +98,29 @@ run_ttl_lru(char const *const trace_path,
             s.last_access_time_ms = r.item.timestamp_ms;
             s.ttl_s = ttl_s;
 
-            ++hits;
+            statistics.hit();
         } else {
             map[r.item.key] = {
                 r.item.timestamp_ms,
                 r.item.timestamp_ms,
                 ttl_s,
             };
-            uint64_t evict_tm =
+            uint64_t eviction_time_ms =
                 saturation_add(r.item.timestamp_ms,
                                saturation_multiply(1000, ttl_s));
-            Heap__insert(&min_heap, evict_tm, r.item.key);
+            expiration_queue.emplace(eviction_time_ms, r.item.key);
 
-            ++misses;
+            statistics.miss();
         }
-        ++total_accesses;
     }
 
-    assert(total_accesses < num_entries);
-    LOGGER_ERROR("Capacity: %zu | Hits: %zu (~%f%%), Misses: %zu (=%f%%), "
-                 "Total Accesses: %zu",
-                 capacity,
-                 hits,
-                 (double)100 * hits / total_accesses,
-                 misses,
-                 (double)100 * misses / total_accesses,
-                 total_accesses);
+    assert(statistics.total_accesses_ < num_entries);
+    statistics.print("LRU by TTLs", capacity);
 
     MemoryMap__destroy(&mm);
-    Heap__destroy(&min_heap);
-    return (double)misses / total_accesses;
+    return statistics.miss_rate();
 cleanup_error:
     MemoryMap__destroy(&mm);
-    Heap__destroy(&min_heap);
     return -1.0;
 }
 
