@@ -138,6 +138,7 @@ run_ttl_fifo_cache(char const *const trace_path,
     std::unordered_map<uint64_t, bool> map;
     std::multimap<std::uint64_t, std::uint64_t> expiration_queue;
     CacheStatistics statistics;
+    std::uint64_t logical_time = 0;
     uint64_t ttl_s = 1 << 30;
 
     if (trace_path == NULL || bytes_per_trace_item == 0) {
@@ -183,11 +184,12 @@ run_ttl_fifo_cache(char const *const trace_path,
         } else {
             map[r.item.key] = false;
             uint64_t eviction_time_ms =
-                saturation_add(r.item.timestamp_ms,
-                               saturation_multiply(1000, ttl_s));
+                saturation_add(logical_time, saturation_multiply(1000, ttl_s));
             expiration_queue.emplace(eviction_time_ms, r.item.key);
             statistics.miss();
         }
+
+        ++logical_time;
     }
 
     assert(statistics.total_accesses_ < num_entries);
