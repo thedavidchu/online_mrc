@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "cache_statistics.hpp"
-#include "logger/logger.h"
 
 class ClockCache {
     std::unordered_map<std::uint64_t, bool> map_;
