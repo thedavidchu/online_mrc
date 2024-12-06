@@ -17,6 +17,7 @@
 #include "fifo_cache.hpp"
 #include "io/io.h"
 #include "logger/logger.h"
+#include "lru_cache.hpp"
 #include "math/saturation_arithmetic.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
@@ -245,14 +246,17 @@ main(int argc, char *argv[])
     std::filesystem::path trace_path =
         "/home/david/projects/online_mrc/data/src2.bin";
     std::string stem = trace_path.stem().string();
-    bool run_clock = false, run_fifo = false, run_ttl_lru = false,
-         run_ttl_fifo = false, run_ttl_modified_clock = false;
+    bool run_lru = false, run_clock = false, run_fifo = false;
+    bool run_ttl_lru = false, run_ttl_fifo = false,
+         run_ttl_modified_clock = false;
     std::cout << "Hello, World!" << std::endl;
     for (int i = 0; i < argc && *argv != NULL; ++i, ++argv) {
         std::string arg = std::string(*argv);
         std::cout << "Arg " << i << ": '" << arg << "'" << std::endl;
         if (arg == "fifo") {
             run_fifo = true;
+        } else if (arg == "lru") {
+            run_lru = true;
         } else if (arg == "clock") {
             run_clock = true;
         } else if (arg == "ttl-lru") {
@@ -275,8 +279,15 @@ main(int argc, char *argv[])
     std::vector<std::pair<std::uint64_t, double>> ttl_modified_clock_mrc;
     std::vector<std::pair<std::uint64_t, double>> ttl_fifo_mrc;
     std::vector<std::pair<std::uint64_t, double>> clock_mrc;
+    std::vector<std::pair<std::uint64_t, double>> lru_mrc;
     std::vector<std::pair<std::uint64_t, double>> fifo_mrc;
 
+    if (run_lru) {
+        lru_mrc =
+            generate_mrc<LRUCache>(trace_path.c_str(), TRACE_FORMAT_KIA, sizes)
+                .value_or(std::vector<std::pair<std::uint64_t, double>>());
+        save_mrc(stem + "-lru-mrc.dat", lru_mrc);
+    }
     if (run_ttl_lru) {
         ttl_lru_mrc =
             generate_mrc<TTLLRUCache>(trace_path.c_str(),
@@ -320,6 +331,7 @@ main(int argc, char *argv[])
 
     print_mrc(ClockCache::name, clock_mrc);
     print_mrc(FIFOCache::name, fifo_mrc);
+    print_mrc(LRUCache::name, lru_mrc);
     print_mrc("TTL-LRU", ttl_lru_mrc);
     print_mrc("TTL-Modified-Clock", ttl_modified_clock_mrc);
     print_mrc("TTL-FIFO", ttl_fifo_mrc);
