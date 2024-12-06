@@ -1,14 +1,11 @@
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -18,7 +15,6 @@
 #include "io/io.h"
 #include "logger/logger.h"
 #include "math/saturation_arithmetic.h"
-#include "priority_queue/heap.h"
 #include "trace/reader.h"
 #include "trace/trace.h"
 
