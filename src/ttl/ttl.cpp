@@ -20,6 +20,7 @@
 #include "modified_clock_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
+#include "ttl_clock_cache.hpp"
 #include "ttl_fifo_cache.hpp"
 #include "ttl_lfu_cache.hpp"
 #include "ttl_lru_cache.hpp"
@@ -153,6 +154,7 @@ main(int argc, char *argv[])
                 {LFUCache::name, generate_mrc<LFUCache>},
                 {FIFOCache::name, generate_mrc<FIFOCache>},
 
+                {TTLClockCache::name, generate_mrc<TTLClockCache>},
                 {TTLLRUCache::name, generate_mrc<TTLLRUCache>},
                 {TTLLFUCache::name, generate_mrc<TTLLFUCache>},
                 {TTLFIFOCache::name, generate_mrc<TTLFIFOCache>},
@@ -176,8 +178,9 @@ main(int argc, char *argv[])
     }
 
     std::vector<std::size_t> sizes = {
-        1,     1000,  2000,  3000,  4000,  5000,  6000,  7000,  8000,  9000,
-        10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000,
+        0,     1,     1000,  2000,  3000,  4000,  5000,
+        6000,  7000,  8000,  9000,  10000, 20000, 30000,
+        40000, 50000, 60000, 70000, 80000, 90000, 100000,
     };
     for (std::size_t i = 100000; i < 350000; i += 10000) {
         sizes.push_back(i);
