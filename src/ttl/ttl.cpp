@@ -15,6 +15,7 @@
 #include "io/io.h"
 #include "logger/logger.h"
 #include "lru_cache.hpp"
+#include "modified_clock_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
 #include "ttl_fifo_cache.hpp"
