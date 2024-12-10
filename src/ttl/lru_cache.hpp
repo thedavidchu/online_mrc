@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <unordered_map>
 
 #include "cache_statistics.hpp"
@@ -23,6 +24,7 @@ public:
     LRUCache(std::size_t capacity)
         : capacity_(capacity)
     {
+        assert(capacity_);
     }
 
     std::size_t
@@ -31,19 +33,21 @@ public:
         return map_.size();
     }
 
-    int
+    std::optional<std::uint64_t>
     delete_lru()
     {
         if (eviction_queue_.size() == 0) {
-            return -1;
+            return {};
         }
         auto victim_it = eviction_queue_.begin();
+        if (victim_it == eviction_queue_.end()) {
+            return {};
+        }
         std::uint64_t victim_key = victim_it->second;
         eviction_queue_.erase(victim_it);
-        size_t i = map_.erase(victim_key);
+        std::size_t i = map_.erase(victim_key);
         assert(i == 1);
-        assert(map_.size() + 1 == capacity_);
-        return 0;
+        return victim_key;
     }
 
     int
@@ -60,7 +64,9 @@ public:
         } else {
             if (eviction_queue_.size() >= capacity_) {
                 this->delete_lru();
+                assert(map_.size() + 1 == capacity_);
             }
+            assert(map_.size() + 1 <= capacity_);
             auto [it, inserted] = map_.emplace(key, logical_time_);
             assert(inserted && it->first == key && it->second == logical_time_);
             eviction_queue_.emplace(logical_time_, key);
