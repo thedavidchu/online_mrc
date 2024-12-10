@@ -29,6 +29,11 @@ public:
     int
     access_item(std::uint64_t const key)
     {
+        if (capacity_ == 0) {
+            statistics_.miss();
+            return 0;
+        }
+
         if (map_.count(key)) {
             statistics_.hit();
             return 0;

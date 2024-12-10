@@ -25,7 +25,6 @@ public:
     LFUCache(std::size_t capacity)
         : capacity_(capacity)
     {
-        assert(capacity_ != 0);
     }
 
     std::optional<std::uint64_t>
@@ -48,6 +47,10 @@ public:
     access_item(std::uint64_t const key)
     {
         int err = 0;
+        if (capacity_ == 0) {
+            statistics_.miss();
+            return 0;
+        }
         // NOTE 'map_.size()' doesn't necessarily match
         //      'eviction_queue_.size()', because the latter is now a
         //      hierarchical data structure containing LRUCaches.

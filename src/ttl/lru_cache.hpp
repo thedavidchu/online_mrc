@@ -24,7 +24,6 @@ public:
     LRUCache(std::size_t capacity)
         : capacity_(capacity)
     {
-        assert(capacity_);
     }
 
     std::size_t
@@ -54,6 +53,10 @@ public:
     access_item(std::uint64_t const key)
     {
         assert(map_.size() == eviction_queue_.size());
+        if (capacity_ == 0) {
+            statistics_.miss();
+            return 0;
+        }
         if (map_.count(key)) {
             std::uint64_t prev_access_time = map_[key];
             auto nh = eviction_queue_.extract(prev_access_time);

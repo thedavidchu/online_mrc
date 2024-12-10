@@ -30,6 +30,10 @@ public:
     {
         assert(map_.size() <= capacity_);
         assert(eviction_queue_.size() == capacity_);
+        if (capacity_ == 0) {
+            statistics_.miss();
+            return 0;
+        }
 
         if (map_.count(key)) {
             map_[key] = true;
