@@ -53,7 +53,10 @@ public:
     access_item(std::uint64_t const key)
     {
         assert(map_.size() == expiration_queue_.size());
-
+        if (capacity_ == 0) {
+            statistics_.miss();
+            return 0;
+        }
         if (map_.count(key)) {
             struct myTTLForLRU &s = map_[key];
 

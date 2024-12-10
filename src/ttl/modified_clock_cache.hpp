@@ -61,6 +61,11 @@ run_ttl_modified_clock_cache(char const *const trace_path,
             continue;
         }
 
+        if (capacity == 0) {
+            statistics.miss();
+            continue;
+        }
+
         assert(map.size() == expiration_queue.size());
         if (map.size() >= capacity) {
             auto const x = expiration_queue.begin();
