@@ -1,7 +1,9 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <unordered_map>
+#include <vector>
 
 #include "cache_statistics.hpp"
 #include "io/io.h"
@@ -110,4 +112,18 @@ run_ttl_modified_clock_cache(char const *const trace_path,
 cleanup_error:
     MemoryMap__destroy(&mm);
     return -1.0;
+}
+
+static inline std::optional<std::map<std::uint64_t, double>>
+generate_modified_clock_mrc(char const *const trace_path,
+                            enum TraceFormat const format,
+                            std::vector<std::size_t> const &capacities)
+{
+    std::map<std::size_t, double> mrc = {};
+    for (auto sz : capacities) {
+        double mr = run_ttl_modified_clock_cache(trace_path, format, sz);
+        assert(mr != -1.0);
+        mrc[sz] = mr;
+    }
+    return mrc;
 }
