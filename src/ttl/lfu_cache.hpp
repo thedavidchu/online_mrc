@@ -18,7 +18,7 @@ class LFUCache {
     std::uint64_t logical_time_ = 0;
 
 public:
-    static constexpr char name[] = "LRUCache";
+    static constexpr char name[] = "LFUCache";
     CacheStatistics statistics_;
 
     LFUCache(std::size_t capacity)
