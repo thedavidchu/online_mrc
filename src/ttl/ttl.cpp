@@ -4,21 +4,24 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "clock_cache.hpp"
 #include "fifo_cache.hpp"
 #include "io/io.h"
+#include "lfu_cache.hpp"
 #include "logger/logger.h"
 #include "lru_cache.hpp"
 #include "modified_clock_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
 #include "ttl_fifo_cache.hpp"
+#include "ttl_lfu_cache.hpp"
 #include "ttl_lru_cache.hpp"
 
 template <typename T>
@@ -67,14 +70,14 @@ run_cache(struct MemoryMap const *const mm,
 }
 
 template <typename T>
-static std::optional<std::vector<std::pair<std::uint64_t, double>>>
+static std::optional<std::map<std::uint64_t, double>>
 generate_mrc(char const *const trace_path,
              enum TraceFormat const format,
              std::vector<std::size_t> const &capacities)
 {
     // This initializes everything to the default, i.e. 0.
     struct MemoryMap mm = {};
-    std::vector<std::pair<std::size_t, double>> mrc = {};
+    std::map<std::size_t, double> mrc = {};
 
     if (trace_path == NULL) {
         LOGGER_ERROR("invalid input path", format);
@@ -93,12 +96,9 @@ generate_mrc(char const *const trace_path,
                          typeid(T).name());
             return std::nullopt;
         };
-        mrc.push_back({cap, mr});
+        mrc[cap] = mr;
     }
     MemoryMap__destroy(&mm);
-
-    // Sort the MRC just in case downstream relies on this!
-    std::sort(mrc.begin(), mrc.end());
     return std::make_optional(mrc);
 cleanup_error:
     MemoryMap__destroy(&mm);
@@ -106,8 +106,7 @@ cleanup_error:
 }
 
 static int
-print_mrc(std::string algorithm,
-          std::vector<std::pair<std::uint64_t, double>> mrc)
+print_mrc(std::string algorithm, std::map<std::uint64_t, double> mrc)
 {
     std::cout << algorithm << std::endl;
     for (auto [sz, mr] : mrc) {
@@ -117,8 +116,7 @@ print_mrc(std::string algorithm,
 }
 
 static int
-save_mrc(std::filesystem::path path,
-         std::vector<std::pair<std::uint64_t, double>> mrc)
+save_mrc(std::filesystem::path path, std::map<std::uint64_t, double> mrc)
 {
     std::ofstream fs;
 
@@ -141,95 +139,61 @@ main(int argc, char *argv[])
     std::filesystem::path trace_path =
         "/home/david/projects/online_mrc/data/src2.bin";
     std::string stem = trace_path.stem().string();
-    bool run_lru = false, run_clock = false, run_fifo = false;
-    bool run_ttl_lru = false, run_ttl_fifo = false,
-         run_ttl_modified_clock = false;
-    std::cout << "Hello, World!" << std::endl;
+
+    std::map<std::string,
+             std::function<std::optional<std::map<std::uint64_t, double>>(
+                 char const *const trace_path,
+                 enum TraceFormat const format,
+                 std::vector<std::size_t> const &capacities)>>
+        algorithms =
+            {
+                {ClockCache::name, generate_mrc<ClockCache>},
+                {"ModifiedClock", generate_modified_clock_mrc},
+                {LRUCache::name, generate_mrc<LRUCache>},
+                {LFUCache::name, generate_mrc<LFUCache>},
+                {FIFOCache::name, generate_mrc<FIFOCache>},
+
+                {TTLLRUCache::name, generate_mrc<TTLLRUCache>},
+                {TTLLFUCache::name, generate_mrc<TTLLFUCache>},
+                {TTLFIFOCache::name, generate_mrc<TTLFIFOCache>},
+            },
+        run_algorithms = {};
+
+    std::cout << "Algorithms include: ";
+    for (auto [name, fn] : algorithms) {
+        std::cout << name << ", ";
+    }
+    std::cout << std::endl;
     for (int i = 0; i < argc && *argv != NULL; ++i, ++argv) {
         std::string arg = std::string(*argv);
-        std::cout << "Arg " << i << ": '" << arg << "'" << std::endl;
-        if (arg == "fifo") {
-            run_fifo = true;
-        } else if (arg == "lru") {
-            run_lru = true;
-        } else if (arg == "clock") {
-            run_clock = true;
-        } else if (arg == "ttl-lru") {
-            run_ttl_lru = true;
-        } else if (arg == "ttl-fifo") {
-            run_ttl_fifo = true;
-        } else if (arg == "ttl-modified-clock") {
-            run_ttl_modified_clock = true;
+        if (algorithms.count(arg)) {
+            auto it = algorithms[arg];
+            run_algorithms.emplace(arg, it);
+        } else {
+            std::cout << "Unrecognized argument " << i << ": " << arg
+                      << std::endl;
         }
     }
 
     std::vector<std::size_t> sizes = {
-        1000,  2000,  3000,  4000,  5000,  6000,  7000,  8000,  9000,   10000,
-        20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000,
+        1,     1000,  2000,  3000,  4000,  5000,  6000,  7000,  8000,  9000,
+        10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000,
     };
     for (std::size_t i = 100000; i < 350000; i += 10000) {
         sizes.push_back(i);
     }
-    std::vector<std::pair<std::uint64_t, double>> ttl_lru_mrc;
-    std::vector<std::pair<std::uint64_t, double>> ttl_modified_clock_mrc;
-    std::vector<std::pair<std::uint64_t, double>> ttl_fifo_mrc;
-    std::vector<std::pair<std::uint64_t, double>> clock_mrc;
-    std::vector<std::pair<std::uint64_t, double>> lru_mrc;
-    std::vector<std::pair<std::uint64_t, double>> fifo_mrc;
+    std::map<std::string, std::map<std::uint64_t, double>> mrcs;
 
-    if (run_lru) {
-        lru_mrc =
-            generate_mrc<LRUCache>(trace_path.c_str(), TRACE_FORMAT_KIA, sizes)
-                .value_or(std::vector<std::pair<std::uint64_t, double>>());
-        save_mrc(stem + "-lru-mrc.dat", lru_mrc);
-    }
-    if (run_ttl_lru) {
-        ttl_lru_mrc =
-            generate_mrc<TTLLRUCache>(trace_path.c_str(),
-                                      TRACE_FORMAT_KIA,
-                                      sizes)
-                .value_or(std::vector<std::pair<std::uint64_t, double>>());
-        save_mrc(stem + "-ttl-lru-mrc.dat", ttl_lru_mrc);
-    }
-    if (run_ttl_modified_clock) {
-        for (std::size_t sz = 1024; sz < 350000; sz += 4096) {
-            double mr = run_ttl_modified_clock_cache(trace_path.c_str(),
-                                                     TRACE_FORMAT_KIA,
-                                                     sz);
-            assert(mr != -1.0);
-            ttl_modified_clock_mrc.push_back({sz, mr});
+    for (auto [name, fn] : run_algorithms) {
+        auto mrc = fn(trace_path.c_str(), TRACE_FORMAT_KIA, sizes);
+        if (mrc) {
+            mrcs.emplace(name, mrc.value());
+            save_mrc(stem + "-" + name + "-mrc.dat", mrc.value());
         }
-        save_mrc(stem + "-ttl-modified-clock-mrc.dat", ttl_modified_clock_mrc);
-    }
-    if (run_ttl_fifo) {
-        ttl_fifo_mrc =
-            generate_mrc<TTLFIFOCache>(trace_path.c_str(),
-                                       TRACE_FORMAT_KIA,
-                                       sizes)
-                .value_or(std::vector<std::pair<std::uint64_t, double>>());
-        save_mrc(stem + "-ttl-fifo-mrc.dat", ttl_fifo_mrc);
-    }
-    if (run_clock) {
-        clock_mrc =
-            generate_mrc<ClockCache>(trace_path.c_str(),
-                                     TRACE_FORMAT_KIA,
-                                     sizes)
-                .value_or(std::vector<std::pair<std::uint64_t, double>>());
-        save_mrc(stem + "-clock-mrc.dat", clock_mrc);
-    }
-    if (run_fifo) {
-        fifo_mrc =
-            generate_mrc<FIFOCache>(trace_path.c_str(), TRACE_FORMAT_KIA, sizes)
-                .value_or(std::vector<std::pair<std::uint64_t, double>>());
-        save_mrc(stem + "-fifo-mrc.dat", fifo_mrc);
     }
 
-    print_mrc(ClockCache::name, clock_mrc);
-    print_mrc(FIFOCache::name, fifo_mrc);
-    print_mrc(LRUCache::name, lru_mrc);
-    print_mrc("TTL-LRU", ttl_lru_mrc);
-    print_mrc("TTL-Modified-Clock", ttl_modified_clock_mrc);
-    print_mrc("TTL-FIFO", ttl_fifo_mrc);
-
+    for (auto [name, mrc] : mrcs) {
+        print_mrc(name, mrc);
+    }
     return 0;
 }
