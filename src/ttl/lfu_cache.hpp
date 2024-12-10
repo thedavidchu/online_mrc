@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <unordered_map>
 
 #include "cache_statistics.hpp"
@@ -27,18 +28,20 @@ public:
         assert(capacity_ != 0);
     }
 
-    int
+    std::optional<std::uint64_t>
     evict_lfu()
     {
-        for (auto victim_it = eviction_queue_.begin();
-             victim_it != eviction_queue_.end();
-             ++victim_it) {
-            LRUCache victim_cache = victim_it->second;
-            if (victim_cache.delete_lru() == 0) {
-                break;
+        for (auto &[frq, lru_cache] : eviction_queue_) {
+            if (lru_cache.size() != 0) {
+                auto maybe_victim_key = lru_cache.delete_lru();
+                assert(maybe_victim_key);
+                std::uint64_t victim_key = maybe_victim_key.value();
+                std::size_t i = map_.erase(victim_key);
+                assert(i == 1);
+                return victim_key;
             }
         }
-        return 0;
+        return {};
     }
 
     int
@@ -50,34 +53,45 @@ public:
         //      hierarchical data structure containing LRUCaches.
         if (map_.count(key)) {
             std::uint64_t prev_frq = map_[key];
-            err = eviction_queue_[prev_frq].delete_item(key);
+            auto it_curr = eviction_queue_.find(prev_frq);
+            assert(it_curr != eviction_queue_.end());
+            LRUCache &lru_cache = it_curr->second;
+            err = lru_cache.delete_item(key);
             assert(!err);
             // NOTE Delete the previous LRUCache if it is now empty.
             //      This is because an item with a very high frequency
             //      should not create a whole bunch of empty LRUCaches
             //      as we slowly increment it.
-            if (eviction_queue_[prev_frq].size() == 0) {
+            if (lru_cache.size() == 0) {
                 eviction_queue_.erase(prev_frq);
             }
-            if (!eviction_queue_.count(prev_frq + 1)) {
+            auto it_next = eviction_queue_.find(prev_frq + 1);
+            if (it_next == eviction_queue_.end()) {
                 eviction_queue_.emplace(prev_frq + 1, LRUCache(capacity_));
+                it_next = eviction_queue_.find(prev_frq + 1);
             }
-            eviction_queue_[prev_frq + 1].access_item(key);
+            assert(it_next != eviction_queue_.end());
+            it_next->second.access_item(key);
             map_[key] += 1;
             statistics_.hit();
         } else {
+            assert(map_.size() <= capacity_);
             if (map_.size() >= capacity_) {
                 this->evict_lfu();
+                assert(map_.size() + 1 == capacity_);
             }
-            auto [it, inserted] = map_.emplace(key, logical_time_);
-            assert(inserted && it->first == key && it->second == logical_time_);
-            if (!eviction_queue_.count(0)) {
-                eviction_queue_.emplace(0, LRUCache(capacity_));
+            assert(map_.size() + 1 <= capacity_);
+            std::uint64_t frq = 0;
+            auto [it, inserted] = map_.emplace(key, frq);
+            assert(inserted && it->first == key && it->second == frq);
+            if (eviction_queue_.count(frq) == 0) {
+                eviction_queue_.emplace(frq, LRUCache(capacity_));
             }
-            eviction_queue_.at(0).access_item(key);
+            eviction_queue_.find(frq)->second.access_item(key);
             assert(map_.size() <= capacity_);
             statistics_.miss();
         }
+        assert(map_.count(key));
         ++logical_time_;
         return 0;
     }

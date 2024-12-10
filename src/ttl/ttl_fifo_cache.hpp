@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <unordered_map>
 
 #include "cache_statistics.hpp"
@@ -25,23 +26,33 @@ public:
     {
     }
 
+    std::optional<std::uint64_t>
+    evict_ttl_fifo()
+    {
+        auto const it = expiration_queue_.begin();
+        if (it == expiration_queue_.end()) {
+            return std::nullopt;
+        }
+        std::uint64_t victim_key = it->second;
+        expiration_queue_.erase(it);
+        std::size_t i = map_.erase(victim_key);
+        assert(i == 1);
+        return victim_key;
+    }
+
     int
     access_item(std::uint64_t const key)
     {
         assert(map_.size() == expiration_queue_.size());
-        if (map_.size() >= capacity_) {
-            auto const x = expiration_queue_.begin();
-            std::uint64_t victim_key = x->second;
-            expiration_queue_.erase(x);
-            std::size_t i = map_.erase(victim_key);
-            assert(i == 1);
-            assert(map_.size() + 1 == capacity_);
-        }
-
         if (map_.count(key)) {
             map_[key] = true;
             statistics_.hit();
         } else {
+            if (map_.size() >= capacity_) {
+                auto r = this->evict_ttl_fifo();
+                assert(r);
+                assert(map_.size() + 1 == capacity_);
+            }
             map_[key] = false;
             uint64_t eviction_time_ms =
                 saturation_add(logical_time_,
@@ -49,7 +60,6 @@ public:
             expiration_queue_.emplace(eviction_time_ms, key);
             statistics_.miss();
         }
-
         ++logical_time_;
         return 0;
     }

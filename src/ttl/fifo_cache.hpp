@@ -1,13 +1,14 @@
 
 #pragma once
 
-#include "clock_cache.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <unordered_set>
 #include <vector>
+
+#include "cache_statistics.hpp"
 
 class FIFOCache {
     std::unordered_set<std::uint64_t> map_;
