@@ -25,6 +25,27 @@ public:
     {
     }
 
+    std::size_t
+    size()
+    {
+        return map_.size();
+    }
+
+    int
+    delete_lru()
+    {
+        if (eviction_queue_.size() == 0) {
+            return -1;
+        }
+        auto victim_it = eviction_queue_.begin();
+        std::uint64_t victim_key = victim_it->second;
+        eviction_queue_.erase(victim_it);
+        size_t i = map_.erase(victim_key);
+        assert(i == 1);
+        assert(map_.size() + 1 == capacity_);
+        return 0;
+    }
+
     int
     access_item(std::uint64_t const key)
     {
@@ -38,12 +59,7 @@ public:
             statistics_.hit();
         } else {
             if (eviction_queue_.size() >= capacity_) {
-                auto victim_it = eviction_queue_.begin();
-                std::uint64_t victim_key = victim_it->second;
-                eviction_queue_.erase(victim_it);
-                size_t i = map_.erase(victim_key);
-                assert(i == 1);
-                assert(map_.size() + 1 == capacity_);
+                this->delete_lru();
             }
             auto [it, inserted] = map_.emplace(key, logical_time_);
             assert(inserted && it->first == key && it->second == logical_time_);
@@ -53,5 +69,21 @@ public:
         }
         ++logical_time_;
         return 0;
+    }
+
+    int
+    delete_item(std::uint64_t const key)
+    {
+        assert(map_.size() == eviction_queue_.size());
+        if (map_.count(key)) {
+            std::uint64_t prev_access_time = map_[key];
+            std::size_t i = eviction_queue_.erase(prev_access_time);
+            assert(i == 1);
+            i = map_.erase(key);
+            assert(i == 1);
+            return 0;
+        }
+        // Item not found, so return error!
+        return -1;
     }
 };
