@@ -18,6 +18,7 @@
 #include "logger/logger.h"
 #include "lru_cache.hpp"
 #include "modified_clock_cache.hpp"
+#include "sieve_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
 #include "ttl_clock_cache.hpp"
@@ -153,6 +154,7 @@ main(int argc, char *argv[])
                 {LRUCache::name, generate_mrc<LRUCache>},
                 {LFUCache::name, generate_mrc<LFUCache>},
                 {FIFOCache::name, generate_mrc<FIFOCache>},
+                {SieveCache::name, generate_mrc<SieveCache>},
 
                 {TTLClockCache::name, generate_mrc<TTLClockCache>},
                 {TTLLRUCache::name, generate_mrc<TTLLRUCache>},
