@@ -25,6 +25,7 @@
 #include "ttl_fifo_cache.hpp"
 #include "ttl_lfu_cache.hpp"
 #include "ttl_lru_cache.hpp"
+#include "ttl_sieve_cache.hpp"
 
 template <typename T>
 static double
@@ -160,6 +161,7 @@ main(int argc, char *argv[])
                 {TTLLRUCache::name, generate_mrc<TTLLRUCache>},
                 {TTLLFUCache::name, generate_mrc<TTLLFUCache>},
                 {TTLFIFOCache::name, generate_mrc<TTLFIFOCache>},
+                {TTLSieveCache::name, generate_mrc<TTLSieveCache>},
             },
         run_algorithms = {};
 
