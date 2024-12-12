@@ -13,10 +13,11 @@
 #include <memory>
 #include <memory_resource>
 #include <unordered_map>
+#include <vector>
 
-template <typename K, typename V> class SieveCache {
+template <typename K, typename V> class ExternalSieveCache {
 public:
-    explicit SieveCache(
+    explicit ExternalSieveCache(
         size_t capacity,
         std::pmr::memory_resource *resource = std::pmr::get_default_resource())
         : capacity_(capacity),
@@ -27,6 +28,18 @@ public:
     {
         assert(capacity > 0 && "capacity must be greater than zero.");
         std::pmr::set_default_resource(resource);
+    }
+
+    /// @note   David added this for debugging purposes.
+    std::vector<K>
+    get_keys_in_eviction_order()
+    {
+        std::vector<K> keys;
+        keys.reserve(length_.load());
+        for (auto [k, v] : cache_) {
+            keys.push_back(k);
+        }
+        return keys;
     }
 
     size_t

@@ -7,7 +7,12 @@ sieve_cache_test_exe = executable(
     ],
     dependencies: [
         common_dep,
+        trace_dep,
     ],
 )
 
-test('sieve_cache_test', sieve_cache_test_exe)
+test(
+    'sieve_cache_test',
+    sieve_cache_test_exe,
+    args: [test_trace],
+)

@@ -6,14 +6,17 @@
 
 #include "arrays/array_size.h"
 #include "cache/sieve_cache.hpp"
+#include "external_sieve.hpp"
 #include "logger/logger.h"
 #include "test/mytester.h"
+#include "trace/reader.h"
+#include "ttl_cache/ttl_sieve_cache.hpp"
 
 // NOTE This is the trace shown on the SIEVE website. Or at least, it is
 //      one of the possible traces that causes the behaviour seen on the
 //      SIEVE website.
 //      Source: https://cachemon.github.io/SIEVE-website/
-std::uint64_t trace[] = {
+static std::uint64_t short_trace[] = {
     'A',
     'A',
     'B',
@@ -31,7 +34,7 @@ std::uint64_t trace[] = {
     'B',
     'J',
 };
-std::string soln[] = {
+static std::string soln[] = {
     "||",
     "|A|",
     "|A|",
@@ -42,16 +45,17 @@ std::string soln[] = {
     "|E|D|C|B|A|",
     "|F|E|D|C|B|A|",
     "|G|F|E|D|C|B|A|",
+    // This is where the example starts
     "|G|F|E|D|C|B|A|",
-    "|H|G|F|E|D|C|B|A|",
-    "|H|G|F|E|D|C|B|A|",
-    "|H|G|F|E|D|C|B|A|",
-    "|I|H|G|F|E|D|B|A|",
-    "|I|H|G|F|E|D|B|A|",
-    "|J|I|H|G|F|E|B|A|",
+    "|H|G|F|E|D|B|A|",
+    "|H|G|F|E|D|B|A|",
+    "|H|G|F|E|D|B|A|",
+    "|I|H|G|F|D|B|A|",
+    "|I|H|G|F|D|B|A|",
+    "|J|I|H|G|D|B|A|",
 };
 
-std::string
+static std::string
 sieve_print(SieveCache &cache)
 {
     std::string s;
@@ -65,7 +69,20 @@ sieve_print(SieveCache &cache)
     return "|" + s;
 }
 
-bool
+static std::vector<std::uint64_t>
+get_trace(char const *const filename, enum TraceFormat format)
+{
+    struct Trace t = {};
+    std::vector<std::uint64_t> trace;
+    t = read_trace(filename, format);
+    trace.reserve(t.length);
+    for (std::size_t i = 0; i < t.length; ++i) {
+        trace.push_back(t.trace[i].key);
+    }
+    return trace;
+}
+
+static bool
 simple_test()
 {
     std::vector<std::string> my_soln;
@@ -73,7 +90,7 @@ simple_test()
 
     std::string s = sieve_print(cache);
     my_soln.push_back(s);
-    for (auto i : trace) {
+    for (auto i : short_trace) {
         cache.access_item(i);
         s = sieve_print(cache);
         my_soln.push_back(s);
@@ -94,12 +111,103 @@ simple_test()
         }
     }
 
-    return 0;
+    return true;
+}
+
+static bool
+short_external_sieve_test()
+{
+    bool ok = true;
+    SieveCache my_cache(7);
+    ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(7);
+
+    for (auto key : short_trace) {
+        my_cache.access_item(key);
+        ext_cache.insert(key, 0);
+
+        if (my_cache.size() != ext_cache.length()) {
+            LOGGER_ERROR("different size caches %zu vs %zu",
+                         my_cache.size(),
+                         ext_cache.length());
+            ok = false;
+        }
+        for (auto k : my_cache.get_keys_in_eviction_order()) {
+            if (!ext_cache.contains(k)) {
+                LOGGER_ERROR("external cache missing key '%zu'", k);
+                ok = false;
+            }
+        }
+    }
+    return ok;
+}
+
+template <typename T>
+static void
+print_vector(std::vector<T> vec)
+{
+    std::cout << "{";
+    for (T x : vec) {
+        std::cout << x << ",";
+    }
+    std::cout << "}" << std::endl;
+}
+
+static bool
+external_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
+{
+    bool ok = true;
+    // Cap the number of errors that we report to the user.
+    int nerr = 0;
+    LOGGER_INFO("Testing SIEVE cache with capacity %zu", capacity);
+    TTLSieveCache my_cache(capacity);
+    ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(capacity);
+    for (auto key : trace) {
+        my_cache.access_item(key);
+        ext_cache.insert(key, 0);
+        if (my_cache.size() != ext_cache.length()) {
+            LOGGER_ERROR("different size caches %zu vs %zu",
+                         my_cache.size(),
+                         ext_cache.length());
+            ok = false;
+            ++nerr;
+            if (nerr > 10) {
+                return false;
+            }
+        }
+        for (auto k : my_cache.get_keys_in_eviction_order()) {
+            if (!ext_cache.contains(k)) {
+                LOGGER_ERROR("external cache missing key '%zu'", k);
+                print_vector(my_cache.get_keys_in_eviction_order());
+                print_vector(ext_cache.get_keys_in_eviction_order());
+                ok = false;
+                ++nerr;
+                if (nerr > 10) {
+                    return false;
+                }
+            }
+        }
+    }
+    return ok;
 }
 
 int
-main()
+main(int argc, char *argv[])
 {
     ASSERT_FUNCTION_RETURNS_TRUE(simple_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(short_external_sieve_test());
+
+    if (argc == 1) {
+        LOGGER_WARN("skipping real trace test");
+        return 0;
+    }
+    // NOTE I assume the trace we're being passed is MSR src2.bin.
+    std::vector<std::uint64_t> trace = get_trace(argv[1], TRACE_FORMAT_KIA);
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(2, trace));
+    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 10, trace));
+    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 11, trace));
+    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 12, trace));
+    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 13, trace));
+    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 14, trace));
+    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 15, trace));
     return 0;
 }
