@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <map>
 #include <optional>
-#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "cache_statistics/cache_statistics.hpp"
 
@@ -97,13 +97,16 @@ public:
         return 0;
     }
 
-    void
-    print()
+    /// @note   This is simply for debugging purposes.
+    std::vector<std::uint64_t>
+    get_keys_in_eviction_order()
     {
-        std::string s;
-        for (auto [logical_time, key] : queue_) {
-            s = " | " + std::string(1, (char)key) + " | " + s;
+        std::vector<std::uint64_t> r;
+        // Just a small optimization to avoid resizing.
+        r.reserve(queue_.size());
+        for (auto [expiry_tm, key] : queue_) {
+            r.push_back(key);
         }
-        std::cout << "Sieve: " << s << std::endl;
+        return r;
     }
 };
