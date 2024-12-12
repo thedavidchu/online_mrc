@@ -32,6 +32,7 @@ struct CommandLineArguments {
     char *executable;
     gchar *input_path;
     enum TraceFormat trace_format;
+    gint command;
     gint64 start;
     gint64 length;
 };
@@ -90,6 +91,7 @@ parse_command_line_arguments(int argc, char *argv[])
     struct CommandLineArguments args = {.executable = argv[0],
                                         .input_path = NULL,
                                         .trace_format = TRACE_FORMAT_KIA,
+                                        .command = -1,
                                         .start = 0,
                                         .length = 10};
     gchar *trace_format = NULL;
@@ -117,6 +119,14 @@ parse_command_line_arguments(int argc, char *argv[])
          G_OPTION_ARG_INT64,
          &args.start,
          "index to begin. Default 0.",
+         NULL},
+        {"command",
+         'c',
+         0,
+         G_OPTION_ARG_INT,
+         &args.command,
+         "filter for a specific command. Default: -1 (i.e. print any "
+         "commands)",
          NULL},
         {"length",
          'l',
@@ -244,7 +254,9 @@ run(struct CommandLineArguments const *const args)
             &((uint8_t *)mm.buffer)[i * bytes_per_trace_item],
             args->trace_format);
         assert(r.valid);
-        print_trace_entry(r.item);
+        if (args->command == -1 || args->command == r.item.command) {
+            print_trace_entry(r.item);
+        }
     }
 
     MemoryMap__destroy(&mm);
