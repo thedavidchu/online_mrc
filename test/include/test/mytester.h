@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "logger/logger.h"
-
 #define ASSERT_FUNCTION_RETURNS_TRUE(func_call)                                \
     do {                                                                       \
         bool r = (func_call);                                                  \
