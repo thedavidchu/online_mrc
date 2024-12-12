@@ -5,6 +5,7 @@
 #include <map>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
@@ -27,6 +28,23 @@ public:
     TTLSieveCache(std::size_t capacity)
         : capacity_(capacity)
     {
+    }
+
+    std::size_t
+    size()
+    {
+        return map_.size();
+    }
+
+    std::vector<std::uint64_t>
+    get_keys_in_eviction_order()
+    {
+        std::vector<std::uint64_t> keys;
+        keys.reserve(ttl_queue_.size());
+        for (auto [exp_tm, key] : ttl_queue_) {
+            keys.push_back(key);
+        }
+        return keys;
     }
 
     static std::uint64_t
