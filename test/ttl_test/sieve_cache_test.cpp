@@ -1,5 +1,7 @@
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
+#include <string>
 #include <vector>
 
 #include "arrays/array_size.h"
