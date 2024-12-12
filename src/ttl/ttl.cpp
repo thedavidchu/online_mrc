@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -11,21 +10,21 @@
 #include <string>
 #include <vector>
 
-#include "clock_cache.hpp"
-#include "fifo_cache.hpp"
+#include "cache/clock_cache.hpp"
+#include "cache/fifo_cache.hpp"
+#include "cache/lfu_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/sieve_cache.hpp"
 #include "io/io.h"
-#include "lfu_cache.hpp"
 #include "logger/logger.h"
-#include "lru_cache.hpp"
 #include "modified_clock_cache.hpp"
-#include "sieve_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
-#include "ttl_clock_cache.hpp"
-#include "ttl_fifo_cache.hpp"
-#include "ttl_lfu_cache.hpp"
-#include "ttl_lru_cache.hpp"
-#include "ttl_sieve_cache.hpp"
+#include "ttl_cache/ttl_clock_cache.hpp"
+#include "ttl_cache/ttl_fifo_cache.hpp"
+#include "ttl_cache/ttl_lfu_cache.hpp"
+#include "ttl_cache/ttl_lru_cache.hpp"
+#include "ttl_cache/ttl_sieve_cache.hpp"
 
 template <typename T>
 static double

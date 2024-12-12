@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "cache_statistics.hpp"
+#include "cache_statistics/cache_statistics.hpp"
 
 class FIFOCache {
     std::unordered_set<std::uint64_t> map_;

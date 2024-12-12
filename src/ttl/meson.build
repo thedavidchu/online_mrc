@@ -1,6 +1,9 @@
+cache_inc = include_directories('include')
+
 ttl_exe = executable(
     'ttl_exe',
     'ttl.cpp',
+    include_directories: cache_inc,
     link_with: [],
     dependencies: [
         boost_dep,

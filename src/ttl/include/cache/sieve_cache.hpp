@@ -9,7 +9,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "cache_statistics.hpp"
+#include "cache_statistics/cache_statistics.hpp"
 
 class SieveCache {
     struct SieveBucket {
