@@ -11,6 +11,17 @@ sieve_cache_test_exe = executable(
     ],
 )
 
+c_sieve_cache_test_exe = executable(
+    'c_sieve_cache_test_exe',
+    'c_sieve_cache_test.c',
+    include_directories: [
+        mytester_include,
+    ],
+    dependencies: [
+        lib_cache_sim_dep,
+    ],
+)
+
 test(
     'sieve_cache_test',
     sieve_cache_test_exe,
