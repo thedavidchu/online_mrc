@@ -56,10 +56,10 @@ static std::string soln[] = {
 };
 
 static std::string
-sieve_print(SieveCache &cache)
+sieve_print(std::vector<std::uint64_t> keys)
 {
     std::string s;
-    for (auto key : cache.get_keys_in_eviction_order()) {
+    for (auto key : keys) {
         // NOTE We know that the key is a character.
         s = std::string(1, (char)key) + "|" + s;
     }
@@ -88,11 +88,11 @@ simple_test()
     std::vector<std::string> my_soln;
     SieveCache cache(7);
 
-    std::string s = sieve_print(cache);
+    std::string s = sieve_print(cache.get_keys_in_eviction_order());
     my_soln.push_back(s);
     for (auto i : short_trace) {
         cache.access_item(i);
-        s = sieve_print(cache);
+        s = sieve_print(cache.get_keys_in_eviction_order());
         my_soln.push_back(s);
     }
 
@@ -111,6 +111,33 @@ simple_test()
         }
     }
 
+    return true;
+}
+
+/// @brief  Check the external implementation matches the example given
+///         by Yang et al. on their blog.
+static bool
+simple_external_test()
+{
+    // Check external solution
+    std::vector<std::string> ext_soln;
+    ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(7);
+    std::string s = sieve_print(ext_cache.get_keys_in_eviction_order());
+    ext_soln.push_back(s);
+    for (auto i : short_trace) {
+        ext_cache.insert(i, 0);
+        s = sieve_print(ext_cache.get_keys_in_eviction_order());
+        ext_soln.push_back(s);
+    }
+    assert(ext_soln.size() == ARRAY_SIZE(soln));
+    for (std::size_t i = 0; i < ext_soln.size(); ++i) {
+        if (ext_soln[i] != soln[i]) {
+            LOGGER_ERROR("mismatching strings at %zu: got '%s', expecting '%s'",
+                         i,
+                         ext_soln[i].c_str(),
+                         soln[i].c_str());
+        }
+    }
     return true;
 }
 
@@ -161,11 +188,13 @@ external_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
     LOGGER_INFO("Testing SIEVE cache with capacity %zu", capacity);
     TTLSieveCache my_cache(capacity);
     ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(capacity);
-    for (auto key : trace) {
+    for (std::size_t i = 0; i < trace.size(); ++i) {
+        auto key = trace[i];
         my_cache.access_item(key);
         ext_cache.insert(key, 0);
         if (my_cache.size() != ext_cache.length()) {
-            LOGGER_ERROR("different size caches %zu vs %zu",
+            LOGGER_ERROR("iteration %zu: different size caches %zu vs %zu",
+                         i,
                          my_cache.size(),
                          ext_cache.length());
             ok = false;
@@ -176,7 +205,9 @@ external_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
         }
         for (auto k : my_cache.get_keys_in_eviction_order()) {
             if (!ext_cache.contains(k)) {
-                LOGGER_ERROR("external cache missing key '%zu'", k);
+                LOGGER_ERROR("iteration %zu, external cache missing key '%zu'",
+                             i,
+                             k);
                 print_vector(my_cache.get_keys_in_eviction_order());
                 print_vector(ext_cache.get_keys_in_eviction_order());
                 ok = false;
@@ -194,6 +225,7 @@ int
 main(int argc, char *argv[])
 {
     ASSERT_FUNCTION_RETURNS_TRUE(simple_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(simple_external_test());
     ASSERT_FUNCTION_RETURNS_TRUE(short_external_sieve_test());
 
     if (argc == 1) {

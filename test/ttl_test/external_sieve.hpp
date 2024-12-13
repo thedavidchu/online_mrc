@@ -8,6 +8,7 @@
 
 #ifndef SIEVE_HPP
 #define SIEVE_HPP
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <memory>
@@ -35,10 +36,14 @@ public:
     get_keys_in_eviction_order()
     {
         std::vector<K> keys;
-        keys.reserve(length_.load());
-        for (auto [k, v] : cache_) {
-            keys.push_back(k);
+        keys.reserve(length());
+        for (auto node = head_; node != tail_; node = node->next) {
+            keys.push_back(node->key);
         }
+        if (tail_ != nullptr) {
+            keys.push_back(tail_->key);
+        }
+        std::reverse(keys.begin(), keys.end());
         return keys;
     }
 
