@@ -1,3 +1,6 @@
 [submodule "src/mrc/goel_quickmrc/quickmrc"]
 	path = src/mrc/goel_quickmrc/quickmrc
 	url = https://github.com/thedavidchu/quickmrc.git
+[submodule "third-party/libCacheSim"]
+	path = third-party/libCacheSim
+	url = https://github.com/1a1a11a/libCacheSim.git
