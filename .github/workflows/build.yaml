@@ -38,6 +38,8 @@ jobs:
             arch: x86
             # NOTE: If a boost version matching all requirements cannot be found,
             # this build step will fail
+      - name: Install GLib-2.0
+        run: sudo apt install -y libglib2.0-dev
       - run: meson setup builddir/
         env:
           CC: gcc
