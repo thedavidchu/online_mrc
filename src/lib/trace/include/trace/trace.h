@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* !__cplusplus */
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -38,3 +42,7 @@ Trace__init(struct Trace *const me, size_t const length);
 
 void
 Trace__destroy(struct Trace *const me);
+
+#ifdef __cplusplus
+}
+#endif /* !__cplusplus */

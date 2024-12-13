@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#define restrict __restrict__
+#endif /* !__cplusplus */
+
 #include "trace/trace.h"
 
 enum TraceFormat {
@@ -60,3 +65,7 @@ construct_trace_item(uint8_t const *const restrict bytes,
 struct FullTraceItemResult
 construct_full_trace_item(uint8_t const *const restrict bytes,
                           enum TraceFormat format);
+
+#ifdef __cplusplus
+}
+#endif /* !__cplusplus */
