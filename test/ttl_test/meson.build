@@ -12,9 +12,9 @@ sieve_cache_test_exe = executable(
     ],
 )
 
-c_sieve_cache_test_exe = executable(
-    'c_sieve_cache_test_exe',
-    'c_sieve_cache_test.c',
+yang_sieve_cache_test_exe = executable(
+    'yang_sieve_cache_test_exe',
+    'yang_sieve_cache_test.c',
     include_directories: [
         mytester_include,
     ],
@@ -23,8 +23,6 @@ c_sieve_cache_test_exe = executable(
     ],
 )
 
-test(
-    'sieve_cache_test',
-    sieve_cache_test_exe,
-    args: [test_trace],
-)
+test('sieve_cache_test', sieve_cache_test_exe, args: [test_trace])
+
+test('yang_sieve_cache_test', yang_sieve_cache_test_exe)
