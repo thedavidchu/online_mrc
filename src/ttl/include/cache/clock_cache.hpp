@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cache_statistics.hpp"
+#include "cache_statistics/cache_statistics.hpp"
 
 class ClockCache {
     std::unordered_map<std::uint64_t, bool> map_;

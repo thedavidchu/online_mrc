@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -11,19 +10,21 @@
 #include <string>
 #include <vector>
 
-#include "clock_cache.hpp"
-#include "fifo_cache.hpp"
+#include "cache/clock_cache.hpp"
+#include "cache/fifo_cache.hpp"
+#include "cache/lfu_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/sieve_cache.hpp"
 #include "io/io.h"
-#include "lfu_cache.hpp"
 #include "logger/logger.h"
-#include "lru_cache.hpp"
 #include "modified_clock_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
-#include "ttl_clock_cache.hpp"
-#include "ttl_fifo_cache.hpp"
-#include "ttl_lfu_cache.hpp"
-#include "ttl_lru_cache.hpp"
+#include "ttl_cache/ttl_clock_cache.hpp"
+#include "ttl_cache/ttl_fifo_cache.hpp"
+#include "ttl_cache/ttl_lfu_cache.hpp"
+#include "ttl_cache/ttl_lru_cache.hpp"
+#include "ttl_cache/ttl_sieve_cache.hpp"
 
 template <typename T>
 static double
@@ -153,11 +154,13 @@ main(int argc, char *argv[])
                 {LRUCache::name, generate_mrc<LRUCache>},
                 {LFUCache::name, generate_mrc<LFUCache>},
                 {FIFOCache::name, generate_mrc<FIFOCache>},
+                {SieveCache::name, generate_mrc<SieveCache>},
 
                 {TTLClockCache::name, generate_mrc<TTLClockCache>},
                 {TTLLRUCache::name, generate_mrc<TTLLRUCache>},
                 {TTLLFUCache::name, generate_mrc<TTLLFUCache>},
                 {TTLFIFOCache::name, generate_mrc<TTLFIFOCache>},
+                {TTLSieveCache::name, generate_mrc<TTLSieveCache>},
             },
         run_algorithms = {};
 

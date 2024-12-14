@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cache_statistics.hpp"
+#include "cache_statistics/cache_statistics.hpp"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "math/saturation_arithmetic.h"

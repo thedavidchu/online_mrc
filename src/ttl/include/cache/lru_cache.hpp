@@ -9,7 +9,7 @@
 #include <optional>
 #include <unordered_map>
 
-#include "cache_statistics.hpp"
+#include "cache_statistics/cache_statistics.hpp"
 
 class LRUCache {
     std::unordered_map<std::uint64_t, std::uint64_t> map_;

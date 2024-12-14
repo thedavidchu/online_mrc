@@ -9,8 +9,8 @@
 #include <optional>
 #include <unordered_map>
 
-#include "cache_statistics.hpp"
-#include "lru_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache_statistics/cache_statistics.hpp"
 
 class LFUCache {
     std::unordered_map<std::uint64_t, std::uint64_t> map_;

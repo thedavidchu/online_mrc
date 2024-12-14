@@ -77,6 +77,11 @@ if not fs.exists(test_trace)
     warning('could not find file: ' + test_trace)
 endif
 
+# CMake Subproject: 1a1a11a/libCacheSim
+cmake = import('cmake')
+lib_cache_sim_subproject = cmake.subproject('libCacheSim')
+lib_cache_sim_dep = lib_cache_sim_subproject.dependency('libCacheSim')
+
 subdir('src')
 subdir('test')
 subdir('bench')

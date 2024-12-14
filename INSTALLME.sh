@@ -36,6 +36,9 @@ sudo apt install pkg-config libglib2.0-dev
 # called 'libboost1.81-dev' worked.
 sudo apt install libboost-all-dev
 
+# Install dependencies for 1a1a11a/libCacheSim
+sudo apt install -y cmake libgoogle-perftools-dev libzstd-dev
+
 # Install environment niceties
 sudo apt install clang-format clangd
 

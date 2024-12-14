@@ -6,3 +6,4 @@ mytester_include = include_directories(
 # use the mytester_include.
 subdir('lib_test')
 subdir('mrc_test')
+subdir('ttl_test')
