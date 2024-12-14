@@ -182,8 +182,9 @@ compare_caches(TTLSieveCache const &my_cache, YangSieveCache const &yang_cache)
     return nerr;
 }
 
+/// @brief  Compare the state of two SIEVE cache implementations.
 static bool
-external_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
+comparison_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
 {
     // Cap the number of errors that we report to the user.
     int nerr = 0;
@@ -226,12 +227,12 @@ main(int argc, char *argv[])
     }
     // NOTE I assume the trace we're being passed is MSR src2.bin.
     std::vector<std::uint64_t> trace = get_trace(argv[1], TRACE_FORMAT_KIA);
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(2, trace));
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 10, trace));
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 11, trace));
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 12, trace));
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 13, trace));
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 14, trace));
-    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 15, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(2, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(1 << 10, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(1 << 11, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(1 << 12, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(1 << 13, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(1 << 14, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(comparison_sieve_test(1 << 15, trace));
     return 0;
 }
