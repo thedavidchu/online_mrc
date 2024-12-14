@@ -81,3 +81,23 @@ YangSieveCache::get_keys() const
     }
     return keys;
 }
+
+void
+YangSieveCache::print() const
+{
+    cache_t *c = (cache_t *)cache_;
+    assert(c);
+    Sieve_params_t *p = (Sieve_params_t *)c->eviction_params;
+    printf("Cache (size=%zu): ", c->n_obj);
+    for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
+        // Indicate where the hand is pointing.
+        if (p->pointer == o) {
+            printf("*");
+        }
+        if (o->sieve.freq) {
+            printf("v");
+        }
+        printf("%zu ", o->obj_id);
+    }
+    printf("\n");
+}

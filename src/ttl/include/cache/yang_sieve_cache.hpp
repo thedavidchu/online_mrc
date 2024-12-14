@@ -23,6 +23,9 @@ public:
     std::vector<std::uint64_t>
     get_keys() const;
 
+    void
+    print() const;
+
     std::size_t const capacity_;
     CacheStatistics statistics_;
 
