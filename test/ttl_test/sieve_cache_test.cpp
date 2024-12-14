@@ -6,6 +6,7 @@
 
 #include "arrays/array_size.h"
 #include "cache/sieve_cache.hpp"
+#include "cache/yang_sieve_cache.hpp"
 #include "logger/logger.h"
 #include "sieve/external_sieve.hpp"
 #include "test/mytester.h"
@@ -83,7 +84,7 @@ get_trace(char const *const filename, enum TraceFormat format)
 }
 
 static bool
-simple_test()
+my_simple_test()
 {
     std::vector<std::string> my_soln;
     SieveCache cache(7);
@@ -117,16 +118,16 @@ simple_test()
 /// @brief  Check the external implementation matches the example given
 ///         by Yang et al. on their blog.
 static bool
-simple_external_test()
+yang_single_test()
 {
     // Check external solution
     std::vector<std::string> ext_soln;
-    ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(7);
-    std::string s = sieve_print(ext_cache.get_keys_in_eviction_order());
+    YangSieveCache ext_cache(7);
+    std::string s = sieve_print(ext_cache.get_keys());
     ext_soln.push_back(s);
     for (auto i : short_trace) {
-        ext_cache.insert(i, 0);
-        s = sieve_print(ext_cache.get_keys_in_eviction_order());
+        ext_cache.access_item(i);
+        s = sieve_print(ext_cache.get_keys());
         ext_soln.push_back(s);
     }
     assert(ext_soln.size() == ARRAY_SIZE(soln));
@@ -141,33 +142,6 @@ simple_external_test()
     return true;
 }
 
-static bool
-short_external_sieve_test()
-{
-    bool ok = true;
-    SieveCache my_cache(7);
-    ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(7);
-
-    for (auto key : short_trace) {
-        my_cache.access_item(key);
-        ext_cache.insert(key, 0);
-
-        if (my_cache.size() != ext_cache.length()) {
-            LOGGER_ERROR("different size caches %zu vs %zu",
-                         my_cache.size(),
-                         ext_cache.length());
-            ok = false;
-        }
-        for (auto k : my_cache.get_keys_in_eviction_order()) {
-            if (!ext_cache.contains(k)) {
-                LOGGER_ERROR("external cache missing key '%zu'", k);
-                ok = false;
-            }
-        }
-    }
-    return ok;
-}
-
 template <typename T>
 static void
 print_vector(std::vector<T> vec)
@@ -179,54 +153,73 @@ print_vector(std::vector<T> vec)
     std::cout << "}" << std::endl;
 }
 
-static bool
-external_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
+/// @note   Compare the caches
+static int
+compare_caches(TTLSieveCache const &my_cache, YangSieveCache const &yang_cache)
 {
-    bool ok = true;
-    // Cap the number of errors that we report to the user.
     int nerr = 0;
-    LOGGER_INFO("Testing SIEVE cache with capacity %zu", capacity);
-    TTLSieveCache my_cache(capacity);
-    ExternalSieveCache<std::uint64_t, std::uint64_t> ext_cache(capacity);
-    for (std::size_t i = 0; i < trace.size(); ++i) {
-        auto key = trace[i];
-        my_cache.access_item(key);
-        ext_cache.insert(key, 0);
-        if (my_cache.size() != ext_cache.length()) {
-            LOGGER_ERROR("iteration %zu: different size caches %zu vs %zu",
-                         i,
-                         my_cache.size(),
-                         ext_cache.length());
-            ok = false;
+    int const MAX_NERRS = 10;
+
+    // NOTE If the caches are the same size, then we know that all of
+    //      'missing' keys in one cache have corresponding 'missing'
+    //      other keys in the other cache.
+    if (my_cache.size() != yang_cache.size()) {
+        LOGGER_ERROR("different size caches %zu vs %zu",
+                     my_cache.size(),
+                     yang_cache.size());
+        ++nerr;
+    }
+    for (auto k : my_cache.get_keys_in_eviction_order()) {
+        if (!yang_cache.contains(k)) {
+            LOGGER_ERROR("Yang's cache missing key '%zu'", k);
+            print_vector(my_cache.get_keys_in_eviction_order());
+            print_vector(yang_cache.get_keys());
             ++nerr;
-            if (nerr > 10) {
-                return false;
-            }
-        }
-        for (auto k : my_cache.get_keys_in_eviction_order()) {
-            if (!ext_cache.contains(k)) {
-                LOGGER_ERROR("iteration %zu, external cache missing key '%zu'",
-                             i,
-                             k);
-                print_vector(my_cache.get_keys_in_eviction_order());
-                print_vector(ext_cache.get_keys_in_eviction_order());
-                ok = false;
-                ++nerr;
-                if (nerr > 10) {
-                    return false;
-                }
+            if (nerr > MAX_NERRS) {
+                return nerr;
             }
         }
     }
-    return ok;
+    return nerr;
+}
+
+static bool
+external_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
+{
+    // Cap the number of errors that we report to the user.
+    int nerr = 0;
+    int const MAX_NERRS = 10;
+    LOGGER_INFO("Testing SIEVE cache with capacity %zu", capacity);
+    TTLSieveCache my_cache(capacity);
+    YangSieveCache yang_cache(capacity);
+    for (std::size_t i = 0; i < trace.size(); ++i) {
+        auto key = trace[i];
+        my_cache.access_item(key);
+        yang_cache.access_item(key);
+
+        // NOTE This should amoritize the cost of comparisons to O(N).
+        if (i % capacity == 0) {
+            int n = compare_caches(my_cache, yang_cache);
+            if (n) {
+                LOGGER_ERROR("mismatch on iteration %zu", i);
+            }
+            nerr += n;
+        }
+        // This is so that we print a few errors at once, but also do
+        // not overwhelm the system with billions of errors if things
+        // get really bad!
+        if (nerr > MAX_NERRS) {
+            return false;
+        }
+    }
+    return nerr == 0;
 }
 
 int
 main(int argc, char *argv[])
 {
-    ASSERT_FUNCTION_RETURNS_TRUE(simple_test());
-    ASSERT_FUNCTION_RETURNS_TRUE(simple_external_test());
-    ASSERT_FUNCTION_RETURNS_TRUE(short_external_sieve_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(my_simple_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(yang_single_test());
 
     if (argc == 1) {
         LOGGER_WARN("skipping real trace test");
@@ -235,11 +228,11 @@ main(int argc, char *argv[])
     // NOTE I assume the trace we're being passed is MSR src2.bin.
     std::vector<std::uint64_t> trace = get_trace(argv[1], TRACE_FORMAT_KIA);
     ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(2, trace));
-    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 10, trace));
-    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 11, trace));
-    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 12, trace));
-    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 13, trace));
-    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 14, trace));
-    // ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 15, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 10, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 11, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 12, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 13, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 14, trace));
+    ASSERT_FUNCTION_RETURNS_TRUE(external_sieve_test(1 << 15, trace));
     return 0;
 }

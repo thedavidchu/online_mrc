@@ -1,5 +1,12 @@
 cache_inc = include_directories('include')
 
+yang_sieve_cache_lib = library(
+    'yang_sieve_cache_lib',
+    'yang_sieve_cache.cpp',
+    include_directories: cache_inc,
+    dependencies: lib_cache_sim_dep,
+)
+
 ttl_exe = executable(
     'ttl_exe',
     'ttl.cpp',

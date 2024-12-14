@@ -31,13 +31,13 @@ public:
     }
 
     std::size_t
-    size()
+    size() const
     {
         return map_.size();
     }
 
     std::vector<std::uint64_t>
-    get_keys_in_eviction_order()
+    get_keys_in_eviction_order() const
     {
         std::vector<std::uint64_t> keys;
         keys.reserve(ttl_queue_.size());
