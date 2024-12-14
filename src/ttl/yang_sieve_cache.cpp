@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "cache/yang_sieve_cache.hpp"
+#include "yang_cache/yang_sieve_cache.hpp"
 // NOTE It shouldn't be this painful to include a library file, but it is...
 #include "libCacheSim/include/libCacheSim.h"
 
