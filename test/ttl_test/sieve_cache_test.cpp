@@ -8,7 +8,6 @@
 #include "cache/sieve_cache.hpp"
 #include "cache/yang_sieve_cache.hpp"
 #include "logger/logger.h"
-#include "sieve/external_sieve.hpp"
 #include "test/mytester.h"
 #include "trace/reader.h"
 #include "ttl_cache/ttl_sieve_cache.hpp"
