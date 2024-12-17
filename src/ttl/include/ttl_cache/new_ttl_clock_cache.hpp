@@ -8,12 +8,13 @@ class NewTTLClockCache : public BaseTTLCache {
     {
         auto obj = map_.find(key);
         assert(obj != map_.end());
-        auto old_exp_tm_ms = obj->second.expiration_time_ms_;
+        TTLMetadata metadata = obj->second;
+        auto old_exp_tm_ms = metadata.expiration_time_ms_;
         if (old_exp_tm_ms < insertion_position_ms_) {
             std::uint64_t const new_exp_tm_ms = old_exp_tm_ms + capacity_;
-            obj->second.visit(timestamp_ms, new_exp_tm_ms);
+            metadata.visit(timestamp_ms, new_exp_tm_ms);
         } else {
-            obj->second.visit(timestamp_ms, {});
+            metadata.visit(timestamp_ms, {});
         }
         statistics_.hit();
     }
