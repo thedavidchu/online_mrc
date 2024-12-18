@@ -1,6 +1,8 @@
-#include "ttl_cache/base_ttl_cache.hpp"
 #include <cstddef>
 #include <iostream>
+
+#include "ttl_cache/base_ttl_cache.hpp"
+#include "unused/mark_unused.h"
 
 class NewTTLClockCache : public BaseTTLCache {
     void
