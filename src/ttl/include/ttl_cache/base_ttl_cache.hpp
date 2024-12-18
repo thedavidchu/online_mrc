@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -25,8 +26,10 @@ struct TTLMetadata {
     std::size_t frequency_ = 0;
     std::uint64_t insertion_time_ms_ = 0;
     std::uint64_t last_access_time_ms_ = 0;
-    bool visited_ = false;
-
+    /// @note   I decided to store the expiration time rather than the
+    ///         TTL for convenience. The TTL can be calculated by
+    ///         subtracting the (last time the expiration time was set)
+    ///         from the (expiration time).
     std::uint64_t expiration_time_ms_ = 0;
 
     TTLMetadata(std::uint64_t const insertion_time_ms,
@@ -37,22 +40,28 @@ struct TTLMetadata {
     {
     }
 
+    template <class Stream>
+    void
+    to_stream(Stream &s, bool const newline = false) const
+    {
+        s << "TTLMetadata(frequency=" << frequency_ << ",";
+        s << "insertion_time[ms]=" << insertion_time_ms_ << ",";
+        s << "last_access_time[ms]=" << last_access_time_ms_ << ",";
+        s << "expiration_time[ms]=" << expiration_time_ms_ << ")";
+        if (newline) {
+            s << std::endl;
+        }
+    }
+
     void
     visit(std::uint64_t const access_time_ms,
           std::optional<std::uint64_t> const new_expiration_time_ms)
     {
         ++frequency_;
         last_access_time_ms_ = access_time_ms;
-        visited_ = true;
         if (new_expiration_time_ms) {
             expiration_time_ms_ = new_expiration_time_ms.value();
         }
-    }
-
-    void
-    unvisit()
-    {
-        visited_ = false;
     }
 };
 
@@ -61,6 +70,12 @@ public:
     BaseTTLCache(std::size_t const capacity)
         : capacity_(capacity)
     {
+    }
+
+    std::uint64_t
+    size() const
+    {
+        return map_.size();
     }
 
     /// @brief  Get keys in current eviction order (from soonest to
@@ -100,6 +115,56 @@ public:
         std::size_t i = map_.erase(victim_key);
         assert(i == 1);
         return victim_key;
+    }
+
+    template <class Stream>
+    void
+    to_stream(Stream &s) const
+    {
+        s << name << "(capacity=" << capacity_ << ",size=" << size() << ")"
+          << std::endl;
+        s << "> Key-Metadata Map:" << std::endl;
+        for (auto [k, metadata] : map_) {
+            // This is inefficient, but looks easier on the eyes.
+            std::stringstream ss;
+            metadata.to_stream(ss);
+            s << ">> key: " << k << ", metadata: " << ss.str() << std::endl;
+        }
+        s << "> Expiration Queue:" << std::endl;
+        for (auto [exp_tm, k] : expiration_queue_) {
+            s << ">> expiration time[ms]: " << exp_tm << ", key: " << k
+              << std::endl;
+        }
+    }
+
+    bool
+    validate(int const verbose = 0) const
+    {
+        if (verbose) {
+            std::cout << "validate(verbose=" << verbose << ")" << std::endl;
+        }
+        assert(map_.size() == expiration_queue_.size());
+        assert(size() <= capacity_);
+        if (verbose) {
+            std::cout << "> size: " << size() << std::endl;
+        }
+        if (verbose >= 2) {
+            to_stream(std::cout);
+        }
+        for (auto [k, metadata] : map_) {
+            if (verbose >= 2) {
+                std::stringstream ss;
+                metadata.to_stream(ss);
+                std::cout << "> Validating: key=" << k
+                          << ", metadata=" << ss.str() << std::endl;
+            }
+            assert(expiration_queue_.count(metadata.expiration_time_ms_));
+            auto obj = expiration_queue_.find(metadata.expiration_time_ms_);
+            assert(obj != expiration_queue_.end());
+            assert(obj->first == metadata.expiration_time_ms_);
+            assert(obj->second == k);
+        }
+        return true;
     }
 
     int
