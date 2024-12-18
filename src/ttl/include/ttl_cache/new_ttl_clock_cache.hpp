@@ -1,24 +1,8 @@
 #include "ttl_cache/base_ttl_cache.hpp"
-#include "unused/mark_unused.h"
 #include <cstddef>
 #include <iostream>
 
 class NewTTLClockCache : public BaseTTLCache {
-    /// @brief  Change the expiration time of an object.
-    bool
-    change_map_expiration_time(std::uint64_t const old_expiration_time_ms,
-                               std::uint64_t const key,
-                               std::uint64_t const new_expiration_time_ms)
-    {
-        // TODO We will use the key when we implement the expiration
-        //      queue as a multimap.
-        UNUSED(key);
-        auto nh = expiration_queue_.extract(old_expiration_time_ms);
-        nh.key() = new_expiration_time_ms;
-        expiration_queue_.insert(std::move(nh));
-        return true;
-    }
-
     void
     hit(std::uint64_t const timestamp_ms, std::uint64_t const key)
     {
@@ -29,7 +13,7 @@ class NewTTLClockCache : public BaseTTLCache {
         if (old_exp_tm_ms < insertion_position_ms_) {
             std::uint64_t const new_exp_tm_ms = old_exp_tm_ms + capacity_;
             metadata.visit(timestamp_ms, new_exp_tm_ms);
-            change_map_expiration_time(old_exp_tm_ms, key, new_exp_tm_ms);
+            update_expiration_time(old_exp_tm_ms, key, new_exp_tm_ms);
         } else {
             metadata.visit(timestamp_ms, {});
         }

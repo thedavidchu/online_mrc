@@ -117,6 +117,25 @@ public:
         return victim_key;
     }
 
+    /// @brief  Change the expiration time of an object.
+    bool
+    update_expiration_time(std::uint64_t const old_expiration_time_ms,
+                           std::uint64_t const key,
+                           std::uint64_t const new_expiration_time_ms)
+    {
+        auto [begin, end] =
+            expiration_queue_.equal_range(old_expiration_time_ms);
+        for (auto x = begin; x != end; ++x) {
+            if (x->second == key) {
+                auto nh = expiration_queue_.extract(x);
+                nh.key() = new_expiration_time_ms;
+                expiration_queue_.insert(std::move(nh));
+                return true;
+            }
+        }
+        return true;
+    }
+
     template <class Stream>
     void
     to_stream(Stream &s) const
