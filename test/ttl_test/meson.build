@@ -23,6 +23,19 @@ yang_sieve_cache_test_exe = executable(
     ],
 )
 
-test('sieve_cache_test', sieve_cache_test_exe, args: [test_trace])
+ttl_clock_cache_test_exe = executable(
+    'ttl_clock_cache_test_exe',
+    'ttl_clock_cache_test.cpp',
+    include_directories: [
+        mytester_include,
+        cache_inc,
+    ],
+    dependencies: [
+        common_dep,
+        trace_dep,
+    ],
+)
 
+test('sieve_cache_test', sieve_cache_test_exe, args: [test_trace])
 test('yang_sieve_cache_test', yang_sieve_cache_test_exe)
+test('ttl_clock_cache_test', ttl_clock_cache_test_exe, args: [test_trace])

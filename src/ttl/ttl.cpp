@@ -1,3 +1,5 @@
+/** @brief  This file creates MRCs based on the listed algorithms.
+ */
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -20,11 +22,93 @@
 #include "modified_clock_cache.hpp"
 #include "trace/reader.h"
 #include "trace/trace.h"
+#include "ttl_cache/new_ttl_clock_cache.hpp"
 #include "ttl_cache/ttl_clock_cache.hpp"
 #include "ttl_cache/ttl_fifo_cache.hpp"
 #include "ttl_cache/ttl_lfu_cache.hpp"
 #include "ttl_cache/ttl_lru_cache.hpp"
 #include "ttl_cache/ttl_sieve_cache.hpp"
+
+template <typename T>
+static double
+new_run_cache(struct MemoryMap const *const mm,
+              enum TraceFormat format,
+              uint64_t const capacity)
+{
+    LOGGER_TRACE("running '%s' algorithm for size %zu", T::name, capacity);
+    size_t num_entries = 0;
+    size_t bytes_per_trace_item = 0;
+    T cache(capacity);
+
+    if (mm == NULL) {
+        LOGGER_ERROR("invalid input");
+        return -1.0;
+    }
+    // NOTE I let this helper function handle the format checks for me
+    //      so that all logic dealing with parsing trace formats is
+    //      contained within this library.
+    bytes_per_trace_item = get_bytes_per_trace_item(format);
+    if (bytes_per_trace_item == 0) {
+        LOGGER_ERROR("invalid trace format");
+        return -1.0;
+    }
+    num_entries = mm->num_bytes / bytes_per_trace_item;
+    for (size_t i = 0; i < num_entries; ++i) {
+        if (i % 1000000 == 0) {
+            LOGGER_TRACE("Finished %zu / %zu", i, num_entries);
+        }
+        struct FullTraceItemResult r = construct_full_trace_item(
+            &((uint8_t *)mm->buffer)[i * bytes_per_trace_item],
+            format);
+        assert(r.valid);
+
+        // Skip PUT requests.
+        if (r.item.command == 1) {
+            continue;
+        }
+
+        cache.access_item(r.item.timestamp_ms, r.item.key);
+    }
+    assert(cache.statistics_.total_accesses_ < num_entries);
+    cache.statistics_.print(T::name, capacity);
+    return cache.statistics_.miss_rate();
+}
+
+template <typename T>
+static std::optional<std::map<std::uint64_t, double>>
+new_generate_mrc(char const *const trace_path,
+                 enum TraceFormat const format,
+                 std::vector<std::size_t> const &capacities)
+{
+    // This initializes everything to the default, i.e. 0.
+    struct MemoryMap mm = {};
+    std::map<std::size_t, double> mrc = {};
+
+    if (trace_path == NULL) {
+        LOGGER_ERROR("invalid input path", format);
+        goto cleanup_error;
+    }
+
+    // Memory map the input trace file
+    if (!MemoryMap__init(&mm, trace_path, "rb")) {
+        LOGGER_ERROR("failed to mmap '%s'", trace_path);
+        goto cleanup_error;
+    }
+    for (auto cap : capacities) {
+        double mr = new_run_cache<T>(&mm, format, cap);
+        if (mr == -1.0) {
+            LOGGER_ERROR("error in '%s' algorithm (N.B. name may be mangled)",
+                         typeid(T).name());
+            return std::nullopt;
+        };
+        mrc[cap] = mr;
+    }
+    MemoryMap__destroy(&mm);
+    return std::make_optional(mrc);
+cleanup_error:
+    MemoryMap__destroy(&mm);
+    return std::nullopt;
+}
 
 template <typename T>
 static double
@@ -149,13 +233,14 @@ main(int argc, char *argv[])
                  std::vector<std::size_t> const &capacities)>>
         algorithms =
             {
-                {ClockCache::name, generate_mrc<ClockCache>},
+                {ClockCache::name, new_generate_mrc<ClockCache>},
                 {"ModifiedClock", generate_modified_clock_mrc},
                 {LRUCache::name, generate_mrc<LRUCache>},
                 {LFUCache::name, generate_mrc<LFUCache>},
                 {FIFOCache::name, generate_mrc<FIFOCache>},
                 {SieveCache::name, generate_mrc<SieveCache>},
 
+                {NewTTLClockCache::name, new_generate_mrc<NewTTLClockCache>},
                 {TTLClockCache::name, generate_mrc<TTLClockCache>},
                 {TTLLRUCache::name, generate_mrc<TTLLRUCache>},
                 {TTLLFUCache::name, generate_mrc<TTLLFUCache>},
