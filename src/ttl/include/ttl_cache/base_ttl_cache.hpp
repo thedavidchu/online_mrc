@@ -128,7 +128,7 @@ public:
     validate(int const verbose = 0) const
     {
         if (verbose) {
-            std::cout << "validate(name" << name << ",verbose=" << verbose
+            std::cout << "validate(name=" << name << ",verbose=" << verbose
                       << ")" << std::endl;
         }
         assert(map_.size() == expiration_queue_.size());

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <iostream>
 
@@ -6,6 +7,22 @@
 #include "unused/mark_unused.h"
 
 class NewTTLClockCache : public BaseTTLCache {
+    /// @brief  This method should be called in three cases:
+    ///         1. Upon insertion of a new element
+    ///         2. Upon deletion of the soonest expiring object
+    ///         3. Upon promotion of the soonest expiring object
+    ///         N.B. Cases 2 and 3 are basically saying if the soonest
+    ///         expiration time changes.
+    ///         N.B. Cases 2 and 3 are idempotent; case 1 is not.
+    void
+    update_insertion_position_ms()
+    {
+        std::uint64_t max_exp_tm = expiration_queue_.rbegin()->first;
+        std::uint64_t min_exp_tm = expiration_queue_.begin()->first;
+        insertion_position_ms_ =
+            std::min(max_exp_tm + 1, min_exp_tm + capacity_);
+    }
+
     void
     hit(std::uint64_t const timestamp_ms, std::uint64_t const key)
     {
@@ -17,6 +34,7 @@ class NewTTLClockCache : public BaseTTLCache {
             std::uint64_t const new_exp_tm_ms = old_exp_tm_ms + capacity_;
             metadata.visit(timestamp_ms, new_exp_tm_ms);
             update_expiration_time(old_exp_tm_ms, key, new_exp_tm_ms);
+            update_insertion_position_ms();
         } else {
             metadata.visit(timestamp_ms, {});
         }
@@ -27,10 +45,6 @@ class NewTTLClockCache : public BaseTTLCache {
     miss(std::uint64_t const timestamp_ms, std::uint64_t const key)
     {
         if (map_.size() == capacity_) {
-            auto exp = get_soonest_expiring();
-            assert(exp.has_value());
-            std::uint64_t soonest_exp_tm = exp->first;
-            insertion_position_ms_ = soonest_exp_tm + capacity_;
             auto r = evict_soonest_expiring();
             assert(r.has_value());
             assert(map_.size() + 1 == capacity_);
@@ -39,13 +53,7 @@ class NewTTLClockCache : public BaseTTLCache {
         map_.emplace(key, CacheMetadata(timestamp_ms, exp_tm_ms));
         expiration_queue_.emplace(exp_tm_ms, key);
         statistics_.miss();
-        // NOTE This won't work if we support user-set TTLs, because
-        //      we may end up with overlapping objects at a single
-        //      timestamp. Or not, because the user-set TTLs will
-        //      be very far in the past. I'm not sure.
-        //      I'll need to think about this mroe.
-        // NOTE I don't understand this comment, to be honest.
-        ++insertion_position_ms_;
+        update_insertion_position_ms();
     }
 
 public:
@@ -75,6 +83,16 @@ public:
             std::cout << k << "@" << tm << ",";
         }
         std::cout << std::endl;
+    }
+
+    bool
+    validate(int const verbose = 0) const
+    {
+        std::uint64_t max_exp_tm = expiration_queue_.rbegin()->first;
+        std::uint64_t min_exp_tm = expiration_queue_.begin()->first;
+        assert(insertion_position_ms_ ==
+               std::min(max_exp_tm + 1, min_exp_tm + capacity_));
+        return BaseTTLCache::validate(verbose);
     }
 
     int
