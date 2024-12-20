@@ -231,7 +231,7 @@ main(int argc, char *argv[])
                  std::vector<std::size_t> const &capacities)>>
         algorithms =
             {
-                {ClockCache::name, generate_mrc<ClockCache>},
+                {ClockCache::name, new_generate_mrc<ClockCache>},
                 {"ModifiedClock", generate_modified_clock_mrc},
                 {LRUCache::name, generate_mrc<LRUCache>},
                 {LFUCache::name, generate_mrc<LFUCache>},

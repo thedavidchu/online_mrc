@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -9,61 +11,16 @@
 #include <utility>
 #include <vector>
 
+#include "cache_metadata/cache_metadata.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
 static inline std::uint64_t
-get_expiration_time(std::uint64_t const current_time_ms,
+get_expiration_time(std::uint64_t const access_time_ms,
                     std::uint64_t const ttl_s)
 {
-    return saturation_add(current_time_ms, saturation_multiply(1000, ttl_s));
+    return saturation_add(access_time_ms, saturation_multiply(1000, ttl_s));
 }
-
-struct TTLMetadata {
-    /// @note   We don't consider the first access in the frequency
-    ///         counter. There's no real reason, I just think it's nice
-    ///         to start at 0 rather than 1.
-    std::size_t frequency_ = 0;
-    std::uint64_t insertion_time_ms_ = 0;
-    std::uint64_t last_access_time_ms_ = 0;
-    /// @note   I decided to store the expiration time rather than the
-    ///         TTL for convenience. The TTL can be calculated by
-    ///         subtracting the (last time the expiration time was set)
-    ///         from the (expiration time).
-    std::uint64_t expiration_time_ms_ = 0;
-
-    TTLMetadata(std::uint64_t const insertion_time_ms,
-                std::uint64_t const expiration_time_ms)
-        : insertion_time_ms_(insertion_time_ms),
-          last_access_time_ms_(insertion_time_ms),
-          expiration_time_ms_(expiration_time_ms)
-    {
-    }
-
-    template <class Stream>
-    void
-    to_stream(Stream &s, bool const newline = false) const
-    {
-        s << "TTLMetadata(frequency=" << frequency_ << ",";
-        s << "insertion_time[ms]=" << insertion_time_ms_ << ",";
-        s << "last_access_time[ms]=" << last_access_time_ms_ << ",";
-        s << "expiration_time[ms]=" << expiration_time_ms_ << ")";
-        if (newline) {
-            s << std::endl;
-        }
-    }
-
-    void
-    visit(std::uint64_t const access_time_ms,
-          std::optional<std::uint64_t> const new_expiration_time_ms)
-    {
-        ++frequency_;
-        last_access_time_ms_ = access_time_ms;
-        if (new_expiration_time_ms) {
-            expiration_time_ms_ = new_expiration_time_ms.value();
-        }
-    }
-};
 
 class BaseTTLCache {
 public:
@@ -196,7 +153,7 @@ protected:
     std::size_t const capacity_;
 
     /// @brief  Map the keys to the metadata.
-    std::unordered_map<std::uint64_t, TTLMetadata> map_;
+    std::unordered_map<std::uint64_t, CacheMetadata> map_;
     std::multimap<std::uint64_t, std::uint64_t> expiration_queue_;
 
 public:

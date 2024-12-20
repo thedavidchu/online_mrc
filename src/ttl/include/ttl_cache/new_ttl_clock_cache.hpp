@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <iostream>
 
+#include "cache_metadata/cache_metadata.hpp"
 #include "ttl_cache/base_ttl_cache.hpp"
 #include "unused/mark_unused.h"
 
@@ -10,7 +11,7 @@ class NewTTLClockCache : public BaseTTLCache {
     {
         auto obj = map_.find(key);
         assert(obj != map_.end());
-        TTLMetadata &metadata = obj->second;
+        CacheMetadata &metadata = obj->second;
         auto old_exp_tm_ms = metadata.expiration_time_ms_;
         if (old_exp_tm_ms < insertion_position_ms_) {
             std::uint64_t const new_exp_tm_ms = old_exp_tm_ms + capacity_;
@@ -42,7 +43,7 @@ class NewTTLClockCache : public BaseTTLCache {
             ++insertion_position_ms_;
         }
         std::uint64_t exp_tm_ms = insertion_position_ms_;
-        map_.emplace(key, TTLMetadata(timestamp_ms, exp_tm_ms));
+        map_.emplace(key, CacheMetadata(timestamp_ms, exp_tm_ms));
         expiration_queue_.emplace(exp_tm_ms, key);
         statistics_.miss();
     }
