@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <optional>
 #include <sstream>
 #include <unordered_map>
@@ -20,7 +21,7 @@ public:
     }
 
     bool
-    size() const
+    size() const noexcept
     {
         return map_.size();
     }
@@ -63,7 +64,7 @@ public:
     }
 
     bool
-    contains(std::uint64_t const key) const
+    contains(std::uint64_t const key) const noexcept
     {
         return map_.find(key) != map_.end();
     }
@@ -83,14 +84,32 @@ public:
     int
     access_item(std::uint64_t const timestamp_ms,
                 std::uint64_t const key,
-                std::uint64_t const ttl_s);
+                std::optional<std::uint64_t> const ttl_s = {});
 
-    // template <class Stream>
-    // void
-    // to_stream(Stream &s) const;
+    template <class Stream>
+    void
+    to_stream(Stream &s) const
+    {
+        s << name << "(capacity=" << capacity_ << ",size=" << size() << ")"
+          << std::endl;
+        s << "> Key-Metadata Map:" << std::endl;
+        for (auto [k, metadata] : map_) {
+            // This is inefficient, but looks easier on the eyes.
+            std::stringstream ss;
+            metadata.to_stream(ss);
+            s << ">> key: " << k << ", metadata: " << ss.str() << std::endl;
+        }
+    }
 
-    // bool
-    // validate(int const verbose = 0) const;
+    bool
+    validate(int const verbose = 0) const
+    {
+        if (verbose) {
+            to_stream(std::cout);
+        }
+        assert(size() == map_.size());
+        return true;
+    }
 
 protected:
     std::unordered_map<std::uint64_t, CacheMetadata> map_;

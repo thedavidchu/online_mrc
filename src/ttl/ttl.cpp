@@ -67,7 +67,7 @@ new_run_cache(struct MemoryMap const *const mm,
             continue;
         }
 
-        cache.access_item(r.item.timestamp_ms, r.item.key, r.item.ttl_s);
+        cache.access_item(r.item.timestamp_ms, r.item.key);
     }
     assert(cache.statistics_.total_accesses_ < num_entries);
     cache.statistics_.print(T::name, capacity);

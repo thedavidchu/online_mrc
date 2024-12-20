@@ -34,18 +34,18 @@ class NewTTLClockCache : public BaseTTLCache {
             auto r = evict_soonest_expiring();
             assert(r.has_value());
             assert(map_.size() + 1 == capacity_);
-        } else {
-            // NOTE This won't work if we support user-set TTLs, because
-            //      we may end up with overlapping objects at a single
-            //      timestamp. Or not, because the user-set TTLs will
-            //      be very far in the past. I'm not sure.
-            //      I'll need to think about this mroe.
-            ++insertion_position_ms_;
         }
         std::uint64_t exp_tm_ms = insertion_position_ms_;
         map_.emplace(key, CacheMetadata(timestamp_ms, exp_tm_ms));
         expiration_queue_.emplace(exp_tm_ms, key);
         statistics_.miss();
+        // NOTE This won't work if we support user-set TTLs, because
+        //      we may end up with overlapping objects at a single
+        //      timestamp. Or not, because the user-set TTLs will
+        //      be very far in the past. I'm not sure.
+        //      I'll need to think about this mroe.
+        // NOTE I don't understand this comment, to be honest.
+        ++insertion_position_ms_;
     }
 
 public:
@@ -66,6 +66,11 @@ public:
     {
         std::cout << name << "(insertion_position_ms=" << insertion_position_ms_
                   << "): ";
+        std::cout << "{";
+        for (auto [k, _] : map_) {
+            std::cout << k << ",";
+        }
+        std::cout << "} ";
         for (auto [tm, k] : expiration_queue_) {
             std::cout << k << "@" << tm << ",";
         }
@@ -75,7 +80,7 @@ public:
     int
     access_item(std::uint64_t const timestamp_ms,
                 std::uint64_t const key,
-                std::uint64_t const ttl_s)
+                std::optional<std::uint64_t> const ttl_s = {})
     {
         // NOTE We don't support user-set TTLs yet.
         UNUSED(ttl_s);

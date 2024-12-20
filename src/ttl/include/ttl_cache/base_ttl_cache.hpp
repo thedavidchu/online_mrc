@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -15,11 +16,21 @@
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
+/// @todo   Handle overflows more gracefully.
+///         For example, too large of an epoch should trigger a mass
+///         shift of epochs downward. Too large of a access time should
+///         trigger a mass shift of access times downward.
 static inline std::uint64_t
-get_expiration_time(std::uint64_t const access_time_ms,
-                    std::uint64_t const ttl_s)
+get_ttl_cache_expiration_time(std::uint64_t const epoch,
+                              std::uint64_t const epoch_time_ms,
+                              std::uint64_t const access_time_ms)
 {
-    return saturation_add(access_time_ms, saturation_multiply(1000, ttl_s));
+    // TODO Handle an overflow more gracefully.
+    assert(access_time_ms < epoch_time_ms);
+    // TODO Handle an overflow more gracefully. IDEK if this works...
+    assert(std::numeric_limits<std::uint64_t>::max() / epoch > 1);
+    return saturation_add(saturation_multiply(epoch, epoch_time_ms),
+                          access_time_ms);
 }
 
 class BaseTTLCache {
@@ -117,7 +128,8 @@ public:
     validate(int const verbose = 0) const
     {
         if (verbose) {
-            std::cout << "validate(verbose=" << verbose << ")" << std::endl;
+            std::cout << "validate(name" << name << ",verbose=" << verbose
+                      << ")" << std::endl;
         }
         assert(map_.size() == expiration_queue_.size());
         assert(size() <= capacity_);

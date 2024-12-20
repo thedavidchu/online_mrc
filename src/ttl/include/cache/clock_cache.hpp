@@ -6,12 +6,13 @@
 #include <cstdint>
 #include <deque>
 #include <limits>
+#include <optional>
 #include <unordered_map>
 
 #include "cache/base_cache.hpp"
 #include "cache_metadata/cache_metadata.hpp"
 #include "cache_statistics/cache_statistics.hpp"
-#include "ttl_cache/base_ttl_cache.hpp"
+#include "ttl/ttl.hpp"
 #include "unused/mark_unused.h"
 
 /// @note   I implemented this as FIFO with reinsertion, which is slower
@@ -36,10 +37,12 @@ private:
             std::uint64_t const victim_key = evictor_.back();
             evictor_.pop_back();
             if (map_.at(victim_key).visited) {
+                // Re-insert visited node.
                 map_.at(victim_key).unvisit();
                 evictor_.push_front(victim_key);
                 continue;
             } else {
+                // Permanently remove unvisited node.
                 map_.erase(victim_key);
                 break;
             }
@@ -77,7 +80,8 @@ public:
     validate(int const verbose = 0) const
     {
         if (verbose) {
-            std::cout << "validate(verbose=" << verbose << ")" << std::endl;
+            std::cout << "validate(name=" << name << ",verbose=" << verbose
+                      << ")" << std::endl;
         }
         assert(map_.size() == evictor_.size());
         assert(size() <= capacity_);
@@ -100,7 +104,7 @@ public:
     int
     access_item(std::uint64_t const access_time_ms,
                 std::uint64_t const key,
-                std::uint64_t const ttl_s)
+                std::optional<std::uint64_t> const ttl_s = {})
     {
         UNUSED(ttl_s);
         assert(map_.size() == evictor_.size());
@@ -110,6 +114,7 @@ public:
             return 0;
         }
 
+        // TODO Change this to enable TTLs.
         std::uint64_t expiration_time_ms =
             get_expiration_time(access_time_ms, FOREVER);
         if (map_.count(key)) {
@@ -124,8 +129,6 @@ public:
     }
 
 protected:
-    // This is to prevent the object from expiring.
-    std::size_t const FOREVER = std::numeric_limits<std::size_t>::max();
     std::deque<std::uint64_t> evictor_;
 
 public:
