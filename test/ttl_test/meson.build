@@ -27,10 +27,12 @@ new_ttl_clock_cache_test_exe = executable(
     'new_ttl_clock_cache_test_exe',
     'new_ttl_clock_cache_test.cpp',
     include_directories: [
+        mytester_include,
         cache_inc,
     ],
     dependencies: [
         common_dep,
+        trace_dep,
     ],
 )
 
