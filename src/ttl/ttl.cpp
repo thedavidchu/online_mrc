@@ -1,3 +1,5 @@
+/** @brief  This file creates MRCs based on the listed algorithms.
+ */
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
