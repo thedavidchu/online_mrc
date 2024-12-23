@@ -16,6 +16,8 @@
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
+constexpr std::size_t DEFAULT_EPOCH_TIME_MS = (std::size_t)1 << 40;
+
 /// @todo   Handle overflows more gracefully.
 ///         For example, too large of an epoch should trigger a mass
 ///         shift of epochs downward. Too large of a access time should
@@ -161,7 +163,6 @@ public:
                 std::uint64_t const ttl_s);
 
 protected:
-    std::uint64_t const ttl_s_ = 1 << 30;
     std::size_t const capacity_;
 
     /// @brief  Map the keys to the metadata.

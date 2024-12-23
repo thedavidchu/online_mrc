@@ -9,6 +9,7 @@ sieve_cache_test_exe = executable(
     dependencies: [
         common_dep,
         trace_dep,
+        yang_cache_dep,
     ],
 )
 
@@ -20,6 +21,7 @@ yang_sieve_cache_test_exe = executable(
     ],
     dependencies: [
         lib_cache_sim_dep,
+        yang_cache_dep,
     ],
 )
 

@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cstddef>
 #include <iostream>
 
@@ -13,14 +12,24 @@ class NewTTLClockCache : public BaseTTLCache {
     ///         3. Upon promotion of the soonest expiring object
     ///         N.B. Cases 2 and 3 are basically saying if the soonest
     ///         expiration time changes.
-    ///         N.B. Cases 2 and 3 are idempotent; case 1 is not.
     void
     update_insertion_position_ms()
     {
-        std::uint64_t max_exp_tm = expiration_queue_.rbegin()->first;
-        std::uint64_t min_exp_tm = expiration_queue_.begin()->first;
-        insertion_position_ms_ =
-            std::min(max_exp_tm + 1, min_exp_tm + capacity_);
+        if (insertion_position_ms_ <= DEFAULT_EPOCH_TIME_MS + capacity_) {
+            // NOTE I chose this forumlation over a simple increment
+            //      because it is idempotent.
+            // NOTE If we have objects with short TTLs, then basing our
+            //      insertion point on size may be erroneous here, since
+            //      some objects may be evicted. This affects the size
+            //      but not the insertion position (AFAIK).
+            //      Thus, maybe we should check for the lowest next
+            //      value from the current insertion point that does not
+            //      have a TTL in the promoted or non-promoted position.
+            insertion_position_ms_ = DEFAULT_EPOCH_TIME_MS + size();
+        } else {
+            std::uint64_t min_exp_tm = expiration_queue_.begin()->first;
+            insertion_position_ms_ = min_exp_tm + capacity_;
+        }
     }
 
     void
@@ -63,7 +72,7 @@ public:
     ///         circa 2002).
     NewTTLClockCache(std::size_t const capacity)
         : BaseTTLCache(capacity),
-          insertion_position_ms_(1000 * ttl_s_)
+          insertion_position_ms_(DEFAULT_EPOCH_TIME_MS)
     {
     }
 
@@ -88,10 +97,6 @@ public:
     bool
     validate(int const verbose = 0) const
     {
-        std::uint64_t max_exp_tm = expiration_queue_.rbegin()->first;
-        std::uint64_t min_exp_tm = expiration_queue_.begin()->first;
-        assert(insertion_position_ms_ ==
-               std::min(max_exp_tm + 1, min_exp_tm + capacity_));
         return BaseTTLCache::validate(verbose);
     }
 

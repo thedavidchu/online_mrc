@@ -9,6 +9,10 @@
 #include "trace/reader.h"
 #include "ttl_cache/new_ttl_clock_cache.hpp"
 
+/*******************************************************************************
+ *  HELPER FUNCTIONS
+ *********************************************************************************/
+
 static void
 print_keys(std::vector<std::uint64_t> &keys)
 {
@@ -18,6 +22,25 @@ print_keys(std::vector<std::uint64_t> &keys)
     std::cout << std::endl;
 }
 
+static std::vector<std::uint64_t>
+get_trace(char const *const filename, enum TraceFormat format)
+{
+    struct Trace t = {};
+    std::vector<std::uint64_t> trace;
+    t = read_trace(filename, format);
+    trace.reserve(t.length);
+    for (std::size_t i = 0; i < t.length; ++i) {
+        trace.push_back(t.trace[i].key);
+    }
+    return trace;
+}
+
+/*******************************************************************************
+ *  VALIDATION TESTING
+ *********************************************************************************/
+
+/// @brief  Validate that the trace runs with validations turned on.
+///         We don't check the correctness of the result.
 static bool
 simple_validation_test(std::vector<std::uint64_t> const &trace,
                        std::size_t const capacity,
@@ -39,18 +62,47 @@ simple_validation_test(std::vector<std::uint64_t> const &trace,
     return true;
 }
 
-static std::vector<std::uint64_t>
-get_trace(char const *const filename, enum TraceFormat format)
+/*******************************************************************************
+ *  CACHE VS ORACLE TESTING
+ *********************************************************************************/
+template <typename T>
+static bool
+equal_vectors(std::vector<T> const &lhs, std::vector<T> const &rhs)
 {
-    struct Trace t = {};
-    std::vector<std::uint64_t> trace;
-    t = read_trace(filename, format);
-    trace.reserve(t.length);
-    for (std::size_t i = 0; i < t.length; ++i) {
-        trace.push_back(t.trace[i].key);
+    if (lhs.size() != rhs.size()) {
+        return false;
     }
-    return trace;
+    for (std::size_t i = 0; i < lhs.size(); ++i) {
+        if (lhs[i] != rhs[i]) {
+            return false;
+        }
+    }
+    return true;
 }
+
+static bool
+cache_vs_oracle_test(std::vector<std::uint64_t> const &trace,
+                     std::size_t const capacity,
+                     std::vector<std::uint64_t> const &final_state,
+                     int const verbose = 0)
+{
+    NewTTLClockCache cache(capacity);
+    std::uint64_t time = 0;
+    for (auto x : trace) {
+        cache.access_item(time++, x);
+        cache.validate(0);
+        if (verbose >= 2) {
+            std::cout << "Access key: " << x << std::endl;
+            cache.debug_print();
+        }
+    }
+    auto keys = cache.get_keys();
+    return equal_vectors(keys, final_state);
+}
+
+/*******************************************************************************
+ *  CACHE COMPARISON TESTING
+ *********************************************************************************/
 
 template <class C, class T>
 static int
@@ -125,10 +177,41 @@ main(int argc, char *argv[])
     std::vector<std::uint64_t> trace = {0, 1, 2, 3, 0, 1, 0, 2, 3, 4, 5, 6, 7};
     std::vector<std::uint64_t> src2_trace =
         {1, 2, 3, 4, 5, 5, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-
     ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(simple_trace, 4));
     ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(trace, 4));
     ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(src2_trace, 2, 2));
+
+    // Test filling the trace
+    std::vector<std::uint64_t> trace_0 = {1, 2, 3, 4};
+    std::vector<std::uint64_t> final_state_0 = {3, 4};
+    std::vector<std::uint64_t> trace_1 = {1, 1, 2, 3, 4};
+    std::vector<std::uint64_t> final_state_1 = {3, 4};
+    std::vector<std::uint64_t> trace_2 = {1, 1, 2, 2, 3, 4};
+    std::vector<std::uint64_t> final_state_2 = {2, 4};
+    std::vector<std::uint64_t> trace_3 = {1, 2, 2, 3, 4};
+    std::vector<std::uint64_t> final_state_3 = {2, 4};
+    std::vector<std::uint64_t> trace_4 = {1, 2, 2, 3, 3, 4};
+    std::vector<std::uint64_t> final_state_4 = {3, 4};
+    std::vector<std::uint64_t> trace_5 = {1, 1, 2, 2, 3, 3, 4};
+    std::vector<std::uint64_t> final_state_5 = {3, 4};
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        cache_vs_oracle_test(trace_0, 2, final_state_0));
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        cache_vs_oracle_test(trace_1, 2, final_state_1));
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        cache_vs_oracle_test(trace_2, 2, final_state_2));
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        cache_vs_oracle_test(trace_3, 2, final_state_3));
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        cache_vs_oracle_test(trace_4, 2, final_state_4));
+    ASSERT_FUNCTION_RETURNS_TRUE(
+        cache_vs_oracle_test(trace_5, 2, final_state_5));
+
+    // Test replacement of a filled cache
+    std::vector<std::uint64_t> trace_6 = {1, 2, 3};
+    std::vector<std::uint64_t> trace_7 = {1, 1, 2, 3};
+    std::vector<std::uint64_t> trace_8 = {1, 2, 2, 3};
+    std::vector<std::uint64_t> trace_9 = {1, 1, 2, 2, 3};
     if (argc == 2) {
         // ASSERT_FUNCTION_RETURNS_TRUE(
         //     trace_test(argv[1], TRACE_FORMAT_KIA, 1, 0));

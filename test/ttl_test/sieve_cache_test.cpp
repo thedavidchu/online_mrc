@@ -10,6 +10,7 @@
 #include "test/mytester.h"
 #include "trace/reader.h"
 #include "ttl_cache/ttl_sieve_cache.hpp"
+#include "yang_cache/yang_cache.hpp"
 #include "yang_cache/yang_sieve_cache.hpp"
 
 // NOTE This is the trace shown on the SIEVE website. Or at least, it is
@@ -121,21 +122,38 @@ yang_single_test()
 {
     // Check external solution
     std::vector<std::string> ext_soln;
+    std::vector<std::string> ext_alt_soln;
     YangSieveCache ext_cache(7);
+    YangCache ext_cache_alt(7, YangCacheType::SIEVE);
     std::string s = sieve_print(ext_cache.get_keys());
     ext_soln.push_back(s);
+    s = sieve_print(ext_cache_alt.get_keys());
+    ext_alt_soln.push_back(s);
     for (auto i : short_trace) {
         ext_cache.access_item(i);
         s = sieve_print(ext_cache.get_keys());
         ext_soln.push_back(s);
+
+        // Alternate
+        ext_cache_alt.access_item(i);
+        s = sieve_print(ext_cache_alt.get_keys());
+        ext_alt_soln.push_back(s);
     }
     assert(ext_soln.size() == ARRAY_SIZE(soln));
+    assert(ext_alt_soln.size() == ARRAY_SIZE(soln));
     for (std::size_t i = 0; i < ext_soln.size(); ++i) {
         if (ext_soln[i] != soln[i]) {
             LOGGER_ERROR("mismatching strings at %zu: got '%s', expecting '%s'",
                          i,
                          ext_soln[i].c_str(),
                          soln[i].c_str());
+        }
+        if (ext_alt_soln[i] != soln[i]) {
+            LOGGER_ERROR(
+                "(alt) mismatching strings at %zu: got '%s', expecting '%s'",
+                i,
+                ext_alt_soln[i].c_str(),
+                soln[i].c_str());
         }
     }
     return true;
