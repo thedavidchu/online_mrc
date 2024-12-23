@@ -3,11 +3,11 @@
 #include <iostream>
 #include <vector>
 
-#include "cache/clock_cache.hpp"
 #include "logger/logger.h"
 #include "test/mytester.h"
 #include "trace/reader.h"
 #include "ttl_cache/new_ttl_clock_cache.hpp"
+#include "yang_cache/yang_cache.hpp"
 
 /*******************************************************************************
  *  HELPER FUNCTIONS
@@ -50,11 +50,12 @@ simple_validation_test(std::vector<std::uint64_t> const &trace,
     std::uint64_t time = 0;
     for (auto x : trace) {
         cache.access_item(time++, x);
-        cache.validate(0);
         if (verbose >= 2) {
             std::cout << "Access key: " << x << std::endl;
             cache.debug_print();
+            cache.to_stream(std::cout);
         }
+        cache.validate(0);
     }
     if (verbose) {
         cache.debug_print();
@@ -144,9 +145,9 @@ compare_caches(std::vector<std::uint64_t> const &trace,
 {
     int nerr = 0;
     NewTTLClockCache ttl_cache(capacity);
-    ClockCache cache(capacity);
+    YangCache cache(capacity, YangCacheType::CLOCK);
     for (std::size_t i = 0; i < trace.size(); ++i) {
-        cache.access_item(i, trace[i]);
+        cache.access_item(trace[i]);
         ttl_cache.access_item(i, trace[i]);
         if (i % capacity == 0) {
             nerr += compare_cache_states(cache, ttl_cache, verbose);

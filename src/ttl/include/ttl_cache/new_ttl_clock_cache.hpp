@@ -15,7 +15,7 @@ class NewTTLClockCache : public BaseTTLCache {
     void
     update_insertion_position_ms()
     {
-        if (insertion_position_ms_ <= DEFAULT_EPOCH_TIME_MS + capacity_) {
+        if (insertion_position_ms_ < DEFAULT_EPOCH_TIME_MS + capacity_) {
             // NOTE I chose this forumlation over a simple increment
             //      because it is idempotent.
             // NOTE If we have objects with short TTLs, then basing our
