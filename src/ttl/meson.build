@@ -1,8 +1,14 @@
 cache_inc = include_directories('include')
 
-yang_sieve_cache_lib = library(
-    'yang_sieve_cache_lib',
-    'yang_sieve_cache.cpp',
+yang_cache_lib = library(
+    'yang_cache_lib',
+    'yang_cache.cpp',
+    include_directories: cache_inc,
+    dependencies: lib_cache_sim_dep,
+)
+
+yang_cache_dep = declare_dependency(
+    link_with: yang_cache_lib,
     include_directories: cache_inc,
     dependencies: lib_cache_sim_dep,
 )

@@ -4,72 +4,133 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <limits>
+#include <optional>
 #include <unordered_map>
-#include <vector>
 
+#include "cache/base_cache.hpp"
+#include "cache_metadata/cache_metadata.hpp"
 #include "cache_statistics/cache_statistics.hpp"
+#include "ttl/ttl.hpp"
+#include "unused/mark_unused.h"
 
-class ClockCache {
-    std::unordered_map<std::uint64_t, bool> map_;
-    std::vector<std::uint64_t> eviction_queue_;
-    std::size_t const capacity_;
-    std::uint64_t eviction_idx_ = 0;
+/// @note   I implemented this as FIFO with reinsertion, which is slower
+///         but easier to get right.
+class ClockCache : public BaseCache {
+private:
+    void
+    hit(std::uint64_t const access_time_ms,
+        std::uint64_t const key,
+        std::uint64_t const expiration_time_ms)
+    {
+        map_.at(key).visit(access_time_ms, expiration_time_ms);
+    }
+
+    void
+    miss(std::uint64_t const access_time_ms,
+         std::uint64_t const key,
+         std::uint64_t const expiration_time_ms)
+    {
+        assert(evictor_.size() <= capacity_);
+        while (evictor_.size() >= capacity_) {
+            std::uint64_t const victim_key = evictor_.back();
+            evictor_.pop_back();
+            if (map_.at(victim_key).visited) {
+                // Re-insert visited node.
+                map_.at(victim_key).unvisit();
+                evictor_.push_front(victim_key);
+                continue;
+            } else {
+                // Permanently remove unvisited node.
+                map_.erase(victim_key);
+                break;
+            }
+        }
+        evictor_.push_front(key);
+        map_.emplace(key, CacheMetadata(access_time_ms, expiration_time_ms));
+    }
 
 public:
-    static constexpr char name[] = "ClockCache";
-    CacheStatistics statistics_;
-
     ClockCache(std::size_t capacity)
-        : eviction_queue_(capacity),
-          capacity_(capacity)
+        : BaseCache(capacity)
     {
     }
 
-    int
-    access_item(std::uint64_t const key)
+    template <class Stream>
+    void
+    to_stream(Stream &s) const
     {
+        s << name << "(capacity=" << capacity_ << ",size=" << size() << ")"
+          << std::endl;
+        s << "> Key-Metadata Map:" << std::endl;
+        for (auto [k, metadata] : map_) {
+            // This is inefficient, but looks easier on the eyes.
+            std::stringstream ss;
+            metadata.to_stream(ss);
+            s << ">> key: " << k << ", metadata: " << ss.str() << std::endl;
+        }
+        s << "> Evictor" << std::endl;
+        for (auto k : evictor_) {
+            s << ">> key: " << k << std::endl;
+        }
+    }
+
+    bool
+    validate(int const verbose = 0) const
+    {
+        if (verbose) {
+            std::cout << "validate(name=" << name << ",verbose=" << verbose
+                      << ")" << std::endl;
+        }
+        assert(map_.size() == evictor_.size());
+        assert(size() <= capacity_);
+        if (verbose) {
+            std::cout << "> size: " << size() << std::endl;
+        }
+        if (verbose >= 2) {
+            to_stream(std::cout);
+        }
+
+        for (auto k : evictor_) {
+            if (verbose >= 2) {
+                std::cout << "> Validating: key=" << k << std::endl;
+            }
+            assert(map_.count(k));
+        }
+        return true;
+    }
+
+    int
+    access_item(std::uint64_t const access_time_ms,
+                std::uint64_t const key,
+                std::optional<std::uint64_t> const ttl_s = {})
+    {
+        UNUSED(ttl_s);
+        assert(map_.size() == evictor_.size());
         assert(map_.size() <= capacity_);
-        assert(eviction_queue_.size() == capacity_);
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
 
+        // TODO Change this to enable TTLs.
+        std::uint64_t expiration_time_ms =
+            get_expiration_time(access_time_ms, FOREVER);
         if (map_.count(key)) {
-            map_[key] = true;
+            hit(access_time_ms, key, expiration_time_ms);
             statistics_.hit();
-            assert(map_.size() <= capacity_);
-            return 0;
+        } else {
+            miss(access_time_ms, key, expiration_time_ms);
+            statistics_.miss();
         }
-
-        if (eviction_idx_ >= capacity_) {
-            assert(map_.size() == capacity_);
-            while (true) {
-                uint64_t victim_key =
-                    eviction_queue_[eviction_idx_ % capacity_];
-                if (!map_[victim_key]) {
-                    size_t i = map_.erase(victim_key);
-                    assert(i == 1);
-                    eviction_queue_[eviction_idx_ % capacity_] = key;
-
-                    // We should be sure that we can correctly add
-                    // another element to the cache, since we should
-                    // have evicted one.
-                    assert(map_.size() + 1 == capacity_);
-                    break;
-                } else {
-                    ++eviction_idx_;
-                    map_[victim_key] = false;
-                }
-            }
-        }
-
-        assert(map_.size() < capacity_);
-        map_[key] = false;
-        eviction_queue_[eviction_idx_ % capacity_] = key;
-        ++eviction_idx_;
         assert(map_.size() <= capacity_);
-        statistics_.miss();
         return 0;
     }
+
+protected:
+    std::deque<std::uint64_t> evictor_;
+
+public:
+    static constexpr char name[] = "ClockCache";
 };
