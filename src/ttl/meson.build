@@ -13,13 +13,6 @@ yang_cache_dep = declare_dependency(
     dependencies: lib_cache_sim_dep,
 )
 
-yang_sieve_cache_lib = library(
-    'yang_sieve_cache_lib',
-    'yang_sieve_cache.cpp',
-    include_directories: cache_inc,
-    dependencies: lib_cache_sim_dep,
-)
-
 ttl_exe = executable(
     'ttl_exe',
     'ttl.cpp',

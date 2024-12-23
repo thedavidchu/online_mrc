@@ -118,36 +118,21 @@ my_simple_test()
 /// @brief  Check the external implementation matches the example given
 ///         by Yang et al. on their blog.
 static bool
-yang_single_test()
+yang_simple_test()
 {
     // Check external solution
-    std::vector<std::string> ext_soln;
     std::vector<std::string> ext_alt_soln;
-    YangSieveCache ext_cache(7);
     YangCache ext_cache_alt(7, YangCacheType::SIEVE);
-    std::string s = sieve_print(ext_cache.get_keys());
-    ext_soln.push_back(s);
+    std::string s;
     s = sieve_print(ext_cache_alt.get_keys());
     ext_alt_soln.push_back(s);
     for (auto i : short_trace) {
-        ext_cache.access_item(i);
-        s = sieve_print(ext_cache.get_keys());
-        ext_soln.push_back(s);
-
-        // Alternate
         ext_cache_alt.access_item(i);
         s = sieve_print(ext_cache_alt.get_keys());
         ext_alt_soln.push_back(s);
     }
-    assert(ext_soln.size() == ARRAY_SIZE(soln));
     assert(ext_alt_soln.size() == ARRAY_SIZE(soln));
-    for (std::size_t i = 0; i < ext_soln.size(); ++i) {
-        if (ext_soln[i] != soln[i]) {
-            LOGGER_ERROR("mismatching strings at %zu: got '%s', expecting '%s'",
-                         i,
-                         ext_soln[i].c_str(),
-                         soln[i].c_str());
-        }
+    for (std::size_t i = 0; i < ext_alt_soln.size(); ++i) {
         if (ext_alt_soln[i] != soln[i]) {
             LOGGER_ERROR(
                 "(alt) mismatching strings at %zu: got '%s', expecting '%s'",
@@ -172,7 +157,7 @@ print_vector(std::vector<T> vec)
 
 /// @note   Compare the caches
 static int
-compare_caches(TTLSieveCache const &my_cache, YangSieveCache const &yang_cache)
+compare_caches(TTLSieveCache const &my_cache, YangCache const &yang_cache)
 {
     int nerr = 0;
     int const MAX_NERRS = 10;
@@ -209,7 +194,7 @@ comparison_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
     int const MAX_NERRS = 10;
     LOGGER_INFO("Testing SIEVE cache with capacity %zu", capacity);
     TTLSieveCache my_cache(capacity);
-    YangSieveCache yang_cache(capacity);
+    YangCache yang_cache(capacity, YangCacheType::SIEVE);
     for (std::size_t i = 0; i < trace.size(); ++i) {
         auto key = trace[i];
         my_cache.access_item(key);
@@ -237,7 +222,7 @@ int
 main(int argc, char *argv[])
 {
     ASSERT_FUNCTION_RETURNS_TRUE(my_simple_test());
-    ASSERT_FUNCTION_RETURNS_TRUE(yang_single_test());
+    ASSERT_FUNCTION_RETURNS_TRUE(yang_simple_test());
 
     if (argc == 1) {
         LOGGER_WARN("skipping real trace test");
