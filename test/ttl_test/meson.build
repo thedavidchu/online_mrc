@@ -5,7 +5,6 @@ sieve_cache_test_exe = executable(
         mytester_include,
         cache_inc,
     ],
-    link_with: yang_sieve_cache_lib,
     dependencies: [
         common_dep,
         trace_dep,
