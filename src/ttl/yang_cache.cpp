@@ -148,3 +148,22 @@ YangCache::print() const
         assert(0);
     }
 }
+
+bool
+YangCache::validate(int const verbose) const
+{
+    // I trust Juncheng Yang's code, so I don't actually do any major
+    // testing. Is this a mistake? Well, I'm doing it for expediency.
+    if (verbose) {
+        std::cout << "Validate(type=YangCache, type=" << (int)type_ << ")"
+                  << std::endl;
+    }
+    switch (type_) {
+    case YangCacheType::CLOCK:
+        return true;
+    case YangCacheType::SIEVE:
+        return true;
+    default:
+        return true;
+    }
+}

@@ -31,6 +31,9 @@ public:
     void
     print() const;
 
+    bool
+    validate(int const verbose = 0) const;
+
     std::size_t const capacity_;
     YangCacheType const type_;
     CacheStatistics statistics_;

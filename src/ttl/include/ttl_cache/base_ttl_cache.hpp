@@ -35,6 +35,22 @@ get_ttl_cache_expiration_time(std::uint64_t const epoch,
                           access_time_ms);
 }
 
+static inline std::uint64_t
+get_ttl_cache_epoch(std::uint64_t const expiration_time,
+                    std::uint64_t const epoch_time_ms)
+{
+    assert(epoch_time_ms != 0);
+    return expiration_time / epoch_time_ms;
+}
+
+static inline std::uint64_t
+get_ttl_cache_access_time(std::uint64_t const expiration_time,
+                          std::uint64_t const epoch_time_ms)
+{
+    assert(epoch_time_ms != 0);
+    return expiration_time % epoch_time_ms;
+}
+
 class BaseTTLCache {
 public:
     BaseTTLCache(std::size_t const capacity)

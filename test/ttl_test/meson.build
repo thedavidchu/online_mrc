@@ -8,6 +8,7 @@ clock_cache_test_exe = executable(
     dependencies: [
         common_dep,
         trace_dep,
+        yang_cache_dep,
     ],
 )
 
