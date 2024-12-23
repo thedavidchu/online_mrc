@@ -179,9 +179,9 @@ main(int argc, char *argv[])
     std::vector<std::uint64_t> trace = {0, 1, 2, 3, 0, 1, 0, 2, 3, 4, 5, 6, 7};
     std::vector<std::uint64_t> src2_trace =
         {1, 2, 3, 4, 5, 5, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    // ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(simple_trace, 4));
-    // ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(trace, 4));
-    // ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(src2_trace, 2));
+    ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(simple_trace, 4));
+    ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(trace, 4));
+    ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(src2_trace, 2));
 
     // Test filling the trace
     std::vector<std::uint64_t> trace_0 = {1, 2, 3, 4};
@@ -215,10 +215,18 @@ main(int argc, char *argv[])
     std::vector<std::uint64_t> trace_8 = {1, 2, 2, 3};
     std::vector<std::uint64_t> trace_9 = {1, 1, 2, 2, 3};
     if (argc == 2) {
-        // ASSERT_FUNCTION_RETURNS_TRUE(
-        //     trace_test(argv[1], TRACE_FORMAT_KIA, 1, 0));
+        ASSERT_FUNCTION_RETURNS_TRUE(trace_test(argv[1], TRACE_FORMAT_KIA, 1));
+        ASSERT_FUNCTION_RETURNS_TRUE(trace_test(argv[1], TRACE_FORMAT_KIA, 2));
         ASSERT_FUNCTION_RETURNS_TRUE(
-            trace_test(argv[1], TRACE_FORMAT_KIA, 2, 2));
+            trace_test(argv[1], TRACE_FORMAT_KIA, 1 << 10));
+        ASSERT_FUNCTION_RETURNS_TRUE(
+            trace_test(argv[1], TRACE_FORMAT_KIA, 1 << 12));
+        ASSERT_FUNCTION_RETURNS_TRUE(
+            trace_test(argv[1], TRACE_FORMAT_KIA, 1 << 14));
+        ASSERT_FUNCTION_RETURNS_TRUE(
+            trace_test(argv[1], TRACE_FORMAT_KIA, 1 << 16));
+        ASSERT_FUNCTION_RETURNS_TRUE(
+            trace_test(argv[1], TRACE_FORMAT_KIA, 1 << 18));
     }
     return 0;
 }
