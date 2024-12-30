@@ -56,6 +56,7 @@ YangCache::contains(std::uint64_t const key) const
 {
     cache_t *c = (cache_t *)cache_;
     request_t *r = (request_t *)req_;
+    r->obj_id = key;
     return c->find(c, r, false) != NULL;
 }
 
