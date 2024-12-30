@@ -91,8 +91,8 @@ my_simple_test()
 
     std::string s = sieve_print(cache.get_keys_in_eviction_order());
     my_soln.push_back(s);
-    for (auto i : short_trace) {
-        cache.access_item(i);
+    for (std::size_t i = 0; i < ARRAY_SIZE(short_trace); ++i) {
+        cache.access_item({i, short_trace[i]});
         s = sieve_print(cache.get_keys_in_eviction_order());
         my_soln.push_back(s);
     }
@@ -126,8 +126,8 @@ yang_simple_test()
     std::string s;
     s = sieve_print(ext_cache_alt.get_keys());
     ext_alt_soln.push_back(s);
-    for (auto i : short_trace) {
-        ext_cache_alt.access_item(i);
+    for (std::size_t i = 0; i < ARRAY_SIZE(short_trace); ++i) {
+        ext_cache_alt.access_item({i, short_trace[i]});
         s = sieve_print(ext_cache_alt.get_keys());
         ext_alt_soln.push_back(s);
     }
@@ -197,8 +197,8 @@ comparison_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
     YangCache yang_cache(capacity, YangCacheType::SIEVE);
     for (std::size_t i = 0; i < trace.size(); ++i) {
         auto key = trace[i];
-        my_cache.access_item(key);
-        yang_cache.access_item(key);
+        my_cache.access_item({i, key});
+        yang_cache.access_item({i, key});
 
         // NOTE This should amoritize the cost of comparisons to O(N).
         if (i % capacity == 0) {

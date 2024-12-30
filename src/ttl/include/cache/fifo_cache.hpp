@@ -5,9 +5,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <unordered_set>
 #include <vector>
 
+#include "cache/base_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 
 class FIFOCache {
@@ -27,19 +29,19 @@ public:
     }
 
     int
-    access_item(std::uint64_t const key)
+    access_item(CacheAccess const &access)
     {
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
 
-        if (map_.count(key)) {
+        if (map_.count(access.key)) {
             statistics_.hit();
             return 0;
         }
 
-        auto [a, b] = map_.insert(key);
+        auto [a, b] = map_.insert(access.key);
         assert(b);
 
         if (eviction_idx_ >= capacity_) {
@@ -48,7 +50,7 @@ public:
             assert(i == 1);
         }
 
-        eviction_queue_[eviction_idx_ % capacity_] = key;
+        eviction_queue_[eviction_idx_ % capacity_] = access.key;
         ++eviction_idx_;
         assert(map_.size() <= capacity_);
         statistics_.miss();

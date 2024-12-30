@@ -102,11 +102,8 @@ public:
     }
 
     int
-    access_item(std::uint64_t const access_time_ms,
-                std::uint64_t const key,
-                std::optional<std::uint64_t> const ttl_s = {})
+    access_item(CacheAccess const &access)
     {
-        UNUSED(ttl_s);
         assert(map_.size() == evictor_.size());
         assert(map_.size() <= capacity_);
         if (capacity_ == 0) {
@@ -116,12 +113,12 @@ public:
 
         // TODO Change this to enable TTLs.
         std::uint64_t expiration_time_ms =
-            get_expiration_time(access_time_ms, FOREVER);
-        if (map_.count(key)) {
-            hit(access_time_ms, key, expiration_time_ms);
+            get_expiration_time(access.timestamp_ms, FOREVER);
+        if (map_.count(access.key)) {
+            hit(access.timestamp_ms, access.key, expiration_time_ms);
             statistics_.hit();
         } else {
-            miss(access_time_ms, key, expiration_time_ms);
+            miss(access.timestamp_ms, access.key, expiration_time_ms);
             statistics_.miss();
         }
         assert(map_.size() <= capacity_);

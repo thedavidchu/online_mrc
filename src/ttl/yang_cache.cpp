@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "cache_metadata/cache_access.hpp"
 #include "yang_cache/yang_cache.hpp"
 // NOTE It shouldn't be this painful to include a library file, but it is...
 #include "libCacheSim/include/libCacheSim.h"
@@ -59,11 +60,11 @@ YangCache::contains(std::uint64_t const key) const
 }
 
 int
-YangCache::access_item(std::uint64_t const key)
+YangCache::access_item(CacheAccess const &access)
 {
     cache_t *c = (cache_t *)cache_;
     request_t *r = (request_t *)req_;
-    r->obj_id = key;
+    r->obj_id = access.key;
     bool is_hit = c->get(c, r);
     if (is_hit) {
         statistics_.hit();

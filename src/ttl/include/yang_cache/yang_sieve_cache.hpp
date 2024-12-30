@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "cache/base_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 
 class YangSieveCache {
@@ -18,7 +19,7 @@ public:
     contains(std::uint64_t const key) const;
 
     int
-    access_item(std::uint64_t const key);
+    access_item(CacheAccess const &access);
 
     std::vector<std::uint64_t>
     get_keys() const;

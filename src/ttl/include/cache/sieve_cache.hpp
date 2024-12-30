@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cache/base_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 
 class SieveCache {
@@ -68,15 +69,15 @@ public:
     }
 
     int
-    access_item(std::uint64_t const key)
+    access_item(CacheAccess const &access)
     {
         assert(map_.size() == queue_.size());
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
-        if (map_.count(key)) {
-            map_[key].visited = true;
+        if (map_.count(access.key)) {
+            map_[access.key].visited = true;
             statistics_.hit();
         } else {
             if (queue_.size() >= capacity_) {
@@ -85,11 +86,11 @@ public:
             }
             assert(map_.size() + 1 <= capacity_);
             struct SieveBucket new_bucket = {false, logical_time_};
-            auto [it, inserted] = map_.emplace(key, new_bucket);
-            assert(inserted && it->first == key &&
+            auto [it, inserted] = map_.emplace(access.key, new_bucket);
+            assert(inserted && it->first == access.key &&
                    it->second.visited == false &&
                    it->second.idx == logical_time_);
-            queue_.emplace(logical_time_, key);
+            queue_.emplace(logical_time_, access.key);
             assert(map_.size() <= capacity_);
             statistics_.miss();
         }

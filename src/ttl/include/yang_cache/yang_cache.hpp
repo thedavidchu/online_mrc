@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "cache_metadata/cache_access.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 
 enum class YangCacheType {
@@ -23,7 +24,7 @@ public:
     contains(std::uint64_t const key) const;
 
     virtual int
-    access_item(std::uint64_t const key);
+    access_item(CacheAccess const &access);
 
     std::vector<std::uint64_t>
     get_keys() const;

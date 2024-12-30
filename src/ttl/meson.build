@@ -4,7 +4,10 @@ yang_cache_lib = library(
     'yang_cache_lib',
     'yang_cache.cpp',
     include_directories: cache_inc,
-    dependencies: lib_cache_sim_dep,
+    dependencies: [
+        lib_cache_sim_dep,
+        trace_dep,
+    ],
 )
 
 yang_cache_dep = declare_dependency(

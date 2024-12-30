@@ -6,6 +6,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "cache/base_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
@@ -65,15 +66,15 @@ public:
     }
 
     int
-    access_item(std::uint64_t const key)
+    access_item(CacheAccess const &access)
     {
         assert(map_.size() == expiration_queue_.size());
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
-        if (map_.count(key)) {
-            map_[key] = true;
+        if (map_.count(access.key)) {
+            map_[access.key] = true;
             statistics_.hit();
         } else {
             if (map_.size() >= capacity_) {
@@ -81,10 +82,10 @@ public:
                 assert(r.has_value());
                 assert(map_.size() + 1 == capacity_);
             }
-            map_[key] = false;
+            map_[access.key] = false;
             uint64_t eviction_time_ms =
                 TTLClockCache::get_expiry_time_ms(logical_time_, ttl_s_);
-            expiration_queue_.emplace(eviction_time_ms, key);
+            expiration_queue_.emplace(eviction_time_ms, access.key);
             statistics_.miss();
         }
         ++logical_time_;

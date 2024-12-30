@@ -9,6 +9,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "cache/base_cache.hpp"
 #include "cache/lru_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 
@@ -44,7 +45,7 @@ public:
     }
 
     int
-    access_item(std::uint64_t const key)
+    access_item(CacheAccess const &access)
     {
         int err = 0;
         if (capacity_ == 0) {
@@ -54,12 +55,12 @@ public:
         // NOTE 'map_.size()' doesn't necessarily match
         //      'eviction_queue_.size()', because the latter is now a
         //      hierarchical data structure containing LRUCaches.
-        if (map_.count(key)) {
-            std::uint64_t prev_frq = map_[key];
+        if (map_.count(access.key)) {
+            std::uint64_t prev_frq = map_[access.key];
             auto it_curr = eviction_queue_.find(prev_frq);
             assert(it_curr != eviction_queue_.end());
             LRUCache &lru_cache = it_curr->second;
-            err = lru_cache.delete_item(key);
+            err = lru_cache.delete_item(access.key);
             assert(!err);
             // NOTE Delete the previous LRUCache if it is now empty.
             //      This is because an item with a very high frequency
@@ -74,8 +75,8 @@ public:
                 it_next = eviction_queue_.find(prev_frq + 1);
             }
             assert(it_next != eviction_queue_.end());
-            it_next->second.access_item(key);
-            map_[key] += 1;
+            it_next->second.access_item(access);
+            map_[access.key] += 1;
             statistics_.hit();
         } else {
             assert(map_.size() <= capacity_);
@@ -85,16 +86,16 @@ public:
             }
             assert(map_.size() + 1 <= capacity_);
             std::uint64_t frq = 0;
-            auto [it, inserted] = map_.emplace(key, frq);
-            assert(inserted && it->first == key && it->second == frq);
+            auto [it, inserted] = map_.emplace(access.key, frq);
+            assert(inserted && it->first == access.key && it->second == frq);
             if (eviction_queue_.count(frq) == 0) {
                 eviction_queue_.emplace(frq, LRUCache(capacity_));
             }
-            eviction_queue_.find(frq)->second.access_item(key);
+            eviction_queue_.find(frq)->second.access_item(access);
             assert(map_.size() <= capacity_);
             statistics_.miss();
         }
-        assert(map_.count(key));
+        assert(map_.count(access.key));
         ++logical_time_;
         return 0;
     }

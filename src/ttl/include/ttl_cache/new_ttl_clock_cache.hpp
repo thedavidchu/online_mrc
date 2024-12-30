@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <iostream>
 
+#include "cache/base_cache.hpp"
 #include "cache_metadata/cache_metadata.hpp"
 #include "ttl_cache/base_ttl_cache.hpp"
 #include "unused/mark_unused.h"
@@ -101,22 +102,19 @@ public:
     }
 
     int
-    access_item(std::uint64_t const timestamp_ms,
-                std::uint64_t const key,
-                std::optional<std::uint64_t> const ttl_s = {})
+    access_item(CacheAccess const &access)
     {
         // NOTE We don't support user-set TTLs yet.
-        UNUSED(ttl_s);
         assert(map_.size() == expiration_queue_.size());
         assert(map_.size() <= capacity_);
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
-        if (map_.count(key)) {
-            hit(timestamp_ms, key);
+        if (map_.count(access.key)) {
+            hit(access.timestamp_ms, access.key);
         } else {
-            miss(timestamp_ms, key);
+            miss(access.timestamp_ms, access.key);
         }
         return 0;
     }

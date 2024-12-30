@@ -49,7 +49,7 @@ simple_validation_test(std::vector<std::uint64_t> const &trace,
     NewTTLClockCache cache(capacity);
     std::uint64_t time = 0;
     for (auto x : trace) {
-        cache.access_item(time++, x);
+        cache.access_item({time++, x});
         if (verbose >= 2) {
             std::cout << "Access key: " << x << std::endl;
             cache.debug_print();
@@ -90,7 +90,7 @@ cache_vs_oracle_test(std::vector<std::uint64_t> const &trace,
     NewTTLClockCache cache(capacity);
     std::uint64_t time = 0;
     for (auto x : trace) {
-        cache.access_item(time++, x);
+        cache.access_item({time++, x});
         if (verbose >= 2) {
             std::cout << "Access key: " << x << std::endl;
             cache.debug_print();
@@ -148,8 +148,8 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     NewTTLClockCache ttl_cache(capacity);
     YangCache cache(capacity, YangCacheType::CLOCK);
     for (std::size_t i = 0; i < trace.size(); ++i) {
-        cache.access_item(trace[i]);
-        ttl_cache.access_item(i, trace[i]);
+        cache.access_item({i, trace[i]});
+        ttl_cache.access_item({i, trace[i]});
         if (i % capacity == 0) {
             nerr += compare_cache_states(cache, ttl_cache, verbose);
             if (nerr > max_errs) {

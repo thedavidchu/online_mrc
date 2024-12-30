@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_map>
 
+#include "cache/base_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
@@ -55,15 +56,15 @@ public:
     }
 
     int
-    access_item(std::uint64_t const key)
+    access_item(CacheAccess const &access)
     {
         assert(map_.size() == expiration_queue_.size());
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
-        if (map_.count(key)) {
-            struct myTTLForLFU &s = map_[key];
+        if (map_.count(access.key)) {
+            struct myTTLForLFU &s = map_[access.key];
 
             // Use old eviction time
             std::uint64_t old_evict_time =
@@ -73,7 +74,7 @@ public:
             auto const [start, end] =
                 expiration_queue_.equal_range(old_evict_time);
             for (auto i = start; i != end; ++i) {
-                if (i->second == key) {
+                if (i->second == access.key) {
                     auto node_handle = expiration_queue_.extract(i);
                     node_handle.key() =
                         TTLLFUCache::get_expiry_time_ms(logical_time_,
@@ -94,14 +95,14 @@ public:
             if (map_.size() >= capacity_) {
                 this->evict_soonest_expiring();
             }
-            map_[key] = {
+            map_[access.key] = {
                 0,
                 logical_time_,
                 ttl_s_,
             };
             uint64_t eviction_time_ms =
                 TTLLFUCache::get_expiry_time_ms(logical_time_, ttl_s_, 0);
-            expiration_queue_.emplace(eviction_time_ms, key);
+            expiration_queue_.emplace(eviction_time_ms, access.key);
 
             statistics_.miss();
         }

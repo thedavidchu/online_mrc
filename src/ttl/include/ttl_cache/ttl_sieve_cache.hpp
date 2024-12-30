@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cache/base_cache.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
@@ -72,22 +73,22 @@ public:
     }
 
     int
-    access_item(std::uint64_t const key)
+    access_item(CacheAccess const &access)
     {
         assert(map_.size() == ttl_queue_.size());
         if (capacity_ == 0) {
             statistics_.miss();
             return 0;
         }
-        if (map_.count(key)) {
+        if (map_.count(access.key)) {
             // Only increment the eviction time if it hasn't been
             // incremented already in this epoch.
-            if (map_[key] <=
+            if (map_[access.key] <=
                 TTLSieveCache::get_expiry_time_ms(0, epoch_ + 1, ttl_s_)) {
-                auto nh = ttl_queue_.extract(map_[key]);
+                auto nh = ttl_queue_.extract(map_[access.key]);
                 nh.key() += ttl_s_;
                 ttl_queue_.insert(std::move(nh));
-                map_[key] += ttl_s_;
+                map_[access.key] += ttl_s_;
             }
             statistics_.hit();
         } else {
@@ -100,8 +101,8 @@ public:
                 TTLSieveCache::get_expiry_time_ms(logical_time_,
                                                   epoch_,
                                                   ttl_s_);
-            map_[key] = eviction_time_ms;
-            ttl_queue_.emplace(eviction_time_ms, key);
+            map_[access.key] = eviction_time_ms;
+            ttl_queue_.emplace(eviction_time_ms, access.key);
             statistics_.miss();
         }
         ++logical_time_;

@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "cache/base_cache.hpp"
 #include "cache_metadata/cache_metadata.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
@@ -174,9 +175,7 @@ public:
     }
 
     int
-    access_item(std::uint64_t const timestamp_ms,
-                std::uint64_t const key,
-                std::uint64_t const ttl_s);
+    access_item(CacheAccess const &access);
 
 protected:
     std::size_t const capacity_;

@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cache_metadata/cache_access.hpp"
 #include "cache_metadata/cache_metadata.hpp"
 #include "cache_statistics/cache_statistics.hpp"
 
@@ -82,9 +83,7 @@ public:
     }
 
     int
-    access_item(std::uint64_t const timestamp_ms,
-                std::uint64_t const key,
-                std::optional<std::uint64_t> const ttl_s = {});
+    access_item(CacheAccess const &access);
 
     template <class Stream>
     void
