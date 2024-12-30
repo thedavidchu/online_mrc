@@ -11,7 +11,6 @@
 #include "trace/reader.h"
 #include "ttl_cache/ttl_sieve_cache.hpp"
 #include "yang_cache/yang_cache.hpp"
-#include "yang_cache/yang_sieve_cache.hpp"
 
 // NOTE This is the trace shown on the SIEVE website. Or at least, it is
 //      one of the possible traces that causes the behaviour seen on the
