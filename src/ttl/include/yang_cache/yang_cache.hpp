@@ -12,9 +12,9 @@ enum class YangCacheType {
     SIEVE,
 };
 
-class YangCache {
+template <YangCacheType T> class YangCache {
 public:
-    YangCache(std::size_t const capacity, YangCacheType const type);
+    YangCache(std::size_t const capacity);
     ~YangCache();
 
     std::size_t
@@ -23,7 +23,7 @@ public:
     bool
     contains(std::uint64_t const key) const;
 
-    virtual int
+    int
     access_item(CacheAccess const &access);
 
     std::vector<std::uint64_t>
@@ -38,9 +38,13 @@ public:
     std::size_t const capacity_;
     YangCacheType const type_;
     CacheStatistics statistics_;
+    static constexpr char const *name = "YangCache<?>";
 
 private:
     // NOTE This is an opaque pointer to Yang's cache and request.
     void *const cache_;
     void *const req_;
 };
+
+template class YangCache<YangCacheType::CLOCK>;
+template class YangCache<YangCacheType::SIEVE>;

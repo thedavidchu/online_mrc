@@ -28,6 +28,7 @@
 #include "ttl_cache/ttl_lfu_cache.hpp"
 #include "ttl_cache/ttl_lru_cache.hpp"
 #include "ttl_cache/ttl_sieve_cache.hpp"
+#include "yang_cache/yang_cache.hpp"
 
 template <typename T>
 static double
@@ -153,6 +154,8 @@ main(int argc, char *argv[])
         algorithms =
             {
                 {ClockCache::name, generate_mrc<ClockCache>},
+                {"YangClockCache",
+                 generate_mrc<YangCache<YangCacheType::CLOCK>>},
                 {"ModifiedClock", generate_modified_clock_mrc},
                 {LRUCache::name, generate_mrc<LRUCache>},
                 {LFUCache::name, generate_mrc<LFUCache>},

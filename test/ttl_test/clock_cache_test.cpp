@@ -146,7 +146,7 @@ compare_caches(std::vector<std::uint64_t> const &trace,
 {
     int nerr = 0;
     NewTTLClockCache ttl_cache(capacity);
-    YangCache cache(capacity, YangCacheType::CLOCK);
+    YangCache<YangCacheType::CLOCK> cache(capacity);
     for (std::size_t i = 0; i < trace.size(); ++i) {
         cache.access_item({i, trace[i]});
         ttl_cache.access_item({i, trace[i]});

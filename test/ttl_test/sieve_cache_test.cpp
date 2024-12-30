@@ -122,7 +122,7 @@ yang_simple_test()
 {
     // Check external solution
     std::vector<std::string> ext_alt_soln;
-    YangCache ext_cache_alt(7, YangCacheType::SIEVE);
+    YangCache<YangCacheType::SIEVE> ext_cache_alt(7);
     std::string s;
     s = sieve_print(ext_cache_alt.get_keys());
     ext_alt_soln.push_back(s);
@@ -157,7 +157,8 @@ print_vector(std::vector<T> vec)
 
 /// @note   Compare the caches
 static int
-compare_caches(TTLSieveCache const &my_cache, YangCache const &yang_cache)
+compare_caches(TTLSieveCache const &my_cache,
+               YangCache<YangCacheType::SIEVE> const &yang_cache)
 {
     int nerr = 0;
     int const MAX_NERRS = 10;
@@ -194,7 +195,7 @@ comparison_sieve_test(std::size_t capacity, std::vector<std::uint64_t> trace)
     int const MAX_NERRS = 10;
     LOGGER_INFO("Testing SIEVE cache with capacity %zu", capacity);
     TTLSieveCache my_cache(capacity);
-    YangCache yang_cache(capacity, YangCacheType::SIEVE);
+    YangCache<YangCacheType::SIEVE> yang_cache(capacity);
     for (std::size_t i = 0; i < trace.size(); ++i) {
         auto key = trace[i];
         my_cache.access_item({i, key});

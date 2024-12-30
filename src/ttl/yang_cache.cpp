@@ -29,30 +29,33 @@ init_cache(std::size_t const capacity, YangCacheType const type)
     }
 }
 
-YangCache::YangCache(std::size_t const capacity, YangCacheType const type)
+template <YangCacheType T>
+YangCache<T>::YangCache(std::size_t const capacity)
     : capacity_(capacity),
-      type_(type),
-      cache_(init_cache(capacity, type)),
+      type_(T),
+      cache_(init_cache(capacity, T)),
       req_(new_request())
 {
 }
 
-YangCache::~YangCache()
+template <YangCacheType T> YangCache<T>::~YangCache()
 {
     cache_t *c = (cache_t *)cache_;
     c->cache_free(c);
     free_request((request_t *)req_);
 }
 
+template <YangCacheType T>
 std::size_t
-YangCache::size() const
+YangCache<T>::size() const
 {
     cache_t *c = (cache_t *)cache_;
     return c->n_obj;
 }
 
+template <YangCacheType T>
 bool
-YangCache::contains(std::uint64_t const key) const
+YangCache<T>::contains(std::uint64_t const key) const
 {
     cache_t *c = (cache_t *)cache_;
     request_t *r = (request_t *)req_;
@@ -60,8 +63,9 @@ YangCache::contains(std::uint64_t const key) const
     return c->find(c, r, false) != NULL;
 }
 
+template <YangCacheType T>
 int
-YangCache::access_item(CacheAccess const &access)
+YangCache<T>::access_item(CacheAccess const &access)
 {
     cache_t *c = (cache_t *)cache_;
     request_t *r = (request_t *)req_;
@@ -86,12 +90,13 @@ typedef struct {
     cache_obj_t *pointer;
 } Sieve_params_t;
 
+template <YangCacheType T>
 std::vector<std::uint64_t>
-YangCache::get_keys() const
+YangCache<T>::get_keys() const
 {
     cache_t *c = (cache_t *)cache_;
     std::vector<std::uint64_t> keys;
-    switch (type_) {
+    switch (T) {
     case YangCacheType::CLOCK: {
         Clock_params_t *p = (Clock_params_t *)c->eviction_params;
         for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
@@ -112,12 +117,13 @@ YangCache::get_keys() const
     return keys;
 }
 
+template <YangCacheType T>
 void
-YangCache::print() const
+YangCache<T>::print() const
 {
     cache_t *c = (cache_t *)cache_;
     assert(c);
-    switch (type_) {
+    switch (T) {
     case YangCacheType::CLOCK: {
         Clock_params_t *p = (Clock_params_t *)c->eviction_params;
         printf("SieveCache (size=%zu): ", c->n_obj);
@@ -151,16 +157,17 @@ YangCache::print() const
     }
 }
 
+template <YangCacheType T>
 bool
-YangCache::validate(int const verbose) const
+YangCache<T>::validate(int const verbose) const
 {
     // I trust Juncheng Yang's code, so I don't actually do any major
     // testing. Is this a mistake? Well, I'm doing it for expediency.
     if (verbose) {
-        std::cout << "Validate(type=YangCache, type=" << (int)type_ << ")"
+        std::cout << "Validate(type=YangCache, type=" << (int)T << ")"
                   << std::endl;
     }
-    switch (type_) {
+    switch (T) {
     case YangCacheType::CLOCK:
         return true;
     case YangCacheType::SIEVE:
