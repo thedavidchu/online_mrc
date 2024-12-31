@@ -98,10 +98,18 @@ YangCache<T>::get_keys() const
     std::vector<std::uint64_t> keys;
     switch (T) {
     case YangCacheType::CLOCK: {
+        std::vector<std::uint64_t> v_keys, uv_keys;
         Clock_params_t *p = (Clock_params_t *)c->eviction_params;
         for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
-            keys.push_back(o->obj_id);
+            if (o->clock.freq) {
+                v_keys.push_back(o->obj_id);
+            } else {
+                uv_keys.push_back(o->obj_id);
+            }
         }
+        // NOTE The {u,uv}_keys are in reverse eviction order.
+        keys.insert(keys.end(), uv_keys.rbegin(), uv_keys.rend());
+        keys.insert(keys.end(), v_keys.rbegin(), v_keys.rend());
         break;
     }
     case YangCacheType::SIEVE: {
@@ -126,7 +134,7 @@ YangCache<T>::print() const
     switch (T) {
     case YangCacheType::CLOCK: {
         Clock_params_t *p = (Clock_params_t *)c->eviction_params;
-        printf("SieveCache (size=%zu): ", c->n_obj);
+        printf("YangClockCache(size=%zu): ", c->n_obj);
         for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
             if (o->sieve.freq) {
                 printf("v");
@@ -138,7 +146,7 @@ YangCache<T>::print() const
     }
     case YangCacheType::SIEVE: {
         Sieve_params_t *p = (Sieve_params_t *)c->eviction_params;
-        printf("SieveCache (size=%zu): ", c->n_obj);
+        printf("YangSieveCache(size=%zu): ", c->n_obj);
         for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
             // Indicate where the hand is pointing.
             if (p->pointer == o) {

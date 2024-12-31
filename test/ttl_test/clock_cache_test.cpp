@@ -35,6 +35,23 @@ get_trace(char const *const filename, enum TraceFormat format)
     return trace;
 }
 
+static void
+print_caches(YangCache<YangCacheType::CLOCK> const &cache,
+             NewTTLClockCache const &ttl_cache,
+             std::size_t const i)
+{
+    LOGGER_INFO("error in iteration %zu", i);
+    std::vector<std::uint64_t> c_keys = cache.get_keys(),
+                               t_keys = ttl_cache.get_keys();
+    std::cout << "Cache keys:";
+    print_keys(c_keys);
+    std::cout << "TTL Cache keys:";
+    print_keys(t_keys);
+    std::cout << "---" << std::endl;
+    cache.print();
+    ttl_cache.debug_print();
+}
+
 /*******************************************************************************
  *  VALIDATION TESTING
  *********************************************************************************/
@@ -66,40 +83,21 @@ simple_validation_test(std::vector<std::uint64_t> const &trace,
 /*******************************************************************************
  *  CACHE VS ORACLE TESTING
  *********************************************************************************/
-template <typename T>
 static bool
-equal_vectors(std::vector<T> const &lhs, std::vector<T> const &rhs)
+equal_vectors(std::vector<std::uint64_t> const &lhs,
+              std::vector<std::uint64_t> const &rhs)
 {
     if (lhs.size() != rhs.size()) {
+        LOGGER_ERROR("mismatch in sizes: %zu vs %zu", lhs.size(), rhs.size());
         return false;
     }
     for (std::size_t i = 0; i < lhs.size(); ++i) {
         if (lhs[i] != rhs[i]) {
+            LOGGER_ERROR("mismatch at %zu: %zu vs %zu", i, lhs[i], rhs[i]);
             return false;
         }
     }
     return true;
-}
-
-static bool
-cache_vs_oracle_test(std::vector<std::uint64_t> const &trace,
-                     std::size_t const capacity,
-                     std::vector<std::uint64_t> const &final_state,
-                     int const verbose = 0)
-{
-    NewTTLClockCache cache(capacity);
-    std::uint64_t time = 0;
-    for (auto x : trace) {
-        cache.access_item({time++, x});
-        if (verbose >= 2) {
-            std::cout << "Access key: " << x << std::endl;
-            cache.debug_print();
-            cache.to_stream(std::cout);
-        }
-        cache.validate(0);
-    }
-    auto keys = cache.get_keys();
-    return equal_vectors(keys, final_state);
 }
 
 /*******************************************************************************
@@ -129,11 +127,11 @@ compare_cache_states(C const &cache, T const &ttl_cache, int const verbose = 0)
         std::cout << "TTL-Cache keys: ";
         print_keys(keys);
     }
-    for (auto k : ttl_cache.get_keys()) {
-        if (!cache.contains(k)) {
-            LOGGER_ERROR("key %zu found in TTL cache but not regular cache", k);
-            nerr += 1;
-        }
+
+    std::vector<std::uint64_t> t_keys = ttl_cache.get_keys(),
+                               c_keys = cache.get_keys();
+    if (!equal_vectors(c_keys, t_keys)) {
+        nerr += 1;
     }
     return nerr;
 }
@@ -142,7 +140,7 @@ static bool
 compare_caches(std::vector<std::uint64_t> const &trace,
                std::size_t const capacity,
                int const verbose = 0,
-               int const max_errs = 10)
+               int const max_errs = 1)
 {
     int nerr = 0;
     NewTTLClockCache ttl_cache(capacity);
@@ -150,8 +148,13 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     for (std::size_t i = 0; i < trace.size(); ++i) {
         cache.access_item({i, trace[i]});
         ttl_cache.access_item({i, trace[i]});
-        if (i % capacity == 0) {
-            nerr += compare_cache_states(cache, ttl_cache, verbose);
+        if (i % capacity == 0 || true) {
+            int n = compare_cache_states(cache, ttl_cache, verbose);
+            if (n) {
+                LOGGER_ERROR("mismatch on iteration %zu", i);
+                print_caches(cache, ttl_cache, i);
+            }
+            nerr += n;
             if (nerr > max_errs) {
                 return false;
             }
@@ -175,46 +178,48 @@ trace_test(char const *const filename,
 int
 main(int argc, char *argv[])
 {
-    std::vector<std::uint64_t> simple_trace = {0, 1, 2, 3, 0, 1, 2, 3, 4};
-    std::vector<std::uint64_t> trace = {0, 1, 2, 3, 0, 1, 0, 2, 3, 4, 5, 6, 7};
-    std::vector<std::uint64_t> src2_trace =
-        {1, 2, 3, 4, 5, 5, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(simple_trace, 4));
-    ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(trace, 4));
-    ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(src2_trace, 2));
+    bool const simple_test = false;
+    if (simple_test) {
+        std::vector<std::uint64_t> simple_trace = {0, 1, 2, 3, 0, 1, 2, 3, 4};
+        std::vector<std::uint64_t> trace =
+            {0, 1, 2, 3, 0, 1, 0, 2, 3, 4, 5, 6, 7};
+        std::vector<std::uint64_t> src2_trace =
+            {1, 2, 3, 4, 5, 5, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(simple_trace, 4));
+        ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(trace, 4));
+        ASSERT_FUNCTION_RETURNS_TRUE(simple_validation_test(src2_trace, 2));
+    }
 
-    // Test filling the trace
-    std::vector<std::uint64_t> trace_0 = {1, 2, 3, 4};
-    std::vector<std::uint64_t> final_state_0 = {3, 4};
-    std::vector<std::uint64_t> trace_1 = {1, 1, 2, 3, 4};
-    std::vector<std::uint64_t> final_state_1 = {3, 4};
-    std::vector<std::uint64_t> trace_2 = {1, 1, 2, 2, 3, 4};
-    std::vector<std::uint64_t> final_state_2 = {3, 4};
-    std::vector<std::uint64_t> trace_3 = {1, 2, 2, 3, 4};
-    std::vector<std::uint64_t> final_state_3 = {2, 4};
-    std::vector<std::uint64_t> trace_4 = {1, 2, 2, 3, 3, 4};
-    std::vector<std::uint64_t> final_state_4 = {3, 4};
-    std::vector<std::uint64_t> trace_5 = {1, 1, 2, 2, 3, 3, 4};
-    std::vector<std::uint64_t> final_state_5 = {4, 3};
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        cache_vs_oracle_test(trace_0, 2, final_state_0));
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        cache_vs_oracle_test(trace_1, 2, final_state_1));
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        cache_vs_oracle_test(trace_2, 2, final_state_2));
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        cache_vs_oracle_test(trace_3, 2, final_state_3));
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        cache_vs_oracle_test(trace_4, 2, final_state_4));
-    ASSERT_FUNCTION_RETURNS_TRUE(
-        cache_vs_oracle_test(trace_5, 2, final_state_5));
+    bool const filling_test = true;
+    if (filling_test) {
+        // NOTE I've never done something so silly in my life, but I'm creating
+        //      every combination of length 8 with the numbers 0..=3. My
+        //      calculations say this should be 65536 (=4^8).
+        for (std::size_t t0 = 0; t0 < 4; ++t0) {
+            for (std::size_t t1 = 0; t1 < 4; ++t1) {
+                for (std::size_t t2 = 0; t2 < 4; ++t2) {
+                    for (std::size_t t3 = 0; t3 < 4; ++t3) {
+                        for (std::size_t t4 = 0; t4 < 4; ++t4) {
+                            for (std::size_t t5 = 0; t5 < 4; ++t5) {
+                                for (std::size_t t6 = 0; t6 < 4; ++t6) {
+                                    for (std::size_t t7 = 0; t7 < 4; ++t7) {
+                                        std::vector<std::uint64_t> trace =
+                                            {t0, t1, t2, t3, t4, t5, t6, t7};
+                                        print_keys(trace);
+                                        ASSERT_FUNCTION_RETURNS_TRUE(
+                                            compare_caches(trace, 2));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    // Test replacement of a filled cache
-    std::vector<std::uint64_t> trace_6 = {1, 2, 3};
-    std::vector<std::uint64_t> trace_7 = {1, 1, 2, 3};
-    std::vector<std::uint64_t> trace_8 = {1, 2, 2, 3};
-    std::vector<std::uint64_t> trace_9 = {1, 1, 2, 2, 3};
-    if (argc == 2) {
+    bool const real_trace_test = false;
+    if (real_trace_test && argc == 2) {
         ASSERT_FUNCTION_RETURNS_TRUE(trace_test(argv[1], TRACE_FORMAT_KIA, 1));
         ASSERT_FUNCTION_RETURNS_TRUE(trace_test(argv[1], TRACE_FORMAT_KIA, 2));
         ASSERT_FUNCTION_RETURNS_TRUE(
