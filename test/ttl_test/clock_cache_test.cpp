@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -14,7 +15,7 @@
  *********************************************************************************/
 
 static void
-print_keys(std::vector<std::uint64_t> &keys)
+print_vector(std::vector<std::uint64_t> &keys)
 {
     for (auto k : keys) {
         std::cout << k << ",";
@@ -40,13 +41,13 @@ print_caches(YangCache<YangCacheType::CLOCK> const &cache,
              NewTTLClockCache const &ttl_cache,
              std::size_t const i)
 {
-    LOGGER_INFO("error in iteration %zu", i);
+    LOGGER_INFO("iteration %zu", i);
     std::vector<std::uint64_t> c_keys = cache.get_keys(),
                                t_keys = ttl_cache.get_keys();
     std::cout << "Cache keys:";
-    print_keys(c_keys);
+    print_vector(c_keys);
     std::cout << "TTL Cache keys:";
-    print_keys(t_keys);
+    print_vector(t_keys);
     std::cout << "---" << std::endl;
     cache.print();
     ttl_cache.debug_print();
@@ -104,9 +105,10 @@ equal_vectors(std::vector<std::uint64_t> const &lhs,
  *  CACHE COMPARISON TESTING
  *********************************************************************************/
 
-template <class C, class T>
 static int
-compare_cache_states(C const &cache, T const &ttl_cache, int const verbose = 0)
+compare_cache_states(YangCache<YangCacheType::CLOCK> const &cache,
+                     NewTTLClockCache const &ttl_cache,
+                     int const verbose = 0)
 {
     int nerr = 0;
     cache.validate(verbose);
@@ -122,10 +124,10 @@ compare_cache_states(C const &cache, T const &ttl_cache, int const verbose = 0)
     if (verbose) {
         std::vector<std::uint64_t> keys = cache.get_keys();
         std::cout << "Cache keys: ";
-        print_keys(keys);
+        print_vector(keys);
         keys = ttl_cache.get_keys();
         std::cout << "TTL-Cache keys: ";
-        print_keys(keys);
+        print_vector(keys);
     }
 
     std::vector<std::uint64_t> t_keys = ttl_cache.get_keys(),
@@ -145,7 +147,10 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     int nerr = 0;
     NewTTLClockCache ttl_cache(capacity);
     YangCache<YangCacheType::CLOCK> cache(capacity);
+    assert(errno == 0);
     for (std::size_t i = 0; i < trace.size(); ++i) {
+        std::cout << "vvvvvvvvvv" << std::endl;
+        print_caches(cache, ttl_cache, i);
         cache.access_item({i, trace[i]});
         ttl_cache.access_item({i, trace[i]});
         if (i % capacity == 0 || true) {
@@ -159,6 +164,7 @@ compare_caches(std::vector<std::uint64_t> const &trace,
                 return false;
             }
         }
+        std::cout << "^^^^^^^^^^" << std::endl;
     }
     nerr += compare_cache_states(cache, ttl_cache);
     return nerr == 0;
@@ -172,6 +178,7 @@ trace_test(char const *const filename,
            int const max_errs = 10)
 {
     std::vector<std::uint64_t> trace = get_trace(filename, format);
+    assert(errno == 0);
     return compare_caches(trace, capacity, verbose, max_errs);
 }
 
@@ -205,7 +212,7 @@ main(int argc, char *argv[])
                                     for (std::size_t t7 = 0; t7 < 4; ++t7) {
                                         std::vector<std::uint64_t> trace =
                                             {t0, t1, t2, t3, t4, t5, t6, t7};
-                                        print_keys(trace);
+                                        print_vector(trace);
                                         ASSERT_FUNCTION_RETURNS_TRUE(
                                             compare_caches(trace, 2));
                                     }

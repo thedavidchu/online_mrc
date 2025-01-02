@@ -17,7 +17,8 @@
 #include "cache_statistics/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
-constexpr std::size_t DEFAULT_EPOCH_TIME_MS = (std::size_t)1 << 40;
+// constexpr std::size_t DEFAULT_EPOCH_TIME_MS = (std::size_t)1 << 40;
+constexpr std::size_t DEFAULT_EPOCH_TIME_MS = (std::size_t)0;
 
 /// @todo   Handle overflows more gracefully.
 ///         For example, too large of an epoch should trigger a mass

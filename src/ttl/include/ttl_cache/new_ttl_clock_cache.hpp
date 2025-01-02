@@ -1,10 +1,10 @@
+#include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 
-#include "cache/base_cache.hpp"
 #include "cache_metadata/cache_metadata.hpp"
 #include "ttl_cache/base_ttl_cache.hpp"
-#include "unused/mark_unused.h"
 
 class NewTTLClockCache : public BaseTTLCache {
     /// @brief  This method should be called in three cases:
@@ -34,13 +34,32 @@ class NewTTLClockCache : public BaseTTLCache {
     }
 
     void
+    update_last_expiration_time()
+    {
+        auto x = get_soonest_expiring();
+        assert(x.has_value());
+        last_deletion_ms_ = x->second;
+    }
+
+    /// @brief  Get the barrier for when a promotion is performed.
+    std::uint64_t
+    promotion_time()
+    {
+        if (!last_deletion_ms_.has_value()) {
+            return size();
+        } else {
+            return last_deletion_ms_.value() + size();
+        }
+    }
+
+    void
     hit(std::uint64_t const timestamp_ms, std::uint64_t const key)
     {
         auto obj = map_.find(key);
         assert(obj != map_.end());
         CacheMetadata &metadata = obj->second;
         auto old_exp_tm_ms = metadata.expiration_time_ms_;
-        if (old_exp_tm_ms < insertion_position_ms_) {
+        if (old_exp_tm_ms < promotion_time()) {
             std::uint64_t const new_exp_tm_ms = old_exp_tm_ms + capacity_;
             metadata.visit(timestamp_ms, new_exp_tm_ms);
             update_expiration_time(old_exp_tm_ms, key, new_exp_tm_ms);
@@ -55,6 +74,7 @@ class NewTTLClockCache : public BaseTTLCache {
     miss(std::uint64_t const timestamp_ms, std::uint64_t const key)
     {
         if (map_.size() == capacity_) {
+            update_last_expiration_time();
             auto r = evict_soonest_expiring();
             assert(r.has_value());
             assert(map_.size() + 1 == capacity_);
@@ -121,6 +141,8 @@ public:
 
 private:
     std::uint64_t insertion_position_ms_ = 0;
+    // This is the last deletion due to the Clock algorithm
+    std::optional<std::uint64_t> last_deletion_ms_ = {};
 
 public:
     static constexpr char name[] = "NewTTLClockCache";

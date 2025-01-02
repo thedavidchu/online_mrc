@@ -1,6 +1,8 @@
 #include <cassert>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
+#include <time.h>
 #include <vector>
 
 #include "cache_metadata/cache_access.hpp"
@@ -16,17 +18,30 @@ set_cc_params(std::size_t const capacity)
     return cc_param;
 }
 
+/// @note   I am a little bit worried that I don't understand the default
+///         cache size and TTL in Yang's cache. I may be inadvertently
+///         limiting the cache size without realizing.
 static cache_t *
 init_cache(std::size_t const capacity, YangCacheType const type)
 {
+    cache_t *c = NULL;
     switch (type) {
     case YangCacheType::CLOCK:
-        return Clock_init(set_cc_params(capacity), NULL);
+        c = Clock_init(set_cc_params(capacity), NULL);
+        // NOTE Somehow, the above command causes errno = 22, but if I go to the
+        //      function and check errno right before the return, everything is
+        //      fine. Maybe this is a difference between C and C++'s errno
+        //      interface? I'm not sure.
+        assert(errno == 22);
+        errno = 0;
+        break;
     case YangCacheType::SIEVE:
-        return Sieve_init(set_cc_params(capacity), NULL);
+        c = Sieve_init(set_cc_params(capacity), NULL);
+        break;
     default:
         assert(0);
     }
+    return c;
 }
 
 template <YangCacheType T>
