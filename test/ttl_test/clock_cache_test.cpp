@@ -5,7 +5,6 @@
 #include <sstream>
 #include <vector>
 
-#include "logger/logger.h"
 #include "test/mytester.h"
 #include "trace/reader.h"
 #include "ttl_cache/new_ttl_clock_cache.hpp"
@@ -50,7 +49,6 @@ print_caches(YangCache<YangCacheType::CLOCK> const &cache,
     print_vector(c_keys, stream);
     stream << "TTL Cache keys:";
     print_vector(t_keys, stream);
-    stream << "---" << std::endl;
     cache.print(stream);
     ttl_cache.debug_print(stream);
 }
@@ -158,6 +156,7 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     for (std::size_t i = 0; i < trace.size(); ++i) {
         stream << "vvvvvvvvvv" << std::endl;
         print_caches(cache, ttl_cache, i, stream);
+        stream << ">>> ACCESS ITEM " << trace[i] << std::endl;
         cache.access_item({i, trace[i]});
         ttl_cache.access_item({i, trace[i]});
         if (i % capacity == 0 || true) {

@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <string>
 
 #include "cache_metadata/cache_metadata.hpp"
 #include "ttl_cache/base_ttl_cache.hpp"
@@ -37,12 +38,12 @@ class NewTTLClockCache : public BaseTTLCache {
     {
         auto x = get_soonest_expiring();
         assert(x.has_value());
-        last_deletion_ms_ = x->second;
+        last_deletion_ms_ = x->first;
     }
 
     /// @brief  Get the barrier for when a promotion is performed.
     std::uint64_t
-    promotion_time()
+    promotion_time() const
     {
         if (!last_deletion_ms_.has_value()) {
             return size();
@@ -101,8 +102,12 @@ public:
     void
     debug_print(std::ostream &stream) const
     {
-        stream << name << "(insertion_position_ms=" << insertion_position_ms_
-               << "): ";
+        stream << name << "(last_deletion [ms]="
+               << (!last_deletion_ms_.has_value()
+                       ? "{}"
+                       : std::to_string(last_deletion_ms_.value()))
+               << ", promotion [ms]=" << promotion_time()
+               << ", insertion [ms]=" << insertion_position_ms_ << "): ";
         stream << "{";
         for (auto [k, _] : map_) {
             stream << k << ",";
