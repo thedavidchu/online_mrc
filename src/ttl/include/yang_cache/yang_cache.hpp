@@ -30,10 +30,10 @@ public:
     get_keys() const;
 
     void
-    print() const;
+    print(std::ostream &stream) const;
 
     bool
-    validate(int const verbose = 0) const;
+    validate(std::ostream &stream, int const verbose = 0) const;
 
     std::size_t const capacity_;
     YangCacheType const type_;

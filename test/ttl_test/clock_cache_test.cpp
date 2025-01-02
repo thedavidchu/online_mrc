@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <sstream>
 #include <vector>
 
 #include "logger/logger.h"
@@ -15,12 +16,12 @@
  *********************************************************************************/
 
 static void
-print_vector(std::vector<std::uint64_t> &keys)
+print_vector(std::vector<std::uint64_t> &keys, std::ostream &stream)
 {
     for (auto k : keys) {
-        std::cout << k << ",";
+        stream << k << ",";
     }
-    std::cout << std::endl;
+    stream << std::endl;
 }
 
 static std::vector<std::uint64_t>
@@ -39,18 +40,19 @@ get_trace(char const *const filename, enum TraceFormat format)
 static void
 print_caches(YangCache<YangCacheType::CLOCK> const &cache,
              NewTTLClockCache const &ttl_cache,
-             std::size_t const i)
+             std::size_t const i,
+             std::ostream &stream)
 {
-    LOGGER_INFO("iteration %zu", i);
+    stream << "[INFO] iteration " << i << std::endl;
     std::vector<std::uint64_t> c_keys = cache.get_keys(),
                                t_keys = ttl_cache.get_keys();
-    std::cout << "Cache keys:";
-    print_vector(c_keys);
-    std::cout << "TTL Cache keys:";
-    print_vector(t_keys);
-    std::cout << "---" << std::endl;
-    cache.print();
-    ttl_cache.debug_print();
+    stream << "Cache keys:";
+    print_vector(c_keys, stream);
+    stream << "TTL Cache keys:";
+    print_vector(t_keys, stream);
+    stream << "---" << std::endl;
+    cache.print(stream);
+    ttl_cache.debug_print(stream);
 }
 
 /*******************************************************************************
@@ -70,13 +72,13 @@ simple_validation_test(std::vector<std::uint64_t> const &trace,
         cache.access_item({time++, x});
         if (verbose >= 2) {
             std::cout << "Access key: " << x << std::endl;
-            cache.debug_print();
+            cache.debug_print(std::cout);
             cache.to_stream(std::cout);
         }
-        cache.validate(0);
+        cache.validate(std::cout, 0);
     }
     if (verbose) {
-        cache.debug_print();
+        cache.debug_print(std::cout);
     }
     return true;
 }
@@ -86,15 +88,18 @@ simple_validation_test(std::vector<std::uint64_t> const &trace,
  *********************************************************************************/
 static bool
 equal_vectors(std::vector<std::uint64_t> const &lhs,
-              std::vector<std::uint64_t> const &rhs)
+              std::vector<std::uint64_t> const &rhs,
+              std::ostream &stream)
 {
     if (lhs.size() != rhs.size()) {
-        LOGGER_ERROR("mismatch in sizes: %zu vs %zu", lhs.size(), rhs.size());
+        stream << "[ERROR] mismatch in vector sizes: " << lhs.size() << " vs "
+               << rhs.size() << std::endl;
         return false;
     }
     for (std::size_t i = 0; i < lhs.size(); ++i) {
         if (lhs[i] != rhs[i]) {
-            LOGGER_ERROR("mismatch at %zu: %zu vs %zu", i, lhs[i], rhs[i]);
+            stream << "[ERROR] mismatch at " << i << ": " << lhs[i] << " vs "
+                   << rhs[i] << "" << std::endl;
             return false;
         }
     }
@@ -108,11 +113,12 @@ equal_vectors(std::vector<std::uint64_t> const &lhs,
 static int
 compare_cache_states(YangCache<YangCacheType::CLOCK> const &cache,
                      NewTTLClockCache const &ttl_cache,
+                     std::ostream &stream,
                      int const verbose = 0)
 {
     int nerr = 0;
-    cache.validate(verbose);
-    ttl_cache.validate(verbose);
+    cache.validate(stream, verbose);
+    ttl_cache.validate(stream, verbose);
     // NOTE I'm getting some strange behaviour where the 'cache.size()'
     //      does not agree with the actual size.
     // if (cache.size() != ttl_cache.size()) {
@@ -123,16 +129,16 @@ compare_cache_states(YangCache<YangCacheType::CLOCK> const &cache,
     // }
     if (verbose) {
         std::vector<std::uint64_t> keys = cache.get_keys();
-        std::cout << "Cache keys: ";
-        print_vector(keys);
+        stream << "Cache keys: ";
+        print_vector(keys, stream);
         keys = ttl_cache.get_keys();
-        std::cout << "TTL-Cache keys: ";
-        print_vector(keys);
+        stream << "TTL-Cache keys: ";
+        print_vector(keys, stream);
     }
 
     std::vector<std::uint64_t> t_keys = ttl_cache.get_keys(),
                                c_keys = cache.get_keys();
-    if (!equal_vectors(c_keys, t_keys)) {
+    if (!equal_vectors(c_keys, t_keys, stream)) {
         nerr += 1;
     }
     return nerr;
@@ -141,6 +147,7 @@ compare_cache_states(YangCache<YangCacheType::CLOCK> const &cache,
 static bool
 compare_caches(std::vector<std::uint64_t> const &trace,
                std::size_t const capacity,
+               std::stringstream &stream,
                int const verbose = 0,
                int const max_errs = 1)
 {
@@ -149,25 +156,31 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     YangCache<YangCacheType::CLOCK> cache(capacity);
     assert(errno == 0);
     for (std::size_t i = 0; i < trace.size(); ++i) {
-        std::cout << "vvvvvvvvvv" << std::endl;
-        print_caches(cache, ttl_cache, i);
+        stream << "vvvvvvvvvv" << std::endl;
+        print_caches(cache, ttl_cache, i, stream);
         cache.access_item({i, trace[i]});
         ttl_cache.access_item({i, trace[i]});
         if (i % capacity == 0 || true) {
-            int n = compare_cache_states(cache, ttl_cache, verbose);
+            int n = compare_cache_states(cache, ttl_cache, stream, verbose);
             if (n) {
-                LOGGER_ERROR("mismatch on iteration %zu", i);
-                print_caches(cache, ttl_cache, i);
+                stream << "[ERROR] mismatch on iteration " << i << std::endl;
+                print_caches(cache, ttl_cache, i, stream);
             }
             nerr += n;
             if (nerr > max_errs) {
-                return false;
+                goto error;
             }
         }
-        std::cout << "^^^^^^^^^^" << std::endl;
+        stream << "^^^^^^^^^^" << std::endl;
     }
-    nerr += compare_cache_states(cache, ttl_cache);
-    return nerr == 0;
+    nerr += compare_cache_states(cache, ttl_cache, stream);
+    if (nerr) {
+        goto error;
+    }
+    return true;
+error:
+    std::cout << stream.str() << std::endl;
+    return false;
 }
 
 bool
@@ -179,7 +192,13 @@ trace_test(char const *const filename,
 {
     std::vector<std::uint64_t> trace = get_trace(filename, format);
     assert(errno == 0);
-    return compare_caches(trace, capacity, verbose, max_errs);
+    std::stringstream ss;
+    bool r = compare_caches(trace, capacity, ss, verbose, max_errs);
+    if (!r) {
+        std::cout << ss.str();
+        return false;
+    }
+    return true;
 }
 
 int
@@ -212,9 +231,10 @@ main(int argc, char *argv[])
                                     for (std::size_t t7 = 0; t7 < 4; ++t7) {
                                         std::vector<std::uint64_t> trace =
                                             {t0, t1, t2, t3, t4, t5, t6, t7};
-                                        print_vector(trace);
+                                        std::stringstream stream;
+                                        print_vector(trace, stream);
                                         ASSERT_FUNCTION_RETURNS_TRUE(
-                                            compare_caches(trace, 2));
+                                            compare_caches(trace, 2, stream));
                                     }
                                 }
                             }

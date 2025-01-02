@@ -1,4 +1,3 @@
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -100,25 +99,25 @@ public:
     /// @note   This is for verbose debugging purposes and isn't
     ///         guaranteed to be a stable interface.
     void
-    debug_print() const
+    debug_print(std::ostream &stream) const
     {
-        std::cout << name << "(insertion_position_ms=" << insertion_position_ms_
-                  << "): ";
-        std::cout << "{";
+        stream << name << "(insertion_position_ms=" << insertion_position_ms_
+               << "): ";
+        stream << "{";
         for (auto [k, _] : map_) {
-            std::cout << k << ",";
+            stream << k << ",";
         }
-        std::cout << "} ";
+        stream << "} ";
         for (auto [tm, k] : expiration_queue_) {
-            std::cout << k << "@" << tm << ",";
+            stream << k << "@" << tm << ",";
         }
-        std::cout << std::endl;
+        stream << std::endl;
     }
 
     bool
-    validate(int const verbose = 0) const
+    validate(std::ostream &stream, int const verbose = 0) const
     {
-        return BaseTTLCache::validate(verbose);
+        return BaseTTLCache::validate(stream, verbose);
     }
 
     int

@@ -2,6 +2,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
+#include <ostream>
 #include <time.h>
 #include <vector>
 
@@ -142,37 +143,37 @@ YangCache<T>::get_keys() const
 
 template <YangCacheType T>
 void
-YangCache<T>::print() const
+YangCache<T>::print(std::ostream &stream) const
 {
     cache_t *c = (cache_t *)cache_;
     assert(c);
     switch (T) {
     case YangCacheType::CLOCK: {
         Clock_params_t *p = (Clock_params_t *)c->eviction_params;
-        printf("YangClockCache(size=%zu): ", c->n_obj);
+        stream << "YangClockCache(size=" << c->n_obj << "): ";
         for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
             if (o->sieve.freq) {
-                printf("v");
+                stream << "v";
             }
-            printf("%zu ", o->obj_id);
+            stream << o->obj_id << " ";
         }
-        printf("\n");
+        stream << std::endl;
         break;
     }
     case YangCacheType::SIEVE: {
         Sieve_params_t *p = (Sieve_params_t *)c->eviction_params;
-        printf("YangSieveCache(size=%zu): ", c->n_obj);
+        stream << "YangSieveCache(size=" << c->n_obj << "): ";
         for (cache_obj_t *o = p->q_head; o != NULL; o = o->queue.next) {
             // Indicate where the hand is pointing.
             if (p->pointer == o) {
-                printf("*");
+                stream << "*";
             }
             if (o->sieve.freq) {
-                printf("v");
+                stream << "v";
             }
-            printf("%zu ", o->obj_id);
+            stream << o->obj_id << " ";
         }
-        printf("\n");
+        stream << std::endl;
         break;
     }
     default:
@@ -182,13 +183,13 @@ YangCache<T>::print() const
 
 template <YangCacheType T>
 bool
-YangCache<T>::validate(int const verbose) const
+YangCache<T>::validate(std::ostream &stream, int const verbose) const
 {
     // I trust Juncheng Yang's code, so I don't actually do any major
     // testing. Is this a mistake? Well, I'm doing it for expediency.
     if (verbose) {
-        std::cout << "Validate(type=YangCache, type=" << (int)T << ")"
-                  << std::endl;
+        stream << "Validate(type=YangCache, type=" << (int)T << ")"
+               << std::endl;
     }
     switch (T) {
     case YangCacheType::CLOCK:

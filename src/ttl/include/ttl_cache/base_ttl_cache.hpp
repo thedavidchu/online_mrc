@@ -145,26 +145,26 @@ public:
     }
 
     bool
-    validate(int const verbose = 0) const
+    validate(std::ostream &stream, int const verbose = 0) const
     {
         if (verbose) {
-            std::cout << "validate(name=" << name << ",verbose=" << verbose
-                      << ")" << std::endl;
+            stream << "validate(name=" << name << ",verbose=" << verbose << ")"
+                   << std::endl;
         }
         assert(map_.size() == expiration_queue_.size());
         assert(size() <= capacity_);
         if (verbose) {
-            std::cout << "> size: " << size() << std::endl;
+            stream << "> size: " << size() << std::endl;
         }
         if (verbose >= 2) {
-            to_stream(std::cout);
+            to_stream(stream);
         }
         for (auto [k, metadata] : map_) {
             if (verbose >= 2) {
                 std::stringstream ss;
                 metadata.to_stream(ss);
-                std::cout << "> Validating: key=" << k
-                          << ", metadata=" << ss.str() << std::endl;
+                stream << "> Validating: key=" << k << ", metadata=" << ss.str()
+                       << std::endl;
             }
             assert(expiration_queue_.count(metadata.expiration_time_ms_));
             auto obj = expiration_queue_.find(metadata.expiration_time_ms_);
