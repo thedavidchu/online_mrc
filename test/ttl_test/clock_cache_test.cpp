@@ -121,12 +121,11 @@ compare_cache_states(YangCache<YangCacheType::CLOCK> const &cache,
     ttl_cache.validate(stream, verbose);
     // NOTE I'm getting some strange behaviour where the 'cache.size()'
     //      does not agree with the actual size.
-    // if (cache.size() != ttl_cache.size()) {
-    //     LOGGER_ERROR("cache (%zu) and TTL cache (%zu) are different sizes",
-    //                  cache.size(),
-    //                  ttl_cache.size());
-    //     nerr += 1;
-    // }
+    if (cache.size() != ttl_cache.size()) {
+        stream << "cache (" << cache.size() << ") and TTL cache ("
+               << ttl_cache.size() << ") are different sizes" << std::endl;
+        nerr += 1;
+    }
     if (verbose) {
         std::vector<std::uint64_t> keys = cache.get_keys();
         stream << "Cache keys: ";
