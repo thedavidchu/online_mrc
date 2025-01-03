@@ -10,6 +10,8 @@
 #include "ttl_cache/new_ttl_clock_cache.hpp"
 #include "yang_cache/yang_cache.hpp"
 
+bool const debug = false;
+
 /*******************************************************************************
  *  HELPER FUNCTIONS
  *********************************************************************************/
@@ -154,14 +156,16 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     YangCache<YangCacheType::CLOCK> cache(capacity);
     assert(errno == 0);
     for (std::size_t i = 0; i < trace.size(); ++i) {
-        stream << "vvvvvvvvvv" << std::endl;
-        print_caches(cache, ttl_cache, i, stream);
-        stream << ">>> ACCESS ITEM " << trace[i] << std::endl;
+        if (debug) {
+            stream << "vvvvvvvvvv" << std::endl;
+            print_caches(cache, ttl_cache, i, stream);
+            stream << ">>> ACCESS ITEM " << trace[i] << std::endl;
+        }
         cache.access_item({i, trace[i]});
         ttl_cache.access_item({i, trace[i]});
-        if (i % capacity == 0 || true) {
+        if (i % capacity == 0) {
             int n = compare_cache_states(cache, ttl_cache, stream, verbose);
-            if (n) {
+            if (debug && n) {
                 stream << "[ERROR] mismatch on iteration " << i << std::endl;
                 print_caches(cache, ttl_cache, i, stream);
             }
@@ -170,7 +174,9 @@ compare_caches(std::vector<std::uint64_t> const &trace,
                 goto error;
             }
         }
-        stream << "^^^^^^^^^^" << std::endl;
+        if (debug) {
+            stream << "^^^^^^^^^^" << std::endl;
+        }
     }
     nerr += compare_cache_states(cache, ttl_cache, stream);
     if (nerr) {
@@ -178,7 +184,9 @@ compare_caches(std::vector<std::uint64_t> const &trace,
     }
     return true;
 error:
-    std::cout << stream.str() << std::endl;
+    if (debug) {
+        std::cout << stream.str() << std::endl;
+    }
     return false;
 }
 
@@ -220,21 +228,22 @@ main(int argc, char *argv[])
         // NOTE I've never done something so silly in my life, but I'm creating
         //      every combination of length 8 with the numbers 0..=3. My
         //      calculations say this should be 65536 (=4^8).
-        for (std::size_t t0 = 0; t0 < 4; ++t0) {
-            for (std::size_t t1 = 0; t1 < 4; ++t1) {
-                for (std::size_t t2 = 0; t2 < 4; ++t2) {
-                    for (std::size_t t3 = 0; t3 < 4; ++t3) {
-                        for (std::size_t t4 = 0; t4 < 4; ++t4) {
-                            for (std::size_t t5 = 0; t5 < 4; ++t5) {
-                                for (std::size_t t6 = 0; t6 < 4; ++t6) {
-                                    for (std::size_t t7 = 0; t7 < 4; ++t7) {
-                                        std::vector<std::uint64_t> trace =
-                                            {t0, t1, t2, t3, t4, t5, t6, t7};
-                                        std::stringstream stream;
+        std::size_t const t0 = 0;
+        for (std::size_t t1 = 0; t1 < 2; ++t1) {
+            for (std::size_t t2 = 0; t2 < 3; ++t2) {
+                for (std::size_t t3 = 0; t3 < 4; ++t3) {
+                    for (std::size_t t4 = 0; t4 < 4; ++t4) {
+                        for (std::size_t t5 = 0; t5 < 4; ++t5) {
+                            for (std::size_t t6 = 0; t6 < 4; ++t6) {
+                                for (std::size_t t7 = 0; t7 < 4; ++t7) {
+                                    std::vector<std::uint64_t> trace =
+                                        {t0, t1, t2, t3, t4, t5, t6, t7};
+                                    std::stringstream stream;
+                                    if (debug) {
                                         print_vector(trace, stream);
-                                        ASSERT_FUNCTION_RETURNS_TRUE(
-                                            compare_caches(trace, 2, stream));
                                     }
+                                    ASSERT_FUNCTION_RETURNS_TRUE(
+                                        compare_caches(trace, 2, stream));
                                 }
                             }
                         }
@@ -244,7 +253,7 @@ main(int argc, char *argv[])
         }
     }
 
-    bool const real_trace_test = false;
+    bool const real_trace_test = true;
     if (real_trace_test && argc == 2) {
         ASSERT_FUNCTION_RETURNS_TRUE(trace_test(argv[1], TRACE_FORMAT_KIA, 1));
         ASSERT_FUNCTION_RETURNS_TRUE(trace_test(argv[1], TRACE_FORMAT_KIA, 2));

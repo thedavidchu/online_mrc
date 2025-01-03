@@ -48,7 +48,7 @@ class NewTTLClockCache : public BaseTTLCache {
         if (!last_deletion_ms_.has_value()) {
             return size();
         } else {
-            return last_deletion_ms_.value() + size();
+            return last_deletion_ms_.value() + size() + 1;
         }
     }
 
