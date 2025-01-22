@@ -23,6 +23,7 @@ struct CacheMetadata {
     std::uint64_t expiration_time_ms_ = 0;
     bool visited = false;
 
+    /// @brief  Initialize metadata for unit-sized value size.
     CacheMetadata(std::uint64_t const insertion_time_ms,
                   std::uint64_t const expiration_time_ms)
         : insertion_time_ms_(insertion_time_ms),
@@ -32,6 +33,7 @@ struct CacheMetadata {
     {
     }
 
+    /// @brief  Initialize metadata for variable-sized value.
     CacheMetadata(std::size_t const value_size,
                   std::uint64_t const insertion_time_ms,
                   std::uint64_t const expiration_time_ms)

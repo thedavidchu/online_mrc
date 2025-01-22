@@ -1,3 +1,4 @@
+/** @brief  Represent a cache access. */
 #pragma once
 #include <cstdint>
 #include <optional>
