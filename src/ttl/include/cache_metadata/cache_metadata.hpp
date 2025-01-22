@@ -1,3 +1,4 @@
+/** @brief  Metadata for a cache object. */
 #pragma once
 
 #include <cstdint>
@@ -5,6 +6,10 @@
 #include <ostream>
 
 struct CacheMetadata {
+    /// @note   Size of the object's value in bytes (since the key is a
+    ///         uint64 and this metadata is considered "extra" but
+    ///         constant). The default is 1 for a unit sized cache.
+    std::size_t size_ = 1;
     /// @note   We don't consider the first access in the frequency
     ///         counter. There's no real reason, I just think it's nice
     ///         to start at 0 rather than 1.
@@ -21,6 +26,17 @@ struct CacheMetadata {
     CacheMetadata(std::uint64_t const insertion_time_ms,
                   std::uint64_t const expiration_time_ms)
         : insertion_time_ms_(insertion_time_ms),
+          last_access_time_ms_(insertion_time_ms),
+          expiration_time_ms_(expiration_time_ms),
+          visited(false)
+    {
+    }
+
+    CacheMetadata(std::size_t const value_size,
+                  std::uint64_t const insertion_time_ms,
+                  std::uint64_t const expiration_time_ms)
+        : size_(value_size),
+          insertion_time_ms_(insertion_time_ms),
           last_access_time_ms_(insertion_time_ms),
           expiration_time_ms_(expiration_time_ms),
           visited(false)
