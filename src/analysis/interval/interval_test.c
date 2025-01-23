@@ -70,7 +70,7 @@ main(int argc, char *argv[])
     assert(argc == 2);
     char const *const input_path = argv[1];
 
-    struct Trace trace = read_trace(input_path, TRACE_FORMAT_KIA);
+    struct Trace trace = read_trace_keys(input_path, TRACE_FORMAT_KIA);
     g_assert_true(test_interval_olken(&trace));
 
     return 0;

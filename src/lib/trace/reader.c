@@ -202,8 +202,17 @@ parse_trace_format_string(char const *const format_str)
     return TRACE_FORMAT_INVALID;
 }
 
+char const *
+get_trace_format_string(enum TraceFormat const format)
+{
+    if (format < 0 || format >= ARRAY_SIZE(TRACE_FORMAT_STRINGS)) {
+        return TRACE_FORMAT_STRINGS[0];
+    }
+    return TRACE_FORMAT_STRINGS[format];
+}
+
 struct Trace
-read_trace(char const *const restrict file_name, enum TraceFormat format)
+read_trace_keys(char const *const restrict file_name, enum TraceFormat format)
 {
     struct TraceItem *trace = NULL;
     size_t nobj_expected = 0;

@@ -412,7 +412,7 @@ main(int argc, char *argv[])
         LOGGER_TRACE("beginning to read trace file '%s' with format '%s'",
                      args.input_path,
                      TRACE_FORMAT_STRINGS[args.format]);
-        struct Trace trace = read_trace(args.input_path, args.format);
+        struct Trace trace = read_trace_keys(args.input_path, args.format);
         run_experiments(&trace, &args);
     }
     if (args.run_uniform) {

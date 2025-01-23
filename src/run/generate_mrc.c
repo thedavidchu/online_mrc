@@ -317,7 +317,7 @@ get_trace(struct CommandLineArguments args)
                                                    10);
     } else {
         LOGGER_TRACE("Reading trace from '%s'", args.input_path);
-        return read_trace(args.input_path, args.trace_format);
+        return read_trace_keys(args.input_path, args.trace_format);
     }
 }
 

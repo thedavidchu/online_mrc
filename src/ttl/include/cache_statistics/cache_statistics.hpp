@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -11,24 +12,24 @@ struct CacheStatistics {
 
     /// @brief  Register a cache hit.
     void
-    hit()
+    hit(size_t const size_bytes = 1)
     {
-        ++hits_;
-        ++total_accesses_;
+        hits_ += size_bytes;
+        total_accesses_ += size_bytes;
     }
 
     /// @brief  Register a cache miss.
     void
-    miss()
+    miss(size_t const size_bytes = 1)
     {
-        ++misses_;
-        ++total_accesses_;
+        misses_ += size_bytes;
+        total_accesses_ += size_bytes;
     }
 
     /// @brief  Get the miss ratio.
     /// @returns miss rate on success; -1.0 on failure.
     double
-    miss_rate()
+    miss_rate() const
     {
         if (total_accesses_ == 0) {
             return -1.0;
@@ -38,7 +39,7 @@ struct CacheStatistics {
 
     /// @brief  Pretty print the cache statistics.
     void
-    print(std::string const algorithm, std::size_t cache_size)
+    print(std::string const algorithm, std::size_t cache_size) const
     {
         std::string header = "Cache Statistics for '" + algorithm +
                              "' of size " + std::to_string(cache_size);

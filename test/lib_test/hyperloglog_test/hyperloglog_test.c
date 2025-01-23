@@ -184,7 +184,7 @@ static bool
 test_hyperloglog_accuracy_on_trace(char const *const trace_path,
                                    enum TraceFormat trace_format)
 {
-    struct Trace trace = read_trace(trace_path, trace_format);
+    struct Trace trace = read_trace_keys(trace_path, trace_format);
     assert(trace.trace != NULL && trace.length != 0);
 
     test_hyperloglog_accuracy(TRACE_OUTPUT_PATH,

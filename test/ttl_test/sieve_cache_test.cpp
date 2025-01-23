@@ -75,7 +75,7 @@ get_trace(char const *const filename, enum TraceFormat format)
 {
     struct Trace t = {};
     std::vector<std::uint64_t> trace;
-    t = read_trace(filename, format);
+    t = read_trace_keys(filename, format);
     trace.reserve(t.length);
     for (std::size_t i = 0; i < t.length; ++i) {
         trace.push_back(t.trace[i].key);
