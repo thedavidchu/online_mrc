@@ -25,25 +25,25 @@ cd "$(git rev-parse --show-toplevel)"
 git submodule update --init --recursive
 
 # Install dependencies
-sudo apt update
-sudo apt upgrade
-sudo apt install python3 python3-pip python3-setuptools \
+sudo apt -y update
+sudo apt -y upgrade
+sudo apt install -y python3 python3-pip python3-setuptools \
     python3-wheel ninja-build meson
-sudo apt install python3-numpy python3-matplotlib python3-tqdm
-sudo apt install pkg-config libglib2.0-dev
+sudo apt install -y python3-numpy python3-matplotlib python3-tqdm
+sudo apt install -y pkg-config libglib2.0-dev
 # Depending on your OS version, this may default to 1.74. In this case,
 # follow the instructions to install a backport. I found the package
 # called 'libboost1.81-dev' worked.
-sudo apt install libboost-all-dev
+sudo apt install -y libboost-all-dev
 
 # Install dependencies for 1a1a11a/libCacheSim
 sudo apt install -y cmake libgoogle-perftools-dev libzstd-dev
 
 # Install environment niceties
-sudo apt install clang-format clangd
+sudo apt install -y clang-format clangd
 
 # Install debugging tools
-sudo apt install valgrind
+sudo apt install -y valgrind
 
 # Build Meson
 meson setup build

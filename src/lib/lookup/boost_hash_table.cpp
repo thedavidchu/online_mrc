@@ -1,4 +1,10 @@
+#include <boost/version.hpp>
+// Boost introduced unordered flat maps in version 1.83.0
+#if BOOST_VERSION >= 108300
 #include <boost/unordered/unordered_flat_map.hpp>
+#else
+#include <unordered_map>
+#endif
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -11,8 +17,12 @@
 #include "types/value_type.h"
 
 struct BoostHashTablePrivate {
+#if BOOST_VERSION >= 108300
     boost::unordered::unordered_flat_map<std::uint64_t, std::uint64_t>
         hash_table;
+#else
+    std::unordered_map<std::uint64_t, std::uint64_t> hash_table;
+#endif
 };
 
 static struct BoostHashTablePrivate *
@@ -77,7 +87,7 @@ BoostHashTable__put(struct BoostHashTable *const me,
 struct LookupReturn
 BoostHashTable__remove(struct BoostHashTable *const me, KeyType const key)
 {
-    if (me == NULL || !me->private_->hash_table.contains(key)) {
+    if (me == NULL || me->private_->hash_table.count(key) == 0) {
         return {false, 0};
     }
     ValueType value = me->private_->hash_table.at(key);
