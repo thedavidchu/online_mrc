@@ -2,6 +2,8 @@
 /// 1. Test with real trace (how to get TTLs?)
 /// 2. How to count miscounts?
 /// 3. How to do certainty?
+/// 4. This is really slow. Profile it to see how long the LRU stack is
+///     taking...
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -47,6 +49,11 @@ public:
             correctly_evicted_bytes_ + wrongly_expired_bytes_;
         double eviction_rate = (double)should_have_evicted_bytes / dt;
         uint64_t time_until_eviction = capacity_ / eviction_rate;
+        // NOTE This is an incredibly crude mechanism to eventually
+        //      acheive the 'certainty' based on historical data.
+        if (wrongly_expired_bytes_ > correctly_evicted_bytes_ * certainty_) {
+            return true;
+        }
         return access.ttl_ms >= time_until_eviction;
     }
 
@@ -57,22 +64,67 @@ public:
     store_ttl(CacheAccess const &access, uint64_t const dt) const
     {
         // What is the chance of being evicted by TTL?
-        uint64_t should_have_evicted_bytes =
-            correctly_evicted_bytes_ + wrongly_expired_bytes_;
-        double eviction_rate = (double)should_have_evicted_bytes / dt;
+        uint64_t should_have_expired_bytes =
+            correctly_expired_bytes_ + wrongly_evicted_bytes_;
+        double eviction_rate = (double)should_have_expired_bytes / dt;
         uint64_t time_until_eviction = capacity_ / eviction_rate;
+        // NOTE This is an incredibly crude mechanism to eventually
+        //      acheive the 'certainty' based on historical data.
+        //      This may not even be the correct way to do it; we may
+        //      want something closer to (abs(x - y) / max(x, y)).
+        if (wrongly_evicted_bytes_ > correctly_expired_bytes_ * certainty_) {
+            return true;
+        }
         return access.ttl_ms <= time_until_eviction;
+    }
+
+    void
+    update_correctly_evicted(size_t const bytes)
+    {
+        correctly_evicted_bytes_ += bytes;
+        sq_corr_evict_ += bytes * bytes;
+    }
+
+    void
+    update_correctly_expired(size_t const bytes)
+    {
+        correctly_expired_bytes_ += bytes;
+        sq_corr_exp_ += bytes * bytes;
+    }
+
+    void
+    update_wrongly_evicted(size_t const bytes)
+    {
+        wrongly_evicted_bytes_ += bytes;
+        sq_wrong_evict_ += bytes * bytes;
+    }
+
+    void
+    update_wrongly_expired(size_t const bytes)
+    {
+        wrongly_expired_bytes_ += bytes;
+        sq_wrong_exp_ += bytes * bytes;
     }
 
     // TODO Make these private? There's no real point other than safety,
     //      which is a darn good reason. But I'd just make a setter
     //      method anyways, which would be a waste of time.
     size_t const capacity_;
+    // NOTE The certainty can also be made specific to the TTL policy
+    //      versus the regular eviction policy. For example, we may want
+    //      to bias toward a higher chance of including an object in the
+    //      TTL queue than the LRU queue.
     double const certainty_;
     uint64_t correctly_evicted_bytes_ = 0;
     uint64_t correctly_expired_bytes_ = 0;
     uint64_t wrongly_evicted_bytes_ = 0;
     uint64_t wrongly_expired_bytes_ = 0;
+
+    // These are for variance.
+    size_t sq_corr_evict_ = 0;
+    size_t sq_corr_exp_ = 0;
+    size_t sq_wrong_evict_ = 0;
+    size_t sq_wrong_exp_ = 0;
 };
 
 /// @brief  Remove a specific <key, value> pair from a multimap,
@@ -146,17 +198,17 @@ private:
             evicted_bytes_ += sz_bytes;
             if (current_time_ms_ <= exp_tm) {
                 // Not yet expired.
-                predictor_.correctly_evicted_bytes_ += sz_bytes;
+                predictor_.update_correctly_evicted(sz_bytes);
             } else {
-                predictor_.wrongly_evicted_bytes_ += sz_bytes;
+                predictor_.update_wrongly_evicted(sz_bytes);
             }
             break;
         case EvictionCause::TTL:
             expired_bytes_ += sz_bytes;
             if (last_evicted_ <= last_access) {
-                predictor_.correctly_expired_bytes_ += sz_bytes;
+                predictor_.update_correctly_expired(sz_bytes);
             } else {
-                predictor_.wrongly_expired_bytes_ += sz_bytes;
+                predictor_.update_wrongly_expired(sz_bytes);
             }
             break;
         default:
@@ -260,7 +312,6 @@ private:
 public:
     PredictiveCache(size_t const capacity, double const certainty)
         : capacity_(capacity),
-          certainty_(certainty),
           predictor_(capacity, certainty)
     {
         assert(0 <= certainty && certainty <= 1.0);
@@ -352,7 +403,6 @@ private:
     // Number of bytes in the current cache.
     size_t size_ = 0;
     size_t max_size_ = 0;
-    double const certainty_ = 1.0;
 
     // Number of bytes inserted into the cache.
     size_t inserted_bytes_ = 0;
