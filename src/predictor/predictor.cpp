@@ -495,13 +495,14 @@ test_trace(CacheAccessTrace const &trace,
            double const certainty)
 {
     PredictiveCache p(capacity_bytes, certainty);
-    LOGGER_INFO("starting test_trace()");
+    LOGGER_TIMING("starting test_trace()");
     for (size_t i = 0; i < trace.size(); ++i) {
         int err = p.access(trace.get(i));
-        if (err)
+        if (err) {
             LOGGER_WARN("error...");
+        }
     }
-    LOGGER_INFO("finished test_trace()");
+    LOGGER_TIMING("finished test_trace()");
 
     auto pred = p.predictor();
     std::cout << "> Capacity [B]: " << p.capacity()
