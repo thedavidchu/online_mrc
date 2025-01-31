@@ -259,14 +259,13 @@ private:
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
         // Otherwise, make room in the cache for the new object.
-        // TODO
         for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
             if (evicted_bytes >= nbytes) {
                 break;
             }
-            evicted_bytes += map_.at(n->key).size_;
-            last_evicted_ =
-                std::max(last_evicted_, map_.at(n->key).last_access_time_ms_);
+            auto m = map_.at(n->key);
+            evicted_bytes += m.size_;
+            last_evicted_ = std::max(last_evicted_, m.last_access_time_ms_);
             victims.push_back(n->key);
         }
         // One cannot evict elements from the map one is iterating over.
