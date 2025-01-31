@@ -1,3 +1,12 @@
+list_exe = executable(
+    'list_exe',
+    ['test_list.cpp', 'list.cpp'],
+    include_directories: include_directories('include'),
+    dependencies: [
+        common_dep,
+    ],
+)
+
 predictor_exe = executable(
     'predictor_exe',
     'predictor.cpp',
@@ -8,3 +17,5 @@ predictor_exe = executable(
         trace_dep,
     ],
 )
+
+test('list_test', list_exe)
