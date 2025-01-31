@@ -45,7 +45,6 @@ List::~List()
 bool
 List::validate()
 {
-    bool const expensive = true;
     bool r = false;
     if (!DEBUG) {
         return true;
@@ -75,25 +74,24 @@ List::validate()
         break;
     }
 
-    if (expensive) {
-        size_t cnt = 0;
-        for (auto p = head_; p != nullptr; p = p->r) {
-            assert(map_.count(p->key));
-            assert(map_.at(p->key) == p);
-            ++cnt;
-            if (p->l != nullptr) {
-                assert(p->l->r == p);
-            } else {
-                assert(p == head_);
-            }
-            if (p->r != nullptr) {
-                assert(p->r->l == p);
-            } else {
-                assert(tail_ == p);
-            }
+    // Check internal consistency of the data structure.
+    size_t cnt = 0;
+    for (auto p = head_; p != nullptr; p = p->r) {
+        assert(map_.count(p->key));
+        assert(map_.at(p->key) == p);
+        ++cnt;
+        if (p->l != nullptr) {
+            assert(p->l->r == p);
+        } else {
+            assert(p == head_);
         }
-        assert(cnt == map_.size());
+        if (p->r != nullptr) {
+            assert(p->r->l == p);
+        } else {
+            assert(tail_ == p);
+        }
     }
+    assert(cnt == map_.size());
 
     return true;
 }
