@@ -263,7 +263,7 @@ private:
             if (evicted_bytes >= nbytes) {
                 break;
             }
-            auto m = map_.at(n->key);
+            auto &m = map_.at(n->key);
             evicted_bytes += m.size_;
             last_evicted_ = std::max(last_evicted_, m.last_access_time_ms_);
             victims.push_back(n->key);
