@@ -260,14 +260,14 @@ private:
         std::vector<uint64_t> victims;
         // Otherwise, make room in the cache for the new object.
         // TODO
-        for (auto &n : lru_cache_) {
+        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
             if (evicted_bytes >= nbytes) {
                 break;
             }
-            evicted_bytes += map_.at(n.key).size_;
+            evicted_bytes += map_.at(n->key).size_;
             last_evicted_ =
-                std::max(last_evicted_, map_.at(n.key).last_access_time_ms_);
-            victims.push_back(n.key);
+                std::max(last_evicted_, map_.at(n->key).last_access_time_ms_);
+            victims.push_back(n->key);
         }
         // One cannot evict elements from the map one is iterating over.
         for (auto v : victims) {
@@ -360,8 +360,8 @@ public:
         std::cout << "> PredictiveCache(sz: " << size_ << ", cap: " << capacity_
                   << ")\n";
         std::cout << "> \tLRU: ";
-        for (auto &n : lru_cache_) {
-            std::cout << n.key << ", ";
+        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+            std::cout << n->key << ", ";
         }
         std::cout << "\n";
         std::cout << "> \tTTL: ";

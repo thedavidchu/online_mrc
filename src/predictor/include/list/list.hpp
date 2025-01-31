@@ -11,12 +11,6 @@ struct ListNode {
     uint64_t key;
     struct ListNode *l;
     struct ListNode *r;
-
-    struct ListNode const &
-    operator++()
-    {
-        return *r;
-    }
 };
 
 class List {
