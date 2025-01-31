@@ -11,10 +11,12 @@
 #include "list/list.hpp"
 #include "logger/logger.h"
 
+constexpr bool DEBUG = false;
+
 void
 List::append(struct ListNode *node)
 {
-    LOGGER_INFO("append(%zu)", node->key);
+    LOGGER_TRACE("append(%zu)", node->key);
     validate();
     map_.emplace(node->key, node);
     if (tail_ == nullptr) {
@@ -44,8 +46,11 @@ bool
 List::validate()
 {
     bool const expensive = true;
-    // Sanity checks
     bool r = false;
+    if (!DEBUG) {
+        return true;
+    }
+    // Sanity checks
     switch (map_.size()) {
     case 0:
         r = (head_ == nullptr && tail_ == nullptr);
@@ -125,7 +130,7 @@ List::end() const
 struct ListNode *
 List::extract(uint64_t const key)
 {
-    LOGGER_INFO("extract(%zu)", key);
+    LOGGER_TRACE("extract(%zu)", key);
     validate();
     auto it = map_.find(key);
     if (it == map_.end()) {
@@ -161,7 +166,7 @@ List::remove(uint64_t const key)
 void
 List::access(uint64_t const key)
 {
-    LOGGER_INFO("access(%zu)", key);
+    LOGGER_TRACE("access(%zu)", key);
     validate();
     struct ListNode *r = extract(key);
     if (r == nullptr) {
@@ -180,9 +185,9 @@ List::access(uint64_t const key)
 struct ListNode *
 List::remove_head()
 {
-    LOGGER_INFO("remove_head() -> %p(%s)",
-                head_,
-                head_ ? std::to_string(head_->key).c_str() : "?");
+    LOGGER_TRACE("remove_head() -> %p(%s)",
+                 head_,
+                 head_ ? std::to_string(head_->key).c_str() : "?");
     validate();
     if (head_ == nullptr) {
         validate();
