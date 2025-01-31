@@ -18,6 +18,7 @@
 #include "cache_metadata/cache_access.hpp"
 #include "cache_metadata/cache_metadata.hpp"
 #include "cache_statistics/cache_statistics.hpp"
+#include "list/list.hpp"
 #include "logger/logger.h"
 #include "math/saturation_arithmetic.h"
 #include "trace/reader.h"
@@ -156,7 +157,7 @@ private:
         // TODO If we've filled the cache (i.e. steady-state) and have
         //      some wiggle room for uncertainty, then we can optionally
         //      not add to one of the caches.
-        lru_cache_.emplace(access_time_ms, key);
+        lru_cache_.access(key);
         ttl_cache_.emplace(expiration_time_ms, key);
         size_ += size_bytes;
         inserted_bytes_ += size_bytes;
@@ -166,21 +167,11 @@ private:
     update(uint64_t const key, uint64_t const access_time_ms)
     {
         auto &metadata = map_.at(key);
-        uint64_t old_tm = metadata.last_access_time_ms_;
         // NOTE I do not allow the TTL to be updated after the first
         //      insertion. This is to simplify semantics.
         metadata.visit(access_time_ms, {});
-        for (auto it = lru_cache_.lower_bound(old_tm);
-             it != lru_cache_.upper_bound(old_tm);
-             ++it) {
-            if (it->second == key) {
-                auto nh = lru_cache_.extract(it);
-                nh.key() = access_time_ms;
-                lru_cache_.insert(std::move(nh));
-                return true;
-            }
-        }
-        return false;
+        lru_cache_.access(key);
+        return true;
     }
 
     void
@@ -219,7 +210,7 @@ private:
         map_.erase(victim_key);
         size_ -= sz_bytes;
         // Evict from LRU queue.
-        erased_lru = remove_multimap_kv(lru_cache_, last_access, victim_key);
+        erased_lru = lru_cache_.remove(victim_key);
         if (!erased_lru) {
             LOGGER_WARN("could not evict from LRU");
         }
@@ -268,14 +259,15 @@ private:
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
         // Otherwise, make room in the cache for the new object.
-        for (auto [tm, key] : lru_cache_) {
+        // TODO
+        for (auto &n : lru_cache_) {
             if (evicted_bytes >= nbytes) {
                 break;
             }
-            evicted_bytes += map_.at(key).size_;
+            evicted_bytes += map_.at(n.key).size_;
             last_evicted_ =
-                std::max(last_evicted_, map_.at(key).last_access_time_ms_);
-            victims.push_back(key);
+                std::max(last_evicted_, map_.at(n.key).last_access_time_ms_);
+            victims.push_back(n.key);
         }
         // One cannot evict elements from the map one is iterating over.
         for (auto v : victims) {
@@ -368,8 +360,8 @@ public:
         std::cout << "> PredictiveCache(sz: " << size_ << ", cap: " << capacity_
                   << ")\n";
         std::cout << "> \tLRU: ";
-        for (auto [tm, key] : lru_cache_) {
-            std::cout << key << "@" << tm << ", ";
+        for (auto &n : lru_cache_) {
+            std::cout << n.key << ", ";
         }
         std::cout << "\n";
         std::cout << "> \tTTL: ";
@@ -422,7 +414,7 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    std::multimap<uint64_t, uint64_t> lru_cache_;
+    List lru_cache_;
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;
 };

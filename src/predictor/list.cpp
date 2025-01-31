@@ -94,7 +94,7 @@ List::validate()
 }
 
 void
-List::print()
+List::debug_print()
 {
     std::cout << "Map: ";
     for (auto [k, p] : map_) {
@@ -108,6 +108,18 @@ List::print()
         std::cout << p << ": " << p->key << ", ";
     }
     std::cout << std::endl;
+}
+
+struct ListNode const *
+List::begin() const
+{
+    return head_;
+}
+
+struct ListNode const *
+List::end() const
+{
+    return nullptr;
 }
 
 struct ListNode *
@@ -136,6 +148,14 @@ List::extract(uint64_t const key)
     // Reset internal pointers so we don't dangle invalid pointers.
     n->l = n->r = nullptr;
     return n;
+}
+
+bool
+List::remove(uint64_t const key)
+{
+    auto n = extract(key);
+    std::free(n);
+    return n != nullptr;
 }
 
 void

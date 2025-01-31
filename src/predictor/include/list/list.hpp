@@ -1,15 +1,8 @@
 #pragma once
-#include <cassert>
-#include <cerrno>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
-#include <iostream>
-#include <string>
 #include <unordered_map>
-
-#include "logger/logger.h"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
@@ -18,6 +11,12 @@ struct ListNode {
     uint64_t key;
     struct ListNode *l;
     struct ListNode *r;
+
+    struct ListNode const &
+    operator++()
+    {
+        return *r;
+    }
 };
 
 class List {
@@ -30,14 +29,23 @@ public:
 
     ~List();
 
+    struct ListNode const *
+    begin() const;
+
+    struct ListNode const *
+    end() const;
+
     bool
     validate();
 
     void
-    print();
+    debug_print();
 
     struct ListNode *
     extract(uint64_t const key);
+
+    bool
+    remove(uint64_t const key);
 
     void
     access(uint64_t const key);
