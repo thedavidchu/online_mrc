@@ -525,7 +525,7 @@ main(int argc, char *argv[])
         std::cout << "OK!" << std::endl;
         break;
     case 3:
-        for (int i = 1; i < 11; ++i) {
+        for (int i = 1; i < 10 + 1; ++i) {
             assert(test_trace(
                 CacheAccessTrace(argv[1], parse_trace_format_string(argv[2])),
                 i * (size_t)1 << 30,
