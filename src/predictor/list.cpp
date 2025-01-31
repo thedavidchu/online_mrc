@@ -146,7 +146,7 @@ List::extract(uint64_t const key)
     } else {
         tail_ = n->l;
     }
-    map_.erase(key);
+    map_.erase(it);
     validate();
     // Reset internal pointers so we don't dangle invalid pointers.
     n->l = n->r = nullptr;
