@@ -324,6 +324,7 @@ public:
             }
         }
         max_size_ = std::max(max_size_, size_);
+        max_unique_ = std::max(max_unique_, map_.size());
         return 0;
     }
 
@@ -337,6 +338,12 @@ public:
     max_size() const
     {
         return max_size_;
+    }
+
+    size_t
+    max_unique() const
+    {
+        return max_unique_;
     }
 
     size_t
@@ -395,6 +402,7 @@ private:
     // Number of bytes in the current cache.
     size_t size_ = 0;
     size_t max_size_ = 0;
+    size_t max_unique_ = 0;
 
     // Number of bytes inserted into the cache.
     size_t inserted_bytes_ = 0;
@@ -499,6 +507,7 @@ test_trace(CacheAccessTrace const &trace,
     auto pred = p.predictor();
     std::cout << "> Capacity [B]: " << p.capacity()
               << " | Max Size [B]: " << p.max_size()
+              << " | Max Unique Objects: " << p.max_unique()
               << " | Correct Eviction [B]: " << pred.correctly_evicted_bytes_
               << " | Correct Expiration [B]: " << pred.correctly_expired_bytes_
               << " | Wrong Eviction [B]: " << pred.wrongly_evicted_bytes_
