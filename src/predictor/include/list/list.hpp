@@ -18,6 +18,12 @@ private:
     void
     append(struct ListNode *node);
 
+    struct ListNode *
+    extract_list_only(uint64_t const key);
+
+    void
+    append_list_only(struct ListNode *node);
+
 public:
     List();
 

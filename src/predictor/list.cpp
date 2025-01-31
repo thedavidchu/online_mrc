@@ -31,6 +31,50 @@ List::append(struct ListNode *node)
     tail_ = node;
 }
 
+struct ListNode *
+List::extract_list_only(uint64_t const key)
+{
+    LOGGER_TRACE("extract(%zu)", key);
+    validate();
+    auto it = map_.find(key);
+    if (it == map_.end()) {
+        validate();
+        return nullptr;
+    }
+    struct ListNode *const n = it->second;
+    if (n->l != nullptr) {
+        n->l->r = n->r;
+    } else {
+        head_ = n->r;
+    }
+    if (n->r != nullptr) {
+        n->r->l = n->l;
+    } else {
+        tail_ = n->l;
+    }
+    validate();
+    // Reset internal pointers so we don't dangle invalid pointers.
+    n->l = n->r = nullptr;
+    return n;
+}
+
+void
+List::append_list_only(struct ListNode *node)
+{
+    LOGGER_TRACE("append(%zu)", node->key);
+    validate();
+    if (tail_ == nullptr) {
+        head_ = tail_ = node;
+        node->l = node->r = nullptr;
+        validate();
+        return;
+    }
+    assert(head_ != nullptr && tail_->r == nullptr && map_.size() != 0);
+    tail_->r = node;
+    node->l = tail_;
+    tail_ = node;
+}
+
 List::List() {}
 
 List::~List()
@@ -166,7 +210,7 @@ List::access(uint64_t const key)
 {
     LOGGER_TRACE("access(%zu)", key);
     validate();
-    struct ListNode *r = extract(key);
+    struct ListNode *r = extract_list_only(key);
     if (r == nullptr) {
         validate();
         r = (struct ListNode *)std::malloc(sizeof(struct ListNode));
@@ -175,8 +219,10 @@ List::access(uint64_t const key)
             std::exit(1);
         }
         *r = ListNode{key, nullptr, nullptr};
+        append(r);
+    } else {
+        append_list_only(r);
     }
-    append(r);
     validate();
 }
 
