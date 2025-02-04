@@ -225,6 +225,7 @@ private:
     evict_expired_objects(uint64_t const current_time_ms)
     {
         std::vector<uint64_t> victims;
+        assert(ttl_cache_.size() == map_.size());
         for (auto [exp_tm, key] : ttl_cache_) {
             if (exp_tm >= current_time_ms) {
                 break;
@@ -521,6 +522,7 @@ main(int argc, char *argv[])
     switch (argc) {
     case 1:
         assert(test_lru());
+        std::cout << "---\n";
         assert(test_ttl());
         std::cout << "OK!" << std::endl;
         break;
