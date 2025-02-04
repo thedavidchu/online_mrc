@@ -30,7 +30,9 @@ struct CacheAccess {
           command((CacheAccessCommand)item->command),
           key(item->key),
           size_bytes(item->size),
-          ttl_ms(item->ttl_s
+          // A TTL of 0 in Kia's traces implies no TTL. I assume it's
+          // the same in Sari's, but I don't know.
+          ttl_ms(item->ttl_s == 0
                      ? std::nullopt
                      : std::optional(saturation_multiply(1000, item->ttl_s)))
     {
