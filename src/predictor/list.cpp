@@ -226,6 +226,17 @@ List::access(uint64_t const key)
     validate();
 }
 
+struct ListNode const *
+List::get(uint64_t const key)
+{
+    LOGGER_TRACE("get(%zu)", key);
+    auto r = map_.find(key);
+    if (r == map_.end()) {
+        return nullptr;
+    }
+    return r->second;
+}
+
 struct ListNode *
 List::remove_head()
 {

@@ -50,6 +50,9 @@ public:
     void
     access(uint64_t const key);
 
+    struct ListNode const *
+    get(uint64_t const key);
+
     struct ListNode *
     remove_head();
 
