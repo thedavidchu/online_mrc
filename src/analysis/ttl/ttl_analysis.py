@@ -21,114 +21,37 @@ of TTLs:
 - cluster52
 - cluster53
 
-@note   For robustness, if we are passed in multiple files, then we will
-        spawn a recursive subprocess to deal with this file. The reason
-        is that these processes seem to get killed in mysterious ways
-        and I don't know why (obviously).
-@note   Okay, I figured out what it was. It was the root directory
-        running out of space.
+@example    My imports break the normal Python stuff, so yeah.
+            Run this file with the following:
+            `python3 -m src.analysis.ttl.ttl_analysis [...args]`
 """
 
 import argparse
 import logging
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-TRACE_DTYPES: dict[str, np.dtype] = {
-    "Kia": np.dtype(
-        [
-            ("timestamp", np.uint64),
-            ("command", np.uint8),
-            ("key", np.uint64),
-            ("size", np.uint32),
-            ("ttl", np.uint32),
-        ],
-    ),
-    # As per https://github.com/SariSultan/TTLsMatter-EuroSys24
-    "Sari": np.dtype(
-        [
-            ("timestamp", np.uint32),
-            ("key", np.uint64),
-            ("size", np.uint32),
-            ("eviction_time", np.uint32),
-        ]
-    ),
-}
+from src.analysis.common.common import (
+    read_trace,
+    TRACE_DTYPES,
+)
 
 logger = logging.getLogger(__name__)
 
-########################################################################
-# START RECURSION STUFF
-########################################################################
-import os
-from shlex import split, quote
-from subprocess import CompletedProcess, run
+ANALYSIS_DTYPE = np.dtype(
+    [
+        ("timestamp_ms", np.uint64),
+        ("size_b", np.uint32),
+        ("ttl_ms", np.uint32),
+    ],
+)
 
 
-def abspath(path: str | Path) -> Path:
-    """Create an absolute path."""
-    return Path(path).resolve()
-
-
-def sh(cmd: str, **kwargs) -> CompletedProcess:
-    """
-    Automatically run nohup on every script. This is because I have
-    a bad habit of killing my scripts on hangup.
-
-    @note   I will echo the commands to terminal, so don't stick your
-            password in commands, obviously!
-    """
-    my_cmd = f"nohup {cmd}"
-    print(f"Running: '{my_cmd}'")
-    r = run(split(my_cmd), capture_output=True, text=True, **kwargs)
-    if r.returncode != 0:
-        print(
-            "=============================================================================="
-        )
-        print(f"Return code: {r.returncode}")
-        print(
-            "----------------------------------- stderr -----------------------------------"
-        )
-        print(r.stderr)
-        print(
-            "----------------------------------- stdout -----------------------------------"
-        )
-        print(r.stdout)
-        print(
-            "=============================================================================="
-        )
-    return r
-
-
-def practice_sh(cmd: str, **kwargs) -> CompletedProcess:
-    # Adding the '--help' flag should call the executable but return
-    # very quickly!
-    return sh(cmd=f"{cmd} --help", **kwargs)
-
-
-def sort_files_by_size(
-    files: list[tuple[Path, Path, Path]]
-) -> list[tuple[Path, Path, Path]]:
-    """
-    Return a list of (input_path, plot_path, histogram_path) with the
-    smallest input_path first.
-
-    @note   Non-existing files have a size of -infinity.
-    """
-    return sorted(
-        files, key=lambda f: os.path.getsize(f[0]) if f[0].exists() else float("-inf")
-    )
-
-
-########################################################################
-# END RECURSION STUFF
-########################################################################
-
-
-def get_array_mask(data: np.memmap, tmpdir: Path, trace_format: str):
+def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
     assert trace_format in {"Kia", "Sari"}
     assert tmpdir.exists()
 
@@ -137,6 +60,8 @@ def get_array_mask(data: np.memmap, tmpdir: Path, trace_format: str):
         # NOTE  We only want entries where the TTL is set. Otherwise,
         #       small TTLs are grouped with very small TTLs despite the
         #       large semantic difference.
+        # NOTE  I'm not actually sure if Sari gives objects with no TTL
+        #       a TTL of 0 too.
         mask[:] = data[:]["eviction_time"] != 0
         mask.flush()
     elif trace_format == "Kia":
@@ -159,10 +84,58 @@ def get_array_mask(data: np.memmap, tmpdir: Path, trace_format: str):
     return mask, mask.sum()
 
 
+def filter_invalid_ttl(
+    tmpdir: Path, file: str, data: np.memmap, format: str
+) -> np.memmap:
+    """Filter out objects without TTLs."""
+    assert format in TRACE_DTYPES.keys()
+    valid_ttl, cnt_valid_ttl = get_valid_ttl_mask(data, tmpdir, format)
+    logger.debug(f"{cnt_valid_ttl=}, {valid_ttl=}")
+    filtered_data = np.memmap(
+        tmpdir / file,
+        dtype=TRACE_DTYPES[format],
+        mode="w+",
+        shape=cnt_valid_ttl,
+    )
+    filtered_data[:cnt_valid_ttl] = data[valid_ttl]
+    filtered_data.flush()
+    # We re-open this file with a read-only permission!
+    filtered_data = np.memmap(
+        tmpdir / file, dtype=TRACE_DTYPES[format], mode="readonly"
+    )
+    return filtered_data
+
+
+def shuffle_data(tmpdir: Path, file: str, data: np.memmap, format: str) -> np.memmap:
+    """Return only the relevant fields."""
+    assert format in TRACE_DTYPES.keys()
+    shfl_data = np.memmap(
+        tmpdir / file, dtype=ANALYSIS_DTYPE, mode="w+", shape=len(data)
+    )
+    match format:
+        case "Sari":
+            shfl_data[:]["timestamp_ms"] = 1000 * data[:]["timestamp"]
+            shfl_data[:]["size_b"] = data[:]["size"]
+            # NOTE  The local traces differ from the format published in
+            #       Sari's paper, "TTLs Matter". On the local traces, the
+            #       'Eviction Time' column seems to be the regular TTL.
+            shfl_data[:]["ttl_ms"] = (
+                1000 * data[:]["eviction_time"]
+            )  # - data[:]["timestamp"]
+        case "Kia":
+            shfl_data[:]["timestamp_ms"] = data[:]["timestamp"]
+            shfl_data[:]["size_b"] = data[:]["size"]
+            shfl_data[:]["ttl_ms"] = 1000 * data[:]["ttl"]
+        case _:
+            raise ValueError(f"unrecognized format '{format}'")
+    shfl_data.flush()
+    shfl_data = np.memmap(tmpdir / file, dtype=ANALYSIS_DTYPE, mode="readonly")
+    return shfl_data
+
+
 def create_ttl_histogram(
     trace_path: Path,
-    trace_format: str,
-    stride: int,
+    format: str,
     tmp_prefix: str | None,
 ):
     """
@@ -171,55 +144,31 @@ def create_ttl_histogram(
             garbage collected ASAP. This is because I'm worried about
             running out of memory when processing the traces.
     """
-    # Error checks
-    assert trace_format in {"Kia", "Sari"}
-    dtype = TRACE_DTYPES[trace_format]
+    assert format in TRACE_DTYPES.keys()
 
     # Read input data into mmap region
-    logger.info(f"Reading from {str(trace_path)} with {trace_format}'s format")
-    data = np.memmap(trace_path, dtype=dtype, mode="readonly")
+    logger.info(f"Reading from {str(trace_path)} with {format}'s format")
+    data = read_trace(trace_path, format, mode="readonly")
     logger.debug(f"Temporary prefix: {tmp_prefix}")
     # Save the relevant entries into mmap region
     with TemporaryDirectory(prefix=tmp_prefix) as t:
         tmpdir = Path(t)
         logger.info(f"Saving temporary files to {str(tmpdir)}")
-        mask, mask_sz = get_array_mask(data, tmpdir, trace_format)
-        masked_data = np.memmap(
-            tmpdir / "masked_data.bin", dtype=dtype, mode="w+", shape=mask_sz
-        )
-        masked_data[:mask_sz] = data[mask]
-        masked_data.flush()
-        logger.debug(f"{masked_data=}")
+        filtered_data = filter_invalid_ttl(tmpdir, "filtered_data.bin", data, format)
         # NOTE  Ideally, I wouldn't create these extra memory mapped files.
         #       I would prefer to simply create light-weight 'views' into
         #       the masked_data, but simple experiments comparing the base
         #       of the masked_data to the {ttl,size,timestamp} tells me that
         #       we end up copying to memory.
-        # Save TTL into mmap region
-        ttl = np.memmap(tmpdir / "ttl.bin", dtype=np.uint32, mode="w+", shape=mask_sz)
-        if trace_format == "Sari":
-            # NOTE  The local traces differ from the format published in
-            #       Sari's paper, "TTLs Matter". On the local traces, the
-            #       'Eviction Time' column seems to be the regular TTL.
-            ttl[:] = masked_data[::stride][
-                "eviction_time"
-            ]  # - data[::stride]["timestamp"]
-            ttl.flush()
-        elif trace_format == "Kia":
-            ttl[:] = masked_data[::stride]["ttl"]
-            ttl.flush()
-        # Save size and timestamp into mmap region
-        size = np.memmap(tmpdir / "size.bin", dtype=np.uint32, mode="w+", shape=mask_sz)
-        size[:] = masked_data[::stride]["size"]
-        size.flush()
-        timestamp = np.memmap(
-            tmpdir / "timestamp.bin", dtype=np.uint64, mode="w+", shape=mask_sz
-        )
-        timestamp[:] = masked_data[::stride]["timestamp"]
-        timestamp.flush()
+        shuffled_data = shuffle_data(tmpdir, "shuffled_data.bin", filtered_data, format)
         # Create the histogram
         hist, (ttl_edges, size_edges, timestamp_edges) = np.histogramdd(
-            [ttl, size, timestamp], bins=50
+            [
+                shuffled_data[:]["ttl_ms"],
+                shuffled_data[:]["size_b"],
+                shuffled_data[:]["timestamp_ms"],
+            ],
+            bins=50,
         )
     return hist, ttl_edges, size_edges, timestamp_edges
 
@@ -227,7 +176,6 @@ def create_ttl_histogram(
 def plot_ttl(
     trace_path: Path,
     trace_format: str,
-    stride: int,
     plot_path: Path,
     histogram_path: Path,
     tmp_prefix: str | None,
@@ -235,7 +183,7 @@ def plot_ttl(
     if not histogram_path.exists():
         logger.info(f"Creating histogram from {str(trace_path)}")
         hist, ttl_edges, size_edges, timestamp_edges = create_ttl_histogram(
-            trace_path, trace_format, stride, tmp_prefix
+            trace_path, trace_format, tmp_prefix
         )
         np.savez(
             histogram_path,
@@ -262,17 +210,24 @@ def plot_ttl(
 
     # Plot TTL vs Size
     ttl_vs_size = np.sum(hist, axis=2)
-    heatmap_a = ax0.pcolormesh(size_edges, ttl_edges, ttl_vs_size, norm="log")
+    heatmap_a = ax0.pcolormesh(
+        size_edges / 1e6, ttl_edges / 1000 / 3600, ttl_vs_size, norm="log"
+    )
     ax0.set_title("Object Time-to-Live (TTL) vs Size")
-    ax0.set_ylabel("Object Time-to-Live (TTL) [seconds]")
-    ax0.set_xlabel("Object Size [bytes]")
+    ax0.set_ylabel("Object Time-to-Live (TTL) [h]")
+    ax0.set_xlabel("Object Size [MB]")
 
     # Plot TTL vs Timestamp
     ttl_vs_timestamp = np.sum(hist, axis=1)
-    heatmap_b = ax1.pcolormesh(timestamp_edges, ttl_edges, ttl_vs_timestamp, norm="log")
+    heatmap_b = ax1.pcolormesh(
+        timestamp_edges / 1000 / 3600,
+        ttl_edges / 1000 / 3600,
+        ttl_vs_timestamp,
+        norm="log",
+    )
     ax1.set_title("Object Time-to-Live (TTL) vs Timestamp")
-    ax1.set_ylabel("Object Time-to-Live (TTL) [seconds]")
-    ax1.set_xlabel("Timestamp [milliseconds]")
+    ax1.set_ylabel("Object Time-to-Live (TTL) [h]")
+    ax1.set_xlabel("Timestamp [h]")
 
     # Set the y_lim after plotting so that it doesn't cause it to be capped at 1.
     # TODO Actively share y-axis between ax0 and ax1
@@ -291,7 +246,7 @@ def plot_ttl(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", "-i", nargs="+", type=Path, help="input trace path(s)"
+        "--input", "-i", type=Path, required=True, help="input trace path(s)"
     )
     parser.add_argument(
         "--format",
@@ -301,12 +256,12 @@ def main():
         default="Kia",
         help="input trace format",
     )
-    parser.add_argument("--stride", type=int, default=1000, help="stride to sample")
-    parser.add_argument("--plot", nargs="+", type=Path, help="output plot path(s)")
+    parser.add_argument("--plot", type=Path, required=True, help="output plot path(s)")
     parser.add_argument(
         "--histogram",
-        nargs="+",
+        "-g",
         type=Path,
+        required=True,
         help="output histogram path(s). This should end in '.npz'.",
     )
     # If your memory-mapped operations are failing for mysterious
@@ -315,6 +270,7 @@ def main():
     # because '/tmp/' is full of old temporary files.
     parser.add_argument(
         "--tmp-dir",
+        "-t",
         type=Path,
         required=False,
         default=None,
@@ -324,48 +280,29 @@ def main():
         ),
     )
     args = parser.parse_args()
-    if not (len(args.input) == len(args.plot) == len(args.histogram)):
-        raise ValueError(
-            "we require the same number of input, plot, and histogram paths"
-        )
-    files = [tuple(z) for z in zip(args.input, args.plot, args.histogram)]
-    files = sort_files_by_size(files)
 
+    if not args.input.exists():
+        raise FileNotFoundError(f"{str(args.input)} DNE")
+    # Validate tmp_dir. I'm not 100% what past-David was intending to do.
     if args.tmp_dir is None:
         tmpdir = None
-    elif args.tmp_dir.exists():
+    elif args.tmp_dir.is_dir():
         # NOTE  It would be more OS agnostic to use 'os.sep' instead of
         #       '/', but I think this is clearer for the OS that I use.
         tmpdir = f"{str(args.tmp_dir)}/"
     else:
         raise FileNotFoundError(f"{args.tmp_dir} DNE")
 
-    if len(files) == 1:
-        (input_, plot, histogram), *_ = files
-        assert len(_) == 0
-        if not input_.exists():
-            logger.warning(f"{str(input_)} DNE")
-        else:
-            logger.info(f"Processing {str(input_), str(plot), str(histogram)}")
-            plot_ttl(
-                input_,
-                args.format,
-                args.stride,
-                plot,
-                histogram,
-                tmp_prefix=tmpdir,
-            )
-        return
-    for input_, plot, histogram in files:
-        sh(
-            f"python3 {abspath(__file__)} "
-            f"--input {abspath(input_)} "
-            f"--format {args.format} "
-            f"--stride {args.stride} "
-            f"--plot {abspath(plot)} "
-            f"--histogram {abspath(histogram)} "
-            f"--tmp-dir {abspath(tmpdir)} "
-        )
+    logger.info(
+        f"Processing {str(args.input)} into {str(args.plot), str(args.histogram)}"
+    )
+    plot_ttl(
+        args.input,
+        args.format,
+        args.plot,
+        args.histogram,
+        tmp_prefix=tmpdir,
+    )
 
 
 if __name__ == "__main__":
@@ -375,7 +312,7 @@ if __name__ == "__main__":
     #       onto the end. That's why I explicitly specify it.
     logging.basicConfig(
         format="[%(levelname)s] [%(asctime)s] [ %(pathname)s:%(lineno)d ] [errno 0: Success] %(message)s",
-        level=logging.INFO,
+        level=logging.DEBUG,
         datefmt=r"%Y-%m-%d %H:%M:%S",
     )
     main()
