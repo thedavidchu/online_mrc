@@ -227,6 +227,9 @@ private:
             break;
         case EvictionCause::TTL:
             expired_bytes_ += sz_bytes;
+            // NOTE If there is never an evicted object, then this will
+            //      always evaluate to true. However, that's not what we
+            //      want...
             if (last_evicted_ <= last_access) {
                 predictor_.update_correctly_expired(sz_bytes);
             } else {
