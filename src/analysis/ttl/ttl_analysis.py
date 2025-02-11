@@ -146,11 +146,9 @@ def create_ttl_histogram(
     """
     assert format in TRACE_DTYPES.keys()
 
-    # Read input data into mmap region
     logger.info(f"Reading from {str(trace_path)} with {format}'s format")
     data = read_trace(trace_path, format, mode="readonly")
     logger.debug(f"Temporary prefix: {tmp_prefix}")
-    # Save the relevant entries into mmap region
     with TemporaryDirectory(prefix=tmp_prefix) as t:
         tmpdir = Path(t)
         logger.info(f"Saving temporary files to {str(tmpdir)}")
@@ -161,7 +159,6 @@ def create_ttl_histogram(
         #       of the masked_data to the {ttl,size,timestamp} tells me that
         #       we end up copying to memory.
         shuffled_data = shuffle_data(tmpdir, "shuffled_data.bin", filtered_data, format)
-        # Create the histogram
         hist, (ttl_edges, size_edges, timestamp_edges) = np.histogramdd(
             [
                 shuffled_data[:]["ttl_ms"],
@@ -269,29 +266,33 @@ def main():
     # 'df -h'. I found that my root directory is often full. This is
     # because '/tmp/' is full of old temporary files.
     parser.add_argument(
-        "--tmp-dir",
+        "--tmp-subdirectory",
         "-t",
         type=Path,
         required=False,
         default=None,
         help=(
-            "temporary directory. Use this if your home directory "
-            "(like mine) is too small to fit the traces."
+            "an existing subdirectory of /tmp. Therefore, the temporary "
+            "directory will be at the path /tmp/<tmp-subdirectory>/... "
+            "This is for easily deleting dead temporary files if I use "
+            "too much disk. "
+            "To be honest, I'm not sure how I intended this to be used, "
+            "so please use with caution (or not at all). DEPRECATED!"
         ),
     )
     args = parser.parse_args()
 
     if not args.input.exists():
         raise FileNotFoundError(f"{str(args.input)} DNE")
-    # Validate tmp_dir. I'm not 100% what past-David was intending to do.
-    if args.tmp_dir is None:
+    # Validate tmp_subdirectory. I'm not sure what I intended to do.
+    if args.tmp_subdirectory is None:
         tmpdir = None
-    elif args.tmp_dir.is_dir():
+    elif args.tmp_subdirectory.is_dir():
         # NOTE  It would be more OS agnostic to use 'os.sep' instead of
         #       '/', but I think this is clearer for the OS that I use.
-        tmpdir = f"{str(args.tmp_dir)}/"
+        tmpdir = f"{str(args.tmp_subdirectory)}/"
     else:
-        raise FileNotFoundError(f"{args.tmp_dir} DNE")
+        raise FileNotFoundError(f"{args.tmp_subdirectory} DNE")
 
     logger.info(
         f"Processing {str(args.input)} into {str(args.plot), str(args.histogram)}"
