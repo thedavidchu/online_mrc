@@ -31,6 +31,7 @@ import logging
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from warnings import warn
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -270,7 +271,7 @@ def plot_independent(
     ax1.set_xlabel("Size [MB]")
     ax1.set_ylabel("Log-Frequency")
 
-    time_hist = np.sum(hist, axis=(1, 2))
+    time_hist = np.sum(hist, axis=(0, 1))
     # Smooth the log-plot by converting zeros to ones.
     ax2.semilogy(timestamp_edges[:-1] / 1000 / 3600, time_hist + 1)
     ax2.set_title("Object Timestamp Histogram")
@@ -314,10 +315,16 @@ def main():
         "If the path is not provided, then we turn off caching.",
     )
     parser.add_argument(
-        "--plot-correlated", type=Path, required=True, help="output plot path"
+        "--plot-correlated",
+        type=Path,
+        default=None,
+        help="output path for plot of TTL correlated with size and timestamp.",
     )
     parser.add_argument(
-        "--plot-independent", type=Path, required=True, help="output plot path"
+        "--plot-independent",
+        type=Path,
+        default=None,
+        help="output path for plot of TTL, size, and timestamp independently.",
     )
     # If your memory-mapped operations are failing for mysterious
     # reasons, I would encourage you to check your disk utilization:
@@ -346,17 +353,22 @@ def main():
     if args.tmp_subdirectory is None:
         tmpdir = None
     elif args.tmp_subdirectory.is_dir():
-        # NOTE  It would be more OS agnostic to use 'os.sep' instead of
-        #       '/', but I think this is clearer for the OS that I use.
-        tmpdir = f"{str(args.tmp_subdirectory)}/"
+        # NOTE  On UNIX-like OS, this is equivalent to appending '/'.
+        tmpdir = f"{str(args.tmp_subdirectory)}" + os.sep
     else:
         raise FileNotFoundError(f"{args.tmp_subdirectory} DNE")
 
-    if (
-        args.plot_correlated is not None
-        and args.plot_independent is not None
-        and args.plot_correlated == args.plot_independent
-    ):
+    # I am trying to be clever for concision, but this may inadvertently
+    # lead to these NEVER evaluating to True. For example, if I got the
+    # number of elements in the list wrong, then it would always result
+    # in a False evaluation.
+    if [args.histogram, args.plot_correlated, args.plot_independent] == [None] * 3:
+        raise ValueError("no useful work!")
+    elif [args.plot_correlated, args.plot_independent] == [None] * 2:
+        warn("no output plot specified!")
+    elif args.plot_correlated == args.plot_independent:
+        # We know these paths are not None, since we checked that in an
+        # above condition.
         raise ValueError(
             f"specified the same output plot path twice: {args.plot_correlated} vs {args.plot_independent}"
         )
