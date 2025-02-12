@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-@brief  Plot TTL vs size.
+@brief  Plot TTL vs size and TTL vs time.
 
 We want to figure out a pattern in how the TTLs are set.
 
@@ -177,7 +177,14 @@ def plot_ttl(
     histogram_path: Path,
     tmp_prefix: str | None,
 ):
-    if not histogram_path.exists():
+    if histogram_path.exists():
+        logger.info(f"Loading histogram from {str(histogram_path)}")
+        npz = np.load(histogram_path)
+        hist = npz["histogram"]
+        ttl_edges = npz["ttl_edges"]
+        size_edges = npz["size_edges"]
+        timestamp_edges = npz["time_edges"]
+    else:
         logger.info(f"Creating histogram from {str(trace_path)}")
         hist, ttl_edges, size_edges, timestamp_edges = create_ttl_histogram(
             trace_path, trace_format, tmp_prefix
@@ -190,13 +197,6 @@ def plot_ttl(
             time_edges=timestamp_edges,
         )
         logger.info(f"Saved histogram to {str(histogram_path)}")
-    else:
-        logger.info(f"Loading histogram from {str(histogram_path)}")
-        npz = np.load(histogram_path)
-        hist = npz["histogram"]
-        ttl_edges = npz["ttl_edges"]
-        size_edges = npz["size_edges"]
-        timestamp_edges = npz["time_edges"]
     logger.debug(f"{ttl_edges=}")
     logger.debug(f"{size_edges=}")
     logger.debug(f"{timestamp_edges=}")
