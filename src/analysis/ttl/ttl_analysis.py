@@ -84,7 +84,7 @@ def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
     return mask, mask.sum()
 
 
-def filter_invalid_ttl(
+def filter_valid_ttl(
     tmpdir: Path, file: str, data: np.memmap, format: str
 ) -> np.memmap:
     """Filter out objects without TTLs."""
@@ -152,7 +152,7 @@ def create_ttl_histogram(
     with TemporaryDirectory(prefix=tmp_prefix) as t:
         tmpdir = Path(t)
         logger.info(f"Saving temporary files to {str(tmpdir)}")
-        filtered_data = filter_invalid_ttl(tmpdir, "filtered_data.bin", data, format)
+        filtered_data = filter_valid_ttl(tmpdir, "filtered_data.bin", data, format)
         # NOTE  Ideally, I wouldn't create these extra memory mapped files.
         #       I would prefer to simply create light-weight 'views' into
         #       the masked_data, but simple experiments comparing the base
@@ -199,7 +199,7 @@ def load_or_create_ttl_histogram(
     return hist, ttl_edges, size_edges, timestamp_edges
 
 
-def plot_ttl_vs_size_and_time(
+def plot_correlations(
     hist: np.memmap,
     ttl_edges: np.memmap,
     size_edges: np.memmap,
@@ -245,10 +245,55 @@ def plot_ttl_vs_size_and_time(
     logger.info(f"Saved plot to {str(plot_path)}")
 
 
+def plot_independent(
+    hist: np.memmap,
+    ttl_edges: np.memmap,
+    size_edges: np.memmap,
+    timestamp_edges: np.memmap,
+    plot_path: Path,
+):
+    fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+    fig.set_size_inches(18, 6)
+    fig.suptitle("Object Time-to-Live (TTL), Size, and Timestamp Histograms")
+
+    ttl_hist = np.sum(hist, axis=(1, 2))
+    # Smooth the log-plot by converting zeros to ones.
+    ax0.semilogy(ttl_edges[:-1] / 1000 / 3600, ttl_hist + 1)
+    ax0.set_title("Object Time-to-Live (TTL) Histogram")
+    ax0.set_xlabel("Object Time-to-Live (TTL) [h]")
+    ax0.set_ylabel("Log-Frequency")
+
+    size_hist = np.sum(hist, axis=(0, 2))
+    # Smooth the log-plot by converting zeros to ones.
+    ax1.semilogy(size_edges[:-1] / 1e6, size_hist + 1)
+    ax1.set_title("Object Size Histogram")
+    ax1.set_xlabel("Size [MB]")
+    ax1.set_ylabel("Log-Frequency")
+
+    time_hist = np.sum(hist, axis=(1, 2))
+    # Smooth the log-plot by converting zeros to ones.
+    ax2.semilogy(timestamp_edges[:-1] / 1000 / 3600, time_hist + 1)
+    ax2.set_title("Object Timestamp Histogram")
+    ax2.set_xlabel("Time [h]")
+    ax2.set_ylabel("Log-Frequency")
+
+    # Set the y_lim after plotting so that it doesn't cause it to be capped at 1.
+    # TODO Actively share y-axis between ax0 and ax1
+    ax0.set_xlim(xmin=0)
+    ax0.set_ylim(ymin=0)
+    ax1.set_xlim(xmin=0)
+    ax1.set_ylim(ymin=0)
+    ax2.set_xlim(xmin=0)
+    ax2.set_ylim(ymin=0)
+
+    fig.savefig(plot_path)
+    logger.info(f"Saved plot to {str(plot_path)}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", "-i", type=Path, required=True, help="input trace path(s)"
+        "--input", "-i", type=Path, required=True, help="input trace path"
     )
     parser.add_argument(
         "--format",
@@ -258,13 +303,21 @@ def main():
         default="Kia",
         help="input trace format",
     )
-    parser.add_argument("--plot", type=Path, required=True, help="output plot path(s)")
     parser.add_argument(
         "--histogram",
         "-g",
         type=Path,
-        required=True,
-        help="output histogram path(s). This should end in '.npz'.",
+        default=None,
+        help="output path to histogram cache. This should end in '.npz'. "
+        "If the path exists, then we load the cached histogram. "
+        "If the path DNE, then we save the histogram here. "
+        "If the path is not provided, then we turn off caching.",
+    )
+    parser.add_argument(
+        "--plot-correlated", type=Path, required=True, help="output plot path"
+    )
+    parser.add_argument(
+        "--plot-independent", type=Path, required=True, help="output plot path"
     )
     # If your memory-mapped operations are failing for mysterious
     # reasons, I would encourage you to check your disk utilization:
@@ -299,19 +352,22 @@ def main():
     else:
         raise FileNotFoundError(f"{args.tmp_subdirectory} DNE")
 
-    logger.info(
-        f"Processing {str(args.input)} into {str(args.plot), str(args.histogram)}"
-    )
+    if (
+        args.plot_correlated is not None
+        and args.plot_independent is not None
+        and args.plot_correlated == args.plot_independent
+    ):
+        raise ValueError(
+            f"specified the same output plot path twice: {args.plot_correlated} vs {args.plot_independent}"
+        )
+
     output = load_or_create_ttl_histogram(
-        args.input,
-        args.format,
-        tmpdir,
-        args.histogram,
+        args.input, args.format, tmpdir, args.histogram
     )
-    plot_ttl_vs_size_and_time(
-        *output,
-        args.plot,
-    )
+    if args.plot_correlated:
+        plot_correlations(*output, args.plot_correlated)
+    if args.plot_independent:
+        plot_independent(*output, args.plot_independent)
 
 
 if __name__ == "__main__":
