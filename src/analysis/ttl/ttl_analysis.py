@@ -170,13 +170,9 @@ def create_ttl_histogram(
     return hist, ttl_edges, size_edges, timestamp_edges
 
 
-def plot_ttl(
-    trace_path: Path,
-    trace_format: str,
-    plot_path: Path,
-    histogram_path: Path,
-    tmp_prefix: str | None,
-):
+def load_or_create_ttl_histogram(
+    trace_path: Path, trace_format: Path, tmp_prefix: str, histogram_path: Path
+) -> tuple[np.memmap, np.memmap, np.memmap, np.memmap]:
     if histogram_path.exists():
         logger.info(f"Loading histogram from {str(histogram_path)}")
         npz = np.load(histogram_path)
@@ -200,7 +196,16 @@ def plot_ttl(
     logger.debug(f"{ttl_edges=}")
     logger.debug(f"{size_edges=}")
     logger.debug(f"{timestamp_edges=}")
+    return hist, ttl_edges, size_edges, timestamp_edges
 
+
+def plot_ttl_vs_size_and_time(
+    hist: np.memmap,
+    ttl_edges: np.memmap,
+    size_edges: np.memmap,
+    timestamp_edges: np.memmap,
+    plot_path: Path,
+):
     fig, (ax0, ax1) = plt.subplots(1, 2)
     fig.set_size_inches(12, 6)
     fig.suptitle("Object Time-to-Live (TTL) vs Size and Timestamp")
@@ -297,12 +302,15 @@ def main():
     logger.info(
         f"Processing {str(args.input)} into {str(args.plot), str(args.histogram)}"
     )
-    plot_ttl(
+    output = load_or_create_ttl_histogram(
         args.input,
         args.format,
-        args.plot,
+        tmpdir,
         args.histogram,
-        tmp_prefix=tmpdir,
+    )
+    plot_ttl_vs_size_and_time(
+        *output,
+        args.plot,
     )
 
 
