@@ -1,6 +1,9 @@
 #!/usr/bin/python
 """
-@brief  Plot TTL vs size and TTL vs time.
+@brief  Plot histograms of TTL, size, time. Specifically, you can plot
+        these independently or correlated.
+
+@details
 
 We want to figure out a pattern in how the TTLs are set.
 
@@ -36,7 +39,7 @@ from warnings import warn
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.analysis.common.common import (
+from src.analysis.common.trace import (
     read_trace,
     TRACE_DTYPES,
 )
@@ -63,7 +66,7 @@ def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
         #       large semantic difference.
         # NOTE  I'm not actually sure if Sari gives objects with no TTL
         #       a TTL of 0 too.
-        mask[:] = data[:]["eviction_time"] != 0
+        mask[:] = data[:]["ttl_s"] != 0
         mask.flush()
     elif trace_format == "Kia":
         # NOTE  We only want 'put' commands, which have the value 1,
@@ -75,7 +78,7 @@ def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
         # NOTE  We only want entries where the TTL is set. Otherwise,
         #       small TTLs are grouped with very small TTLs despite the
         #       large semantic difference.
-        mortals = data[:]["ttl"] != 0
+        mortals = data[:]["ttl_s"] != 0
         # NOTE  The documentation says I should be able to write
         #       'puts & mortals', but this leads to the error:
         #       'ValueError: The truth value of an array with more than
@@ -115,18 +118,13 @@ def shuffle_data(tmpdir: Path, file: str, data: np.memmap, format: str) -> np.me
     )
     match format:
         case "Sari":
-            shfl_data[:]["timestamp_ms"] = 1000 * data[:]["timestamp"]
-            shfl_data[:]["size_b"] = data[:]["size"]
-            # NOTE  The local traces differ from the format published in
-            #       Sari's paper, "TTLs Matter". On the local traces, the
-            #       'Eviction Time' column seems to be the regular TTL.
-            shfl_data[:]["ttl_ms"] = (
-                1000 * data[:]["eviction_time"]
-            )  # - data[:]["timestamp"]
+            shfl_data[:]["timestamp_ms"] = 1000 * data[:]["timestamp_s"]
+            shfl_data[:]["size_b"] = data[:]["size_b"]
+            shfl_data[:]["ttl_ms"] = 1000 * data[:]["ttl_s"]
         case "Kia":
-            shfl_data[:]["timestamp_ms"] = data[:]["timestamp"]
-            shfl_data[:]["size_b"] = data[:]["size"]
-            shfl_data[:]["ttl_ms"] = 1000 * data[:]["ttl"]
+            shfl_data[:]["timestamp_ms"] = data[:]["timestamp_ms"]
+            shfl_data[:]["size_b"] = data[:]["size_b"]
+            shfl_data[:]["ttl_ms"] = 1000 * data[:]["ttl_s"]
         case _:
             raise ValueError(f"unrecognized format '{format}'")
     shfl_data.flush()
@@ -174,8 +172,14 @@ def create_ttl_histogram(
 def load_or_create_ttl_histogram(
     trace_path: Path, trace_format: Path, tmp_prefix: str, histogram_path: Path
 ) -> tuple[np.memmap, np.memmap, np.memmap, np.memmap]:
-    if histogram_path.exists():
-        logger.info(f"Loading histogram from {str(histogram_path)}")
+    if histogram_path is None:
+        logger.info(f"Creating histogram from {str(trace_path)}")
+        hist, ttl_edges, size_edges, timestamp_edges = create_ttl_histogram(
+            trace_path, trace_format, tmp_prefix
+        )
+        logger.info(f"Not caching histogram...")
+    elif histogram_path.exists():
+        logger.info(f"Loading cached histogram from {str(histogram_path)}")
         npz = np.load(histogram_path)
         hist = npz["histogram"]
         ttl_edges = npz["ttl_edges"]
@@ -193,7 +197,7 @@ def load_or_create_ttl_histogram(
             size_edges=size_edges,
             time_edges=timestamp_edges,
         )
-        logger.info(f"Saved histogram to {str(histogram_path)}")
+        logger.info(f"Cached histogram to {str(histogram_path)}")
     logger.debug(f"{ttl_edges=}")
     logger.debug(f"{size_edges=}")
     logger.debug(f"{timestamp_edges=}")
@@ -223,14 +227,14 @@ def plot_correlations(
     # Plot TTL vs Timestamp
     ttl_vs_timestamp = np.sum(hist, axis=1)
     heatmap_b = ax1.pcolormesh(
-        timestamp_edges / 1000 / 3600,
+        timestamp_edges / 1000 / 3600 / 24,
         ttl_edges / 1000 / 3600,
         ttl_vs_timestamp,
         norm="log",
     )
     ax1.set_title("Object Time-to-Live (TTL) vs Timestamp")
     ax1.set_ylabel("Object Time-to-Live (TTL) [h]")
-    ax1.set_xlabel("Timestamp [h]")
+    ax1.set_xlabel("Timestamp [day]")
 
     # Set the y_lim after plotting so that it doesn't cause it to be capped at 1.
     # TODO Actively share y-axis between ax0 and ax1
@@ -273,9 +277,9 @@ def plot_independent(
 
     time_hist = np.sum(hist, axis=(0, 1))
     # Smooth the log-plot by converting zeros to ones.
-    ax2.semilogy(timestamp_edges[:-1] / 1000 / 3600, time_hist + 1)
+    ax2.semilogy(timestamp_edges[:-1] / 1000 / 3600 / 24, time_hist + 1)
     ax2.set_title("Object Timestamp Histogram")
-    ax2.set_xlabel("Time [h]")
+    ax2.set_xlabel("Time [day]")
     ax2.set_ylabel("Log-Frequency")
 
     # Set the y_lim after plotting so that it doesn't cause it to be capped at 1.
