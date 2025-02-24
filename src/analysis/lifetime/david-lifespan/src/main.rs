@@ -134,7 +134,7 @@ where
         let label = fmt::memory(*cache_size, Some(2));
 
         for &lifespan in lifespans {
-            plot.add(&label, lifespan / 3_600_000);
+            plot.add(&label, lifespan as f64 / 3_600_000 as f64);
         }
     }
 
