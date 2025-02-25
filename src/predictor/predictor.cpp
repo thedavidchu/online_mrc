@@ -118,6 +118,11 @@ public:
     double const ttl_only_;
     double const lru_only_;
 
+    // LRU Oracle
+
+    size_t lru_size_;
+    List lru_list_;
+
     uint64_t guessed_lru_ = 0;
     uint64_t guessed_ttl_ = 0;
 
