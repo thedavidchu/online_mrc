@@ -15,11 +15,11 @@ use parse_size::parse_size;
 
 use kwik::{
     file::{
-        binary::{BinaryReader, SizedChunk},
         FileReader,
+        binary::{BinaryReader, SizedChunk},
     },
     fmt,
-    plot::{box_plot::BoxPlot, Figure, Plot},
+    plot::{Figure, Plot, box_plot::BoxPlot},
     progress::{Progress, Tag},
 };
 
@@ -47,17 +47,46 @@ struct Object {
     size: u32,
 }
 
+#[allow(dead_code)]
+fn linspace(max_size: u64, max_num_steps: u64) -> Vec<u64> {
+    let mut space = Vec::<u64>::new();
+    let step = max_size / max_num_steps as u64;
+    for cache_size in (step..=max_size).step_by(step as usize) {
+        if cache_size == 0 {
+            println!("Get cache size of 0");
+            continue;
+        }
+        space.push(cache_size);
+    }
+    space
+}
+
+#[allow(dead_code)]
+fn logspace(max_size: u64, max_num_steps: u64) -> Vec<u64> {
+    let mut space = Vec::<u64>::new();
+    for i in 1..=max_num_steps {
+        let cache_size = max_size / (1 << (max_num_steps - i));
+        if cache_size == 0 {
+            println!("Get cache size of 0");
+            continue;
+        }
+        space.push(cache_size)
+    }
+    space
+}
+
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let max_size = parse_size(&args.max_size)?;
-    let step = max_size / args.num_steps as u64;
 
     println!("{}\n", args.path.to_str().unwrap_or_default());
 
-    let mut sized_lifespans = Vec::<(u64, Vec<u64>)>::new();
+    let mut sized_lifespans = Vec::<(String, Vec<u64>)>::new();
 
-    for cache_size in (step..=max_size).step_by(step as usize) {
+    sized_lifespans.push(("TTL (all)".to_string(), get_ttls(&args.path)?));
+
+    for cache_size in logspace(max_size, args.num_steps as u64) {
         println!("Cache size: {}", fmt::memory(cache_size, Some(2)));
 
         let reader = BinaryReader::<Access>::from_path(&args.path)?;
@@ -113,7 +142,8 @@ fn main() -> anyhow::Result<()> {
             }
         }
 
-        sized_lifespans.push((cache_size, lifespans));
+        let label = fmt::memory(cache_size, Some(2));
+        sized_lifespans.push((label, lifespans));
     }
 
     plot(&args.output, &sized_lifespans)?;
@@ -121,7 +151,27 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn plot<P>(path: P, sized_lifespans: &[(u64, Vec<u64>)]) -> io::Result<()>
+fn get_ttls(path: &PathBuf) -> anyhow::Result<Vec<u64>> {
+    println!("Time-to-Live");
+    let reader = BinaryReader::<Access>::from_path(&path)?;
+    let mut progress = Progress::new(reader.size())
+        .with_tag(Tag::Tps)
+        .with_tag(Tag::Eta)
+        .with_tag(Tag::Time);
+
+    let mut lifespans = Vec::<u64>::new();
+    for access in reader {
+        progress.tick(Access::size());
+        // The Twitter traces only have TTLs with the PUT requests, so
+        // we must not ignore those ones.
+        if let Some(ttl) = access.ttl {
+            lifespans.push(ttl as u64 * 1000u64);
+        }
+    }
+    Ok(lifespans)
+}
+
+fn plot<P>(path: P, sized_lifespans: &[(String, Vec<u64>)]) -> io::Result<()>
 where
     P: AsRef<Path>,
 {
@@ -130,9 +180,7 @@ where
         .with_y_label("Lifetime (hrs)")
         .with_format_y_log(true);
 
-    for (cache_size, lifespans) in sized_lifespans {
-        let label = fmt::memory(*cache_size, Some(2));
-
+    for (label, lifespans) in sized_lifespans {
         for &lifespan in lifespans {
             plot.add(&label, lifespan as f64 / 3_600_000 as f64);
         }
