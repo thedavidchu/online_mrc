@@ -39,6 +39,9 @@ struct Args {
 
     #[arg(short, long)]
     output: PathBuf,
+
+    #[arg(long, action)]
+    logspace: bool,
 }
 
 struct Object {
@@ -47,7 +50,6 @@ struct Object {
     size: u32,
 }
 
-#[allow(dead_code)]
 fn linspace(max_size: u64, max_num_steps: u64) -> Vec<u64> {
     let mut space = Vec::<u64>::new();
     let step = max_size / max_num_steps as u64;
@@ -61,7 +63,6 @@ fn linspace(max_size: u64, max_num_steps: u64) -> Vec<u64> {
     space
 }
 
-#[allow(dead_code)]
 fn logspace(max_size: u64, max_num_steps: u64) -> Vec<u64> {
     let mut space = Vec::<u64>::new();
     for i in 1..=max_num_steps {
@@ -86,7 +87,13 @@ fn main() -> anyhow::Result<()> {
 
     sized_lifespans.push(("TTL (all)".to_string(), get_ttls(&args.path)?));
 
-    for cache_size in logspace(max_size, args.num_steps as u64) {
+    let spacing = if args.logspace {
+        logspace(max_size, args.num_steps as u64)
+    } else {
+        linspace(max_size, args.num_steps as u64)
+    };
+
+    for cache_size in spacing {
         println!("Cache size: {}", fmt::memory(cache_size, Some(2)));
 
         let reader = BinaryReader::<Access>::from_path(&args.path)?;
