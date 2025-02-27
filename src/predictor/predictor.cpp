@@ -10,10 +10,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <sys/types.h>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "cache_metadata/cache_access.hpp"
@@ -24,6 +26,8 @@
 #include "math/saturation_arithmetic.h"
 #include "trace/reader.h"
 
+#include "list/lifetime_thresholds.hpp"
+
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
@@ -32,6 +36,76 @@ bool const DEBUG = false;
 enum class EvictionCause {
     LRU,
     TTL,
+};
+
+class LifeTimeCache {
+public:
+    LifeTimeCache(size_t const capacity, double const uncertainty)
+        : capacity_(capacity),
+          thresholds_(uncertainty)
+    {
+    }
+
+    bool
+    contains(uint64_t const key)
+    {
+        // This is just to make sure I really do return 'true' or 'false'.
+        return map_.count(key) ? true : false;
+    }
+
+    void
+    access(CacheAccess const &access)
+    {
+        if (!first_time_ms_.has_value()) {
+            first_time_ms_ = access.timestamp_ms;
+        }
+        current_time_ms_ = access.timestamp_ms;
+
+        if (map_.count(access.key)) {
+            map_.at(access.key).visit(access.timestamp_ms, {});
+        } else {
+            if (access.size_bytes > capacity_) {
+                // Skip objects that are too large for the cache!
+                return;
+            }
+            while (size_ + access.size_bytes > capacity_) {
+                auto x = lru_cache_.remove_head();
+                auto &node = map_.at(x->key);
+                size_ -= node.size_;
+                thresholds_.register_cache_eviction(current_time_ms_ -
+                                                        node.insertion_time_ms_,
+                                                    node.size_);
+                // Erase everything
+                map_.erase(x->key);
+                std::free(x);
+            }
+            map_.emplace(access.key, CacheAccess{access});
+        }
+    }
+
+    std::pair<uint64_t, uint64_t>
+    get_time_thresholds()
+    {
+        auto r = thresholds_.get_thresholds();
+        assert(r.first <= r.second);
+        return r;
+    }
+
+private:
+    // Maximum number of bytes in the cache.
+    size_t const capacity_;
+    // Number of bytes in the current cache.
+    size_t size_ = 0;
+
+    std::optional<uint64_t> first_time_ms_ = std::nullopt;
+    uint64_t current_time_ms_ = 0;
+
+    // Maps key to [last access time, expiration time]
+    std::unordered_map<uint64_t, CacheMetadata> map_;
+    // Maps last access time to keys.
+    List lru_cache_;
+
+    LifeTimeThresholds thresholds_;
 };
 
 class EvictionPredictor {
@@ -45,34 +119,24 @@ public:
     {
     }
 
-    /// @brief  Decide whether to store in the LRU queue.
+    /// @brief  Record a store in the LRU queue.
     /// @param access: CacheAccess const & - cache access.
     /// @param dt: uint64_t const - time the cache has been alive.
     bool
-    store_lru(CacheAccess const &access, uint64_t const dt)
+    record_store_lru()
     {
-        (void)dt;
-        if (access.ttl_ms >= ttl_only_) {
-            ++guessed_lru_;
-            return true;
-        } else {
-            return false;
-        }
+        ++guessed_lru_;
+        return true;
     }
 
-    /// @brief  Decide whether to store in the TTL queue.
+    /// @brief  Record a store in the TTL queue.
     /// @param access: CacheAccess const & - cache access.
     /// @param dt: uint64_t const - time the cache has been alive.
     bool
-    store_ttl(CacheAccess const &access, uint64_t const dt)
+    record_store_ttl()
     {
-        (void)dt;
-        if (access.ttl_ms <= lru_only_) {
-            ++guessed_ttl_;
-            return true;
-        } else {
-            return false;
-        }
+        ++guessed_ttl_;
+        return true;
     }
 
     void
@@ -119,7 +183,6 @@ public:
     double const lru_only_;
 
     // LRU Oracle
-
     size_t lru_size_;
     List lru_list_;
 
@@ -144,17 +207,28 @@ public:
     size_t sq_wrong_exp_ = 0;
 };
 
+template <typename K, typename V>
+static auto
+find_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
+{
+    for (auto it = me.lower_bound(k); it != me.upper_bound(k); ++it) {
+        if (it->second == v) {
+            return it;
+        }
+    }
+    return me.end();
+}
+
 /// @brief  Remove a specific <key, value> pair from a multimap,
 ///         specifically the first instance of that pair.
 template <typename K, typename V>
 static bool
 remove_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
 {
-    for (auto it = me.lower_bound(k); it != me.upper_bound(k); ++it) {
-        if (it->second == v) {
-            me.erase(it);
-            return true;
-        }
+    auto it = find_multimap_kv(me, k, v);
+    if (it != me.end()) {
+        me.erase(it);
+        return true;
     }
     return false;
 }
@@ -169,54 +243,75 @@ private:
                first_time_ms_.value_or(access.timestamp_ms);
     }
 
+    /// @brief  Insert an object into the cache.
     void
     insert(CacheAccess const &access)
     {
         ++num_insertions_;
+        uint64_t const ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
         uint64_t const expiration_time_ms =
             saturation_add(access.timestamp_ms,
                            access.ttl_ms.value_or(UINT64_MAX));
         if (!first_time_ms_.has_value()) {
             first_time_ms_ = access.timestamp_ms;
         }
-        uint64_t const up = uptime(access);
         map_.emplace(access.key,
                      CacheMetadata{access.size_bytes,
                                    access.timestamp_ms,
                                    expiration_time_ms});
-        if (predictor_.store_lru(access, up)) {
+        if (num_insertions_ % (1 << 20) == 0) {
+            lifetime_cache_.get_time_thresholds();
+        }
+        auto r = lifetime_cache_.get_time_thresholds();
+        if (ttl_ms >= r.first) {
+            predictor_.record_store_lru();
             lru_cache_.access(access.key);
         }
-        if (predictor_.store_ttl(access, up)) {
+        if (ttl_ms <= r.second) {
+            predictor_.record_store_ttl();
             ttl_cache_.emplace(expiration_time_ms, access.key);
         }
         size_ += access.size_bytes;
         inserted_bytes_ += access.size_bytes;
     }
 
+    /// @brief  Process an access to an item in the cache.
     bool
     update(CacheAccess const &access)
     {
         ++num_updates_;
         auto &metadata = map_.at(access.key);
-        // NOTE I do not allow the TTL to be updated after the first
-        //      insertion. This is to simplify semantics.
         metadata.visit(access.timestamp_ms, {});
-        // TODO Update the TTL vs LRU decision.
-        // Update the LRU cache if the key is stored, otherwise, not!
-        if (lru_cache_.get(access.key)) {
+        // We want the new TTL after the access.
+        uint64_t const ttl_ms = metadata.ttl_ms();
+
+        auto r = lifetime_cache_.get_time_thresholds();
+        if (ttl_ms >= r.first) {
+            predictor_.record_store_lru();
             lru_cache_.access(access.key);
+        }
+        if (ttl_ms <= r.second) {
+            // Even if we don't re-insert into the TTL queue, we still
+            // want to mark it as stored.
+            predictor_.record_store_ttl();
+            // Only insert the TTL if it hasn't been inserted already.
+            if (find_multimap_kv(ttl_cache_,
+                                 metadata.expiration_time_ms_,
+                                 access.key) == ttl_cache_.end()) {
+                ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
+            }
         }
         return true;
     }
 
+    /// @brief  Evict an object in the cache (either due to the eviction
+    ///         policy or TTL expiration).
     void
     evict(uint64_t const victim_key, EvictionCause const cause)
     {
         bool erased_lru = false, erased_ttl = false;
         CacheMetadata &m = map_.at(victim_key);
         uint64_t sz_bytes = m.size_;
-        uint64_t last_access = m.last_access_time_ms_;
         uint64_t exp_tm = m.expiration_time_ms_;
 
         // Update metadata tracking
@@ -232,10 +327,7 @@ private:
             break;
         case EvictionCause::TTL:
             expired_bytes_ += sz_bytes;
-            // NOTE If there is never an evicted object, then this will
-            //      always evaluate to true. However, that's not what we
-            //      want...
-            if (last_evicted_ <= last_access) {
+            if (lifetime_cache_.contains(victim_key)) {
                 predictor_.update_correctly_expired(sz_bytes);
             } else {
                 predictor_.update_wrongly_expired(sz_bytes);
@@ -277,7 +369,7 @@ private:
     }
 
     bool
-    ensure_enough_room(size_t const nbytes)
+    ensure_enough_room(size_t const nbytes, List &lru_cache)
     {
         // NOTE I need to check this for the empty cache because
         //      otherwise, we skip right over the for-loop and return
@@ -300,13 +392,12 @@ private:
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
         // Otherwise, make room in the cache for the new object.
-        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+        for (auto n = lru_cache.begin(); n != lru_cache.end(); n = n->r) {
             if (evicted_bytes >= nbytes) {
                 break;
             }
             auto &m = map_.at(n->key);
             evicted_bytes += m.size_;
-            last_evicted_ = std::max(last_evicted_, m.last_access_time_ms_);
             victims.push_back(n->key);
         }
         // One cannot evict elements from the map one is iterating over.
@@ -329,7 +420,7 @@ private:
     int
     miss(CacheAccess const &access)
     {
-        if (!ensure_enough_room(access.size_bytes)) {
+        if (!ensure_enough_room(access.size_bytes, lru_cache_)) {
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
@@ -342,11 +433,14 @@ private:
     }
 
 public:
+    /// @note   The {ttl,lru}_only parameters are deprecated. This wasn't
+    ///         a particularly good idea nor was it particularly useful.
     PredictiveCache(size_t const capacity,
                     double const ttl_only,
                     double const lru_only)
         : capacity_(capacity),
-          predictor_(capacity, ttl_only, lru_only)
+          predictor_(capacity, ttl_only, lru_only),
+          lifetime_cache_(capacity, 0.25)
     {
     }
 
@@ -362,6 +456,7 @@ public:
         int err = 0;
         current_time_ms_ = access.timestamp_ms;
         evict_expired_objects(access.timestamp_ms);
+        lifetime_cache_.access(access);
         if (map_.count(access.key)) {
             hit(access);
         } else {
@@ -480,13 +575,14 @@ private:
 
     std::optional<uint64_t> first_time_ms_ = std::nullopt;
     uint64_t current_time_ms_ = 0;
-    // The maximum access time associated with any evicted object.
-    uint64_t last_evicted_ = 0;
 
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
     List lru_cache_;
+    // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
+    LifeTimeCache lifetime_cache_;
+
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;
 };
@@ -608,17 +704,11 @@ main(int argc, char *argv[])
                           6 * (size_t)1 << 30};
 
         for (auto cap : sizes) {
-            for (double ttl_only = 0.0; ttl_only < 3e6; ttl_only += 1e6) {
-                for (double lru_only = ttl_only; lru_only < 3e6;
-                     lru_only += 1e6) {
-                    assert(test_trace(
-                        CacheAccessTrace(argv[1],
-                                         parse_trace_format_string(argv[2])),
-                        cap,
-                        ttl_only,
-                        lru_only));
-                }
-            }
+            assert(test_trace(
+                CacheAccessTrace(argv[1], parse_trace_format_string(argv[2])),
+                cap,
+                0.0,
+                0.0));
         }
         std::cout << "OK!" << std::endl;
         break;
