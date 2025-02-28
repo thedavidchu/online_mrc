@@ -79,7 +79,7 @@ public:
                 map_.erase(x->key);
                 std::free(x);
             }
-            map_.emplace(access.key, CacheAccess{access});
+            map_.emplace(access.key, CacheMetadata{access});
         }
     }
 
@@ -282,7 +282,7 @@ private:
         ++num_updates_;
         auto &metadata = map_.at(access.key);
         metadata.visit(access.timestamp_ms, {});
-        // We want the new TTL after the access.
+        // We want the new TTL after the access (above).
         uint64_t const ttl_ms = metadata.ttl_ms();
 
         auto r = lifetime_cache_.get_time_thresholds();

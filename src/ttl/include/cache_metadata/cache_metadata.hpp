@@ -1,6 +1,9 @@
 /** @brief  Metadata for a cache object. */
 #pragma once
 
+#include "cache_metadata/cache_access.hpp"
+#include "math/saturation_arithmetic.h"
+
 #include <cstdint>
 #include <optional>
 #include <ostream>
@@ -45,6 +48,17 @@ struct CacheMetadata {
     {
     }
 
+    CacheMetadata(CacheAccess const &access)
+        : size_(access.size_bytes),
+          insertion_time_ms_(access.timestamp_ms),
+          last_access_time_ms_(access.timestamp_ms),
+          expiration_time_ms_(
+              saturation_add(access.timestamp_ms,
+                             access.ttl_ms.value_or(UINT64_MAX))),
+          visited(false)
+    {
+    }
+
     template <class Stream>
     void
     to_stream(Stream &s, bool const newline = false) const
@@ -74,5 +88,12 @@ struct CacheMetadata {
     unvisit()
     {
         visited = false;
+    }
+
+    /// @brief  Get the TTL from the last access.
+    uint64_t
+    ttl_ms() const
+    {
+        return expiration_time_ms_ - last_access_time_ms_;
     }
 };
