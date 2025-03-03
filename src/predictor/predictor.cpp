@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <optional>
 #include <sys/types.h>
