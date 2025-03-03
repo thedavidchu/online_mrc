@@ -579,11 +579,13 @@ private:
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
     List lru_cache_;
-    // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
-    LifeTimeCache lifetime_cache_;
 
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;
+
+public:
+    // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
+    LifeTimeCache lifetime_cache_;
 };
 
 bool
@@ -664,29 +666,30 @@ test_trace(CacheAccessTrace const &trace,
     }
     LOGGER_TIMING("finished test_trace()");
 
+    auto r = p.lifetime_cache_.get_time_thresholds();
     auto pred = p.predictor();
     std::cout << "> {\"Capacity [B]\": " << p.capacity()
-              << " , \"Max Size [B]\": " << p.max_size()
-              << " , \"Max Unique Objects\": " << p.max_unique()
-              << " , \"Uptime [ms]\": " << p.uptime()
-              << " , \"Number of Insertions\": " << p.num_insertions()
-              << " , \"Number of Updates\": " << p.num_updates()
-              << " , \"TTL Threshold\": " << ttl_only
-              << " , \"LRU Threshold\": " << lru_only
-              << " , \"Guessed LRU\": " << pred.guessed_lru_
-              << " , \"Guessed TTL\": " << pred.guessed_ttl_
-              << " , \"Correct Eviction Ops\": " << pred.correctly_evicted_ops_
-              << " , \"Correct Expiration Ops\": "
-              << pred.correctly_expired_ops_
-              << " , \"Wrong Eviction Ops\": " << pred.wrongly_evicted_ops_
-              << " , \"Wrong Expiration Ops\": " << pred.wrongly_expired_ops_
-              << " , \"Correct Eviction [B]\": "
-              << pred.correctly_evicted_bytes_
-              << " , \"Correct Expiration [B]\": "
+              << ", \"Max Size [B]\": " << p.max_size()
+              << ", \"Max Unique Objects\": " << p.max_unique()
+              << ", \"Uptime [ms]\": " << p.uptime()
+              << ", \"Number of Insertions\": " << p.num_insertions()
+              << ", \"Number of Updates\": " << p.num_updates()
+              << ", \"TTL Threshold\": " << ttl_only
+              << ", \"LRU Threshold\": " << lru_only
+              << ", \"Guessed LRU\": " << pred.guessed_lru_
+              << ", \"Guessed TTL\": " << pred.guessed_ttl_
+              << ", \"Correct Eviction Ops\": " << pred.correctly_evicted_ops_
+              << ", \"Correct Expiration Ops\": " << pred.correctly_expired_ops_
+              << ", \"Wrong Eviction Ops\": " << pred.wrongly_evicted_ops_
+              << ", \"Wrong Expiration Ops\": " << pred.wrongly_expired_ops_
+              << ", \"Correct Eviction [B]\": " << pred.correctly_evicted_bytes_
+              << ", \"Correct Expiration [B]\": "
               << pred.correctly_expired_bytes_
-              << " , \"Wrong Eviction [B]\": " << pred.wrongly_evicted_bytes_
-              << " , \"Wrong Expiration [B]\": " << pred.wrongly_expired_bytes_
-              << " , \"Miss Ratio\": " << p.miss_rate() << "}" << std::endl;
+              << ", \"Wrong Eviction [B]\": " << pred.wrongly_evicted_bytes_
+              << ", \"Wrong Expiration [B]\": " << pred.wrongly_expired_bytes_
+              << ", \"Miss Ratio\": " << p.miss_rate()
+              << ", \"Lower Threshold\": " << r.first
+              << ", \"Upper Threshold\": " << r.second << "}" << std::endl;
     return true;
 }
 
