@@ -40,6 +40,9 @@ test_lifetime_thresholds_exe = executable(
     'test_lifetime_thresholds',
     'test_lifetime_thresholds.cpp',
     include_directories: predictor_inc,
+    dependencies: [
+        common_dep,
+    ],
 )
 
 test('list_test', list_exe)

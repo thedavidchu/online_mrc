@@ -25,6 +25,7 @@
 #include "math/saturation_arithmetic.h"
 #include "trace/reader.h"
 
+#include "lib/lifetime_cache.hpp"
 #include "lib/lifetime_thresholds.hpp"
 
 using size_t = std::size_t;
@@ -37,87 +38,8 @@ enum class EvictionCause {
     TTL,
 };
 
-class LifeTimeCache {
+class PredictionTracker {
 public:
-    LifeTimeCache(size_t const capacity, double const uncertainty)
-        : capacity_(capacity),
-          thresholds_(uncertainty)
-    {
-    }
-
-    bool
-    contains(uint64_t const key)
-    {
-        // This is just to make sure I really do return 'true' or 'false'.
-        return map_.count(key) ? true : false;
-    }
-
-    void
-    access(CacheAccess const &access)
-    {
-        if (!first_time_ms_.has_value()) {
-            first_time_ms_ = access.timestamp_ms;
-        }
-        current_time_ms_ = access.timestamp_ms;
-
-        if (map_.count(access.key)) {
-            map_.at(access.key).visit(access.timestamp_ms, {});
-        } else {
-            if (access.size_bytes > capacity_) {
-                // Skip objects that are too large for the cache!
-                return;
-            }
-            while (size_ + access.size_bytes > capacity_) {
-                auto x = lru_cache_.remove_head();
-                auto &node = map_.at(x->key);
-                size_ -= node.size_;
-                thresholds_.register_cache_eviction(current_time_ms_ -
-                                                        node.insertion_time_ms_,
-                                                    node.size_);
-                // Erase everything
-                map_.erase(x->key);
-                std::free(x);
-            }
-            map_.emplace(access.key, CacheMetadata{access});
-        }
-    }
-
-    std::pair<uint64_t, uint64_t>
-    get_time_thresholds()
-    {
-        auto r = thresholds_.get_thresholds();
-        assert(r.first <= r.second);
-        return r;
-    }
-
-private:
-    // Maximum number of bytes in the cache.
-    size_t const capacity_;
-    // Number of bytes in the current cache.
-    size_t size_ = 0;
-
-    std::optional<uint64_t> first_time_ms_ = std::nullopt;
-    uint64_t current_time_ms_ = 0;
-
-    // Maps key to [last access time, expiration time]
-    std::unordered_map<uint64_t, CacheMetadata> map_;
-    // Maps last access time to keys.
-    List lru_cache_;
-
-    LifeTimeThresholds thresholds_;
-};
-
-class EvictionPredictor {
-public:
-    EvictionPredictor(size_t const capacity,
-                      double const ttl_only,
-                      double const lru_only)
-        : capacity_(capacity),
-          ttl_only_(ttl_only),
-          lru_only_(lru_only)
-    {
-    }
-
     /// @brief  Record a store in the LRU queue.
     /// @param access: CacheAccess const & - cache access.
     /// @param dt: uint64_t const - time the cache has been alive.
@@ -143,7 +65,6 @@ public:
     {
         correctly_evicted_bytes_ += bytes;
         correctly_evicted_ops_ += 1;
-        sq_corr_evict_ += bytes * bytes;
     }
 
     void
@@ -151,7 +72,6 @@ public:
     {
         correctly_expired_bytes_ += bytes;
         correctly_expired_ops_ += 1;
-        sq_corr_exp_ += bytes * bytes;
     }
 
     void
@@ -159,7 +79,6 @@ public:
     {
         wrongly_evicted_bytes_ += bytes;
         wrongly_evicted_ops_ += 1;
-        sq_wrong_evict_ += bytes * bytes;
     }
 
     void
@@ -167,23 +86,7 @@ public:
     {
         wrongly_expired_bytes_ += bytes;
         wrongly_expired_ops_ += 1;
-        sq_wrong_exp_ += bytes * bytes;
     }
-
-    // TODO Make these private? There's no real point other than safety,
-    //      which is a darn good reason. But I'd just make a setter
-    //      method anyways, which would be a waste of time.
-    size_t const capacity_;
-    // NOTE The certainty can also be made specific to the TTL policy
-    //      versus the regular eviction policy. For example, we may want
-    //      to bias toward a higher chance of including an object in the
-    //      TTL queue than the LRU queue.
-    double const ttl_only_;
-    double const lru_only_;
-
-    // LRU Oracle
-    size_t lru_size_;
-    List lru_list_;
 
     uint64_t guessed_lru_ = 0;
     uint64_t guessed_ttl_ = 0;
@@ -198,12 +101,6 @@ public:
     uint64_t correctly_expired_ops_ = 0;
     uint64_t wrongly_evicted_ops_ = 0;
     uint64_t wrongly_expired_ops_ = 0;
-
-    // These are for variance.
-    size_t sq_corr_evict_ = 0;
-    size_t sq_corr_exp_ = 0;
-    size_t sq_wrong_evict_ = 0;
-    size_t sq_wrong_exp_ = 0;
 };
 
 template <typename K, typename V>
@@ -259,9 +156,9 @@ private:
                                    access.timestamp_ms,
                                    expiration_time_ms});
         if (num_insertions_ % (1 << 20) == 0) {
-            lifetime_cache_.get_time_thresholds();
+            lifetime_cache_.thresholds();
         }
-        auto r = lifetime_cache_.get_time_thresholds();
+        auto r = lifetime_cache_.thresholds();
         if (ttl_ms >= r.first) {
             predictor_.record_store_lru();
             lru_cache_.access(access.key);
@@ -284,7 +181,7 @@ private:
         // We want the new TTL after the access (above).
         uint64_t const ttl_ms = metadata.ttl_ms();
 
-        auto r = lifetime_cache_.get_time_thresholds();
+        auto r = lifetime_cache_.thresholds();
         if (ttl_ms >= r.first) {
             predictor_.record_store_lru();
             lru_cache_.access(access.key);
@@ -434,12 +331,9 @@ private:
 public:
     /// @note   The {ttl,lru}_only parameters are deprecated. This wasn't
     ///         a particularly good idea nor was it particularly useful.
-    PredictiveCache(size_t const capacity,
-                    double const ttl_only,
-                    double const lru_only)
+    PredictiveCache(size_t const capacity, double const uncertainty)
         : capacity_(capacity),
-          predictor_(capacity, ttl_only, lru_only),
-          lifetime_cache_(capacity, 0.25)
+          lifetime_cache_(capacity, uncertainty)
     {
     }
 
@@ -545,7 +439,7 @@ public:
         return statistics_.miss_rate();
     }
 
-    EvictionPredictor const &
+    PredictionTracker const &
     predictor() const
     {
         return predictor_;
@@ -568,7 +462,7 @@ private:
     // Number of bytes expired by TTLs.
     size_t expired_bytes_ = 0;
     // Statistics related to prediction.
-    EvictionPredictor predictor_;
+    PredictionTracker predictor_;
     // Statistics related to cache performance.
     CacheStatistics statistics_;
 
@@ -591,7 +485,7 @@ public:
 bool
 test_lru()
 {
-    PredictiveCache p(2, 0.0, INFINITY);
+    PredictiveCache p(2, 0.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 10},
                               CacheAccess{1, 1, 1, 10},
                               CacheAccess{2, 2, 1, 10}};
@@ -627,7 +521,7 @@ test_lru()
 bool
 test_ttl()
 {
-    PredictiveCache p(2, 0.0, INFINITY);
+    PredictiveCache p(2, 0.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 1},
                               CacheAccess{1001, 1, 1, 10}};
     // Test initial state.
@@ -653,10 +547,9 @@ test_ttl()
 bool
 test_trace(CacheAccessTrace const &trace,
            size_t const capacity_bytes,
-           double const ttl_only,
-           double const lru_only)
+           double const uncertainty)
 {
-    PredictiveCache p(capacity_bytes, ttl_only, lru_only);
+    PredictiveCache p(capacity_bytes, uncertainty);
     LOGGER_TIMING("starting test_trace()");
     for (size_t i = 0; i < trace.size(); ++i) {
         int err = p.access(trace.get(i));
@@ -666,7 +559,7 @@ test_trace(CacheAccessTrace const &trace,
     }
     LOGGER_TIMING("finished test_trace()");
 
-    auto r = p.lifetime_cache_.get_time_thresholds();
+    auto r = p.lifetime_cache_.thresholds();
     auto pred = p.predictor();
     std::cout << "> {\"Capacity [B]\": " << p.capacity()
               << ", \"Max Size [B]\": " << p.max_size()
@@ -674,8 +567,6 @@ test_trace(CacheAccessTrace const &trace,
               << ", \"Uptime [ms]\": " << p.uptime()
               << ", \"Number of Insertions\": " << p.num_insertions()
               << ", \"Number of Updates\": " << p.num_updates()
-              << ", \"TTL Threshold\": " << ttl_only
-              << ", \"LRU Threshold\": " << lru_only
               << ", \"Guessed LRU\": " << pred.guessed_lru_
               << ", \"Guessed TTL\": " << pred.guessed_ttl_
               << ", \"Correct Eviction Ops\": " << pred.correctly_evicted_ops_
@@ -688,6 +579,8 @@ test_trace(CacheAccessTrace const &trace,
               << ", \"Wrong Eviction [B]\": " << pred.wrongly_evicted_bytes_
               << ", \"Wrong Expiration [B]\": " << pred.wrongly_expired_bytes_
               << ", \"Miss Ratio\": " << p.miss_rate()
+              << ", \"Numer of Threshold Refreshes\": "
+              << p.lifetime_cache_.refreshes()
               << ", \"Lower Threshold\": " << r.first
               << ", \"Upper Threshold\": " << r.second << "}" << std::endl;
     return true;
@@ -713,8 +606,7 @@ main(int argc, char *argv[])
             assert(test_trace(
                 CacheAccessTrace(path, parse_trace_format_string(format)),
                 cap,
-                0.0,
-                0.0));
+                0.25));
         }
         std::cout << "OK!" << std::endl;
         break;

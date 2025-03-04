@@ -7,6 +7,10 @@
 ///         shield the math dependency from the user.
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* !__cplusplus*/
+
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
@@ -22,3 +26,7 @@ doubles_are_close(double x, double y, double delta)
 {
     return fabs(x - y) < delta;
 }
+
+#ifdef __cplusplus
+}
+#endif /* !__cplusplus*/
