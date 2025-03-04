@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <tuple>
 #include <utility>
 
 using size_t = std::size_t;
@@ -38,9 +39,18 @@ private:
         return {lower, upper};
     }
 
+    /// @brief  Return if any of the things are more than 1% out of whack.
+    /// @note   How did I choose 1%? I just did, that's how.
+    bool
+    should_refresh() const
+    {
+        return true;
+    }
+
 public:
     LifeTimeThresholds(double const uncertainty)
-        : uncertainty_(uncertainty)
+        : uncertainty_(uncertainty),
+          coarse_histogram_({0, 0, 0})
     {
         assert(uncertainty >= 0.0 && uncertainty <= 0.5);
     }
@@ -53,6 +63,14 @@ public:
         (void)size;
         total_ += 1;
         histogram_[lifetime] += 1;
+
+        if (lower_threshold > lifetime) {
+            ++std::get<0>(coarse_histogram_);
+        } else if (upper_threshold > lifetime) {
+            ++std::get<1>(coarse_histogram_);
+        } else {
+            ++std::get<2>(coarse_histogram_);
+        }
     }
 
     void
@@ -61,14 +79,16 @@ public:
         auto x = recalculate_thresholds();
         lower_threshold = x.first;
         upper_threshold = x.second;
+        std::cout << "Refreshed thresholds: " << lower_threshold << ", "
+                  << upper_threshold << std::endl;
+        coarse_histogram_ = {0, 0, 0};
     }
 
     /// @note   Automatically refresh the thresholds every 1<<20.
     std::pair<uint64_t, uint64_t>
     get_thresholds()
     {
-        static uint64_t cnt = 0;
-        if (cnt++ % (1 << 20) == 0) {
+        if (should_refresh()) {
             refresh_thresholds();
         }
         return {lower_threshold, upper_threshold};
@@ -81,4 +101,7 @@ private:
 
     uint64_t total_ = 0;
     std::map<uint64_t, uint64_t> histogram_;
+    // This tells us how far off our current estimate of the thresholds
+    // may possibly be.
+    std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
 };

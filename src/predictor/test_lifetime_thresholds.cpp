@@ -1,11 +1,10 @@
-#include "list/lifetime_thresholds.hpp"
+#include "lib/lifetime_thresholds.hpp"
 
 #include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <limits>
 #include <utility>
-#include <vector>
 
 bool
 test_empty()

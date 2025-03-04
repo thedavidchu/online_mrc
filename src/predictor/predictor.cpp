@@ -25,7 +25,7 @@
 #include "math/saturation_arithmetic.h"
 #include "trace/reader.h"
 
-#include "list/lifetime_thresholds.hpp"
+#include "lib/lifetime_thresholds.hpp"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
@@ -693,6 +693,8 @@ test_trace(CacheAccessTrace const &trace,
     return true;
 }
 
+#include "lib/iterator_spaces.hpp"
+
 int
 main(int argc, char *argv[])
 {
@@ -704,13 +706,12 @@ main(int argc, char *argv[])
         std::cout << "OK!" << std::endl;
         break;
     case 3: {
-        size_t sizes[] = {(size_t)1 << 30,
-                          3 * (size_t)1 << 30,
-                          6 * (size_t)1 << 30};
-
-        for (auto cap : sizes) {
+        char const *const path = argv[1];
+        char const *const format = argv[2];
+        LOGGER_INFO("Running: %s %s", path, format);
+        for (auto cap : logspace(16 * (size_t)1 << 30, 10)) {
             assert(test_trace(
-                CacheAccessTrace(argv[1], parse_trace_format_string(argv[2])),
+                CacheAccessTrace(path, parse_trace_format_string(format)),
                 cap,
                 0.0,
                 0.0));
