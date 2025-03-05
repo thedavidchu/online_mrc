@@ -73,5 +73,8 @@ format_engineering(double const value)
         exp10 += 3;
     }
 
+    if (exp10 == 0) {
+        return std::to_string(mantissa);
+    }
     return std::to_string(mantissa) + "e" + std::to_string(exp10);
 }

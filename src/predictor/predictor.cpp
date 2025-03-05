@@ -568,24 +568,34 @@ test_trace(CacheAccessTrace const &trace,
               << format_engineering(p.num_insertions())
               << ", \"Number of Updates\": "
               << format_engineering(p.num_updates())
-              << ", \"Guessed LRU\": " << pred.guessed_lru_
-              << ", \"Guessed TTL\": " << pred.guessed_ttl_
-              << ", \"Correct Eviction Ops\": " << pred.correctly_evicted_ops_
-              << ", \"Correct Expiration Ops\": " << pred.correctly_expired_ops_
-              << ", \"Wrong Eviction Ops\": " << pred.wrongly_evicted_ops_
-              << ", \"Wrong Expiration Ops\": " << pred.wrongly_expired_ops_
-              << ", \"Correct Eviction [B]\": " << pred.correctly_evicted_bytes_
+              << ", \"Guessed LRU\": " << format_engineering(pred.guessed_lru_)
+              << ", \"Guessed TTL\": " << format_engineering(pred.guessed_ttl_)
+              << ", \"Correct Eviction Ops\": "
+              << format_engineering(pred.correctly_evicted_ops_)
+              << ", \"Correct Expiration Ops\": "
+              << format_engineering(pred.correctly_expired_ops_)
+              << ", \"Wrong Eviction Ops\": "
+              << format_engineering(pred.wrongly_evicted_ops_)
+              << ", \"Wrong Expiration Ops\": "
+              << format_engineering(pred.wrongly_expired_ops_)
+              << ", \"Correct Eviction [B]\": "
+              << format_memory_size(pred.correctly_evicted_bytes_)
               << ", \"Correct Expiration [B]\": "
-              << pred.correctly_expired_bytes_
-              << ", \"Wrong Eviction [B]\": " << pred.wrongly_evicted_bytes_
-              << ", \"Wrong Expiration [B]\": " << pred.wrongly_expired_bytes_
+              << format_memory_size(pred.correctly_expired_bytes_)
+              << ", \"Wrong Eviction [B]\": "
+              << format_memory_size(pred.wrongly_evicted_bytes_)
+              << ", \"Wrong Expiration [B]\": "
+              << format_memory_size(pred.wrongly_expired_bytes_)
               << ", \"Miss Ratio\": " << p.miss_rate()
               << ", \"Numer of Threshold Refreshes\": "
-              << p.lifetime_cache_.refreshes()
-              << ", \"Since Refresh\": " << p.lifetime_cache_.since_refresh()
-              << ", \"Evictions\": " << p.lifetime_cache_.evictions()
-              << ", \"Lower Threshold\": " << r.first
-              << ", \"Upper Threshold\": " << r.second << "}" << std::endl;
+              << format_engineering(p.lifetime_cache_.refreshes())
+              << ", \"Since Refresh\": "
+              << format_engineering(p.lifetime_cache_.since_refresh())
+              << ", \"Evictions\": "
+              << format_engineering(p.lifetime_cache_.evictions())
+              << ", \"Lower Threshold\": " << format_time(r.first)
+              << ", \"Upper Threshold\": " << format_time(r.second) << "}"
+              << std::endl;
     return true;
 }
 
