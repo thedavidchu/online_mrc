@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <optional>
 #include <sys/types.h>
 #include <utility>
@@ -57,6 +58,8 @@ public:
                 std::free(x);
             }
             map_.emplace(access.key, CacheMetadata{access});
+            lru_cache_.access(access.key);
+            size_ += access.size_bytes;
         }
     }
 
@@ -74,6 +77,18 @@ public:
     refreshes() const
     {
         return thresholds_.refreshes();
+    }
+
+    size_t
+    evictions() const
+    {
+        return thresholds_.evictions();
+    }
+
+    size_t
+    since_refresh() const
+    {
+        return thresholds_.since_refresh();
     }
 
 private:

@@ -154,9 +154,6 @@ private:
                      CacheMetadata{access.size_bytes,
                                    access.timestamp_ms,
                                    expiration_time_ms});
-        if (num_insertions_ % (1 << 20) == 0) {
-            lifetime_cache_.thresholds();
-        }
         auto r = lifetime_cache_.thresholds();
         if (ttl_ms >= r.first) {
             predictor_.record_store_lru();
@@ -543,6 +540,8 @@ test_ttl()
     return true;
 }
 
+#include "lib/format_measurement.hpp"
+
 bool
 test_trace(CacheAccessTrace const &trace,
            size_t const capacity_bytes,
@@ -560,12 +559,15 @@ test_trace(CacheAccessTrace const &trace,
 
     auto r = p.lifetime_cache_.thresholds();
     auto pred = p.predictor();
-    std::cout << "> {\"Capacity [B]\": " << p.capacity()
-              << ", \"Max Size [B]\": " << p.max_size()
-              << ", \"Max Unique Objects\": " << p.max_unique()
-              << ", \"Uptime [ms]\": " << p.uptime()
-              << ", \"Number of Insertions\": " << p.num_insertions()
-              << ", \"Number of Updates\": " << p.num_updates()
+    std::cout << "> {\"Capacity [B]\": " << format_memory_size(p.capacity())
+              << ", \"Max Size [B]\": " << format_memory_size(p.max_size())
+              << ", \"Max Unique Objects\": "
+              << format_engineering(p.max_unique())
+              << ", \"Uptime [ms]\": " << format_time(p.uptime())
+              << ", \"Number of Insertions\": "
+              << format_engineering(p.num_insertions())
+              << ", \"Number of Updates\": "
+              << format_engineering(p.num_updates())
               << ", \"Guessed LRU\": " << pred.guessed_lru_
               << ", \"Guessed TTL\": " << pred.guessed_ttl_
               << ", \"Correct Eviction Ops\": " << pred.correctly_evicted_ops_
@@ -580,6 +582,8 @@ test_trace(CacheAccessTrace const &trace,
               << ", \"Miss Ratio\": " << p.miss_rate()
               << ", \"Numer of Threshold Refreshes\": "
               << p.lifetime_cache_.refreshes()
+              << ", \"Since Refresh\": " << p.lifetime_cache_.since_refresh()
+              << ", \"Evictions\": " << p.lifetime_cache_.evictions()
               << ", \"Lower Threshold\": " << r.first
               << ", \"Upper Threshold\": " << r.second << "}" << std::endl;
     return true;

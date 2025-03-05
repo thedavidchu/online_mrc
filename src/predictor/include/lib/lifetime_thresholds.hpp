@@ -130,6 +130,18 @@ public:
         return num_refresh_;
     }
 
+    size_t
+    evictions() const
+    {
+        return total_;
+    }
+
+    size_t
+    since_refresh() const
+    {
+        return coarse_counter_;
+    }
+
 private:
     double const uncertainty_;
     uint64_t lower_threshold = 0;
