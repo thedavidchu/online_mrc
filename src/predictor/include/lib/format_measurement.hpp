@@ -33,6 +33,12 @@ format_memory_size(double const size_bytes)
            " " + SI_PREFIX_STRINGS[i];
 }
 
+/// @note   I do this in time units that I personally find useful:
+///         milliseconds, seconds, minutes, hours, days, and years.
+///         I conspicuously don't support weeks or months, because those
+///         aren't as nice to think of.
+/// @note   I rely on 'double' having 52 bits of precision, which should
+//          mean that most realistic times are not truncated.
 static inline std::string
 format_time(double const time_ms)
 {
