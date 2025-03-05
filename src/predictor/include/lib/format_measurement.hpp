@@ -36,17 +36,23 @@ format_memory_size(double const size_bytes)
 static inline std::string
 format_time(double const time_ms)
 {
-    if (time_ms >= (size_t)1000 * 60 * 60 * 24) {
-        return std::to_string(time_ms / ((size_t)1000 * 60 * 60 * 24)) + " day";
+    // NOTE I need to use a 'double' here (hence the trailing '.0')
+    //      because the number of ms/year exceeds the size of 'int'.
+    if (time_ms >= 1000.0 * 3600 * 24 * 365) {
+        return std::to_string(time_ms / (1000.0 * 3600 * 24 * 365)) + " year";
     }
-    if (time_ms >= (size_t)1000 * 60 * 60) {
-        return std::to_string(time_ms / ((size_t)1000 * 60 * 60)) + " h";
+    // NOTE I can use regular 'int' in all the below cases.
+    if (time_ms >= 1000 * 3600 * 24) {
+        return std::to_string(time_ms / (1000 * 3600 * 24)) + " day";
     }
-    if (time_ms >= (size_t)1000 * 60) {
-        return std::to_string(time_ms / ((size_t)1000 * 60)) + " min";
+    if (time_ms >= 1000 * 3660) {
+        return std::to_string(time_ms / (1000 * 3600)) + " h";
     }
-    if (time_ms >= (size_t)1000) {
-        return std::to_string(time_ms / ((size_t)1000)) + " s";
+    if (time_ms >= 1000 * 60) {
+        return std::to_string(time_ms / (1000 * 60)) + " min";
+    }
+    if (time_ms >= 1000) {
+        return std::to_string(time_ms / 1000) + " s";
     }
     return std::to_string(time_ms) + " ms";
 }
