@@ -1,0 +1,65 @@
+#pragma once
+
+#include <cassert>
+#include <cstdbool>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
+#include "arrays/array_size.h"
+
+// It would be more complicated to support larger values with exponents
+// larger than 2^64, because that exceeds the maximum of a uint64.
+std::string const SI_PREFIX_STRINGS[] =
+    {"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"};
+
+static inline std::string
+format_memory_size(double const size_bytes)
+{
+    size_t i = 0;
+    for (i = 0; i < ARRAY_SIZE(SI_PREFIX_STRINGS); ++i) {
+        if (size_bytes / ((uint64_t)1 << (i * 10)) < 1024) {
+            break;
+        }
+    }
+    // This would in theory return exbibytes for anything larger than
+    // an EiB, but due to the limits of size_t, this is not possible.
+    if (i >= ARRAY_SIZE(SI_PREFIX_STRINGS)) {
+        i = ARRAY_SIZE(SI_PREFIX_STRINGS) - 1;
+    }
+    // NOTE I formatted this for compatibility with C and C++. I dislike
+    //      many elements of C++, like the lack of designated initializers!
+    return std::to_string((double)size_bytes / ((uint64_t)1 << (i * 10))) +
+           " " + SI_PREFIX_STRINGS[i];
+}
+
+static inline std::string
+format_time(double const time_ms)
+{
+    if (time_ms >= (size_t)1000 * 60 * 60 * 24) {
+        return std::to_string(time_ms / ((size_t)1000 * 60 * 60 * 24)) + " day";
+    }
+    if (time_ms >= (size_t)1000 * 60 * 60) {
+        return std::to_string(time_ms / ((size_t)1000 * 60 * 60)) + " h";
+    }
+    if (time_ms >= (size_t)1000 * 60) {
+        return std::to_string(time_ms / ((size_t)1000 * 60)) + " min";
+    }
+    if (time_ms >= (size_t)1000) {
+        return std::to_string(time_ms / ((size_t)1000)) + " s";
+    }
+    return std::to_string(time_ms) + " ms";
+}
+
+static inline std::string
+format_engineering(double const value)
+{
+    double mantissa = value;
+    size_t exp10 = 0;
+    while (mantissa > 1000) {
+        mantissa /= 1000;
+        exp10 += 3;
+    }
+
+    return std::to_string(mantissa) + "e" + std::to_string(exp10);
+}
