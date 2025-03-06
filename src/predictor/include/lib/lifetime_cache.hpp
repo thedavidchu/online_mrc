@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <optional>
 #include <sys/types.h>
 #include <utility>
@@ -18,9 +17,12 @@ using uint64_t = std::uint64_t;
 
 class LifeTimeCache {
 public:
-    LifeTimeCache(size_t const capacity, double const uncertainty)
+    LifeTimeCache(size_t const capacity,
+                  double const uncertainty,
+                  bool const record_reaccess)
         : capacity_(capacity),
-          thresholds_(uncertainty)
+          thresholds_(uncertainty),
+          record_reaccess_(record_reaccess)
     {
     }
 
@@ -40,7 +42,13 @@ public:
         current_time_ms_ = access.timestamp_ms;
 
         if (map_.count(access.key)) {
-            map_.at(access.key).visit(access.timestamp_ms, {});
+            auto &node = map_.at(access.key);
+            if (record_reaccess_) {
+                thresholds_.register_cache_eviction(
+                    current_time_ms_ - node.last_access_time_ms_,
+                    node.size_);
+            }
+            node.visit(access.timestamp_ms, {});
         } else {
             if (access.size_bytes > capacity_) {
                 // Skip objects that are too large for the cache!
@@ -50,9 +58,15 @@ public:
                 auto x = lru_cache_.remove_head();
                 auto &node = map_.at(x->key);
                 size_ -= node.size_;
-                thresholds_.register_cache_eviction(current_time_ms_ -
-                                                        node.insertion_time_ms_,
-                                                    node.size_);
+                if (record_reaccess_) {
+                    thresholds_.register_cache_eviction(
+                        current_time_ms_ - node.last_access_time_ms_,
+                        node.size_);
+                } else {
+                    thresholds_.register_cache_eviction(
+                        current_time_ms_ - node.insertion_time_ms_,
+                        node.size_);
+                }
                 // Erase everything
                 map_.erase(x->key);
                 std::free(x);
@@ -106,4 +120,6 @@ private:
     List lru_cache_;
 
     LifeTimeThresholds thresholds_;
+
+    bool const record_reaccess_;
 };

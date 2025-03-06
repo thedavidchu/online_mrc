@@ -177,6 +177,9 @@ private:
         // We want the new TTL after the access (above).
         uint64_t const ttl_ms = metadata.ttl_ms();
 
+        if (!repredict_on_reaccess_) {
+            return true;
+        }
         auto r = lifetime_cache_.thresholds();
         if (ttl_ms >= r.first) {
             predictor_.record_store_lru();
@@ -327,9 +330,24 @@ private:
 public:
     /// @note   The {ttl,lru}_only parameters are deprecated. This wasn't
     ///         a particularly good idea nor was it particularly useful.
-    PredictiveCache(size_t const capacity, double const uncertainty)
+    /// @param  capacity: size_t - The capacity of the cache in bytes.
+    /// @param  uncertainty: double [0.0, 0.5] - The uncertainty we
+    ///         allow in the prediction? (this is poorly phrased)
+    /// @param  record_reaccess: bool
+    ///         If true, then record the lifetime as the time between
+    ///         either LRU evictions or reaccess.
+    ///         Otherwise, record the lifetime as the time between
+    ///         insertion and LRU eviction.
+    /// @param  repredict_reaccess: bool
+    ///         If true, then re-predict the queues on each reaccess.
+    ///         Otherwise, predict the queue only on insertion.
+    PredictiveCache(size_t const capacity,
+                    double const uncertainty,
+                    bool const record_reaccess,
+                    bool const repredict_reaccess)
         : capacity_(capacity),
-          lifetime_cache_(capacity, uncertainty)
+          repredict_on_reaccess_(repredict_reaccess),
+          lifetime_cache_(capacity, uncertainty, record_reaccess)
     {
     }
 
@@ -443,7 +461,9 @@ public:
 
 private:
     // Maximum number of bytes in the cache.
-    size_t capacity_;
+    size_t const capacity_;
+    bool const repredict_on_reaccess_;
+
     // Number of bytes in the current cache.
     size_t size_ = 0;
     size_t max_size_ = 0;
@@ -481,7 +501,7 @@ public:
 bool
 test_lru()
 {
-    PredictiveCache p(2, 0.0);
+    PredictiveCache p(2, 0.0, true, true);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 10},
                               CacheAccess{1, 1, 1, 10},
                               CacheAccess{2, 2, 1, 10}};
@@ -517,7 +537,7 @@ test_lru()
 bool
 test_ttl()
 {
-    PredictiveCache p(2, 0.0);
+    PredictiveCache p(2, 0.0, true, true);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 1},
                               CacheAccess{1001, 1, 1, 10}};
     // Test initial state.
@@ -547,7 +567,7 @@ test_trace(CacheAccessTrace const &trace,
            size_t const capacity_bytes,
            double const uncertainty)
 {
-    PredictiveCache p(capacity_bytes, uncertainty);
+    PredictiveCache p(capacity_bytes, uncertainty, true, true);
     LOGGER_TIMING("starting test_trace()");
     for (size_t i = 0; i < trace.size(); ++i) {
         int err = p.access(trace.get(i));
