@@ -9,9 +9,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <map>
 #include <optional>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
 #include <utility>
@@ -346,6 +348,7 @@ public:
                     bool const record_reaccess,
                     bool const repredict_reaccess)
         : capacity_(capacity),
+          record_reaccess_(record_reaccess),
           repredict_on_reaccess_(repredict_reaccess),
           lifetime_cache_(capacity, uncertainty, record_reaccess)
     {
@@ -415,6 +418,18 @@ public:
         return capacity_;
     }
 
+    bool
+    record_reaccess() const
+    {
+        return record_reaccess_;
+    }
+
+    bool
+    repredict_on_reaccess() const
+    {
+        return repredict_on_reaccess_;
+    }
+
     CacheMetadata const *
     get(uint64_t const key)
     {
@@ -462,6 +477,7 @@ public:
 private:
     // Maximum number of bytes in the cache.
     size_t const capacity_;
+    bool const record_reaccess_;
     bool const repredict_on_reaccess_;
 
     // Number of bytes in the current cache.
@@ -565,9 +581,14 @@ test_ttl()
 bool
 test_trace(CacheAccessTrace const &trace,
            size_t const capacity_bytes,
-           double const uncertainty)
+           double const uncertainty,
+           bool record_reaccess,
+           bool repredict_reaccess)
 {
-    PredictiveCache p(capacity_bytes, uncertainty, true, true);
+    PredictiveCache p(capacity_bytes,
+                      uncertainty,
+                      record_reaccess,
+                      repredict_reaccess);
     LOGGER_TIMING("starting test_trace()");
     for (size_t i = 0; i < trace.size(); ++i) {
         int err = p.access(trace.get(i));
@@ -580,6 +601,8 @@ test_trace(CacheAccessTrace const &trace,
     auto r = p.lifetime_cache_.thresholds();
     auto pred = p.predictor();
     std::cout << "> {\"Capacity [B]\": " << format_memory_size(p.capacity())
+              << ", \"Record Reaccess\": " << p.record_reaccess()
+              << ", \"Repredict on Reaccess\": " << p.repredict_on_reaccess()
               << ", \"Max Size [B]\": " << format_memory_size(p.max_size())
               << ", \"Max Unique Objects\": "
               << format_engineering(p.max_unique())
@@ -631,21 +654,30 @@ main(int argc, char *argv[])
         assert(test_ttl());
         std::cout << "OK!" << std::endl;
         break;
-    case 3: {
+    case 6: {
         char const *const path = argv[1];
         char const *const format = argv[2];
+        double const uncertainty = atof(argv[3]);
+        bool const record_reaccess =
+            strcmp(argv[4], "true") == 0 ? true : false;
+        bool const repredict_on_reaccess =
+            strcmp(argv[5], "true") == 0 ? true : false;
         LOGGER_INFO("Running: %s %s", path, format);
-        for (auto cap : logspace(16 * (size_t)1 << 30, 10)) {
+        for (auto cap : logspace((size_t)16 << 30, 10)) {
             assert(test_trace(
                 CacheAccessTrace(path, parse_trace_format_string(format)),
                 cap,
-                0.25));
+                uncertainty,
+                record_reaccess,
+                repredict_on_reaccess));
         }
         std::cout << "OK!" << std::endl;
         break;
     }
     default:
-        std::cout << "Usage: predictor [<trace> <format>]" << std::endl;
+        std::cout << "Usage: predictor [<trace> <format> <uncertainty 0.0-0.5> "
+                     "<record_reaccess true|false> <repredict true|false>]"
+                  << std::endl;
         exit(1);
     }
     return 0;
