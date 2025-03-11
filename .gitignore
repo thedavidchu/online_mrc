@@ -1,3 +1,6 @@
+# Python caches
+__pycache__/
+
 # General
 /.idea/
 /.vs/

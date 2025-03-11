@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "cache/base_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
 struct myTTLForLFU {
@@ -60,7 +60,7 @@ public:
     {
         assert(map_.size() == expiration_queue_.size());
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
         if (map_.count(access.key)) {
@@ -90,7 +90,7 @@ public:
             s.last_access_time_ms = logical_time_;
             s.ttl_s = ttl_s_;
 
-            statistics_.hit();
+            statistics_.deprecated_hit();
         } else {
             if (map_.size() >= capacity_) {
                 this->evict_soonest_expiring();
@@ -104,7 +104,7 @@ public:
                 TTLLFUCache::get_expiry_time_ms(logical_time_, ttl_s_, 0);
             expiration_queue_.emplace(eviction_time_ms, access.key);
 
-            statistics_.miss();
+            statistics_.deprecated_miss();
         }
         ++logical_time_;
         return 0;

@@ -10,8 +10,8 @@
 #include <unordered_map>
 
 #include "cache/base_cache.hpp"
-#include "cache_metadata/cache_metadata.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_metadata.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 #include "ttl/ttl.hpp"
 #include "unused/mark_unused.h"
 
@@ -107,7 +107,7 @@ public:
         assert(map_.size() == evictor_.size());
         assert(map_.size() <= capacity_);
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
 
@@ -116,10 +116,10 @@ public:
             get_expiration_time(access.timestamp_ms, FOREVER);
         if (map_.count(access.key)) {
             hit(access.timestamp_ms, access.key, expiration_time_ms);
-            statistics_.hit();
+            statistics_.deprecated_hit();
         } else {
             miss(access.timestamp_ms, access.key, expiration_time_ms);
-            statistics_.miss();
+            statistics_.deprecated_miss();
         }
         assert(map_.size() <= capacity_);
         return 0;

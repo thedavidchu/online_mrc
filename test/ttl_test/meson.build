@@ -9,6 +9,7 @@ clock_cache_test_exe = executable(
         common_dep,
         trace_dep,
         yang_cache_dep,
+        cpp_cache_dep,
     ],
 )
 
@@ -23,6 +24,7 @@ sieve_cache_test_exe = executable(
         common_dep,
         trace_dep,
         yang_cache_dep,
+        cpp_cache_dep,
     ],
 )
 

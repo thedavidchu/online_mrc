@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "cache/base_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
 class TTLFIFOCache {
@@ -46,12 +46,12 @@ public:
     {
         assert(map_.size() == expiration_queue_.size());
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
         if (map_.count(access.key)) {
             map_[access.key] = true;
-            statistics_.hit();
+            statistics_.deprecated_hit();
         } else {
             if (map_.size() >= capacity_) {
                 auto r = this->evict_ttl_fifo();
@@ -63,7 +63,7 @@ public:
                 saturation_add(logical_time_,
                                saturation_multiply(1000, ttl_s_));
             expiration_queue_.emplace(eviction_time_ms, access.key);
-            statistics_.miss();
+            statistics_.deprecated_miss();
         }
         ++logical_time_;
         return 0;

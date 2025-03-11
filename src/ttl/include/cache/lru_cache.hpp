@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "cache/base_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 
 class LRUCache {
     std::unordered_map<std::uint64_t, std::uint64_t> map_;
@@ -55,7 +55,7 @@ public:
     {
         assert(map_.size() == eviction_queue_.size());
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
         if (map_.count(access.key)) {
@@ -64,7 +64,7 @@ public:
             nh.key() = logical_time_;
             eviction_queue_.insert(std::move(nh));
             map_[access.key] = logical_time_;
-            statistics_.hit();
+            statistics_.deprecated_hit();
         } else {
             if (eviction_queue_.size() >= capacity_) {
                 this->delete_lru();
@@ -76,7 +76,7 @@ public:
                    it->second == logical_time_);
             eviction_queue_.emplace(logical_time_, access.key);
             assert(map_.size() <= capacity_);
-            statistics_.miss();
+            statistics_.deprecated_miss();
         }
         ++logical_time_;
         return 0;

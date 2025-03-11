@@ -25,3 +25,6 @@ subdir('miss_rate_curve')
 
 # Relies on 'histogram' and 'miss_rate_curve' libraries
 subdir('sampler')
+
+# Relies on 'io' and 'trace'
+subdir('cpp_cache')

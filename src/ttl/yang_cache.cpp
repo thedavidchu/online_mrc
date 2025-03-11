@@ -1,9 +1,10 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <vector>
 
-#include "cache_metadata/cache_access.hpp"
+#include "cpp_cache/cache_access.hpp"
 #include "yang_cache/yang_cache.hpp"
 // NOTE It shouldn't be this painful to include a library file, but it is...
 #include "libCacheSim/include/libCacheSim.h"
@@ -67,9 +68,9 @@ YangCache::access_item(CacheAccess const &access)
     r->obj_id = access.key;
     bool is_hit = c->get(c, r);
     if (is_hit) {
-        statistics_.hit();
+        statistics_.deprecated_hit();
     } else {
-        statistics_.miss();
+        statistics_.deprecated_miss();
     }
     return 0;
 }

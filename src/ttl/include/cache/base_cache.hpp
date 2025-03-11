@@ -10,9 +10,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cache_metadata/cache_access.hpp"
-#include "cache_metadata/cache_metadata.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_access.hpp"
+#include "cpp_cache/cache_metadata.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 
 class BaseCache {
 public:

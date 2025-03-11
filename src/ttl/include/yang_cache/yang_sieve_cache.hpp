@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "cache/base_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 
 class YangSieveCache {
 public:

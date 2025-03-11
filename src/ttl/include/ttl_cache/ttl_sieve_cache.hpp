@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "cache/base_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
 class TTLSieveCache {
@@ -77,7 +77,7 @@ public:
     {
         assert(map_.size() == ttl_queue_.size());
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
         if (map_.count(access.key)) {
@@ -90,7 +90,7 @@ public:
                 ttl_queue_.insert(std::move(nh));
                 map_[access.key] += ttl_s_;
             }
-            statistics_.hit();
+            statistics_.deprecated_hit();
         } else {
             if (map_.size() >= capacity_) {
                 auto r = this->evict_soonest_expiring();
@@ -103,7 +103,7 @@ public:
                                                   ttl_s_);
             map_[access.key] = eviction_time_ms;
             ttl_queue_.emplace(eviction_time_ms, access.key);
-            statistics_.miss();
+            statistics_.deprecated_miss();
         }
         ++logical_time_;
         return 0;

@@ -11,7 +11,7 @@
 
 #include "cache/base_cache.hpp"
 #include "cache/lru_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 
 class LFUCache {
     std::unordered_map<std::uint64_t, std::uint64_t> map_;
@@ -49,7 +49,7 @@ public:
     {
         int err = 0;
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
         // NOTE 'map_.size()' doesn't necessarily match
@@ -77,7 +77,7 @@ public:
             assert(it_next != eviction_queue_.end());
             it_next->second.access_item(access);
             map_[access.key] += 1;
-            statistics_.hit();
+            statistics_.deprecated_hit();
         } else {
             assert(map_.size() <= capacity_);
             if (map_.size() >= capacity_) {
@@ -93,7 +93,7 @@ public:
             }
             eviction_queue_.find(frq)->second.access_item(access);
             assert(map_.size() <= capacity_);
-            statistics_.miss();
+            statistics_.deprecated_miss();
         }
         assert(map_.count(access.key));
         ++logical_time_;

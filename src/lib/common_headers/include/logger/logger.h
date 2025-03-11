@@ -13,7 +13,7 @@
 //      means there is no performance overhead for unused logging (assuming
 //      effective dead code elimination).
 #define LOGGER_STREAM stdout
-#define LOGGER_LEVEL  LOGGER_LEVEL_ERROR
+#define LOGGER_LEVEL  LOGGER_LEVEL_INFO
 
 // NOTE The relationship between these levels is subject to change. But
 //      if you do go ahead and change them, you need to change the
@@ -26,10 +26,11 @@ enum LoggerLevels {
     LOGGER_LEVEL_WARN = 4,
     LOGGER_LEVEL_ERROR = 5,
     LOGGER_LEVEL_FATAL = 6,
+    LOGGER_LEVEL_TIMING = 7,
 };
 
 static char const *const LOGGER_LEVEL_STRINGS[] =
-    {"VERBOSE", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
+    {"VERBOSE", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TIMING"};
 
 static inline bool
 _logger_header(FILE *const stream,
@@ -146,6 +147,15 @@ _logger(FILE *const stream,
     _logger(LOGGER_STREAM,                                                     \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_FATAL,                                                \
+            errno,                                                             \
+            __FILE__,                                                          \
+            __LINE__,                                                          \
+            __VA_ARGS__)
+
+#define LOGGER_TIMING(...)                                                     \
+    _logger(LOGGER_STREAM,                                                     \
+            LOGGER_LEVEL,                                                      \
+            LOGGER_LEVEL_TIMING,                                               \
             errno,                                                             \
             __FILE__,                                                          \
             __LINE__,                                                          \
