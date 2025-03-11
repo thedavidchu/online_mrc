@@ -7,6 +7,7 @@ list_dep = declare_dependency(
         include_directories: predictor_inc,
         dependencies: [
             common_dep,
+            cpp_cache_dep,
         ],
     ),
     include_directories: predictor_inc,
@@ -33,6 +34,8 @@ predictor_exe = executable(
         io_dep,
         list_dep,
         trace_dep,
+        cache_statistics_dep,
+        cpp_cache_dep,
     ],
 )
 

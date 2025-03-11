@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <utility>
 
-#include "cache_metadata/cache_metadata.hpp"
+#include "cpp_cache/cache_metadata.hpp"
 #include "lib/lifetime_thresholds.hpp"
 #include "list/list.hpp"
 
@@ -17,6 +17,7 @@ using uint64_t = std::uint64_t;
 
 class LifeTimeCache {
 public:
+    /// The larger the uncertainty, the larger the threshold.
     LifeTimeCache(size_t const capacity,
                   double const uncertainty,
                   bool const record_reaccess)

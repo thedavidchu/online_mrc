@@ -1,9 +1,10 @@
-#include "lib/cache_statistics.hpp"
-#include "lib/format_measurement.hpp"
+#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_cache/format_measurement.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -100,6 +101,17 @@ CacheStatistics::expire(uint64_t const size_bytes)
     upperbound_ttl_wss_ -= size_bytes;
 }
 
+void
+CacheStatistics::deprecated_hit()
+{
+    update(1, 1);
+}
+void
+CacheStatistics::deprecated_miss()
+{
+    insert(1);
+}
+
 uint64_t
 CacheStatistics::total_ops() const
 {
@@ -148,4 +160,11 @@ CacheStatistics::json() const
        << ", \"upperbound_ttl_wss\": "
        << format_memory_size(upperbound_ttl_wss_) << "}";
     return ss.str();
+}
+
+void
+CacheStatistics::print(std::string const &name, uint64_t const capacity) const
+{
+    std::cout << name << "(capacity=" << capacity << "): " << json()
+              << std::endl;
 }

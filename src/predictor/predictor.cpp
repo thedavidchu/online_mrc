@@ -19,9 +19,9 @@
 #include <utility>
 #include <vector>
 
-#include "cache_metadata/cache_access.hpp"
-#include "cache_metadata/cache_metadata.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_access.hpp"
+#include "cpp_cache/cache_metadata.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 #include "list/list.hpp"
 #include "logger/logger.h"
 #include "math/saturation_arithmetic.h"
@@ -105,7 +105,7 @@ public:
 };
 
 template <typename K, typename V>
-static auto
+static inline auto
 find_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
 {
     for (auto it = me.lower_bound(k); it != me.upper_bound(k); ++it) {
@@ -119,7 +119,7 @@ find_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
 /// @brief  Remove a specific <key, value> pair from a multimap,
 ///         specifically the first instance of that pair.
 template <typename K, typename V>
-static bool
+static inline bool
 remove_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
 {
     auto it = find_multimap_kv(me, k, v);
@@ -144,7 +144,7 @@ private:
     void
     insert(CacheAccess const &access)
     {
-        ++num_insertions_;
+        statistics_.insert(access.size_bytes);
         uint64_t const ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
         uint64_t const expiration_time_ms =
             saturation_add(access.timestamp_ms,
@@ -166,15 +166,27 @@ private:
             ttl_cache_.emplace(expiration_time_ms, access.key);
         }
         size_ += access.size_bytes;
-        inserted_bytes_ += access.size_bytes;
     }
 
     /// @brief  Process an access to an item in the cache.
     bool
     update(CacheAccess const &access)
     {
-        ++num_updates_;
         auto &metadata = map_.at(access.key);
+        if (metadata.size_ < access.size_bytes) {
+            if (!ensure_enough_room(access.size_bytes - metadata.size_,
+                                    lru_cache_)) {
+                statistics_.skip(access.size_bytes);
+                // TODO We should evict the old object, but this is too
+                //      much work.
+                if (DEBUG) {
+                    LOGGER_WARN("too big updated object");
+                }
+                return false;
+            }
+        }
+
+        statistics_.update(metadata.size_, access.size_bytes);
         metadata.visit(access.timestamp_ms, {});
         // We want the new TTL after the access (above).
         uint64_t const ttl_ms = metadata.ttl_ms();
@@ -214,7 +226,7 @@ private:
         // Update metadata tracking
         switch (cause) {
         case EvictionCause::LRU:
-            evicted_bytes_ += sz_bytes;
+            statistics_.evict(m.size_);
             if (current_time_ms_ <= exp_tm) {
                 // Not yet expired.
                 predictor_.update_correctly_evicted(sz_bytes);
@@ -223,7 +235,7 @@ private:
             }
             break;
         case EvictionCause::TTL:
-            expired_bytes_ += sz_bytes;
+            statistics_.expire(m.size_);
             if (lifetime_cache_.contains(victim_key)) {
                 predictor_.update_correctly_expired(sz_bytes);
             } else {
@@ -311,7 +323,6 @@ private:
         if (DEBUG && !r) {
             LOGGER_ERROR("could not update on hit");
         }
-        statistics_.hit(access.size_bytes);
     }
 
     int
@@ -321,11 +332,10 @@ private:
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
-            statistics_.miss(access.size_bytes);
+            statistics_.skip(access.size_bytes);
             return -1;
         }
         insert(access);
-        statistics_.miss(access.size_bytes);
         return 0;
     }
 
@@ -365,6 +375,7 @@ public:
     {
         int err = 0;
         current_time_ms_ = access.timestamp_ms;
+        assert(size_ == statistics_.size_);
         evict_expired_objects(access.timestamp_ms);
         lifetime_cache_.access(access);
         if (map_.count(access.key)) {
@@ -377,8 +388,6 @@ public:
                 return -1;
             }
         }
-        max_size_ = std::max(max_size_, size_);
-        max_unique_ = std::max(max_unique_, map_.size());
         return 0;
     }
 
@@ -386,30 +395,6 @@ public:
     size() const
     {
         return size_;
-    }
-
-    size_t
-    max_size() const
-    {
-        return max_size_;
-    }
-
-    size_t
-    max_unique() const
-    {
-        return max_unique_;
-    }
-
-    size_t
-    num_insertions() const
-    {
-        return num_insertions_;
-    }
-
-    size_t
-    num_updates() const
-    {
-        return num_updates_;
     }
 
     size_t
@@ -456,22 +441,16 @@ public:
         std::cout << "\n";
     }
 
-    void
-    print_statistics() const
-    {
-        statistics_.print("PredictiveLRU", size_);
-    }
-
-    double
-    miss_rate() const
-    {
-        return statistics_.miss_rate();
-    }
-
     PredictionTracker const &
     predictor() const
     {
         return predictor_;
+    }
+
+    CacheStatistics const &
+    statistics() const
+    {
+        return statistics_;
     }
 
 private:
@@ -482,17 +461,6 @@ private:
 
     // Number of bytes in the current cache.
     size_t size_ = 0;
-    size_t max_size_ = 0;
-    size_t max_unique_ = 0;
-    size_t num_insertions_ = 0;
-    size_t num_updates_ = 0;
-
-    // Number of bytes inserted into the cache.
-    size_t inserted_bytes_ = 0;
-    // Number of bytes evicted by ordering algorithm.
-    size_t evicted_bytes_ = 0;
-    // Number of bytes expired by TTLs.
-    size_t expired_bytes_ = 0;
     // Statistics related to prediction.
     PredictionTracker predictor_;
     // Statistics related to cache performance.
@@ -576,7 +544,8 @@ test_ttl()
     return true;
 }
 
-#include "lib/format_measurement.hpp"
+#include "cpp_cache/cache_trace.hpp"
+#include "cpp_cache/format_measurement.hpp"
 
 bool
 test_trace(CacheAccessTrace const &trace,
@@ -600,17 +569,19 @@ test_trace(CacheAccessTrace const &trace,
 
     auto r = p.lifetime_cache_.thresholds();
     auto pred = p.predictor();
+    auto stat = p.statistics();
+    std::cout << stat.json() << std::endl;
     std::cout << "> {\"Capacity [B]\": " << format_memory_size(p.capacity())
               << ", \"Record Reaccess\": " << p.record_reaccess()
               << ", \"Repredict on Reaccess\": " << p.repredict_on_reaccess()
-              << ", \"Max Size [B]\": " << format_memory_size(p.max_size())
-              << ", \"Max Unique Objects\": "
-              << format_engineering(p.max_unique())
+              << ", \"Max Size [B]\": " << format_memory_size(stat.max_size_)
+              << ", \"Max Resident Objects\": "
+              << format_engineering(stat.max_resident_objs_)
               << ", \"Uptime [ms]\": " << format_time(p.uptime())
               << ", \"Number of Insertions\": "
-              << format_engineering(p.num_insertions())
+              << format_engineering(stat.insert_ops_)
               << ", \"Number of Updates\": "
-              << format_engineering(p.num_updates())
+              << format_engineering(stat.update_ops_)
               << ", \"Guessed LRU\": " << format_engineering(pred.guessed_lru_)
               << ", \"Guessed TTL\": " << format_engineering(pred.guessed_ttl_)
               << ", \"Correct Eviction Ops\": "
@@ -629,7 +600,7 @@ test_trace(CacheAccessTrace const &trace,
               << format_memory_size(pred.wrongly_evicted_bytes_)
               << ", \"Wrong Expiration [B]\": "
               << format_memory_size(pred.wrongly_expired_bytes_)
-              << ", \"Miss Ratio\": " << p.miss_rate()
+              << ", \"Miss Ratio\": " << stat.miss_rate()
               << ", \"Numer of Threshold Refreshes\": "
               << format_engineering(p.lifetime_cache_.refreshes())
               << ", \"Since Refresh\": "
@@ -643,6 +614,18 @@ test_trace(CacheAccessTrace const &trace,
 }
 
 #include "lib/iterator_spaces.hpp"
+
+bool
+atob_or_panic(char const *const a)
+{
+    if (strcmp(a, "true") == 0) {
+        return true;
+    }
+    if (strcmp(a, "false") == 0) {
+        return false;
+    }
+    assert(0 && "unexpected 'true' or 'false'");
+}
 
 int
 main(int argc, char *argv[])
@@ -658,10 +641,8 @@ main(int argc, char *argv[])
         char const *const path = argv[1];
         char const *const format = argv[2];
         double const uncertainty = atof(argv[3]);
-        bool const record_reaccess =
-            strcmp(argv[4], "true") == 0 ? true : false;
-        bool const repredict_on_reaccess =
-            strcmp(argv[5], "true") == 0 ? true : false;
+        bool const record_reaccess = atob_or_panic(argv[4]);
+        bool const repredict_on_reaccess = atob_or_panic(argv[5]);
         LOGGER_INFO("Running: %s %s", path, format);
         for (auto cap : logspace((size_t)16 << 30, 10)) {
             assert(test_trace(

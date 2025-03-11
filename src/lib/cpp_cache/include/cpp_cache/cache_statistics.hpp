@@ -24,6 +24,12 @@ public:
     void
     expire(uint64_t const size_bytes);
 
+    // Deprecated, but useful for legacy TTL code.
+    void
+    deprecated_hit();
+    void
+    deprecated_miss();
+
     // === Aggregate access methods ===
 
     uint64_t
@@ -35,6 +41,10 @@ public:
 
     std::string
     json() const;
+
+    // Deprecated
+    void
+    print(std::string const &name, uint64_t const capacity) const;
 
 public:
     uint64_t skip_ops_ = 0;

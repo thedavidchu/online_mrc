@@ -29,8 +29,9 @@ format_memory_size(double const size_bytes)
     }
     // NOTE I formatted this for compatibility with C and C++. I dislike
     //      many elements of C++, like the lack of designated initializers!
-    return std::to_string((double)size_bytes / ((uint64_t)1 << (i * 10))) +
-           " " + SI_PREFIX_STRINGS[i];
+    return "\"" +
+           std::to_string((double)size_bytes / ((uint64_t)1 << (i * 10))) +
+           " " + SI_PREFIX_STRINGS[i] + "\"";
 }
 
 /// @note   I do this in time units that I personally find useful:
@@ -45,22 +46,23 @@ format_time(double const time_ms)
     // NOTE I need to use a 'double' here (hence the trailing '.0')
     //      because the number of ms/year exceeds the size of 'int'.
     if (time_ms >= 1000.0 * 3600 * 24 * 365) {
-        return std::to_string(time_ms / (1000.0 * 3600 * 24 * 365)) + " year";
+        return "\"" + std::to_string(time_ms / (1000.0 * 3600 * 24 * 365)) +
+               " year\"";
     }
     // NOTE I can use regular 'int' in all the below cases.
     if (time_ms >= 1000 * 3600 * 24) {
-        return std::to_string(time_ms / (1000 * 3600 * 24)) + " day";
+        return "\"" + std::to_string(time_ms / (1000 * 3600 * 24)) + " day\"";
     }
     if (time_ms >= 1000 * 3660) {
-        return std::to_string(time_ms / (1000 * 3600)) + " h";
+        return "\"" + std::to_string(time_ms / (1000 * 3600)) + " h\"";
     }
     if (time_ms >= 1000 * 60) {
-        return std::to_string(time_ms / (1000 * 60)) + " min";
+        return "\"" + std::to_string(time_ms / (1000 * 60)) + " min\"";
     }
     if (time_ms >= 1000) {
-        return std::to_string(time_ms / 1000) + " s";
+        return "\"" + std::to_string(time_ms / 1000) + " s\"";
     }
-    return std::to_string(time_ms) + " ms";
+    return "\"" + std::to_string(time_ms) + " ms\"";
 }
 
 static inline std::string

@@ -5,7 +5,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <ostream>
 
 /// @brief  Initialize metadata for unit-sized value size.
 CacheMetadata::CacheMetadata(std::uint64_t const insertion_time_ms,
@@ -37,20 +36,6 @@ CacheMetadata::CacheMetadata(CacheAccess const &access)
                                          access.ttl_ms.value_or(UINT64_MAX))),
       visited(false)
 {
-}
-
-template <class Stream>
-void
-CacheMetadata::to_stream(Stream &s, bool const newline) const
-{
-    s << "CacheMetadata(frequency=" << frequency_ << ",";
-    s << "insertion_time[ms]=" << insertion_time_ms_ << ",";
-    s << "last_access_time[ms]=" << last_access_time_ms_ << ",";
-    s << "expiration_time[ms]=" << expiration_time_ms_ << ",";
-    s << "visited=" << visited << ")";
-    if (newline) {
-        s << std::endl;
-    }
 }
 
 void

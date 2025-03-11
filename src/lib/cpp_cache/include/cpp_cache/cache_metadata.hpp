@@ -4,6 +4,7 @@
 #include "cpp_cache/cache_access.hpp"
 
 #include <cstdint>
+#include <iostream>
 #include <optional>
 
 struct CacheMetadata {
@@ -37,7 +38,17 @@ struct CacheMetadata {
 
     template <class Stream>
     void
-    to_stream(Stream &s, bool const newline = false) const;
+    to_stream(Stream &s, bool const newline = false) const
+    {
+        s << "CacheMetadata(frequency=" << frequency_ << ",";
+        s << "insertion_time[ms]=" << insertion_time_ms_ << ",";
+        s << "last_access_time[ms]=" << last_access_time_ms_ << ",";
+        s << "expiration_time[ms]=" << expiration_time_ms_ << ",";
+        s << "visited=" << visited << ")";
+        if (newline) {
+            s << std::endl;
+        }
+    }
 
     void
     visit(std::uint64_t const access_time_ms,

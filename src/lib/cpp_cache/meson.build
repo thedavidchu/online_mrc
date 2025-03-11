@@ -35,6 +35,17 @@ cache_metadata_dep = declare_dependency(
     ],
 )
 
+# Cache Statistics
+cache_statistics_dep = declare_dependency(
+    link_with: library(
+        'cache_statistics_lib',
+        'cache_statistics.cpp',
+        include_directories: [cpp_cache_inc],
+        dependencies: common_dep,
+    ),
+    include_directories: cpp_cache_inc,
+)
+
 # Cache Trace
 cache_trace_dep = declare_dependency(
     link_with: library(
@@ -59,6 +70,7 @@ cpp_cache_dep = declare_dependency(
     dependencies: [
         cache_access_dep,
         cache_metadata_dep,
+        cache_statistics_dep,
         cache_trace_dep,
     ],
     include_directories: cpp_cache_inc,
