@@ -4,7 +4,6 @@
 /// 3. How to do certainty?
 /// 4. This is really slow. Profile it to see how long the LRU stack is
 ///     taking...
-#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -27,108 +26,13 @@
 #include "math/saturation_arithmetic.h"
 #include "trace/reader.h"
 
+#include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
+#include "lib/prediction_tracker.hpp"
+#include "lib/util.hpp"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
-
-bool const DEBUG = false;
-
-enum class EvictionCause {
-    LRU,
-    TTL,
-};
-
-class PredictionTracker {
-public:
-    /// @brief  Record a store in the LRU queue.
-    /// @param access: CacheAccess const & - cache access.
-    /// @param dt: uint64_t const - time the cache has been alive.
-    bool
-    record_store_lru()
-    {
-        ++guessed_lru_;
-        return true;
-    }
-
-    /// @brief  Record a store in the TTL queue.
-    /// @param access: CacheAccess const & - cache access.
-    /// @param dt: uint64_t const - time the cache has been alive.
-    bool
-    record_store_ttl()
-    {
-        ++guessed_ttl_;
-        return true;
-    }
-
-    void
-    update_correctly_evicted(size_t const bytes)
-    {
-        correctly_evicted_bytes_ += bytes;
-        correctly_evicted_ops_ += 1;
-    }
-
-    void
-    update_correctly_expired(size_t const bytes)
-    {
-        correctly_expired_bytes_ += bytes;
-        correctly_expired_ops_ += 1;
-    }
-
-    void
-    update_wrongly_evicted(size_t const bytes)
-    {
-        wrongly_evicted_bytes_ += bytes;
-        wrongly_evicted_ops_ += 1;
-    }
-
-    void
-    update_wrongly_expired(size_t const bytes)
-    {
-        wrongly_expired_bytes_ += bytes;
-        wrongly_expired_ops_ += 1;
-    }
-
-    uint64_t guessed_lru_ = 0;
-    uint64_t guessed_ttl_ = 0;
-
-    uint64_t correctly_evicted_bytes_ = 0;
-    uint64_t correctly_expired_bytes_ = 0;
-    uint64_t wrongly_evicted_bytes_ = 0;
-    uint64_t wrongly_expired_bytes_ = 0;
-
-    // Track the number of correct/wrong operations
-    uint64_t correctly_evicted_ops_ = 0;
-    uint64_t correctly_expired_ops_ = 0;
-    uint64_t wrongly_evicted_ops_ = 0;
-    uint64_t wrongly_expired_ops_ = 0;
-};
-
-template <typename K, typename V>
-static inline auto
-find_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
-{
-    for (auto it = me.lower_bound(k); it != me.upper_bound(k); ++it) {
-        if (it->second == v) {
-            return it;
-        }
-    }
-    return me.end();
-}
-
-/// @brief  Remove a specific <key, value> pair from a multimap,
-///         specifically the first instance of that pair.
-template <typename K, typename V>
-static inline bool
-remove_multimap_kv(std::multimap<K, V> &me, K const k, V const v)
-{
-    auto it = find_multimap_kv(me, k, v);
-    if (it != me.end()) {
-        me.erase(it);
-        return true;
-    }
-    return false;
-}
 
 class PredictiveCache {
 private:
@@ -454,6 +358,8 @@ public:
     }
 
 private:
+    static constexpr bool DEBUG = false;
+
     // Maximum number of bytes in the cache.
     size_t const capacity_;
     bool const record_reaccess_;
@@ -614,18 +520,6 @@ test_trace(CacheAccessTrace const &trace,
 }
 
 #include "lib/iterator_spaces.hpp"
-
-bool
-atob_or_panic(char const *const a)
-{
-    if (strcmp(a, "true") == 0) {
-        return true;
-    }
-    if (strcmp(a, "false") == 0) {
-        return false;
-    }
-    assert(0 && "unexpected 'true' or 'false'");
-}
 
 int
 main(int argc, char *argv[])
