@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "math/saturation_arithmetic.h"
@@ -62,7 +62,7 @@ run_ttl_modified_clock_cache(char const *const trace_path,
         }
 
         if (capacity == 0) {
-            statistics.miss();
+            statistics.deprecated_miss();
             continue;
         }
 
@@ -93,7 +93,7 @@ run_ttl_modified_clock_cache(char const *const trace_path,
             s.last_access_time_ms = r.item.timestamp_ms;
             s.ttl_s = ttl_s;
 
-            statistics.hit();
+            statistics.deprecated_hit();
         } else {
             map[r.item.key] = {
                 r.item.timestamp_ms,
@@ -105,11 +105,11 @@ run_ttl_modified_clock_cache(char const *const trace_path,
                                saturation_multiply(1000, ttl_s));
             expiration_queue.emplace(eviction_time_ms, r.item.key);
 
-            statistics.miss();
+            statistics.deprecated_miss();
         }
     }
 
-    assert(statistics.total_accesses_ < num_entries);
+    assert(statistics.total_ops() < num_entries);
     statistics.print("LRU by TTLs", capacity);
 
     MemoryMap__destroy(&mm);

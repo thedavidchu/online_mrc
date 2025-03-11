@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "cache/base_cache.hpp"
-#include "cache_metadata/cache_metadata.hpp"
+#include "cpp_cache/cache_metadata.hpp"
 #include "ttl_cache/base_ttl_cache.hpp"
 #include "unused/mark_unused.h"
 
@@ -48,7 +48,7 @@ class NewTTLClockCache : public BaseTTLCache {
         } else {
             metadata.visit(timestamp_ms, {});
         }
-        statistics_.hit();
+        statistics_.deprecated_hit();
     }
 
     void
@@ -62,7 +62,7 @@ class NewTTLClockCache : public BaseTTLCache {
         std::uint64_t exp_tm_ms = insertion_position_ms_;
         map_.emplace(key, CacheMetadata(timestamp_ms, exp_tm_ms));
         expiration_queue_.emplace(exp_tm_ms, key);
-        statistics_.miss();
+        statistics_.deprecated_miss();
         update_insertion_position_ms();
     }
 
@@ -108,7 +108,7 @@ public:
         assert(map_.size() == expiration_queue_.size());
         assert(map_.size() <= capacity_);
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
         if (map_.count(access.key)) {

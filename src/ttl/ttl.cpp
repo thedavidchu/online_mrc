@@ -69,7 +69,7 @@ run_cache(struct MemoryMap const *const mm,
 
         cache.access_item({&r.item});
     }
-    assert(cache.statistics_.total_accesses_ < num_entries);
+    assert(cache.statistics_.total_ops() < num_entries);
     cache.statistics_.print(T::name, capacity);
     return cache.statistics_.miss_rate();
 }

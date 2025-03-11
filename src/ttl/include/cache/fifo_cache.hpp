@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "cache/base_cache.hpp"
-#include "cache_statistics/cache_statistics.hpp"
+#include "cpp_cache/cache_statistics.hpp"
 
 class FIFOCache {
     std::unordered_set<std::uint64_t> map_;
@@ -32,12 +32,12 @@ public:
     access_item(CacheAccess const &access)
     {
         if (capacity_ == 0) {
-            statistics_.miss();
+            statistics_.deprecated_miss();
             return 0;
         }
 
         if (map_.count(access.key)) {
-            statistics_.hit();
+            statistics_.deprecated_hit();
             return 0;
         }
 
@@ -53,7 +53,7 @@ public:
         eviction_queue_[eviction_idx_ % capacity_] = access.key;
         ++eviction_idx_;
         assert(map_.size() <= capacity_);
-        statistics_.miss();
+        statistics_.deprecated_miss();
         return 0;
     }
 };
