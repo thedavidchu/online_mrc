@@ -101,6 +101,10 @@ public:
             ++std::get<2>(coarse_histogram_);
             ++coarse_counter_;
         }
+
+        if (should_refresh()) {
+            refresh_thresholds();
+        }
     }
 
     void
@@ -116,11 +120,8 @@ public:
 
     /// @note   Automatically refresh the thresholds when there's a mismatch.
     std::pair<uint64_t, uint64_t>
-    thresholds()
+    thresholds() const
     {
-        if (should_refresh()) {
-            refresh_thresholds();
-        }
         return {lower_threshold, upper_threshold};
     }
 

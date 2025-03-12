@@ -1,7 +1,10 @@
 #pragma once
 
+#include "cpp_cache/format_measurement.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <sstream>
+#include <string>
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
@@ -14,7 +17,7 @@ public:
     bool
     record_store_lru()
     {
-        ++guessed_lru_;
+        ++guess_lru;
         return true;
     }
 
@@ -24,49 +27,71 @@ public:
     bool
     record_store_ttl()
     {
-        ++guessed_ttl_;
+        ++guess_ttl;
         return true;
     }
 
     void
     update_correctly_evicted(size_t const bytes)
     {
-        correctly_evicted_bytes_ += bytes;
-        correctly_evicted_ops_ += 1;
+        right_evict_bytes += bytes;
+        right_evict_ops += 1;
     }
 
     void
     update_correctly_expired(size_t const bytes)
     {
-        correctly_expired_bytes_ += bytes;
-        correctly_expired_ops_ += 1;
+        right_expire_bytes += bytes;
+        right_expire_ops += 1;
     }
 
     void
     update_wrongly_evicted(size_t const bytes)
     {
-        wrongly_evicted_bytes_ += bytes;
-        wrongly_evicted_ops_ += 1;
+        wrong_evict_bytes += bytes;
+        wrong_evict_ops += 1;
     }
 
     void
     update_wrongly_expired(size_t const bytes)
     {
-        wrongly_expired_bytes_ += bytes;
-        wrongly_expired_ops_ += 1;
+        wrong_expire_bytes += bytes;
+        wrong_expire_ops += 1;
     }
 
-    uint64_t guessed_lru_ = 0;
-    uint64_t guessed_ttl_ = 0;
+    std::string
+    json() const
+    {
+        std::stringstream ss;
+        ss << "{" << "\"guess_lru\": " << format_engineering(guess_lru)
+           << ", \"guess_ttl\": " << format_engineering(guess_ttl)
+           << ", \"right_evict_ops\": " << format_engineering(right_evict_ops)
+           << ", \"right_evict_bytes\": "
+           << format_memory_size(right_evict_bytes)
+           << ", \"right_expire_ops\": " << format_engineering(right_expire_ops)
+           << ", \"right_expire_bytes\": "
+           << format_memory_size(right_expire_bytes)
+           << ", \"wrong_evict_ops\": " << format_engineering(wrong_evict_ops)
+           << ", \"wrong_evict_bytes\": "
+           << format_memory_size(wrong_evict_bytes)
+           << ", \"wrong_expire_ops\": " << format_engineering(wrong_expire_ops)
+           << ", \"wrong_expire_bytes\": "
+           << format_memory_size(wrong_expire_bytes) << "}";
+        return ss.str();
+    }
 
-    uint64_t correctly_evicted_bytes_ = 0;
-    uint64_t correctly_expired_bytes_ = 0;
-    uint64_t wrongly_evicted_bytes_ = 0;
-    uint64_t wrongly_expired_bytes_ = 0;
+    uint64_t guess_lru = 0;
+    uint64_t guess_ttl = 0;
 
-    // Track the number of correct/wrong operations
-    uint64_t correctly_evicted_ops_ = 0;
-    uint64_t correctly_expired_ops_ = 0;
-    uint64_t wrongly_evicted_ops_ = 0;
-    uint64_t wrongly_expired_ops_ = 0;
+    uint64_t right_evict_ops = 0;
+    uint64_t right_evict_bytes = 0;
+
+    uint64_t right_expire_ops = 0;
+    uint64_t right_expire_bytes = 0;
+
+    uint64_t wrong_evict_ops = 0;
+    uint64_t wrong_evict_bytes = 0;
+
+    uint64_t wrong_expire_ops = 0;
+    uint64_t wrong_expire_bytes = 0;
 };

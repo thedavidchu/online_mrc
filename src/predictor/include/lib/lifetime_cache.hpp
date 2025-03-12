@@ -80,7 +80,7 @@ public:
 
     /// @brief  Get the time thresholds in milliseconds.
     std::pair<uint64_t, uint64_t>
-    thresholds()
+    thresholds() const
     {
         auto r = thresholds_.thresholds();
         assert(r.first <= r.second);

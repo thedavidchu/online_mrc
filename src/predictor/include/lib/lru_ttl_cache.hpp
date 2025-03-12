@@ -105,10 +105,9 @@ private:
         // for no reason.
         if (nbytes > capacity_) {
             if (DEBUG) {
-                LOGGER_WARN("cannot possibly evict enough bytes: need to evict "
-                            "%zu, but can only evict %zu",
-                            nbytes,
-                            capacity_);
+                LOGGER_WARN("not enough capacity (%zu) for object (%zu)",
+                            capacity_,
+                            nbytes);
             }
             return false;
         }
@@ -159,7 +158,7 @@ private:
         update(access, metadata);
     }
 
-    int
+    bool
     miss(CacheAccess const &access)
     {
         if (!ensure_enough_room(0, access.size_bytes)) {
@@ -167,10 +166,10 @@ private:
                 LOGGER_WARN("not enough room to insert!");
             }
             statistics_.skip(access.size_bytes);
-            return -1;
+            return false;
         }
         insert(access);
-        return 0;
+        return true;
     }
 
 public:
@@ -189,8 +188,7 @@ public:
         if (map_.count(access.key)) {
             hit(access);
         } else {
-            int err = miss(access);
-            if (err) {
+            if (!miss(access)) {
                 if (DEBUG) {
                     LOGGER_WARN("cannot handle miss");
                 }
