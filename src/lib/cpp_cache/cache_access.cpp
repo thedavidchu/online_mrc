@@ -42,3 +42,9 @@ CacheAccess::CacheAccess(std::uint64_t const timestamp_ms,
       ttl_ms(ttl_ms)
 {
 }
+
+std::optional<uint64_t>
+CacheAccess::expiration_time_ms() const
+{
+    return saturation_add(timestamp_ms, ttl_ms.value_or(UINT64_MAX));
+}

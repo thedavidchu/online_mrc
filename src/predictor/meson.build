@@ -25,6 +25,20 @@ list_exe = executable(
     ],
 )
 
+lru_ttl_cache_exe = executable(
+    'lru_ttl_cache_exe',
+    'lru_ttl_cache.cpp',
+    include_directories: predictor_inc,
+    dependencies: [cpp_cache_dep, list_dep],
+)
+
+test_lru_ttl_cache_exe = executable(
+    'test_lru_ttl_cache_exe',
+    'test_lru_ttl_cache.cpp',
+    include_directories: predictor_inc,
+    dependencies: [cpp_cache_dep, list_dep],
+)
+
 predictor_exe = executable(
     'predictor_exe',
     'predictor.cpp',
@@ -50,3 +64,4 @@ test_lifetime_thresholds_exe = executable(
 
 test('list_test', list_exe)
 test('test_lifetime_thresholds', test_lifetime_thresholds_exe)
+test('test_lru_ttl_cache', test_lru_ttl_cache_exe)

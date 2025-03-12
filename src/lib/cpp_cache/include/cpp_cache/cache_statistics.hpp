@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 using uint64_t = std::uint64_t;
@@ -13,6 +14,9 @@ private:
     miss(uint64_t const size_bytes);
 
 public:
+    void
+    time(uint64_t const tm_ms);
+
     void
     skip(uint64_t const size_bytes);
     void
@@ -38,6 +42,8 @@ public:
     total_bytes() const;
     double
     miss_rate() const;
+    uint64_t
+    uptime_ms() const;
 
     std::string
     json() const;
@@ -47,6 +53,9 @@ public:
     print(std::string const &name, uint64_t const capacity) const;
 
 public:
+    std::optional<uint64_t> start_time_ms_ = std::nullopt;
+    std::optional<uint64_t> current_time_ms_ = std::nullopt;
+
     uint64_t skip_ops_ = 0;
     uint64_t skip_bytes_ = 0;
 
@@ -74,6 +83,7 @@ public:
 
     uint64_t resident_objs_ = 0;
     uint64_t max_resident_objs_ = 0;
+    uint64_t upperbound_unique_objs_ = 0;
 
     // Working-Set-Size Statistics
     // The Working Set Size (WSS) is the largest a cache would need to

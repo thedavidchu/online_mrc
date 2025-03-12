@@ -1,12 +1,16 @@
 #include "cpp_cache/cache_statistics.hpp"
 #include "cpp_cache/format_measurement.hpp"
+#include "logger/logger.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <string>
+
+constexpr bool DEBUG = false;
 
 void
 CacheStatistics::hit(uint64_t const size_bytes)
@@ -22,6 +26,23 @@ CacheStatistics::miss(uint64_t const size_bytes)
     // These statistics are the sum of the skip and inserts.
     miss_ops_ += 1;
     miss_bytes_ += size_bytes;
+}
+
+void
+CacheStatistics::time(uint64_t const tm_ms)
+{
+    if (!start_time_ms_.has_value()) {
+        start_time_ms_ = tm_ms;
+    }
+    // Unfortunately, Sari's cluster50 Twitter traces doesn't have
+    // non-decreasing time stamps, so this triggers more than I'd like.
+    if (DEBUG && current_time_ms_.value_or(0) > tm_ms) {
+        LOGGER_WARN("old time (%" PRIu64
+                    ") is larger than input in time (%" PRIu64 ")",
+                    current_time_ms_.value_or(0),
+                    tm_ms);
+    }
+    current_time_ms_ = std::max(current_time_ms_.value_or(0), tm_ms);
 }
 
 void
@@ -47,6 +68,7 @@ CacheStatistics::insert(uint64_t const size_bytes)
 
     resident_objs_ += 1;
     max_resident_objs_ = std::max(max_resident_objs_, resident_objs_);
+    upperbound_unique_objs_ += 1;
 
     upperbound_wss_ += size_bytes;
     upperbound_ttl_wss_ += size_bytes;
@@ -73,6 +95,7 @@ CacheStatistics::update(uint64_t const old_size_bytes,
     // hit based on the new size.
     hit(old_size_bytes);
 }
+
 void
 CacheStatistics::evict(uint64_t const size_bytes)
 {
@@ -134,11 +157,31 @@ CacheStatistics::miss_rate() const
     return (double)miss_bytes_ / total_bytes_;
 }
 
+uint64_t
+CacheStatistics::uptime_ms() const
+{
+    uint64_t begin = 0, end = 0;
+    if (start_time_ms_.has_value() && current_time_ms_.has_value()) {
+        begin = start_time_ms_.value();
+        end = current_time_ms_.value();
+        if (begin > end) {
+            LOGGER_WARN("current time is before start time!");
+            return 0;
+        }
+        return end - begin;
+    }
+    return 0;
+}
+
 std::string
 CacheStatistics::json() const
 {
     std::stringstream ss;
-    ss << "{" << "\"skip_ops\": " << format_engineering(skip_ops_)
+    ss << "{"
+       << "\"start_time_ms\": " << format_time(start_time_ms_.value_or(NAN))
+       << ", \"current_time_ms\": "
+       << format_time(current_time_ms_.value_or(NAN))
+       << ", \"skip_ops\": " << format_engineering(skip_ops_)
        << ", \"skip_bytes\": " << format_memory_size(skip_bytes_)
        << ", \"insert_ops\": " << format_engineering(insert_ops_)
        << ", \"insert_bytes\": " << format_memory_size(insert_bytes_)
@@ -156,6 +199,8 @@ CacheStatistics::json() const
        << ", \"max_size\": " << format_memory_size(max_size_)
        << ", \"resident_objs\": " << format_engineering(resident_objs_)
        << ", \"max_resident_objs\": " << format_engineering(max_resident_objs_)
+       << ", \"upperbound_unique_objs\": "
+       << format_engineering(upperbound_unique_objs_)
        << ", \"upperbound_wss\": " << format_memory_size(upperbound_wss_)
        << ", \"upperbound_ttl_wss\": "
        << format_memory_size(upperbound_ttl_wss_) << "}";

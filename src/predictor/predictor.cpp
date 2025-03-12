@@ -466,10 +466,7 @@ test_trace(CacheAccessTrace const &trace,
                       repredict_reaccess);
     LOGGER_TIMING("starting test_trace()");
     for (size_t i = 0; i < trace.size(); ++i) {
-        int err = p.access(trace.get(i));
-        if (DEBUG && err) {
-            LOGGER_WARN("error...");
-        }
+        p.access(trace.get(i));
     }
     LOGGER_TIMING("finished test_trace()");
 
