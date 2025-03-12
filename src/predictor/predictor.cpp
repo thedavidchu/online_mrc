@@ -102,9 +102,11 @@ test_trace(CacheAccessTrace const &trace,
                       record_reaccess,
                       repredict_reaccess);
     LOGGER_TIMING("starting test_trace()");
+    p.start_simulation();
     for (size_t i = 0; i < trace.size(); ++i) {
         p.access(trace.get(i));
     }
+    p.end_simulation();
     LOGGER_TIMING("finished test_trace()");
     p.print_statistics();
 

@@ -9,8 +9,27 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <sys/time.h>
 
 constexpr bool DEBUG = false;
+
+static uint64_t
+time_diff(uint64_t const start, uint64_t const end)
+{
+    if (start > end) {
+        LOGGER_WARN("end time is before start time!");
+        return 0;
+    }
+    return end - start;
+}
+
+static uint64_t
+get_ms()
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_usec / 1000 + 1000 * tv.tv_sec;
+}
 
 void
 CacheStatistics::hit(uint64_t const size_bytes)
@@ -26,6 +45,24 @@ CacheStatistics::miss(uint64_t const size_bytes)
     // These statistics are the sum of the skip and inserts.
     miss_ops_ += 1;
     miss_bytes_ += size_bytes;
+}
+
+void
+CacheStatistics::start_simulation()
+{
+    if (sim_start_time_ms_.has_value()) {
+        LOGGER_WARN("overwriting existing simulation start time!");
+    }
+    sim_start_time_ms_ = get_ms();
+}
+
+void
+CacheStatistics::end_simulation()
+{
+    if (sim_end_time_ms_.has_value()) {
+        LOGGER_WARN("overwriting existing simulation end time!");
+    }
+    sim_end_time_ms_ = get_ms();
 }
 
 void
@@ -164,11 +201,19 @@ CacheStatistics::uptime_ms() const
     if (start_time_ms_.has_value() && current_time_ms_.has_value()) {
         begin = start_time_ms_.value();
         end = current_time_ms_.value();
-        if (begin > end) {
-            LOGGER_WARN("current time is before start time!");
-            return 0;
-        }
-        return end - begin;
+        return time_diff(begin, end);
+    }
+    return 0;
+}
+
+uint64_t
+CacheStatistics::sim_uptime_ms() const
+{
+    uint64_t begin = 0, end = 0;
+    if (sim_start_time_ms_.has_value() && sim_end_time_ms_.has_value()) {
+        begin = sim_start_time_ms_.value();
+        end = sim_end_time_ms_.value();
+        return time_diff(begin, end);
     }
     return 0;
 }
@@ -181,6 +226,7 @@ CacheStatistics::json() const
        << "\"start_time_ms\": " << format_time(start_time_ms_.value_or(NAN))
        << ", \"current_time_ms\": "
        << format_time(current_time_ms_.value_or(NAN))
+       << ", \"simulation time\": " << format_time(sim_uptime_ms())
        << ", \"skip_ops\": " << format_engineering(skip_ops_)
        << ", \"skip_bytes\": " << format_memory_size(skip_bytes_)
        << ", \"insert_ops\": " << format_engineering(insert_ops_)

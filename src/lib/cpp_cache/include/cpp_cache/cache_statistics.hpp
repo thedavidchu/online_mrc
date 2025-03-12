@@ -14,6 +14,12 @@ private:
     miss(uint64_t const size_bytes);
 
 public:
+    // Track the simulation runtime of the cache.
+    void
+    start_simulation();
+    void
+    end_simulation();
+
     void
     time(uint64_t const tm_ms);
 
@@ -44,6 +50,8 @@ public:
     miss_rate() const;
     uint64_t
     uptime_ms() const;
+    uint64_t
+    sim_uptime_ms() const;
 
     std::string
     json() const;
@@ -55,6 +63,9 @@ public:
 public:
     std::optional<uint64_t> start_time_ms_ = std::nullopt;
     std::optional<uint64_t> current_time_ms_ = std::nullopt;
+
+    std::optional<uint64_t> sim_start_time_ms_ = std::nullopt;
+    std::optional<uint64_t> sim_end_time_ms_ = std::nullopt;
 
     uint64_t skip_ops_ = 0;
     uint64_t skip_bytes_ = 0;

@@ -179,6 +179,18 @@ public:
     {
     }
 
+    void
+    start_simulation()
+    {
+        statistics_.start_simulation();
+    }
+
+    void
+    end_simulation()
+    {
+        statistics_.end_simulation();
+    }
+
     int
     access(CacheAccess const &access)
     {
