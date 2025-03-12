@@ -40,11 +40,11 @@ private:
         map_.emplace(access.key, CacheMetadata{access});
         auto r = lifetime_cache_.thresholds();
         if (ttl_ms >= r.first) {
-            predictor_.record_store_lru();
+            pred_tracker.record_store_lru();
             lru_cache_.access(access.key);
         }
         if (ttl_ms <= r.second) {
-            predictor_.record_store_ttl();
+            pred_tracker.record_store_ttl();
             ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
                                access.key);
         }
@@ -64,13 +64,13 @@ private:
         uint64_t const ttl_ms = metadata.ttl_ms();
         auto r = lifetime_cache_.thresholds();
         if (ttl_ms >= r.first) {
-            predictor_.record_store_lru();
+            pred_tracker.record_store_lru();
             lru_cache_.access(access.key);
         }
         if (ttl_ms <= r.second) {
             // Even if we don't re-insert into the TTL queue, we still
             // want to mark it as stored.
-            predictor_.record_store_ttl();
+            pred_tracker.record_store_ttl();
             // Only insert the TTL if it hasn't been inserted already.
             if (find_multimap_kv(ttl_cache_,
                                  metadata.expiration_time_ms_,
@@ -95,17 +95,17 @@ private:
             statistics_.evict(m.size_);
             if (statistics_.current_time_ms_ <= exp_tm) {
                 // Not yet expired.
-                predictor_.update_correctly_evicted(sz_bytes);
+                pred_tracker.update_correctly_evicted(sz_bytes);
             } else {
-                predictor_.update_wrongly_evicted(sz_bytes);
+                pred_tracker.update_wrongly_evicted(sz_bytes);
             }
             break;
         case EvictionCause::TTL:
             statistics_.expire(m.size_);
             if (oracle_.get(victim_key)) {
-                predictor_.update_correctly_expired(sz_bytes);
+                pred_tracker.update_correctly_expired(sz_bytes);
             } else {
-                predictor_.update_wrongly_expired(sz_bytes);
+                pred_tracker.update_wrongly_expired(sz_bytes);
             }
             break;
         default:
@@ -318,7 +318,7 @@ public:
     PredictionTracker const &
     predictor() const
     {
-        return predictor_;
+        return pred_tracker;
     }
 
     CacheStatistics const &
@@ -335,7 +335,7 @@ public:
                   << ", \"Record Reaccess\": " << record_reaccess_
                   << ", \"Repredict on Reaccess\": " << repredict_on_reaccess_
                   << ", \"CacheStatistics\": " << statistics_.json()
-                  << ", \"PredictionTracker\": " << predictor_.json()
+                  << ", \"PredictionTracker\": " << pred_tracker.json()
                   << ", \"Numer of Threshold Refreshes\": "
                   << format_engineering(lifetime_cache_.refreshes())
                   << ", \"Since Refresh\": "
@@ -358,7 +358,7 @@ private:
     // Number of bytes in the current cache.
     size_t size_ = 0;
     // Statistics related to prediction.
-    PredictionTracker predictor_;
+    PredictionTracker pred_tracker;
     // Statistics related to cache performance.
     CacheStatistics statistics_;
 
