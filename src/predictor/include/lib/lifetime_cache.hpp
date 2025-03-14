@@ -106,6 +106,12 @@ public:
         return thresholds_.since_refresh();
     }
 
+    double
+    uncertainty() const
+    {
+        return thresholds_.uncertainty();
+    }
+
 private:
     // Maximum number of bytes in the cache.
     size_t const capacity_;

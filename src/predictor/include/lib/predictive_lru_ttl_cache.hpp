@@ -346,6 +346,7 @@ public:
     {
         auto r = lifetime_cache_.thresholds();
         std::cout << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
+                  << ", \"Uncertainty\": " << lifetime_cache_.uncertainty()
                   << ", \"Record Reaccess\": " << record_reaccess_
                   << ", \"Repredict on Reaccess\": " << repredict_on_reaccess_
                   << ", \"CacheStatistics\": " << statistics_.json()

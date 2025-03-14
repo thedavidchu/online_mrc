@@ -143,6 +143,12 @@ public:
         return coarse_counter_;
     }
 
+    double
+    uncertainty() const
+    {
+        return uncertainty_;
+    }
+
 private:
     double const uncertainty_;
     uint64_t lower_threshold = 0;
