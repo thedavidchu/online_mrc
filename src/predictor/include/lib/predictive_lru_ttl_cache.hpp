@@ -143,12 +143,30 @@ private:
         }
     }
 
+    /// @brief  Evict from the TTL cache in the soonest expiring order.
+    bool
+    evict_from_ttl_cache(std::vector<uint64_t> &victims,
+                         uint64_t &evicted_bytes,
+                         uint64_t const required_bytes)
+    {
+        for (auto [tm, key] : ttl_cache_) {
+            if (evicted_bytes >= required_bytes) {
+                break;
+            }
+            auto &m = map_.at(key);
+            evicted_bytes += m.size_;
+            victims.push_back(key);
+        }
+
+        return (evicted_bytes >= required_bytes);
+    }
+
     bool
     ensure_enough_room(size_t const old_nbytes, size_t const new_nbytes)
     {
+        assert(size_ <= capacity_);
         // We already have enough room if we're not increasing the data.
         if (old_nbytes >= new_nbytes) {
-            assert(size_ <= capacity_);
             return true;
         }
         size_t const nbytes = new_nbytes - old_nbytes;
@@ -178,6 +196,16 @@ private:
             auto &m = map_.at(n->key);
             evicted_bytes += m.size_;
             victims.push_back(n->key);
+        }
+        // Evict from TTL queue as well, since the LRU queue may not
+        // have enough elements to create enough room, since it doesn't
+        // have all the elements in it.
+        if (true) {
+            bool r =
+                evict_from_ttl_cache(victims, evicted_bytes, required_bytes);
+            if (!r) {
+                LOGGER_WARN("could not evict enough from TTL cache");
+            }
         }
         // One cannot evict elements from the map one is iterating over.
         for (auto v : victims) {
