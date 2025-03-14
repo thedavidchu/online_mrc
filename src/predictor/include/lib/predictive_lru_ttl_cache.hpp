@@ -120,6 +120,14 @@ private:
             //      It wasn't expired, but rather it was the soonest-to-expire.
             pred_tracker.update_wrongly_expired(sz_bytes);
             break;
+        case EvictionCause::AccessExpired:
+            statistics_.expire(m.size_);
+            // NOTE This isn't exactly the correct classification...
+            //      It wasn't evicted by LRU, it was evicted by
+            //      reaccessing an expired object. However, it would
+            //      have been in the LRU queue, which is why I chose this.
+            pred_tracker.update_wrongly_evicted(sz_bytes);
+            break;
         default:
             assert(0 && "impossible");
         }
@@ -233,6 +241,12 @@ private:
         return;
     }
 
+    bool
+    is_expired(CacheAccess const &access, CacheMetadata const &metadata)
+    {
+        return (access.timestamp_ms > metadata.expiration_time_ms_);
+    }
+
     void
     hit(CacheAccess const &access)
     {
@@ -311,14 +325,21 @@ public:
         lifetime_cache_.access(access);
         oracle_.access(access);
         if (map_.count(access.key)) {
-            hit(access);
-        } else {
-            if (!miss(access)) {
-                if (DEBUG) {
-                    LOGGER_WARN("cannot handle miss");
-                }
-                return -1;
+            auto &metadata = map_.at(access.key);
+            if (!is_expired(access, metadata)) {
+                hit(access);
+                return 0;
+            } else {
+                evict(access.key, EvictionCause::AccessExpired);
             }
+        }
+
+        bool ok = miss(access);
+        if (!ok) {
+            if (DEBUG) {
+                LOGGER_WARN("cannot handle miss");
+            }
+            return -1;
         }
         return 0;
     }
