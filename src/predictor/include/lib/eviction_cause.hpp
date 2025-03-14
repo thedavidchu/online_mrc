@@ -3,4 +3,5 @@
 enum class EvictionCause {
     LRU,
     TTL,
+    VolatileTTL,
 };

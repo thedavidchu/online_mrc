@@ -114,6 +114,12 @@ private:
                 pred_tracker.update_wrongly_expired(sz_bytes);
             }
             break;
+        case EvictionCause::VolatileTTL:
+            statistics_.evict(m.size_);
+            // NOTE This isn't exactly the correct classification...
+            //      It wasn't expired, but rather it was the soonest-to-expire.
+            pred_tracker.update_wrongly_expired(sz_bytes);
+            break;
         default:
             assert(0 && "impossible");
         }
@@ -143,9 +149,10 @@ private:
         }
     }
 
-    /// @brief  Evict from the TTL cache in the soonest expiring order.
+    /// @brief  Get the soonest expiring keys that would be enough to
+    ///         make sufficient room in the cache.
     bool
-    evict_from_ttl_cache(std::vector<uint64_t> &victims,
+    get_soonest_expiring(std::vector<uint64_t> &victims,
                          uint64_t &evicted_bytes,
                          uint64_t const required_bytes)
     {
@@ -197,19 +204,22 @@ private:
             evicted_bytes += m.size_;
             victims.push_back(n->key);
         }
+        // One cannot evict elements from the map one is iterating over.
+        for (auto v : victims) {
+            evict(v, EvictionCause::LRU);
+        }
+
         // Evict from TTL queue as well, since the LRU queue may not
         // have enough elements to create enough room, since it doesn't
         // have all the elements in it.
         if (true) {
-            bool r =
-                evict_from_ttl_cache(victims, evicted_bytes, required_bytes);
-            if (!r) {
+            victims.clear();
+            if (!get_soonest_expiring(victims, evicted_bytes, required_bytes)) {
                 LOGGER_WARN("could not evict enough from TTL cache");
             }
-        }
-        // One cannot evict elements from the map one is iterating over.
-        for (auto v : victims) {
-            evict(v, EvictionCause::LRU);
+            for (auto v : victims) {
+                evict(v, EvictionCause::VolatileTTL);
+            }
         }
         return true;
     }
