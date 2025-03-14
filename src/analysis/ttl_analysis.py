@@ -14,7 +14,7 @@ guaranteed to be complete) of clusters with two or more large clusters
 of TTLs:
 - cluster4
 - cluster5
-- cluster6 
+- cluster6
 - cluster24
 - cluster25
 - cluster26
@@ -56,6 +56,7 @@ ANALYSIS_DTYPE = np.dtype(
 
 
 def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
+    """Create a mask of which TTLs are valid."""
     assert trace_format in {"Kia", "Sari"}
     assert tmpdir.exists()
 
@@ -211,6 +212,7 @@ def plot_correlations(
     timestamp_edges: np.memmap,
     plot_path: Path,
 ):
+    """Plot TTL vs Size and TTL vs Timestamp"""
     fig, (ax0, ax1) = plt.subplots(1, 2)
     fig.set_size_inches(12, 6)
     fig.suptitle("Object Time-to-Live (TTL) vs Size and Timestamp")
@@ -257,6 +259,7 @@ def plot_independent(
     timestamp_edges: np.memmap,
     plot_path: Path,
 ):
+    """Plot the TTL, size, and timestamps as separate histograms."""
     fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
     fig.set_size_inches(18, 6)
     fig.suptitle("Object Time-to-Live (TTL), Size, and Timestamp Histograms")
@@ -270,9 +273,9 @@ def plot_independent(
 
     size_hist = np.sum(hist, axis=(0, 2))
     # Smooth the log-plot by converting zeros to ones.
-    ax1.semilogy(size_edges[:-1] / 1e6, size_hist + 1)
+    ax1.semilogy(size_edges[:-1] / (1 << 20), size_hist + 1)
     ax1.set_title("Object Size Histogram")
-    ax1.set_xlabel("Size [MB]")
+    ax1.set_xlabel("Size [MiB]")
     ax1.set_ylabel("Log-Frequency")
 
     time_hist = np.sum(hist, axis=(0, 1))
@@ -341,12 +344,12 @@ def main():
         required=False,
         default=None,
         help=(
-            "an existing subdirectory of /tmp. Therefore, the temporary "
-            "directory will be at the path /tmp/<tmp-subdirectory>/... "
-            "This is for easily deleting dead temporary files if I use "
-            "too much disk. "
-            "To be honest, I'm not sure how I intended this to be used, "
-            "so please use with caution (or not at all). DEPRECATED!"
+            "WARNING: DEPRECATED! An existing subdirectory of /tmp. Therefore, "
+            "the temporary directory will be at the path "
+            "/tmp/<tmp-subdirectory>/... This is for easily deleting dead "
+            "temporary files if I use too much disk. To be honest, I'm not sure "
+            "how I intended this to be used, so please use with caution (or not "
+            "at all). WARNING: DEPRECATED!"
         ),
     )
     args = parser.parse_args()

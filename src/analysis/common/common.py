@@ -1,4 +1,4 @@
-""" @brief  Common functions and data structures. """
+"""@brief  Common functions and data structures."""
 
 import logging
 from shlex import split
@@ -56,3 +56,20 @@ def practice_sh(cmd: str, **kwargs) -> CompletedProcess:
     # Adding the '--help' flag should call the executable but return
     # very quickly!
     return sh(cmd=f"{cmd} --help", **kwargs)
+
+
+def format_memory_size(size_bytes: float | int) -> str:
+    """Format memory sizes."""
+    prefices = {
+        "B": 1,
+        "KiB": 1 << 10,
+        "MiB": 1 << 20,
+        "GiB": 1 << 30,
+        "TiB": 1 << 40,
+        "PiB": 1 << 50,
+        "EiB": 1 << 60,
+    }
+    for i, (prefix, multiplier) in enumerate(prefices.items()):
+        if size_bytes / multiplier < 1024:
+            break
+    return f"{size_bytes / multiplier} {prefix}"
