@@ -8,29 +8,9 @@ Verify a trace is as expected.
 import argparse
 from pathlib import Path
 
-from tqdm import tqdm
 import numpy as np
 
-TRACE_DTYPES: dict[str, np.dtype] = {
-    "Kia": np.dtype(
-        [
-            ("timestamp", np.uint64),
-            ("command", np.uint8),
-            ("key", np.uint64),
-            ("size", np.uint32),
-            ("ttl", np.uint32),
-        ],
-    ),
-    # As per https://github.com/SariSultan/TTLsMatter-EuroSys24
-    "Sari": np.dtype(
-        [
-            ("timestamp", np.uint32),
-            ("key", np.uint64),
-            ("size", np.uint32),
-            ("eviction_time", np.uint32),
-        ]
-    ),
-}
+from src.analysis.common.trace import TRACE_DTYPES
 
 
 def main():
@@ -46,19 +26,29 @@ def main():
         default="Kia",
         help="input trace format",
     )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="verbosely print the mismatches"
+    )
     args = parser.parse_args()
 
     x = np.fromfile(args.input, dtype=TRACE_DTYPES[args.format])
 
     # Check for non-decreasing timestamps
-    tm_cmp = x[:-1]["timestamp"] <= x[1:]["timestamp"]
-    non_decreasing_timestamps = np.all(tm_cmp)
-    print(f"Non-decreasing timestamps: {non_decreasing_timestamps}")
-    if not non_decreasing_timestamps:
-        for i, y in enumerate(tm_cmp):
+    tmstr = {"Kia": "timestamp_ms", "Sari": "timestamp_s"}[args.format]
+    ok_tm = x[:-1][tmstr] <= x[1:][tmstr]
+    cnt_ok_tm = np.count_nonzero(ok_tm)
+    # There is one fewer comparison than there are accesses, so that is
+    # why we subtract 1 from the number of accesses.
+    cnt_decr_tm = len(x) - cnt_ok_tm - 1
+    print(f"Decreasing timestamps: {cnt_decr_tm}")
+    if args.verbose and cnt_decr_tm:
+        cnt = 0
+        print("Decreasing Timestamps:")
+        for pos, y in enumerate(ok_tm):
             if not y:
+                cnt += 1
                 print(
-                    f"Non-decreasing at positions {i}, {i+1}: {x[i]['timestamp']} vs {x[i+1]['timestamp']}"
+                    f"[{cnt}/{cnt_decr_tm}] At positions {pos}, {pos+1}: {x[pos][tmstr]} > {x[pos+1][tmstr]}"
                 )
 
 
