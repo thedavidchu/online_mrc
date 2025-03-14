@@ -66,6 +66,8 @@ private:
         if (ttl_ms >= r.first) {
             pred_tracker.record_store_lru();
             lru_cache_.access(access.key);
+        } else {
+            lru_cache_.remove(access.key);
         }
         if (ttl_ms <= r.second) {
             // Even if we don't re-insert into the TTL queue, we still
@@ -77,6 +79,10 @@ private:
                                  access.key) == ttl_cache_.end()) {
                 ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
             }
+        } else {
+            remove_multimap_kv(ttl_cache_,
+                               metadata.expiration_time_ms_,
+                               access.key);
         }
     }
 
