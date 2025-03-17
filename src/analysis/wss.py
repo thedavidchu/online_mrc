@@ -4,7 +4,7 @@ Calculate the working set size of a trace.
 
 @note   I use pure Python to calculate the working set sizes, so be
         careful on large traces!
-@example    `python3 -m src.analysis.wss.working_set_size [...args]`
+@example    `python3 -m src.analysis.wss [...args]`
 """
 
 import argparse
