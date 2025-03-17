@@ -79,7 +79,13 @@ endif
 
 # CMake Subproject: 1a1a11a/libCacheSim
 cmake = import('cmake')
-lib_cache_sim_subproject = cmake.subproject('libCacheSim')
+lib_cache_sim_opt = cmake.subproject_options()
+lib_cache_sim_opt.set_override_option('warning_level', '0')
+lib_cache_sim_subproject = cmake.subproject(
+    'libCacheSim',
+    options: lib_cache_sim_opt,
+)
+
 lib_cache_sim_dep = lib_cache_sim_subproject.dependency('libCacheSim')
 
 subdir('src')
