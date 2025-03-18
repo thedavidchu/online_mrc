@@ -280,8 +280,8 @@ public:
     /// @note   The {ttl,lru}_only parameters are deprecated. This wasn't
     ///         a particularly good idea nor was it particularly useful.
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    /// @param  uncertainty: double [0.0, 0.5] - The uncertainty we
-    ///         allow in the prediction? (this is poorly phrased)
+    /// @param  {lower,upper}_ratio: double [0.0, 1.0] - The
+    ///         ratio thresholds for prediction.
     /// @param  record_reaccess: bool
     ///         If true, then record the lifetime as the time between
     ///         either LRU evictions or reaccess.
@@ -291,11 +291,12 @@ public:
     ///         If true, then re-predict the queues on each reaccess.
     ///         Otherwise, predict the queue only on insertion.
     PredictiveCache(size_t const capacity,
-                    double const uncertainty,
+                    double const lower_ratio,
+                    double const upper_ratio,
                     LifeTimeCacheMode const cache_mode)
         : capacity_(capacity),
           lifetime_cache_mode_(cache_mode),
-          lifetime_cache_(capacity, uncertainty, cache_mode),
+          lifetime_cache_(capacity, lower_ratio, upper_ratio, cache_mode),
           oracle_(capacity)
     {
     }
@@ -403,8 +404,8 @@ public:
     {
         auto r = lifetime_cache_.thresholds();
         std::cout << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
-                  << ", \"Uncertainty\": " << lifetime_cache_.uncertainty()
-                  << ", \"Lifetime Cache Mode\": "
+                  << ", \"Lower Ratio\": " << lifetime_cache_.lower_ratio()
+                  << ", \"Upper Ratio\": " << lifetime_cache_.upper_ratio()
                   << ", \"Lifetime Cache Mode\": \""
                   << LifeTimeCacheMode__str(lifetime_cache_.mode())
                   << "\", \"CacheStatistics\": " << statistics_.json()

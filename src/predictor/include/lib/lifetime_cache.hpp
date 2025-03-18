@@ -80,12 +80,12 @@ class LifeTimeCache {
     }
 
 public:
-    /// The larger the uncertainty, the larger the threshold.
     LifeTimeCache(size_t const capacity,
-                  double const uncertainty,
+                  double const lower_ratio,
+                  double const upper_ratio,
                   LifeTimeCacheMode const mode)
         : capacity_(capacity),
-          thresholds_(uncertainty),
+          thresholds_(lower_ratio, upper_ratio),
           mode_(mode)
     {
     }
@@ -149,9 +149,15 @@ public:
     }
 
     double
-    uncertainty() const
+    lower_ratio() const
     {
-        return thresholds_.uncertainty();
+        return thresholds_.lower_ratio();
+    }
+
+    double
+    upper_ratio() const
+    {
+        return thresholds_.upper_ratio();
     }
 
     LifeTimeCacheMode

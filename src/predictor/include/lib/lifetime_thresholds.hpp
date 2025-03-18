@@ -21,26 +21,32 @@ private:
     std::pair<uint64_t, uint64_t>
     recalculate_thresholds() const
     {
-        assert(uncertainty_ >= 0.0 && uncertainty_ <= 0.5);
-
         uint64_t lower = 0, upper = std::numeric_limits<uint64_t>::max();
         uint64_t accum = 0;
         uint64_t prev_lifetime = 0;
         bool found_lower = false;
-        // Find the (50{+,-}uncertainty)th percentile lifetimes.
+
         for (auto [lifetime, frq] : histogram_) {
             accum += frq;
-            if (!found_lower && (double)accum / total_ > 0.5 - uncertainty_) {
+            if (!found_lower && (double)accum / total_ > lower_ratio_) {
                 lower = prev_lifetime;
                 found_lower = true;
             }
-            if ((double)accum / total_ >= 0.5 + uncertainty_) {
+            if ((double)accum / total_ >= upper_ratio_) {
                 upper = lifetime;
                 break;
             }
             prev_lifetime = lifetime;
         }
 
+        // If the ratios are the same, then we simply return the mean.
+        // This does bias us to round down, however. It may be a bit of
+        // an optimization to simply return the lower threshold in this
+        // case, because we compute it earlier than the upper threshold.
+        if (lower_ratio_ == upper_ratio_) {
+            double mean = (double)(lower + upper) / 2;
+            return {mean, mean};
+        }
         return {lower, upper};
     }
 
@@ -50,10 +56,6 @@ private:
     bool
     should_refresh() const
     {
-        // In future, I may support different uncertainties for below
-        // and above the median.
-        double const lower_uncertainty = uncertainty_;
-        double const upper_uncertainty = uncertainty_;
         double const error = 0.01 * coarse_counter_;
 
         // We don't readjust until we have at least 1 million data points!
@@ -62,11 +64,9 @@ private:
             return false;
         }
 
-        // The expected count of the lower
-        double const low_cnt = (0.5 - lower_uncertainty) * coarse_counter_;
-        double const mid_cnt =
-            (lower_uncertainty + upper_uncertainty) * coarse_counter_;
-        double const up_cnt = (0.5 - upper_uncertainty) * coarse_counter_;
+        double const low_cnt = lower_ratio_ * coarse_counter_;
+        double const mid_cnt = (upper_ratio_ - lower_ratio_) * coarse_counter_;
+        double const up_cnt = (1.0 - upper_ratio_) * coarse_counter_;
 
         return !(
             doubles_are_close(low_cnt, std::get<0>(coarse_histogram_), error) &&
@@ -75,11 +75,14 @@ private:
     }
 
 public:
-    LifeTimeThresholds(double const uncertainty)
-        : uncertainty_(uncertainty),
+    LifeTimeThresholds(double const lower_ratio, double const upper_ratio)
+        : lower_ratio_(lower_ratio),
+          upper_ratio_(upper_ratio),
           coarse_histogram_({0, 0, 0})
     {
-        assert(uncertainty >= 0.0 && uncertainty <= 0.5);
+        assert(lower_ratio >= 0.0 && lower_ratio <= 1.0);
+        assert(upper_ratio >= 0.0 && upper_ratio <= 1.0);
+        assert(lower_ratio <= upper_ratio);
     }
 
     void
@@ -91,10 +94,10 @@ public:
         total_ += 1;
         histogram_[lifetime] += 1;
 
-        if (lower_threshold > lifetime) {
+        if (lower_threshold_ > lifetime) {
             ++std::get<0>(coarse_histogram_);
             ++coarse_counter_;
-        } else if (upper_threshold > lifetime) {
+        } else if (upper_threshold_ > lifetime) {
             ++std::get<1>(coarse_histogram_);
             ++coarse_counter_;
         } else {
@@ -111,8 +114,8 @@ public:
     refresh_thresholds()
     {
         auto x = recalculate_thresholds();
-        lower_threshold = x.first;
-        upper_threshold = x.second;
+        lower_threshold_ = x.first;
+        upper_threshold_ = x.second;
         coarse_histogram_ = {0, 0, 0};
         coarse_counter_ = 0;
         ++num_refresh_;
@@ -122,7 +125,7 @@ public:
     std::pair<uint64_t, uint64_t>
     thresholds() const
     {
-        return {lower_threshold, upper_threshold};
+        return {lower_threshold_, upper_threshold_};
     }
 
     size_t
@@ -144,15 +147,22 @@ public:
     }
 
     double
-    uncertainty() const
+    lower_ratio() const
     {
-        return uncertainty_;
+        return lower_ratio_;
+    }
+
+    double
+    upper_ratio() const
+    {
+        return upper_ratio_;
     }
 
 private:
-    double const uncertainty_;
-    uint64_t lower_threshold = 0;
-    uint64_t upper_threshold = std::numeric_limits<uint64_t>::max();
+    double const lower_ratio_;
+    double const upper_ratio_;
+    uint64_t lower_threshold_ = 0;
+    uint64_t upper_threshold_ = std::numeric_limits<uint64_t>::max();
 
     uint64_t total_ = 0;
     std::map<uint64_t, uint64_t> histogram_;

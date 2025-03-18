@@ -16,7 +16,7 @@ print_pair(std::pair<A, B> const &p)
 static bool
 test_empty()
 {
-    LifeTimeThresholds t(0.25);
+    LifeTimeThresholds t(0.25, 0.75);
     std::pair<uint64_t, uint64_t> r;
 
     r = t.thresholds();
@@ -34,7 +34,7 @@ test_empty()
 static bool
 test_thresholds(bool const debug = false)
 {
-    LifeTimeThresholds t(0.25);
+    LifeTimeThresholds t(0.25, 0.75);
     std::pair<uint64_t, uint64_t> r;
 
     for (uint64_t i = 1; i < 100; ++i) {
@@ -53,7 +53,7 @@ test_thresholds(bool const debug = false)
 static bool
 test_refresh(bool const debug = false)
 {
-    LifeTimeThresholds t(0.25);
+    LifeTimeThresholds t(0.25, 0.75);
     std::pair<uint64_t, uint64_t> r;
 
     // Sample from 1..=100 and make sure the thresholds change at the

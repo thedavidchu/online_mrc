@@ -1,9 +1,6 @@
 /// TODO
 /// 1. Test with real trace (how to get TTLs?)
 /// 2. How to count miscounts?
-/// 3. How to do certainty?
-/// 4. This is really slow. Profile it to see how long the LRU stack is
-///     taking...
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -28,7 +25,7 @@ using uint64_t = std::uint64_t;
 bool
 test_lru()
 {
-    PredictiveCache p(2, 0.0, LifeTimeCacheMode::EvictionTime);
+    PredictiveCache p(2, 0.0, 1.0, LifeTimeCacheMode::EvictionTime);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 10},
                               CacheAccess{1, 1, 1, 10},
                               CacheAccess{2, 2, 1, 10}};
@@ -64,7 +61,7 @@ test_lru()
 bool
 test_ttl()
 {
-    PredictiveCache p(2, 0.0, LifeTimeCacheMode::EvictionTime);
+    PredictiveCache p(2, 0.0, 1.0, LifeTimeCacheMode::EvictionTime);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 1},
                               CacheAccess{1001, 1, 1, 10}};
     // Test initial state.
@@ -90,10 +87,14 @@ test_ttl()
 bool
 test_trace(CacheAccessTrace const &trace,
            size_t const capacity_bytes,
-           double const uncertainty,
+           double const lower_ratio,
+           double const upper_ratio,
            LifeTimeCacheMode const lifetime_cache_mode)
 {
-    PredictiveCache p(capacity_bytes, uncertainty, lifetime_cache_mode);
+    PredictiveCache p(capacity_bytes,
+                      lower_ratio,
+                      upper_ratio,
+                      lifetime_cache_mode);
     LOGGER_TIMING("starting test_trace()");
     p.start_simulation();
     for (size_t i = 0; i < trace.size(); ++i) {
@@ -116,26 +117,29 @@ main(int argc, char *argv[])
         assert(test_ttl());
         std::cout << "OK!" << std::endl;
         break;
-    case 5: {
+    case 6: {
         char const *const path = argv[1];
         char const *const format = argv[2];
-        double const uncertainty = atof(argv[3]);
+        double const lower_ratio = atof(argv[3]);
+        double const upper_ratio = atof(argv[4]);
         LifeTimeCacheMode const lifetime_cache_mode =
-            LifeTimeCacheMode__parse(argv[4]);
+            LifeTimeCacheMode__parse(argv[5]);
         LOGGER_INFO("Running: %s %s", path, format);
         for (auto cap : logspace((size_t)16 << 30, 10)) {
             assert(test_trace(
                 CacheAccessTrace(path, parse_trace_format_string(format)),
                 cap,
-                uncertainty,
+                lower_ratio,
+                upper_ratio,
                 lifetime_cache_mode));
         }
         std::cout << "OK!" << std::endl;
         break;
     }
     default:
-        std::cout << "Usage: predictor [<trace> <format> <uncertainty 0.0-0.5> "
-                     "<lifetime_cache_mode EvictionTime|LifeTime>"
+        std::cout << "Usage: predictor [<trace> <format> <lower_ratio 0.0-1.0> "
+                     "<upper_ratio 0.0-1.0> <lifetime_cache_mode "
+                     "EvictionTime|LifeTime>"
                   << std::endl;
         exit(1);
     }
