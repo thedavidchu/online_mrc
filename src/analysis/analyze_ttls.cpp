@@ -161,7 +161,9 @@ analyze_statistics_per_access(
 }
 
 void
-analyze_trace(char const *const trace_path, enum TraceFormat const format)
+analyze_trace(char const *const trace_path,
+              enum TraceFormat const format,
+              bool const verbose = false)
 {
     Histogram ttl_diff_hist;
 
@@ -175,19 +177,19 @@ analyze_trace(char const *const trace_path, enum TraceFormat const format)
             continue;
         }
 
+        // Analyze whether the TTL has changed before we update the
+        // object with the new TTL.
         if (map[x.key].current_ttl_ms.has_value()) {
             uint64_t old_ttl = map.at(x.key).current_ttl_ms.value();
             uint64_t new_ttl = x.ttl_ms.value();
             uint64_t diff = absdiff(old_ttl, new_ttl);
             ttl_diff_hist.update(diff);
-            if (diff != 0) {
+            if (verbose && diff != 0) {
                 std::cout << "TTL mismatch: " << old_ttl << " vs " << new_ttl
                           << std::endl;
-                map[x.key].access(x);
             }
-        } else {
-            map[x.key].access(x);
         }
+        map[x.key].access(x);
     }
 
     std::cout << "Min TTL diff [ms]: " << ttl_diff_hist.percentile(0.0)
@@ -209,9 +211,16 @@ analyze_trace(char const *const trace_path, enum TraceFormat const format)
 }
 
 int
-main()
+main(int argc, char *argv[])
 {
-    char const *const trace_path = "/mnt/disk1-20tb/kia/twitter/cluster50.bin";
-    analyze_trace(trace_path, TRACE_FORMAT_KIA);
+    if (argc != 3) {
+        std::cout << "Usage: " << argv[0] << " <trace-path> <format>"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+    char const *const trace_path = argv[1];
+    enum TraceFormat format = parse_trace_format_string(argv[2]);
+    assert(format == TRACE_FORMAT_KIA || format == TRACE_FORMAT_SARI);
+    analyze_trace(trace_path, format);
     return 0;
 }
