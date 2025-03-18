@@ -405,8 +405,9 @@ public:
         std::cout << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
                   << ", \"Uncertainty\": " << lifetime_cache_.uncertainty()
                   << ", \"Lifetime Cache Mode\": "
+                  << ", \"Lifetime Cache Mode\": \""
                   << LifeTimeCacheMode__str(lifetime_cache_.mode())
-                  << ", \"CacheStatistics\": " << statistics_.json()
+                  << "\", \"CacheStatistics\": " << statistics_.json()
                   << ", \"PredictionTracker\": " << pred_tracker.json()
                   << ", \"Numer of Threshold Refreshes\": "
                   << format_engineering(lifetime_cache_.refreshes())
