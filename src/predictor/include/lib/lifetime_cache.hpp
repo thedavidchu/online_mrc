@@ -4,26 +4,89 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <sys/types.h>
 #include <utility>
 
+#include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_metadata.hpp"
 #include "lib/lifetime_thresholds.hpp"
 #include "list/list.hpp"
+#include "logger/logger.h"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
+enum class LifeTimeCacheMode {
+    // This is the time since the last access to the eviction.
+    EvictionTime,
+    // This is the time from the insertion to the eviction.
+    LifeTime,
+};
+
+static inline LifeTimeCacheMode
+LifeTimeCacheMode__parse(char const *const str)
+{
+    if (strcmp(str, "EvictionTime") == 0) {
+        return LifeTimeCacheMode::EvictionTime;
+    }
+    if (strcmp(str, "LifeTime") == 0) {
+        return LifeTimeCacheMode::LifeTime;
+    }
+    LOGGER_FATAL("unrecognized lifetime cache mode: %s", str);
+    exit(1);
+}
+
+static inline char const *
+LifeTimeCacheMode__str(LifeTimeCacheMode const mode)
+{
+    switch (mode) {
+    case LifeTimeCacheMode::EvictionTime:
+        return "EvictionTime";
+    case LifeTimeCacheMode::LifeTime:
+        return "LifeTime";
+    default:
+        assert(0 && "impossible");
+    }
+}
+
 class LifeTimeCache {
+    void
+    ensure_enough_room(CacheAccess const &access)
+    {
+        while (size_ + access.size_bytes > capacity_) {
+            auto x = lru_cache_.remove_head();
+            auto &node = map_.at(x->key);
+            size_ -= node.size_;
+            switch (mode_) {
+            case LifeTimeCacheMode::EvictionTime:
+                thresholds_.register_cache_eviction(
+                    current_time_ms_ - node.last_access_time_ms_,
+                    node.size_);
+                break;
+            case LifeTimeCacheMode::LifeTime:
+                thresholds_.register_cache_eviction(current_time_ms_ -
+                                                        node.insertion_time_ms_,
+                                                    node.size_);
+                break;
+            default:
+                break;
+            }
+            // Erase everything
+            map_.erase(x->key);
+            std::free(x);
+        }
+    }
+
 public:
     /// The larger the uncertainty, the larger the threshold.
     LifeTimeCache(size_t const capacity,
                   double const uncertainty,
-                  bool const record_reaccess)
+                  LifeTimeCacheMode const mode)
         : capacity_(capacity),
           thresholds_(uncertainty),
-          record_reaccess_(record_reaccess)
+          mode_(mode)
     {
     }
 
@@ -44,34 +107,13 @@ public:
 
         if (map_.count(access.key)) {
             auto &node = map_.at(access.key);
-            if (record_reaccess_) {
-                thresholds_.register_cache_eviction(
-                    current_time_ms_ - node.last_access_time_ms_,
-                    node.size_);
-            }
             node.visit(access.timestamp_ms, {});
         } else {
             if (access.size_bytes > capacity_) {
                 // Skip objects that are too large for the cache!
                 return;
             }
-            while (size_ + access.size_bytes > capacity_) {
-                auto x = lru_cache_.remove_head();
-                auto &node = map_.at(x->key);
-                size_ -= node.size_;
-                if (record_reaccess_) {
-                    thresholds_.register_cache_eviction(
-                        current_time_ms_ - node.last_access_time_ms_,
-                        node.size_);
-                } else {
-                    thresholds_.register_cache_eviction(
-                        current_time_ms_ - node.insertion_time_ms_,
-                        node.size_);
-                }
-                // Erase everything
-                map_.erase(x->key);
-                std::free(x);
-            }
+            ensure_enough_room(access);
             map_.emplace(access.key, CacheMetadata{access});
             lru_cache_.access(access.key);
             size_ += access.size_bytes;
@@ -112,6 +154,12 @@ public:
         return thresholds_.uncertainty();
     }
 
+    LifeTimeCacheMode
+    mode() const
+    {
+        return mode_;
+    }
+
 private:
     // Maximum number of bytes in the cache.
     size_t const capacity_;
@@ -128,5 +176,5 @@ private:
 
     LifeTimeThresholds thresholds_;
 
-    bool const record_reaccess_;
+    LifeTimeCacheMode const mode_;
 };

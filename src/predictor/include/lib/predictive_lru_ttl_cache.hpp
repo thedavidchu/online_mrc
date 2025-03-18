@@ -57,7 +57,7 @@ private:
     {
         statistics_.update(metadata.size_, access.size_bytes);
         metadata.visit(access.timestamp_ms, {});
-        if (!repredict_on_reaccess_) {
+        if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
             return;
         }
         // We want the new TTL after the access (above).
@@ -292,12 +292,10 @@ public:
     ///         Otherwise, predict the queue only on insertion.
     PredictiveCache(size_t const capacity,
                     double const uncertainty,
-                    bool const record_reaccess,
-                    bool const repredict_reaccess)
+                    LifeTimeCacheMode const cache_mode)
         : capacity_(capacity),
-          record_reaccess_(record_reaccess),
-          repredict_on_reaccess_(repredict_reaccess),
-          lifetime_cache_(capacity, uncertainty, record_reaccess),
+          lifetime_cache_mode_(cache_mode),
+          lifetime_cache_(capacity, uncertainty, cache_mode),
           oracle_(capacity)
     {
     }
@@ -356,16 +354,10 @@ public:
         return capacity_;
     }
 
-    bool
-    record_reaccess() const
+    LifeTimeCacheMode
+    lifetime_cache_mode() const
     {
-        return record_reaccess_;
-    }
-
-    bool
-    repredict_on_reaccess() const
-    {
-        return repredict_on_reaccess_;
+        return lifetime_cache_mode_;
     }
 
     CacheMetadata const *
@@ -412,8 +404,8 @@ public:
         auto r = lifetime_cache_.thresholds();
         std::cout << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
                   << ", \"Uncertainty\": " << lifetime_cache_.uncertainty()
-                  << ", \"Record Reaccess\": " << record_reaccess_
-                  << ", \"Repredict on Reaccess\": " << repredict_on_reaccess_
+                  << ", \"Lifetime Cache Mode\": "
+                  << LifeTimeCacheMode__str(lifetime_cache_.mode())
                   << ", \"CacheStatistics\": " << statistics_.json()
                   << ", \"PredictionTracker\": " << pred_tracker.json()
                   << ", \"Numer of Threshold Refreshes\": "
@@ -432,8 +424,7 @@ private:
 
     // Maximum number of bytes in the cache.
     size_t const capacity_;
-    bool const record_reaccess_;
-    bool const repredict_on_reaccess_;
+    LifeTimeCacheMode const lifetime_cache_mode_;
 
     // Number of bytes in the current cache.
     size_t size_ = 0;
@@ -450,7 +441,6 @@ private:
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;
 
-public:
     // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
     LifeTimeCache lifetime_cache_;
     // This wouldn't exist in the real cache, for obvious reasons.
