@@ -1,40 +1,60 @@
+#pragma once
+
 /** @brief  [TODO]
  *
  *  @todo   Support different lower/upper uncertainties.
  **/
-#pragma once
+
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <map>
 #include <tuple>
 #include <utility>
 
 #include "math/doubles_are_equal.h"
 
-using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
 class LifeTimeThresholds {
-private:
     std::pair<uint64_t, uint64_t>
     recalculate_thresholds() const
     {
-        uint64_t lower = 0, upper = std::numeric_limits<uint64_t>::max();
-        uint64_t accum = 0;
-        uint64_t prev_lifetime = 0;
-        bool found_lower = false;
+        bool found_lower = false, found_upper = false;
+        uint64_t lower = 0, upper = UINT64_MAX, accum = 0, prev_lifetime = 0;
+
+        // Handle special cases. If we didn't handle the case of 1.0
+        // explicitly, we would simply set the upper_threshold_ to the
+        // largest lifespan we have seen yet, rather than the maximum
+        // possible.
+        if (lower_ratio_ == 0.0) {
+            lower = 0;
+            found_lower = true;
+        }
+        if (upper_ratio_ == 0.0) {
+            upper = 0;
+            found_upper = true;
+        }
+        if (lower_ratio_ == 1.0) {
+            lower = UINT64_MAX;
+            found_lower = true;
+        }
+        if (upper_ratio_ == 1.0) {
+            upper = UINT64_MAX;
+            found_upper = true;
+        }
 
         for (auto [lifetime, frq] : histogram_) {
+            if (found_lower && found_upper) {
+                break;
+            }
             accum += frq;
             if (!found_lower && (double)accum / total_ > lower_ratio_) {
                 lower = prev_lifetime;
                 found_lower = true;
             }
-            if ((double)accum / total_ >= upper_ratio_) {
+            if (!found_upper && (double)accum / total_ >= upper_ratio_) {
                 upper = lifetime;
-                break;
+                found_upper = true;
             }
             prev_lifetime = lifetime;
         }
@@ -128,19 +148,19 @@ public:
         return {lower_threshold_, upper_threshold_};
     }
 
-    size_t
+    uint64_t
     refreshes() const
     {
         return num_refresh_;
     }
 
-    size_t
+    uint64_t
     evictions() const
     {
         return total_;
     }
 
-    size_t
+    uint64_t
     since_refresh() const
     {
         return coarse_counter_;
@@ -162,17 +182,17 @@ private:
     double const lower_ratio_;
     double const upper_ratio_;
     uint64_t lower_threshold_ = 0;
-    uint64_t upper_threshold_ = std::numeric_limits<uint64_t>::max();
+    uint64_t upper_threshold_ = UINT64_MAX;
 
     uint64_t total_ = 0;
     std::map<uint64_t, uint64_t> histogram_;
     // This tells us how far off our current estimate of the thresholds
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
-    size_t coarse_counter_ = 0;
-    size_t num_refresh_ = 0;
+    uint64_t coarse_counter_ = 0;
+    uint64_t num_refresh_ = 0;
 
 public:
     // TODO Make this configurable?
-    static constexpr size_t MIN_COARSE_COUNT = 1 << 20;
+    static constexpr uint64_t MIN_COARSE_COUNT = 1 << 20;
 };
