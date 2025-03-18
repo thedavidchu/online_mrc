@@ -16,7 +16,9 @@ class ProgressBar {
     format_time_min_sec(double const tm_s)
     {
         uint64_t min = tm_s / 60;
-        return std::to_string(min) + ":" + std::to_string((uint64_t)tm_s % 60);
+        uint64_t sec = (uint64_t)tm_s % 60;
+        return std::to_string(min) + ":" + std::string(sec < 10 ? 1 : 0, '0') +
+               std::to_string(sec);
     }
 
     bool
