@@ -9,6 +9,7 @@
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_trace.hpp"
 #include "cpp_cache/histogram.hpp"
+#include "cpp_cache/progress_bar.hpp"
 #include "trace/reader.h"
 
 #include <cassert>
@@ -169,7 +170,9 @@ analyze_trace(char const *const trace_path,
 
     std::unordered_map<uint64_t, AccessStatistics> map;
     CacheAccessTrace const trace(trace_path, format);
+    ProgressBar pbar(trace.size());
     for (size_t i = 0; i < trace.size(); ++i) {
+        pbar.tick();
         auto &x = trace.get(i);
 
         if (!x.ttl_ms.has_value()) {
