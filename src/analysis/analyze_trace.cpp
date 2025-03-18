@@ -1,9 +1,4 @@
-/** @brief  Analyze the SET requests in Kia's trace.
- *
- *  @todo   1. How many SET before GET [only]
- *  @todo   1. How many SET before and after GET
- *  @todo   1. How many SET after GET [only]
- *  @todo   1. No SET
+/** @brief  Analyze the GET and SET requests in Kia's trace.
  */
 
 #include "cpp_cache/cache_access.hpp"
@@ -166,6 +161,7 @@ analyze_trace(char const *const trace_path,
               enum TraceFormat const format,
               bool const verbose = false)
 {
+    uint64_t cnt_gets = 0, cnt_sets = 0;
     Histogram ttl_diff_hist;
 
     std::unordered_map<uint64_t, AccessStatistics> map;
@@ -176,9 +172,11 @@ analyze_trace(char const *const trace_path,
         auto &x = trace.get(i);
 
         if (!x.ttl_ms.has_value()) {
+            cnt_gets += 1;
             map[x.key].access(x);
             continue;
         }
+        cnt_sets += 1;
 
         // Analyze whether the TTL has changed before we update the
         // object with the new TTL.
@@ -195,6 +193,15 @@ analyze_trace(char const *const trace_path,
         map[x.key].access(x);
     }
 
+    std::cout << "# Trace Analysis for " << trace_path << " ("
+              << get_trace_format_string(TRACE_FORMAT_KIA) << "'s format)"
+              << std::endl;
+
+    std::cout << "## Commands" << std::endl;
+    std::cout << "Number of SETs: " << cnt_sets << std::endl;
+    std::cout << "Number of GETs: " << cnt_gets << std::endl;
+
+    std::cout << "## TTLs" << std::endl;
     std::cout << "Min TTL diff [ms]: " << ttl_diff_hist.percentile(0.0)
               << std::endl;
     std::cout << "Q1 TTL diff [ms]: " << ttl_diff_hist.percentile(0.25)
