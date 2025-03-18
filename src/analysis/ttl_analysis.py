@@ -12,17 +12,19 @@ TTLs in the Twitter traces in Figure 3.1. The CDFs with multiple
 vertical sections are the interesting ones. Here's a list (not
 guaranteed to be complete) of clusters with two or more large clusters
 of TTLs:
-- cluster4
-- cluster5
-- cluster6
-- cluster24
-- cluster25
-- cluster26
-- cluster34
-- cluster37
-- cluster46
-- cluster52
-- cluster53
+- cluster4 (Kia's: 81 GB)
+- cluster5 (Kia's: 244 GB)
+- cluster6 (Kia's: 196 GB)
+- cluster24 (Kia's: 77 GB)
+- cluster25 (Kia's: 268 GB) - "mix of small and large TTLs" (Yang)
+- cluster26 (Kia's: 3.7 GB)
+- cluster34 (Kia's: 50 GB)
+- cluster37 (Kia's: 74 GB)
+- cluster46 (Kia's: 154 GB)
+- cluster52 (Kia's: 285 GB) - "mix of small and large TTLs" (Yang)
+- cluster53 (Kia's: 5.3 GB)
+
+
 
 @example    My imports break the normal Python stuff, so yeah.
             Run this file with the following:
