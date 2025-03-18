@@ -80,6 +80,8 @@ class LifeTimeCache {
     }
 
 public:
+    /// @param lower_ratio - acceptable level of not expiring objects.
+    /// @param upper_ratio - acceptable level of not evicting objects.
     LifeTimeCache(size_t const capacity,
                   double const lower_ratio,
                   double const upper_ratio,
