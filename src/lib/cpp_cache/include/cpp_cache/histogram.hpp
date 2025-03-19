@@ -37,6 +37,8 @@ public:
         return accum / total_;
     }
 
+    /// @brief  Return the bucket with the highest frequency, broken by
+    ///         the largest bucket number.
     double
     mode()
     {

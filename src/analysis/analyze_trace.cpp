@@ -227,8 +227,7 @@ analyze_trace(char const *const trace_path,
               << format_underscore(ttl_diff_hist.percentile(0.0)) << std::endl;
     std::cout << "Q1 TTL diff [ms]: "
               << format_underscore(ttl_diff_hist.percentile(0.25)) << std::endl;
-    std::cout << "Mean TTL diff [ms]: "
-              << format_underscore(ttl_diff_hist.mean()) << std::endl;
+    std::cout << "Mean TTL diff [ms]: " << ttl_diff_hist.mean() << std::endl;
     std::cout << "Mode TTL diff [ms]: "
               << format_underscore(ttl_diff_hist.mode()) << std::endl;
     std::cout << "Median TTL diff [ms]: "
