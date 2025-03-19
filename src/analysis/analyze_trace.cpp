@@ -29,6 +29,13 @@ absdiff(uint64_t const a, uint64_t const b)
     }
 }
 
+static inline std::string
+prettify_number(uint64_t const num, uint64_t const den)
+{
+    return format_underscore(num) + " (" + format_percent((double)num / den) +
+           ")";
+}
+
 struct AccessStatistics {
     void
     access(CacheAccess const &access)
@@ -131,24 +138,25 @@ analyze_statistics_per_key(
 
     std::cout << "Number of keys: " << format_underscore(num_keys) << std::endl;
     std::cout << "Number of keys with multiple TTLs: "
-              << format_underscore(change_ttl) << std::endl;
-    std::cout << "GET of key only: " << format_underscore(get_only)
+              << prettify_number(change_ttl, num_keys) << std::endl;
+    std::cout << "GET of key only: " << prettify_number(get_only, num_keys)
               << std::endl;
-    std::cout << "SET of key only: " << format_underscore(set_only)
+    std::cout << "SET of key only: " << prettify_number(set_only, num_keys)
               << std::endl;
     std::cout << "First GET of key before first SET: "
-              << format_underscore(get_set) << std::endl;
+              << prettify_number(get_set, num_keys) << std::endl;
     std::cout << "Last GET of key after last SET: "
-              << format_underscore(set_get) << std::endl;
+              << prettify_number(set_get, num_keys) << std::endl;
     std::cout << "GET of key surrounded by SETs: "
-              << format_underscore(set_get_set) << std::endl;
+              << prettify_number(set_get_set, num_keys) << std::endl;
     std::cout << "SET of key surrounded by GETs: "
-              << format_underscore(get_set_get) << std::endl;
-    std::cout << "SET and GET at same time: " << format_underscore(same_time)
-              << std::endl;
+              << prettify_number(get_set_get, num_keys) << std::endl;
+    std::cout << "SET and GET at same time: "
+              << prettify_number(same_time, num_keys) << std::endl;
     std::cout << "Sum (should equal #keys): "
-              << get_only + set_only + get_set + set_get + set_get_set +
-                     get_set_get + same_time
+              << prettify_number(get_only + set_only + get_set + set_get +
+                                     set_get_set + get_set_get + same_time,
+                                 num_keys)
               << std::endl;
 }
 
@@ -166,14 +174,18 @@ analyze_statistics_per_access(
     std::cout << "Number of accesses: " << format_underscore(num_accesses)
               << std::endl;
     std::cout << "GET access before first SET: "
-              << format_underscore(gets_before_first_set) << std::endl;
+              << prettify_number(gets_before_first_set, num_accesses)
+              << std::endl;
     std::cout << "GET access after first SET: "
-              << format_underscore(num_accesses - gets_before_first_set)
+              << prettify_number(num_accesses - gets_before_first_set,
+                                 num_accesses)
               << std::endl;
     std::cout << "GET accesses after last SET: "
-              << format_underscore(gets_after_last_set) << std::endl;
+              << prettify_number(gets_after_last_set, num_accesses)
+              << std::endl;
     std::cout << "GET accesses before last SET: "
-              << format_underscore(num_accesses - gets_after_last_set)
+              << prettify_number(num_accesses - gets_after_last_set,
+                                 num_accesses)
               << std::endl;
 }
 
@@ -219,8 +231,10 @@ analyze_trace(char const *const trace_path,
               << std::endl;
 
     std::cout << "## Commands" << std::endl;
-    std::cout << "Number of SETs: " << format_underscore(cnt_sets) << std::endl;
-    std::cout << "Number of GETs: " << format_underscore(cnt_gets) << std::endl;
+    std::cout << "Number of SETs: "
+              << prettify_number(cnt_sets, cnt_sets + cnt_gets) << std::endl;
+    std::cout << "Number of GETs: "
+              << prettify_number(cnt_gets, cnt_sets + cnt_gets) << std::endl;
 
     std::cout << "## TTLs" << std::endl;
     std::cout << "Min TTL diff [ms]: "

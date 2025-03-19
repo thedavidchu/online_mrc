@@ -103,3 +103,9 @@ format_underscore(uint64_t const value)
     std::string str{digits.begin(), digits.end()};
     return str;
 }
+
+static inline std::string
+format_percent(double const ratio)
+{
+    return std::to_string(100 * ratio) + "%";
+}
