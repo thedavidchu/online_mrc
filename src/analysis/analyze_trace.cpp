@@ -57,7 +57,7 @@ struct AccessStatistics {
             latest_set_time_ms = access.timestamp_ms;
             if (current_ttl_ms.has_value() &&
                 current_ttl_ms.value() != access.ttl_ms.value_or(UINT64_MAX)) {
-                ttl_changes = true;
+                ttl_changes += 1;
             }
             current_ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
         } else {
@@ -67,7 +67,7 @@ struct AccessStatistics {
 
     uint64_t gets_before_first_set = 0;
     uint64_t gets_after_last_set = 0;
-    bool ttl_changes = false;
+    uint64_t ttl_changes = 0;
 
     std::optional<uint64_t> first_set_time_ms = std::nullopt;
     std::optional<uint64_t> first_get_time_ms = std::nullopt;
@@ -99,8 +99,7 @@ analyze_statistics_per_key(
     // first and last are the same or different times.
     uint64_t same_time = 0;
     for (auto [k, stats] : map) {
-        // I could add the boolean directly, but I'm not sure whether
-        // the C++ standard guarantees true == 1.
+        // Count the keys where the TTL changes at least once.
         change_ttl += stats.ttl_changes ? 1 : 0;
         if (stats.first_set_time_ms.has_value() &&
             stats.first_get_time_ms.has_value()) {
@@ -163,13 +162,16 @@ analyze_statistics_per_key(
 void
 analyze_statistics_per_access(
     std::unordered_map<uint64_t, AccessStatistics> const &map,
-    size_t const num_accesses)
+    size_t const num_accesses,
+    size_t const cnt_sets)
 {
     uint64_t gets_before_first_set = 0;
     uint64_t gets_after_last_set = 0;
+    uint64_t ttl_changes = 0;
     for (auto [k, stats] : map) {
         gets_before_first_set += stats.gets_before_first_set;
         gets_after_last_set += stats.gets_after_last_set;
+        ttl_changes += stats.ttl_changes;
     }
     std::cout << "Number of accesses: " << format_underscore(num_accesses)
               << std::endl;
@@ -187,6 +189,10 @@ analyze_statistics_per_access(
               << prettify_number(num_accesses - gets_after_last_set,
                                  num_accesses)
               << std::endl;
+    // We should compare this to the number of SET requests, not the
+    // number of SET+GET requests, since they only change on SET requests.
+    std::cout << "Accesses where TTL changes (compared to SET requests): "
+              << prettify_number(ttl_changes, cnt_sets) << std::endl;
 }
 
 void
@@ -231,10 +237,10 @@ analyze_trace(char const *const trace_path,
               << std::endl;
 
     std::cout << "## Commands" << std::endl;
-    std::cout << "Number of SETs: "
-              << prettify_number(cnt_sets, cnt_sets + cnt_gets) << std::endl;
-    std::cout << "Number of GETs: "
-              << prettify_number(cnt_gets, cnt_sets + cnt_gets) << std::endl;
+    std::cout << "Number of SETs: " << prettify_number(cnt_sets, trace.size())
+              << std::endl;
+    std::cout << "Number of GETs: " << prettify_number(cnt_gets, trace.size())
+              << std::endl;
 
     std::cout << "## TTLs" << std::endl;
     std::cout << "Min TTL diff [ms]: "
@@ -253,7 +259,7 @@ analyze_trace(char const *const trace_path,
     std::cout << "---" << std::endl;
     analyze_statistics_per_key(map, map.size());
     std::cout << "---" << std::endl;
-    analyze_statistics_per_access(map, trace.size());
+    analyze_statistics_per_access(map, trace.size(), cnt_sets);
 }
 
 int
