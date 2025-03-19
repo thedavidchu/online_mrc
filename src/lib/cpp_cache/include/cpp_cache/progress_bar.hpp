@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cpp_cache/format_measurement.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -44,7 +45,8 @@ class ProgressBar {
         std::cout << "\r" << percentage_done() << "|"
                   << std::string(progress, '=')
                   << std::string(granularity_ - progress, ' ') << "| "
-                  << counter_ << "/" << size_ << " ["
+                  << format_underscore(counter_) << "/"
+                  << format_underscore(size_) << " ["
                   << format_time_min_sec(dur_s) << "<?, "
                   << (double)counter_ / dur_s << "it/s]";
         std::flush(std::cout);
