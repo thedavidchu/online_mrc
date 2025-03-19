@@ -3,6 +3,7 @@
 
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_trace.hpp"
+#include "cpp_cache/format_measurement.hpp"
 #include "cpp_cache/histogram.hpp"
 #include "cpp_cache/progress_bar.hpp"
 #include "trace/reader.h"
@@ -119,19 +120,20 @@ analyze_statistics_per_key(
         }
     }
 
-    std::cout << "GET of key only: " << get_only << "/" << num_keys
+    std::cout << "Number of keys: " << format_underscore(num_keys) << std::endl;
+    std::cout << "GET of key only: " << format_underscore(get_only)
               << std::endl;
-    std::cout << "SET of key only: " << set_only << "/" << num_keys
+    std::cout << "SET of key only: " << format_underscore(set_only)
               << std::endl;
-    std::cout << "First GET of key before first SET: " << get_set << "/"
-              << num_keys << std::endl;
-    std::cout << "Last GET of key after last SET: " << set_get << "/"
-              << num_keys << std::endl;
-    std::cout << "GET of key surrounded by SETs: " << set_get_set << "/"
-              << num_keys << std::endl;
-    std::cout << "SET of key surrounded by GETs: " << get_set_get << "/"
-              << num_keys << std::endl;
-    std::cout << "SET and GET at same time: " << same_time << "/" << num_keys
+    std::cout << "First GET of key before first SET: "
+              << format_underscore(get_set) << std::endl;
+    std::cout << "Last GET of key after last SET: "
+              << format_underscore(set_get) << std::endl;
+    std::cout << "GET of key surrounded by SETs: "
+              << format_underscore(set_get_set) << std::endl;
+    std::cout << "SET of key surrounded by GETs: "
+              << format_underscore(get_set_get) << std::endl;
+    std::cout << "SET and GET at same time: " << format_underscore(same_time)
               << std::endl;
     std::cout << "Sum (should equal #keys): "
               << get_only + set_only + get_set + set_get + set_get_set +
@@ -150,10 +152,18 @@ analyze_statistics_per_access(
         gets_before_first_set += stats.gets_before_first_set;
         gets_after_last_set += stats.gets_after_last_set;
     }
-    std::cout << "GET access before first SET: " << gets_before_first_set << "/"
-              << num_accesses << std::endl;
-    std::cout << "GET accesses after last SET: " << gets_after_last_set << "/"
-              << num_accesses << std::endl;
+    std::cout << "Number of accesses: " << format_underscore(num_accesses)
+              << std::endl;
+    std::cout << "GET access before first SET: "
+              << format_underscore(gets_before_first_set) << std::endl;
+    std::cout << "GET access after first SET: "
+              << format_underscore(num_accesses - gets_before_first_set)
+              << std::endl;
+    std::cout << "GET accesses after last SET: "
+              << format_underscore(gets_after_last_set) << std::endl;
+    std::cout << "GET accesses before last SET: "
+              << format_underscore(num_accesses - gets_after_last_set)
+              << std::endl;
 }
 
 void
@@ -198,22 +208,24 @@ analyze_trace(char const *const trace_path,
               << std::endl;
 
     std::cout << "## Commands" << std::endl;
-    std::cout << "Number of SETs: " << cnt_sets << std::endl;
-    std::cout << "Number of GETs: " << cnt_gets << std::endl;
+    std::cout << "Number of SETs: " << format_underscore(cnt_sets) << std::endl;
+    std::cout << "Number of GETs: " << format_underscore(cnt_gets) << std::endl;
 
     std::cout << "## TTLs" << std::endl;
-    std::cout << "Min TTL diff [ms]: " << ttl_diff_hist.percentile(0.0)
-              << std::endl;
-    std::cout << "Q1 TTL diff [ms]: " << ttl_diff_hist.percentile(0.25)
-              << std::endl;
-    std::cout << "Mean TTL diff [ms]: " << ttl_diff_hist.mean() << std::endl;
-    std::cout << "Mode TTL diff [ms]: " << ttl_diff_hist.mode() << std::endl;
-    std::cout << "Median TTL diff [ms]: " << ttl_diff_hist.percentile(0.5)
-              << std::endl;
-    std::cout << "Q3 TTL diff [ms]: " << ttl_diff_hist.percentile(0.75)
-              << std::endl;
-    std::cout << "Max TTL diff [ms]: " << ttl_diff_hist.percentile(1.0)
-              << std::endl;
+    std::cout << "Min TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.percentile(0.0)) << std::endl;
+    std::cout << "Q1 TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.percentile(0.25)) << std::endl;
+    std::cout << "Mean TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.mean()) << std::endl;
+    std::cout << "Mode TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.mode()) << std::endl;
+    std::cout << "Median TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.percentile(0.5)) << std::endl;
+    std::cout << "Q3 TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.percentile(0.75)) << std::endl;
+    std::cout << "Max TTL diff [ms]: "
+              << format_underscore(ttl_diff_hist.percentile(1.0)) << std::endl;
     std::cout << "---" << std::endl;
     analyze_statistics_per_key(map, map.size());
     std::cout << "---" << std::endl;
