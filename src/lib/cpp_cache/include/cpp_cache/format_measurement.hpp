@@ -1,12 +1,17 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cstdbool>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "arrays/array_size.h"
+#include "arrays/is_last.h"
 
 // It would be more complicated to support larger values with exponents
 // larger than 2^64, because that exceeds the maximum of a uint64.
@@ -79,4 +84,22 @@ format_engineering(double const value)
         return std::to_string(mantissa);
     }
     return std::to_string(mantissa) + "e" + std::to_string(exp10);
+}
+
+static inline std::string
+format_underscore(uint64_t const value)
+{
+    std::vector<char> digits;
+    std::string original_string = std::to_string(value);
+    std::reverse(original_string.begin(), original_string.end());
+    for (size_t i = 0; i < original_string.size(); ++i) {
+        char c = original_string.at(i);
+        digits.push_back(c);
+        if (!is_last(i, original_string.size()) && i % 3 == 2) {
+            digits.push_back('_');
+        }
+    }
+    std::reverse(digits.begin(), digits.end());
+    std::string str{digits.begin(), digits.end()};
+    return str;
 }

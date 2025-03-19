@@ -1,4 +1,5 @@
 subdir('common_test')
+subdir('cpp_cache_test')
 subdir('file_test')
 subdir('hash_test')
 subdir('histogram_test')
