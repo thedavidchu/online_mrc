@@ -48,6 +48,10 @@ struct AccessStatistics {
             }
             gets_after_last_set = 0;
             latest_set_time_ms = access.timestamp_ms;
+            if (current_ttl_ms.has_value() &&
+                current_ttl_ms.value() != access.ttl_ms.value_or(UINT64_MAX)) {
+                ttl_changes = true;
+            }
             current_ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
         } else {
             assert(0 && "impossible!");
@@ -56,6 +60,7 @@ struct AccessStatistics {
 
     uint64_t gets_before_first_set = 0;
     uint64_t gets_after_last_set = 0;
+    bool ttl_changes = false;
 
     std::optional<uint64_t> first_set_time_ms = std::nullopt;
     std::optional<uint64_t> first_get_time_ms = std::nullopt;
@@ -69,6 +74,7 @@ analyze_statistics_per_key(
     std::unordered_map<uint64_t, AccessStatistics> const &map,
     size_t const num_keys)
 {
+    uint64_t change_ttl = 0;
     uint64_t get_only = 0;
     uint64_t set_only = 0;
     // Number of keys where first GET happens before first SET
@@ -86,6 +92,9 @@ analyze_statistics_per_key(
     // first and last are the same or different times.
     uint64_t same_time = 0;
     for (auto [k, stats] : map) {
+        // I could add the boolean directly, but I'm not sure whether
+        // the C++ standard guarantees true == 1.
+        change_ttl += stats.ttl_changes ? 1 : 0;
         if (stats.first_set_time_ms.has_value() &&
             stats.first_get_time_ms.has_value()) {
             assert(stats.latest_set_time_ms.has_value());
@@ -121,6 +130,8 @@ analyze_statistics_per_key(
     }
 
     std::cout << "Number of keys: " << format_underscore(num_keys) << std::endl;
+    std::cout << "Number of keys with multiple TTLs: "
+              << format_underscore(change_ttl) << std::endl;
     std::cout << "GET of key only: " << format_underscore(get_only)
               << std::endl;
     std::cout << "SET of key only: " << format_underscore(set_only)
