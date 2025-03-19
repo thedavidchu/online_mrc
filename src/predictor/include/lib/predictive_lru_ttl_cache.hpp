@@ -115,13 +115,13 @@ private:
             }
             break;
         case EvictionCause::VolatileTTL:
-            statistics_.evict(m.size_);
+            statistics_.ttl_evict(m.size_);
             // NOTE This isn't exactly the correct classification...
             //      It wasn't expired, but rather it was the soonest-to-expire.
             pred_tracker.update_wrongly_expired(sz_bytes);
             break;
         case EvictionCause::AccessExpired:
-            statistics_.expire(m.size_);
+            statistics_.lazy_expire(m.size_);
             // NOTE This isn't exactly the correct classification...
             //      It wasn't evicted by LRU, it was evicted by
             //      reaccessing an expired object. However, it would

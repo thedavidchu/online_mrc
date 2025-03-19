@@ -147,10 +147,38 @@ CacheStatistics::evict(uint64_t const size_bytes)
 }
 
 void
+CacheStatistics::ttl_evict(uint64_t const size_bytes)
+{
+    ttl_evict_ops_ += 1;
+    ttl_evict_bytes_ += size_bytes;
+
+    size_ -= size_bytes;
+    // Cannot set a new maximum size.
+
+    resident_objs_ -= 1;
+    // Cannot set a new maximum number of resident objects.
+}
+
+void
 CacheStatistics::expire(uint64_t const size_bytes)
 {
     expire_ops_ += 1;
     expire_bytes_ += size_bytes;
+
+    size_ -= size_bytes;
+    // Cannot set a new maximum size.
+
+    resident_objs_ -= 1;
+    // Cannot set a new maximum number of resident objects.
+
+    upperbound_ttl_wss_ -= size_bytes;
+}
+
+void
+CacheStatistics::lazy_expire(uint64_t const size_bytes)
+{
+    lazy_expire_ops_ += 1;
+    lazy_expire_bytes_ += size_bytes;
 
     size_ -= size_bytes;
     // Cannot set a new maximum size.
@@ -175,13 +203,15 @@ CacheStatistics::deprecated_miss()
 uint64_t
 CacheStatistics::total_ops() const
 {
-    return insert_ops_ + update_ops_ + evict_ops_ + expire_ops_;
+    return insert_ops_ + update_ops_ + evict_ops_ + ttl_evict_ops_ +
+           expire_ops_ + lazy_expire_ops_;
 }
 
 uint64_t
 CacheStatistics::total_bytes() const
 {
-    return insert_bytes_ + update_bytes_ + evict_bytes_ + expire_bytes_;
+    return insert_bytes_ + update_bytes_ + evict_bytes_ + ttl_evict_bytes_ +
+           expire_bytes_ + lazy_expire_bytes_;
 }
 
 double
@@ -234,8 +264,12 @@ CacheStatistics::json() const
        << ", \"update_bytes\": " << format_memory_size(update_bytes_)
        << ", \"evict_ops\": " << format_engineering(evict_ops_)
        << ", \"evict_bytes\": " << format_memory_size(evict_bytes_)
+       << ", \"ttl_evict_ops\": " << format_engineering(ttl_evict_ops_)
+       << ", \"ttl_evict_bytes\": " << format_memory_size(ttl_evict_bytes_)
        << ", \"expire_ops\": " << format_engineering(expire_ops_)
        << ", \"expire_bytes\": " << format_memory_size(expire_bytes_)
+       << ", \"lazy_expire_ops\": " << format_engineering(lazy_expire_ops_)
+       << ", \"lazy_expire_bytes\": " << format_memory_size(lazy_expire_bytes_)
        << ", \"hit_ops\": " << format_engineering(hit_ops_)
        << ", \"hit_bytes\": " << format_memory_size(hit_bytes_)
        << ", \"miss_ops\": " << format_engineering(miss_ops_)

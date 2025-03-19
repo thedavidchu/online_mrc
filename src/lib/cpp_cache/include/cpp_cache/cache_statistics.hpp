@@ -32,7 +32,11 @@ public:
     void
     evict(uint64_t const size_bytes);
     void
+    ttl_evict(uint64_t const size_bytes);
+    void
     expire(uint64_t const size_bytes);
+    void
+    lazy_expire(uint64_t const size_bytes);
 
     // Deprecated, but useful for legacy TTL code.
     void
@@ -79,8 +83,16 @@ public:
     uint64_t evict_ops_ = 0;
     uint64_t evict_bytes_ = 0;
 
+    // Evictions by the secondary eviction policy, volatile TTLs.
+    uint64_t ttl_evict_ops_ = 0;
+    uint64_t ttl_evict_bytes_ = 0;
+
     uint64_t expire_ops_ = 0;
     uint64_t expire_bytes_ = 0;
+
+    // Expirations done non-actively.
+    uint64_t lazy_expire_ops_ = 0;
+    uint64_t lazy_expire_bytes_ = 0;
 
     // MRC statistics
     uint64_t hit_ops_ = 0;
