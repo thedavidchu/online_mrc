@@ -18,7 +18,7 @@ from src.analysis.common.trace import read_trace
 def print_header(format: str):
     if format == "Kia":
         print(
-            f"| {'ID':<5} | {'Position':<10} | {'Timestamp [s]':<20} | Command | {'Key':<20} | {'Size [B]':<10} | {'TTL [s]':<10} |"
+            f"| {'ID':<5} | {'Position':<10} | {'Timestamp [ms]':<20} | Command | {'Key':<20} | {'Size [B]':<10} | {'TTL [s]':<10} |"
         )
         print(
             f"|-------|------------|----------------------|---------|----------------------|------------|------------|"
@@ -71,7 +71,7 @@ def main():
         help="format of the input trace. Options: Kia|Sari",
     )
     parser.add_argument(
-        "--start", "-s", type=int, default=0, help="index to begin. Default: 0."
+        "--start", "-s", type=int, default=0, help="index to begin (may be negative, but no less than -(length of trace)). Default: 0."
     )
     parser.add_argument(
         "--length", "-l", type=int, default=10, help="length to print. Default: 10."
