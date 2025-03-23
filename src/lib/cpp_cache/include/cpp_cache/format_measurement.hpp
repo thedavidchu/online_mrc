@@ -109,3 +109,13 @@ format_percent(double const ratio)
 {
     return std::to_string(100 * ratio) + "%";
 }
+
+/// @example    '1/100 (1%)'
+static inline std::string
+format_pretty_ratio(uint64_t const num, uint64_t const den)
+{
+    std::stringstream ss;
+    ss << format_underscore(num) << "/" << format_underscore(den) << " ("
+       << format_percent((double)num / den) << ")";
+    return ss.str();
+}
