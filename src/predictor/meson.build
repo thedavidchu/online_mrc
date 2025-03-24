@@ -62,6 +62,18 @@ test_lifetime_thresholds_exe = executable(
     ],
 )
 
+test_iterator_spaces_exe = executable(
+    'test_iterator_spaces_exe',
+    'test_iterator_spaces.cpp',
+    include_directories: predictor_inc,
+    dependencies: [
+        common_dep,
+        cpp_cache_dep,
+        glib_dep,
+    ],
+)
+
 test('list_test', list_exe)
 test('test_lifetime_thresholds', test_lifetime_thresholds_exe)
 test('test_lru_ttl_cache', test_lru_ttl_cache_exe)
+test('test_iterator_spaces', test_iterator_spaces_exe)
