@@ -9,15 +9,28 @@ Calculate the working set size of a trace.
 
 import argparse
 from pathlib import Path
+from warnings import warn
 
 from tqdm import tqdm
 import numpy as np
 
-from src.analysis.common.trace import TRACE_DTYPE
+from src.analysis.common.trace import TRACE_DTYPE, TRACE_DTYPE_KEY
 from src.analysis.common.common import format_memory_size as fmtmem
+from src.analysis.common.common import abspath
 
 
-def wss(path: Path, format: str) -> dict[str, float]:
+def maybe_wrong_format(path: Path, format: str) -> bool:
+    """@brief   Input paths that contain an alternate trace format, but
+                not the intended one are likely wrong."""
+    lower_p = str(path.resolve()).lower()
+    other_formats = set(TRACE_DTYPE_KEY) - set(format)
+    for other in other_formats:
+        if other.lower() in lower_p and format.lower() not in lower_p:
+            return True
+    return False
+
+
+def wss(path: Path, format: str, hide_progress: bool) -> dict[str, float]:
     x = np.fromfile(path, dtype=TRACE_DTYPE[format])
     size = path.stat().st_size
     print(f"File size {str(path)}: {size} ({fmtmem(size)})")
@@ -34,6 +47,9 @@ def wss(path: Path, format: str) -> dict[str, float]:
     bytes_requested = np.sum(x[:]["size_b"])
     print(f"Total bytes requested: {bytes_requested} ({fmtmem(bytes_requested)})")
 
+    # HACK  Hide the progress by replacing the tqdm function with identity.
+    if hide_progress:
+        tqdm = lambda x: x
     # Get working set sizes (may take a while!).
     max_cache_size = {}
     first_cache_size = {}
@@ -65,19 +81,21 @@ def wss(path: Path, format: str) -> dict[str, float]:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", "-i", type=Path, required=True, help="input trace path"
+        "--input", "-i", type=abspath, required=True, help="input trace path"
     )
     parser.add_argument(
         "--format",
         "-f",
         type=str,
-        choices=["Kia", "Sari"],
-        default="Kia",
+        choices=TRACE_DTYPE_KEY,
+        default=TRACE_DTYPE_KEY[0],
         help="input trace format",
     )
+    parser.add_argument("--hide-progress", action="store_true", help="hide the progress bar")
     args = parser.parse_args()
-
-    _ = wss(args.input, args.format)
+    if maybe_wrong_format(args.input, args.format):
+        warn(f"potentially wrong format {args.format} for input {args.input}")
+    _ = wss(args.input, args.format, args.hide_progress)
     print(_)
 
 
