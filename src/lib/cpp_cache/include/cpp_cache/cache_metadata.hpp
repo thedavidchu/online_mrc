@@ -50,6 +50,11 @@ struct CacheMetadata {
         }
     }
 
+    /// @note   Does not update expiration time.
+    void
+    visit_without_ttl_refresh(CacheAccess const &access);
+
+    /// @note   Updates expiration time.
     void
     visit(std::uint64_t const access_time_ms,
           std::optional<std::uint64_t> const new_expiration_time_ms);

@@ -42,12 +42,17 @@ private:
     void
     evict_expired_objects(uint64_t const current_time_ms);
 
+    /// @param  target_bytes - the number of bytes to try to evict.
+    /// @return the number of bytes evicted.
+    uint64_t
+    evict_from_lru(uint64_t const target_bytes);
+
     /// @brief  Get the soonest expiring keys that would be enough to
     ///         make sufficient room in the cache.
+    /// @param  target_bytes - the number of bytes to try to evict.
+    /// @return the number of bytes evicted.
     bool
-    get_soonest_expiring(std::vector<uint64_t> &victims,
-                         uint64_t &evicted_bytes,
-                         uint64_t const required_bytes);
+    evict_smallest_ttl(uint64_t const target_bytes);
 
     bool
     ensure_enough_room(size_t const old_nbytes, size_t const new_nbytes);

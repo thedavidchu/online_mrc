@@ -52,9 +52,10 @@ PredictiveCache::insert(CacheAccess const &access)
 void
 PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 {
-    size_ += access.value_size_b - metadata.size_;
+    size_ -= metadata.size_;
+    size_ += access.value_size_b;
     statistics_.update(metadata.size_, access.value_size_b);
-    metadata.visit(access.timestamp_ms, {});
+    metadata.visit_without_ttl_refresh(access);
     if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
         return;
     }
@@ -89,6 +90,11 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 void
 PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
 {
+    // TODO Cause of abort below. Figure out where my book keeping goes wrong!
+    if (map_.count(victim_key) == 0) {
+        std::cout << victim_key << ", " << EvictionCause__string(cause)
+        << std::endl;
+    }
     CacheMetadata &m = map_.at(victim_key);
     uint64_t sz_bytes = m.size_;
     uint64_t exp_tm = m.expiration_time_ms_;
@@ -155,23 +161,45 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
     }
 }
 
-/// @brief  Get the soonest expiring keys that would be enough to
-///         make sufficient room in the cache.
-bool
-PredictiveCache::get_soonest_expiring(std::vector<uint64_t> &victims,
-                                      uint64_t &evicted_bytes,
-                                      uint64_t const required_bytes)
+/// @return number of bytes evicted.
+uint64_t
+PredictiveCache::evict_from_lru(uint64_t const target_bytes)
 {
+    uint64_t evicted_bytes = 0;
+    std::vector<uint64_t> victims;
+    for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+        if (evicted_bytes >= target_bytes) {
+            break;
+        }
+        auto &m = map_.at(n->key);
+        evicted_bytes += m.size_;
+        victims.push_back(n->key);
+    }
+    // One cannot evict elements from the map one is iterating over.
+    for (auto v : victims) {
+        evict(v, EvictionCause::LRU);
+    }
+    return evicted_bytes;
+}
+
+bool
+PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes)
+{
+    uint64_t evicted_bytes = 0;
+    std::vector<uint64_t> victims;
     for (auto [tm, key] : ttl_cache_) {
-        if (evicted_bytes >= required_bytes) {
+        if (evicted_bytes >= target_bytes) {
             break;
         }
         auto &m = map_.at(key);
         evicted_bytes += m.size_;
         victims.push_back(key);
     }
-
-    return (evicted_bytes >= required_bytes);
+    // One cannot evict elements from the map one is iterating over.
+    for (auto v : victims) {
+        evict(v, EvictionCause::VolatileTTL);
+    }
+    return evicted_bytes;
 }
 
 bool
@@ -200,32 +228,23 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
         return true;
     }
     uint64_t required_bytes = nbytes - (capacity_ - size_);
-    uint64_t evicted_bytes = 0;
-    std::vector<uint64_t> victims;
-    // Otherwise, make room in the cache for the new object.
-    for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
-        if (evicted_bytes >= required_bytes) {
-            break;
-        }
-        auto &m = map_.at(n->key);
-        evicted_bytes += m.size_;
-        victims.push_back(n->key);
-    }
-    // One cannot evict elements from the map one is iterating over.
-    for (auto v : victims) {
-        evict(v, EvictionCause::LRU);
-    }
-
+    uint64_t const lru_evicted_bytes = evict_from_lru(required_bytes);
     // Evict from TTL queue as well, since the LRU queue may not
     // have enough elements to create enough room, since it doesn't
     // have all the elements in it.
-    if (true) {
-        victims.clear();
-        if (!get_soonest_expiring(victims, evicted_bytes, required_bytes)) {
-            LOGGER_WARN("could not evict enough from TTL cache");
-        }
-        for (auto v : victims) {
-            evict(v, EvictionCause::VolatileTTL);
+    if (required_bytes > lru_evicted_bytes) {
+        uint64_t const ttl_evicted_bytes =
+            evict_smallest_ttl(required_bytes - lru_evicted_bytes);
+        if (required_bytes > lru_evicted_bytes + ttl_evicted_bytes) {
+            LOGGER_WARN(
+                "could not evict enough from TTL cache: required %zu "
+                "vs lru %zu ttl %zu -- %zu items left in cache with size %zu",
+                required_bytes,
+                lru_evicted_bytes,
+                ttl_evicted_bytes,
+                map_.size(),
+                size_);
+            return false;
         }
     }
     return true;
