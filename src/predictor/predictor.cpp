@@ -12,6 +12,7 @@
 #include <sys/types.h>
 
 #include "cpp_cache/cache_access.hpp"
+#include "cpp_cache/cache_command.hpp"
 #include "cpp_cache/cache_trace_format.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "logger/logger.h"
@@ -99,7 +100,10 @@ test_trace(CacheAccessTrace const &trace,
     LOGGER_TIMING("starting test_trace()");
     p.start_simulation();
     for (size_t i = 0; i < trace.size(); ++i) {
-        p.access(trace.get(i));
+        auto const &access = trace.get(i);
+        if (access.command == CacheCommand::Get) {
+            p.access(access);
+        }
     }
     p.end_simulation();
     LOGGER_TIMING("finished test_trace()");
