@@ -235,10 +235,7 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
 void
 PredictiveCache::evict_accessed_object(CacheAccess const &access)
 {
-    // TODO We should evict the old object, but I'm too lazy...
-    //      I'd have to change the causes of eviction.
-    (void)access;
-    return;
+    evict(access.key, EvictionCause::AccessExpired);
 }
 
 bool
@@ -329,7 +326,7 @@ PredictiveCache::access(CacheAccess const &access)
             hit(access);
             return 0;
         } else {
-            evict(access.key, EvictionCause::AccessExpired);
+            evict_accessed_object(access);
         }
     }
 
