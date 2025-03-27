@@ -207,6 +207,42 @@ parse_client_id(uint8_t const *const record, CacheTraceFormat const format)
     }
 }
 
+/// @note   Kia's binary format is as follows:
+///
+///         Field Name  | Size (bytes)  | Offset (bytes)
+///         ------------|---------------|---------------
+///         Timestamp   | u64 (8 bytes) | 0
+///         Command     | u64 (1 byte)  | 8
+///         Key         | u64 (8 bytes) | 9
+///         Object size | u32 (4 bytes) | 17
+///         Time-to-live| u32 (4 bytes) | 21
+///
+///         N.B. Everything is little-endian.
+/// @note   Sari's binary format is as follows:
+///
+///         Field Name  | Size (bytes)  | Offset (bytes)
+///         ------------|---------------|---------------
+///         Timestamp   | u32 (4 bytes) | 0
+///         Key         | u64 (8 bytes) | 4
+///         Object size | u32 (4 bytes) | 12
+///         Time-to-live| u32 (4 bytes) | 16
+///
+///         N.B. Everything is little-endian as far as I can tell.
+/// @note   Yang's Twitter binary format is as follows:
+///
+///         Field Name  | Size (bytes)     | Offset (bytes)
+///         ------------|------------------|---------------
+///         Timestamp   | u32 (4 bytes)    | 0
+///         Key         | u64 (8 bytes)    | 4
+///         Key Size    | u32 (10/32 bits) | 12 (10 upper bits)
+///         Value Size  |     (22/32 bits) | 12 (22 lower bits)
+///         Command     | u32 (8/32 bits)  | 16 (8 upper bits)
+///         Time-to-live|     (24/32 bits) | 16 (24 lower bits)
+///         Client ID*  | u32 (4 bytes)    | 20
+///
+///         N.B. Everything is little-endian.
+///         N.B. *Client ID is not part of Yang's original format, but
+///         it is included in the Twitter trace data, so I include it.
 CacheAccess::CacheAccess(uint8_t const *const record,
                          CacheTraceFormat const format)
     : timestamp_ms(parse_timestamp_ms(record, format)),
