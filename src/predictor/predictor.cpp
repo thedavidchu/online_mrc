@@ -126,7 +126,7 @@ main(int argc, char *argv[])
         LifeTimeCacheMode const lifetime_cache_mode =
             LifeTimeCacheMode__parse(argv[5]);
         LOGGER_INFO("Running: %s %s", path, format);
-        for (auto cap : logspace((size_t)16 << 30, 10)) {
+        for (auto cap : semilogspace((size_t)16 << 30, 10)) {
             assert(test_trace(
                 CacheAccessTrace(path, CacheTraceFormat__parse(format)),
                 cap,
