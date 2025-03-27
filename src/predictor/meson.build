@@ -25,6 +25,22 @@ list_exe = executable(
     ],
 )
 
+predictive_lru_ttl_cache_dep = declare_dependency(
+    link_with: library(
+        'predictive_lru_ttl_cache_lib',
+        'predictive_lru_ttl_cache.cpp',
+        include_directories: predictor_inc,
+        dependencies: [
+            cpp_cache_dep,
+            glib_dep,
+        ],
+    ),
+    include_directories: predictor_inc,
+    dependencies: [
+        cpp_cache_dep,
+    ],
+)
+
 lru_ttl_cache_exe = executable(
     'lru_ttl_cache_exe',
     'lru_ttl_cache.cpp',
@@ -50,6 +66,7 @@ predictor_exe = executable(
         trace_dep,
         cache_statistics_dep,
         cpp_cache_dep,
+        predictive_lru_ttl_cache_dep,
     ],
 )
 

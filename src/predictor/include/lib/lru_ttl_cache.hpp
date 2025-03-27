@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_metadata.hpp"
 #include "cpp_cache/cache_statistics.hpp"
