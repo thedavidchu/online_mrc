@@ -1,11 +1,11 @@
-""" @brief  Code related to reading the binary cache traces. """
+"""@brief  Code related to reading the binary cache traces."""
 
 import logging
 from pathlib import Path
 
 import numpy as np
 
-TRACE_DTYPES: dict[str, np.dtype] = {
+TRACE_DTYPE: dict[str, np.dtype] = {
     "Kia": np.dtype(
         [
             ("timestamp_ms", np.uint64),
@@ -26,6 +26,45 @@ TRACE_DTYPES: dict[str, np.dtype] = {
             ("ttl_s", np.uint32),
         ]
     ),
+    "YangTwitterX": np.dtype(
+        [
+            ("timestamp_ms", np.uint32),
+            ("key", np.uint64),
+            # Upper 10 bits: key size
+            # Lower 22 bits: value size
+            ("key_value_size", np.uint32),
+            # Upper 8 bits: op
+            # Lower 24 bits: TTL [ms]
+            ("op_ttl_ms", np.uint32),
+            ("client_id", np.uint32),
+        ]
+    ),
+}
+
+TRACE_DTYPE_KEY = list(TRACE_DTYPE.keys())
+
+KIA_OP_NAMES = {
+    0: "GET",
+    1: "SET",
+}
+
+YANG_OP_NAMES = {
+    0: "NOP",
+    1: "GET",
+    2: "GETS",
+    3: "SET",
+    4: "ADD",
+    5: "CAS",
+    6: "REPLACE",
+    7: "APPEND",
+    8: "PREPEND",
+    9: "DELETE",
+    10: "INCR",
+    11: "DECR",
+    12: "READ",
+    13: "WRITE",
+    14: "UPDATE",
+    255: "INVALID",
 }
 
 # NOTE  Default date format is: datefmt=r"%Y-%m-%d %H:%M:%S"
@@ -43,10 +82,12 @@ logger = logging.getLogger(__name__)
 def read_trace(path: Path, format: str, mode: str | None):
     """
     @param mode: if None, then load into memory. Otherwise, use it as the mode."""
-    assert format in TRACE_DTYPES.keys()
+    assert format in TRACE_DTYPE.keys()
     logger.info(f"Reading from {str(path)} with {format}'s format")
+    logger.info(f"Input path size: {path.stat().st_size}")
+    logger.info(f"Format size: {TRACE_DTYPE[format].itemsize}")
     if mode:
-        data = np.memmap(path, dtype=TRACE_DTYPES[format], mode=mode)
+        data = np.memmap(path, dtype=TRACE_DTYPE[format], mode=mode)
     else:
-        data = np.fromfile(path, dtype=TRACE_DTYPES[format])
+        data = np.fromfile(path, dtype=TRACE_DTYPE[format])
     return data

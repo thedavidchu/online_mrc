@@ -13,12 +13,12 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 
-from src.analysis.common.trace import TRACE_DTYPES
+from src.analysis.common.trace import TRACE_DTYPE
 from src.analysis.common.common import format_memory_size as fmtmem
 
 
 def wss(path: Path, format: str) -> dict[str, float]:
-    x = np.fromfile(path, dtype=TRACE_DTYPES[format])
+    x = np.fromfile(path, dtype=TRACE_DTYPE[format])
     size = path.stat().st_size
     print(f"File size {str(path)}: {size} ({fmtmem(size)})")
     if format == "Kia":
