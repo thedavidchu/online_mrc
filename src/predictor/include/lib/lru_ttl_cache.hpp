@@ -29,18 +29,18 @@ private:
     void
     insert(CacheAccess const &access)
     {
-        statistics_.insert(access.size_bytes);
+        statistics_.insert(access.value_size_b);
         map_.emplace(access.key, CacheMetadata{access});
         lru_cache_.access(access.key);
         ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
                            access.key);
-        size_ += access.size_bytes;
+        size_ += access.value_size_b;
     }
 
     void
     update(CacheAccess const &access, CacheMetadata &metadata)
     {
-        statistics_.update(metadata.size_, access.size_bytes);
+        statistics_.update(metadata.size_, access.value_size_b);
         metadata.visit(access.timestamp_ms, {});
         lru_cache_.access(access.key);
     }
@@ -147,8 +147,8 @@ private:
     hit(CacheAccess const &access)
     {
         auto &metadata = map_.at(access.key);
-        if (!ensure_enough_room(metadata.size_, access.size_bytes)) {
-            statistics_.skip(access.size_bytes);
+        if (!ensure_enough_room(metadata.size_, access.value_size_b)) {
+            statistics_.skip(access.value_size_b);
             evict_accessed_object(access);
             if (DEBUG) {
                 LOGGER_WARN("too big updated object");
@@ -161,11 +161,11 @@ private:
     bool
     miss(CacheAccess const &access)
     {
-        if (!ensure_enough_room(0, access.size_bytes)) {
+        if (!ensure_enough_room(0, access.value_size_b)) {
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
-            statistics_.skip(access.size_bytes);
+            statistics_.skip(access.value_size_b);
             return false;
         }
         insert(access);

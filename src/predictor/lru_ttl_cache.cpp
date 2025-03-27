@@ -1,5 +1,6 @@
 #include "lib/lru_ttl_cache.hpp"
 #include "cpp_cache/cache_trace.hpp"
+#include "cpp_cache/cache_trace_format.hpp"
 #include "cpp_cache/format_measurement.hpp"
 
 bool
@@ -27,7 +28,7 @@ main(int argc, char *argv[])
         LOGGER_INFO("Running: %s %s", path, format);
         for (auto cap : logspace((size_t)16 << 30, 10)) {
             assert(test_trace(
-                CacheAccessTrace(path, parse_trace_format_string(format)),
+                CacheAccessTrace(path, CacheTraceFormat__parse(format)),
                 cap));
         }
         std::cout << "OK!" << std::endl;

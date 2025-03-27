@@ -35,7 +35,7 @@ private:
     void
     insert(CacheAccess const &access)
     {
-        statistics_.insert(access.size_bytes);
+        statistics_.insert(access.value_size_b);
         uint64_t const ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
         map_.emplace(access.key, CacheMetadata{access});
         auto r = lifetime_cache_.thresholds();
@@ -48,14 +48,14 @@ private:
             ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
                                access.key);
         }
-        size_ += access.size_bytes;
+        size_ += access.value_size_b;
     }
 
     /// @brief  Process an access to an item in the cache.
     void
     update(CacheAccess const &access, CacheMetadata &metadata)
     {
-        statistics_.update(metadata.size_, access.size_bytes);
+        statistics_.update(metadata.size_, access.value_size_b);
         metadata.visit(access.timestamp_ms, {});
         if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
             return;
@@ -251,8 +251,8 @@ private:
     hit(CacheAccess const &access)
     {
         auto &metadata = map_.at(access.key);
-        if (!ensure_enough_room(metadata.size_, access.size_bytes)) {
-            statistics_.skip(access.size_bytes);
+        if (!ensure_enough_room(metadata.size_, access.value_size_b)) {
+            statistics_.skip(access.value_size_b);
             evict_accessed_object(access);
             if (DEBUG) {
                 LOGGER_WARN("too big updated object");
@@ -265,11 +265,11 @@ private:
     bool
     miss(CacheAccess const &access)
     {
-        if (!ensure_enough_room(0, access.size_bytes)) {
+        if (!ensure_enough_room(0, access.value_size_b)) {
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
-            statistics_.skip(access.size_bytes);
+            statistics_.skip(access.value_size_b);
             return false;
         }
         insert(access);
