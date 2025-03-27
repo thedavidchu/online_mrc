@@ -4,7 +4,6 @@
 #include "cpp_cache/cache_trace_format.hpp"
 #include "io/io.h"
 #include "logger/logger.h"
-#include "trace/reader.h"
 
 #include <cassert>
 #include <cstddef>
