@@ -43,6 +43,7 @@ private:
     update(CacheAccess const &access, CacheMetadata &metadata)
     {
         statistics_.update(metadata.size_, access.value_size_b);
+        size_ += access.value_size_b - metadata.size_;
         metadata.visit(access.timestamp_ms, {});
         lru_cache_.access(access.key);
     }

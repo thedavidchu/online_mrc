@@ -33,7 +33,6 @@ void
 PredictiveCache::insert(CacheAccess const &access)
 {
     statistics_.insert(access.value_size_b);
-    g_assert_cmpuint(size_, ==, statistics_.size_);
     uint64_t const ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
     map_.emplace(access.key, CacheMetadata{access});
     auto r = lifetime_cache_.thresholds();
@@ -53,8 +52,8 @@ PredictiveCache::insert(CacheAccess const &access)
 void
 PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 {
+    size_ += access.value_size_b - metadata.size_;
     statistics_.update(metadata.size_, access.value_size_b);
-    g_assert_cmpuint(size_, ==, statistics_.size_);
     metadata.visit(access.timestamp_ms, {});
     if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
         return;
@@ -315,8 +314,8 @@ PredictiveCache::end_simulation()
 int
 PredictiveCache::access(CacheAccess const &access)
 {
-    statistics_.time(access.timestamp_ms);
     g_assert_cmpuint(size_, ==, statistics_.size_);
+    statistics_.time(access.timestamp_ms);
     evict_expired_objects(access.timestamp_ms);
     lifetime_cache_.access(access);
     oracle_.access(access);
