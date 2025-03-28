@@ -26,6 +26,9 @@ using uint64_t = std::uint64_t;
 
 class PredictiveCache {
 private:
+    bool
+    ok(bool const fatal = false) const;
+
     /// @brief  Insert an object into the cache.
     void
     insert(CacheAccess const &access);

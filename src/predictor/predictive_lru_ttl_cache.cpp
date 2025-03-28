@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <glib.h>
 #include <iostream>
@@ -27,6 +28,26 @@
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
+
+bool
+PredictiveCache::ok(bool const fatal) const
+{
+    bool ok = true;
+    if (map_.size() < lru_cache_.size()) {
+        LOGGER_WARN("mismatching map vs LRU size");
+        ok = false;
+    }
+    if (map_.size() < ttl_cache_.size()) {
+        LOGGER_WARN("mismatching map vs TTL size");
+        ok = false;
+    }
+
+    if (fatal && !ok) {
+        assert(ok && "FATAL: not OK!");
+        std::exit(1);
+    }
+    return ok;
+}
 
 /// @brief  Insert an object into the cache.
 void
@@ -90,11 +111,6 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 void
 PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
 {
-    // TODO Cause of abort below. Figure out where my book keeping goes wrong!
-    if (map_.count(victim_key) == 0) {
-        std::cout << victim_key << ", " << EvictionCause__string(cause)
-        << std::endl;
-    }
     CacheMetadata &m = map_.at(victim_key);
     uint64_t sz_bytes = m.size_;
     uint64_t exp_tm = m.expiration_time_ms_;
@@ -136,9 +152,9 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
         assert(0 && "impossible");
     }
 
+    size_ -= sz_bytes;
     // Evict from map.
     map_.erase(victim_key);
-    size_ -= sz_bytes;
     // Evict from LRU queue.
     lru_cache_.remove(victim_key);
     // Evict from TTL queue.
@@ -228,26 +244,24 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
         return true;
     }
     uint64_t required_bytes = nbytes - (capacity_ - size_);
-    uint64_t const lru_evicted_bytes = evict_from_lru(required_bytes);
+    uint64_t evicted_bytes = evict_from_lru(required_bytes);
+    if (evicted_bytes >= required_bytes) {
+        return true;
+    }
     // Evict from TTL queue as well, since the LRU queue may not
     // have enough elements to create enough room, since it doesn't
     // have all the elements in it.
-    if (required_bytes > lru_evicted_bytes) {
-        uint64_t const ttl_evicted_bytes =
-            evict_smallest_ttl(required_bytes - lru_evicted_bytes);
-        if (required_bytes > lru_evicted_bytes + ttl_evicted_bytes) {
-            LOGGER_WARN(
-                "could not evict enough from TTL cache: required %zu "
-                "vs lru %zu ttl %zu -- %zu items left in cache with size %zu",
+    evicted_bytes += evict_smallest_ttl(required_bytes - evicted_bytes);
+    if (evicted_bytes >= required_bytes) {
+        return true;
+    }
+    LOGGER_WARN("could not evict enough from TTL cache: required %zu "
+                "vs %zu -- %zu items left in cache with size %zu",
                 required_bytes,
-                lru_evicted_bytes,
-                ttl_evicted_bytes,
+                evicted_bytes,
                 map_.size(),
                 size_);
-            return false;
-        }
-    }
-    return true;
+    return false;
 }
 
 void
