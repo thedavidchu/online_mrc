@@ -33,16 +33,38 @@ bool
 PredictiveCache::ok(bool const fatal) const
 {
     bool ok = true;
+    if (size_ > capacity_) {
+        LOGGER_ERROR("size exceeds capacity");
+        ok = false;
+    }
     if (map_.size() < lru_cache_.size()) {
-        LOGGER_WARN("mismatching map vs LRU size");
+        // NOTE Because of the prediction, we can have fewer items in
+        //      the LRU queue than in the cache.
+        LOGGER_ERROR("mismatching map vs LRU size");
         ok = false;
     }
     if (map_.size() < ttl_cache_.size()) {
-        LOGGER_WARN("mismatching map vs TTL size");
+        // NOTE Because of the prediction, we can have fewer items in
+        //      the TTL queue than in the cache.
+        LOGGER_ERROR("mismatching map vs TTL size");
+        ok = false;
+    }
+    if (map_.size() != 0 && size_ == 0) {
+        // NOTE It's possible (but unlikely) that the cache is filled
+        //      with zero-byte objects, so the number of objects is
+        //      non-zero but the size of the cache is zero. That's why I
+        //      don't error on this case explicitly.
+        LOGGER_WARN("all zero-sized objects in cache");
+        // TODO - make this not an error.
+        ok = false;
+    }
+    if (map_.size() == 0 && size_ != 0) {
+        LOGGER_ERROR("zero objects but non-zero cache size");
         ok = false;
     }
 
     if (fatal && !ok) {
+        // The assertion outputs a convenient error message.
         assert(ok && "FATAL: not OK!");
         std::exit(1);
     }
@@ -73,8 +95,7 @@ PredictiveCache::insert(CacheAccess const &access)
 void
 PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 {
-    size_ -= metadata.size_;
-    size_ += access.value_size_b;
+    size_ += access.value_size_b - metadata.size_;
     statistics_.update(metadata.size_, access.value_size_b);
     metadata.visit_without_ttl_refresh(access);
     if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
@@ -111,6 +132,7 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 void
 PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
 {
+    ok(true);
     CacheMetadata &m = map_.at(victim_key);
     uint64_t sz_bytes = m.size_;
     uint64_t exp_tm = m.expiration_time_ms_;
@@ -118,7 +140,7 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
     // Update metadata tracking
     switch (cause) {
     case EvictionCause::LRU:
-        statistics_.evict(m.size_);
+        statistics_.lru_evict(m.size_);
         if (statistics_.current_time_ms_ <= exp_tm) {
             // Not yet expired.
             pred_tracker.update_correctly_evicted(sz_bytes);
@@ -127,7 +149,7 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
         }
         break;
     case EvictionCause::TTL:
-        statistics_.expire(m.size_);
+        statistics_.ttl_expire(m.size_);
         if (oracle_.get(victim_key)) {
             pred_tracker.update_correctly_expired(sz_bytes);
         } else {
@@ -148,16 +170,20 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
         //      have been in the LRU queue, which is why I chose this.
         pred_tracker.update_wrongly_evicted(sz_bytes);
         break;
+    case EvictionCause::NoRoom:
+        statistics_.no_room_evict(m.size_);
+        // NOTE This isn't exactly the correct classification...
+        //      It wasn't evicted by LRU, it was evicted by
+        //      running out of space in the cache for a re-accessed item.
+        pred_tracker.update_correctly_evicted(sz_bytes);
+        break;
     default:
         assert(0 && "impossible");
     }
 
     size_ -= sz_bytes;
-    // Evict from map.
     map_.erase(victim_key);
-    // Evict from LRU queue.
     lru_cache_.remove(victim_key);
-    // Evict from TTL queue.
     remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
 }
 
@@ -179,13 +205,18 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
 
 /// @return number of bytes evicted.
 uint64_t
-PredictiveCache::evict_from_lru(uint64_t const target_bytes)
+PredictiveCache::evict_from_lru(uint64_t const target_bytes,
+                                std::optional<uint64_t> const ignored_key)
 {
+    ok(true);
     uint64_t evicted_bytes = 0;
     std::vector<uint64_t> victims;
     for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
         if (evicted_bytes >= target_bytes) {
             break;
+        }
+        if (ignored_key.has_value() && n->key == ignored_key.value()) {
+            continue;
         }
         auto &m = map_.at(n->key);
         evicted_bytes += m.size_;
@@ -199,13 +230,17 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes)
 }
 
 bool
-PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes)
+PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes,
+                                    std::optional<uint64_t> const ignored_key)
 {
     uint64_t evicted_bytes = 0;
     std::vector<uint64_t> victims;
     for (auto [tm, key] : ttl_cache_) {
         if (evicted_bytes >= target_bytes) {
             break;
+        }
+        if (ignored_key.has_value() && key == ignored_key.value()) {
+            continue;
         }
         auto &m = map_.at(key);
         evicted_bytes += m.size_;
@@ -220,7 +255,8 @@ PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes)
 
 bool
 PredictiveCache::ensure_enough_room(size_t const old_nbytes,
-                                    size_t const new_nbytes)
+                                    size_t const new_nbytes,
+                                    std::optional<uint64_t> const ignored_key)
 {
     assert(size_ <= capacity_);
     // We already have enough room if we're not increasing the data.
@@ -231,7 +267,7 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
     // We can't possibly fit the new object into the cache!
     // A side-effect is that in this case, we don't flush our cache
     // for no reason.
-    if (nbytes > capacity_) {
+    if (new_nbytes > capacity_) {
         if (DEBUG) {
             LOGGER_WARN("not enough capacity (%zu) for object (%zu)",
                         capacity_,
@@ -244,18 +280,19 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
         return true;
     }
     uint64_t required_bytes = nbytes - (capacity_ - size_);
-    uint64_t evicted_bytes = evict_from_lru(required_bytes);
+    uint64_t evicted_bytes = evict_from_lru(required_bytes, ignored_key);
     if (evicted_bytes >= required_bytes) {
         return true;
     }
     // Evict from TTL queue as well, since the LRU queue may not
     // have enough elements to create enough room, since it doesn't
     // have all the elements in it.
-    evicted_bytes += evict_smallest_ttl(required_bytes - evicted_bytes);
+    evicted_bytes +=
+        evict_smallest_ttl(required_bytes - evicted_bytes, ignored_key);
     if (evicted_bytes >= required_bytes) {
         return true;
     }
-    LOGGER_WARN("could not evict enough from TTL cache: required %zu "
+    LOGGER_WARN("could not evict enough from cache: required %zu "
                 "vs %zu -- %zu items left in cache with size %zu",
                 required_bytes,
                 evicted_bytes,
@@ -265,9 +302,15 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
 }
 
 void
-PredictiveCache::evict_accessed_object(CacheAccess const &access)
+PredictiveCache::evict_expired_accessed_object(CacheAccess const &access)
 {
     evict(access.key, EvictionCause::AccessExpired);
+}
+
+void
+PredictiveCache::evict_too_big_accessed_object(CacheAccess const &access)
+{
+    evict(access.key, EvictionCause::NoRoom);
 }
 
 bool
@@ -281,9 +324,9 @@ void
 PredictiveCache::hit(CacheAccess const &access)
 {
     auto &metadata = map_.at(access.key);
-    if (!ensure_enough_room(metadata.size_, access.value_size_b)) {
+    if (!ensure_enough_room(metadata.size_, access.value_size_b, access.key)) {
         statistics_.skip(access.value_size_b);
-        evict_accessed_object(access);
+        evict_too_big_accessed_object(access);
         if (DEBUG) {
             LOGGER_WARN("too big updated object");
         }
@@ -295,7 +338,7 @@ PredictiveCache::hit(CacheAccess const &access)
 bool
 PredictiveCache::miss(CacheAccess const &access)
 {
-    if (!ensure_enough_room(0, access.value_size_b)) {
+    if (!ensure_enough_room(0, access.value_size_b, {})) {
         if (DEBUG) {
             LOGGER_WARN("not enough room to insert!");
         }
@@ -347,6 +390,7 @@ PredictiveCache::end_simulation()
 int
 PredictiveCache::access(CacheAccess const &access)
 {
+    ok(true);
     g_assert_cmpuint(size_, ==, statistics_.size_);
     statistics_.time(access.timestamp_ms);
     evict_expired_objects(access.timestamp_ms);
@@ -358,7 +402,7 @@ PredictiveCache::access(CacheAccess const &access)
             hit(access);
             return 0;
         } else {
-            evict_accessed_object(access);
+            evict_expired_accessed_object(access);
         }
     }
 

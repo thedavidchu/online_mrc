@@ -40,7 +40,7 @@ parse_memory_size(std::string const &str)
     }
     std::string unit_str = std::string(str_end);
     if (!mem_units.count(unit_str)) {
-        LOGGER_ERROR("cannot parse '%s' as memory size", str.c_str());
+        LOGGER_ERROR("cannot parse '%s' as memory unit", unit_str.c_str());
         return {};
     }
     return ans * mem_units.at(unit_str);

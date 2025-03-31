@@ -41,13 +41,6 @@ predictive_lru_ttl_cache_dep = declare_dependency(
     ],
 )
 
-lru_ttl_cache_exe = executable(
-    'lru_ttl_cache_exe',
-    'lru_ttl_cache.cpp',
-    include_directories: predictor_inc,
-    dependencies: [cpp_cache_dep, list_dep],
-)
-
 test_lru_ttl_cache_exe = executable(
     'test_lru_ttl_cache_exe',
     'test_lru_ttl_cache.cpp',

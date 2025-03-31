@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
+#include <optional>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
@@ -46,22 +47,30 @@ private:
     evict_expired_objects(uint64_t const current_time_ms);
 
     /// @param  target_bytes - the number of bytes to try to evict.
+    /// @param  ignored_key - a key that should not be evicted.
     /// @return the number of bytes evicted.
     uint64_t
-    evict_from_lru(uint64_t const target_bytes);
+    evict_from_lru(uint64_t const target_bytes,
+                   std::optional<uint64_t> const ignored_key);
 
     /// @brief  Get the soonest expiring keys that would be enough to
     ///         make sufficient room in the cache.
     /// @param  target_bytes - the number of bytes to try to evict.
+    /// @param  ignored_key - a key that should not be evicted.
     /// @return the number of bytes evicted.
     bool
-    evict_smallest_ttl(uint64_t const target_bytes);
+    evict_smallest_ttl(uint64_t const target_bytes,
+                       std::optional<uint64_t> const ignored_key);
 
     bool
-    ensure_enough_room(size_t const old_nbytes, size_t const new_nbytes);
+    ensure_enough_room(size_t const old_nbytes,
+                       size_t const new_nbytes,
+                       std::optional<uint64_t> const ignored_key);
 
     void
-    evict_accessed_object(CacheAccess const &access);
+    evict_expired_accessed_object(CacheAccess const &access);
+    void
+    evict_too_big_accessed_object(CacheAccess const &access);
 
     bool
     is_expired(CacheAccess const &access, CacheMetadata const &metadata);
