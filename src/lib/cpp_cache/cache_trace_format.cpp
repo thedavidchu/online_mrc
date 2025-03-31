@@ -73,7 +73,7 @@ CacheTraceFormat__bytes_per_entry(CacheTraceFormat const format)
     case CacheTraceFormat::Kia:
         return 25;
     case CacheTraceFormat::Sari:
-        return 24;
+        return 20;
     case CacheTraceFormat::YangTwitter:
         return 24;
     case CacheTraceFormat::Invalid:
