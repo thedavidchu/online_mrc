@@ -14,6 +14,7 @@
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_command.hpp"
 #include "cpp_cache/cache_trace_format.hpp"
+#include "cpp_cache/parse_measurement.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "logger/logger.h"
 
@@ -122,30 +123,30 @@ main(int argc, char *argv[])
         assert(test_ttl());
         std::cout << "OK!" << std::endl;
         break;
-    case 6: {
+    case 7: {
         char const *const path = argv[1];
         char const *const format = argv[2];
         double const lower_ratio = atof(argv[3]);
         double const upper_ratio = atof(argv[4]);
+        // This will panic if it was unsuccessful.
+        uint64_t const cache_capacity = parse_memory_size(argv[5]).value();
         LifeTimeCacheMode const lifetime_cache_mode =
-            LifeTimeCacheMode__parse(argv[5]);
+            LifeTimeCacheMode__parse(argv[6]);
         LOGGER_INFO("Running: %s %s", path, format);
-        for (auto cap : semilogspace((size_t)16 << 30, 10)) {
-            assert(test_trace(
-                CacheAccessTrace(path, CacheTraceFormat__parse(format)),
-                cap,
-                lower_ratio,
-                upper_ratio,
-                lifetime_cache_mode));
-        }
+        test_trace(CacheAccessTrace(path, CacheTraceFormat__parse(format)),
+                   cache_capacity,
+                   lower_ratio,
+                   upper_ratio,
+                   lifetime_cache_mode);
         std::cout << "OK!" << std::endl;
         break;
     }
     default:
-        std::cout << "Usage: predictor [<trace> <format> <lower_ratio 0.0-1.0> "
-                     "<upper_ratio 0.0-1.0> <lifetime_cache_mode "
-                     "EvictionTime|LifeTime>"
-                  << std::endl;
+        std::cout
+            << "Usage: predictor [<trace> <format> <lower_ratio 0.0-1.0> "
+               "<upper_ratio 0.0-1.0> <cache-capacity> <lifetime_cache_mode "
+               "EvictionTime|LifeTime>"
+            << std::endl;
         exit(1);
     }
     return 0;
