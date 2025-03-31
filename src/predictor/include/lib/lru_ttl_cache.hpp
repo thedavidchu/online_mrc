@@ -36,16 +36,20 @@ private:
             LOGGER_ERROR("size exceeds capacity");
             ok = false;
         }
-        if (map_.size() == lru_cache_.size()) {
+        if (map_.size() != lru_cache_.size()) {
             // NOTE Because of the prediction, we can have fewer items in
             //      the LRU queue than in the cache.
-            LOGGER_ERROR("mismatching map vs LRU size");
+            LOGGER_ERROR("mismatching map (%zu) vs LRU (%zu) size",
+                         map_.size(),
+                         lru_cache_.size());
             ok = false;
         }
-        if (map_.size() == ttl_cache_.size()) {
+        if (map_.size() != ttl_cache_.size()) {
             // NOTE Because of the prediction, we can have fewer items in
             //      the TTL queue than in the cache.
-            LOGGER_ERROR("mismatching map vs TTL size");
+            LOGGER_ERROR("mismatching map (%zu) vs TTL (%zu) size",
+                         map_.size(),
+                         ttl_cache_.size());
             ok = false;
         }
         if (map_.size() != 0 && size_ == 0) {
