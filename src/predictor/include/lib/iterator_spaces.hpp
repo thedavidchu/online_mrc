@@ -1,7 +1,12 @@
 #pragma once
 
+#include "cpp_cache/format_measurement.hpp"
+#include "math/positive_ceiling_divide.h"
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <vector>
 
@@ -27,6 +32,25 @@ logspace(size_t max, size_t num)
         r.push_back(max >> (num - 1 - i));
     }
     return r;
+}
+
+/// @brief  Space things by factor of sqrt(2).
+static inline std::vector<size_t>
+semilogspace(size_t max, size_t num)
+{
+    std::vector<size_t> r = logspace(max, POSITIVE_CEILING_DIVIDE(num, 2));
+    std::reverse(r.begin(), r.end());
+    std::vector<size_t> s;
+    assert(max > num);
+    for (size_t i = 0; i < num; ++i) {
+        if (i % 2 == 0) {
+            s.push_back(r[i / 2]);
+        } else {
+            s.push_back(r[i / 2] / std::sqrt(2));
+        }
+    }
+    std::reverse(s.begin(), s.end());
+    return s;
 }
 
 template <typename T>

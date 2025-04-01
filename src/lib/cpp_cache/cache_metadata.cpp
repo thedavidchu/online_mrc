@@ -29,13 +29,26 @@ CacheMetadata::CacheMetadata(std::size_t const value_size,
 }
 
 CacheMetadata::CacheMetadata(CacheAccess const &access)
-    : size_(access.size_bytes),
+    : size_(access.value_size_b),
       insertion_time_ms_(access.timestamp_ms),
       last_access_time_ms_(access.timestamp_ms),
       expiration_time_ms_(saturation_add(access.timestamp_ms,
                                          access.ttl_ms.value_or(UINT64_MAX))),
       visited(false)
 {
+}
+
+void
+CacheMetadata::visit_without_ttl_refresh(CacheAccess const &access)
+{
+    ++frequency_;
+    last_access_time_ms_ = access.timestamp_ms;
+    visited = true;
+    size_ = access.value_size_b;
+    // NOTE We intentionally don't update the expiration time because
+    //      that's how most caches work. Previously, we had allowed
+    //      updating it because we needed the update semantics to
+    //      replicate LRU with TTLs.
 }
 
 void

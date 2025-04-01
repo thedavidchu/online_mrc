@@ -1,21 +1,22 @@
 #include "cpp_cache/cache_trace.hpp"
 #include "cpp_cache/cache_access.hpp"
 
+#include "cpp_cache/cache_trace_format.hpp"
 #include "io/io.h"
 #include "logger/logger.h"
-#include "trace/reader.h"
 
 #include <cassert>
 #include <cstddef>
 #include <string>
 
 CacheAccessTrace::CacheAccessTrace(std::string const &fname,
-                                   enum TraceFormat const format)
-    : bytes_per_obj_(get_bytes_per_trace_item(format)),
+                                   CacheTraceFormat const format)
+    : bytes_per_obj_(CacheTraceFormat__bytes_per_entry(format)),
       format_(format)
 {
     if (bytes_per_obj_ == 0) {
-        LOGGER_ERROR("invalid format %s", get_trace_format_string(format));
+        LOGGER_ERROR("invalid format %s",
+                     CacheTraceFormat__string(format).c_str());
         exit(1);
     }
     // Memory map the input trace file
@@ -37,9 +38,5 @@ CacheAccessTrace::size() const
 CacheAccess const
 CacheAccessTrace::get(size_t const i) const
 {
-    struct FullTraceItemResult r =
-        construct_full_trace_item(&((uint8_t *)mm_.buffer)[i * bytes_per_obj_],
-                                  format_);
-    assert(r.valid);
-    return CacheAccess{&r.item};
+    return CacheAccess{&((uint8_t *)mm_.buffer)[i * bytes_per_obj_], format_};
 }

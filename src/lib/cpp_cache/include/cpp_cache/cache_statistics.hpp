@@ -30,11 +30,13 @@ public:
     void
     update(uint64_t const old_size_bytes, uint64_t const new_size_bytes);
     void
-    evict(uint64_t const size_bytes);
+    lru_evict(uint64_t const size_bytes);
+    void
+    no_room_evict(uint64_t const size_bytes);
     void
     ttl_evict(uint64_t const size_bytes);
     void
-    expire(uint64_t const size_bytes);
+    ttl_expire(uint64_t const size_bytes);
     void
     lazy_expire(uint64_t const size_bytes);
 
@@ -80,15 +82,18 @@ public:
     uint64_t update_ops_ = 0;
     uint64_t update_bytes_ = 0;
 
-    uint64_t evict_ops_ = 0;
-    uint64_t evict_bytes_ = 0;
+    uint64_t lru_evict_ops_ = 0;
+    uint64_t lru_evict_bytes_ = 0;
+
+    uint64_t no_room_ops_ = 0;
+    uint64_t no_room_bytes_ = 0;
 
     // Evictions by the secondary eviction policy, volatile TTLs.
     uint64_t ttl_evict_ops_ = 0;
     uint64_t ttl_evict_bytes_ = 0;
 
-    uint64_t expire_ops_ = 0;
-    uint64_t expire_bytes_ = 0;
+    uint64_t ttl_expire_ops_ = 0;
+    uint64_t ttl_expire_bytes_ = 0;
 
     // Expirations done non-actively.
     uint64_t lazy_expire_ops_ = 0;

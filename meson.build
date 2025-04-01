@@ -15,8 +15,11 @@ project(
         # I link the libraries statically (default is dynamic) because I want to
         # see them when I use gprof.
         'default_library=static',
-        # Build with 'debugoptimized' for -O2 -g or 'release' for -O3
-        'buildtype=debugoptimized',
+        # Build with the following options:
+        # 1. 'debug' for -O0 -g
+        # 2. 'debugoptimized' for -O2 -g
+        # 3. 'release' for -O3
+        'buildtype=debug',
         # Enable link-time optimizations
         'b_lto=false',
         # Disable profile guided optimization

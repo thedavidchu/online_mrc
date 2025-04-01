@@ -4,6 +4,7 @@ cardinality_analyzer_exe = executable(
     include_directories: [],
     dependencies: [
         common_dep,
+        olken_dep,
         glib_dep,
         lookup_dep,
         shards_dep,

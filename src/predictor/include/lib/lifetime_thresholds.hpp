@@ -29,16 +29,14 @@ class LifeTimeThresholds {
         if (lower_ratio_ == 0.0) {
             lower = 0;
             found_lower = true;
+        } else if (lower_ratio_ == 1.0) {
+            lower = UINT64_MAX;
+            found_lower = true;
         }
         if (upper_ratio_ == 0.0) {
             upper = 0;
             found_upper = true;
-        }
-        if (lower_ratio_ == 1.0) {
-            lower = UINT64_MAX;
-            found_lower = true;
-        }
-        if (upper_ratio_ == 1.0) {
+        } else if (upper_ratio_ == 1.0) {
             upper = UINT64_MAX;
             found_upper = true;
         }

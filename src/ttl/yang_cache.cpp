@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "cpp_cache/cache_access.hpp"
+#include "unused/mark_unused.h"
 #include "yang_cache/yang_cache.hpp"
 // NOTE It shouldn't be this painful to include a library file, but it is...
 #include "libCacheSim/include/libCacheSim.h"
@@ -55,6 +56,7 @@ YangCache::size() const
 bool
 YangCache::contains(std::uint64_t const key) const
 {
+    UNUSED(key);
     cache_t *c = (cache_t *)cache_;
     request_t *r = (request_t *)req_;
     return c->find(c, r, false) != NULL;

@@ -1,6 +1,8 @@
 # Python caches
 __pycache__/
 
+nohup.out
+
 # General
 /.idea/
 /.vs/

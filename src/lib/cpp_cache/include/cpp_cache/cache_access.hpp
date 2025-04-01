@@ -3,24 +3,24 @@
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <string>
 
+#include "cpp_cache/cache_command.hpp"
+#include "cpp_cache/cache_trace_format.hpp"
 #include "trace/trace.h"
 
 using uint64_t = std::uint64_t;
 using uint32_t = std::uint32_t;
 using uint8_t = std::uint8_t;
 
-enum class CacheAccessCommand : uint8_t {
-    get,
-    set,
-};
-
 struct CacheAccess {
-    uint64_t const timestamp_ms;
-    CacheAccessCommand const command;
-    uint64_t const key;
-    uint32_t const size_bytes;
-    std::optional<uint64_t> const ttl_ms;
+    uint64_t const timestamp_ms = 0;
+    CacheCommand const command = CacheCommand::Invalid;
+    uint64_t const key = 0;
+    uint64_t const key_size_b = 0;
+    uint64_t const value_size_b = 0;
+    std::optional<uint64_t> const ttl_ms = {};
+    uint64_t const client_id = 0;
 
     /// @brief  Initialize a CacheAccess object from a FullTraceItem.
     CacheAccess(struct FullTraceItem const *const item);
@@ -29,9 +29,17 @@ struct CacheAccess {
 
     CacheAccess(uint64_t const timestamp_ms,
                 uint64_t const key,
-                uint64_t size_bytes,
+                uint64_t value_size_b,
                 std::optional<uint64_t> ttl_ms);
+
+    CacheAccess(uint8_t const *const ptr, CacheTraceFormat const format);
 
     std::optional<uint64_t>
     expiration_time_ms() const;
+
+    /// @brief  Return a comma-separated string of the internals.
+    ///         Format is the same as the Twitter trace CSVs.
+    /// @note   These is NO trailing comma.
+    std::string
+    twitter_csv(bool const newline = false) const;
 };

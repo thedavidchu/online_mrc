@@ -55,7 +55,7 @@ class LifeTimeCache {
     void
     ensure_enough_room(CacheAccess const &access)
     {
-        while (size_ + access.size_bytes > capacity_) {
+        while (size_ + access.value_size_b > capacity_) {
             auto x = lru_cache_.remove_head();
             auto &node = map_.at(x->key);
             size_ -= node.size_;
@@ -111,14 +111,14 @@ public:
             auto &node = map_.at(access.key);
             node.visit(access.timestamp_ms, {});
         } else {
-            if (access.size_bytes > capacity_) {
+            if (access.value_size_b > capacity_) {
                 // Skip objects that are too large for the cache!
                 return;
             }
             ensure_enough_room(access);
             map_.emplace(access.key, CacheMetadata{access});
             lru_cache_.access(access.key);
-            size_ += access.size_bytes;
+            size_ += access.value_size_b;
         }
     }
 

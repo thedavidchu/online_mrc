@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.analysis.common.trace import TRACE_DTYPES
+from src.analysis.common.trace import TRACE_DTYPE
 
 
 def main():
@@ -31,7 +31,7 @@ def main():
     )
     args = parser.parse_args()
 
-    x = np.fromfile(args.input, dtype=TRACE_DTYPES[args.format])
+    x = np.fromfile(args.input, dtype=TRACE_DTYPE[args.format])
 
     # Check for non-decreasing timestamps
     tmstr = {"Kia": "timestamp_ms", "Sari": "timestamp_s"}[args.format]

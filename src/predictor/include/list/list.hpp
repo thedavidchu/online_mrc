@@ -53,6 +53,11 @@ public:
     struct ListNode const *
     get(uint64_t const key);
 
+    size_t
+    size() const {
+        return map_.size();
+    }
+
     struct ListNode *
     remove_head();
 

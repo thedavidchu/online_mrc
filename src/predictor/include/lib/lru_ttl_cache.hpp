@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_metadata.hpp"
 #include "cpp_cache/cache_statistics.hpp"
@@ -26,22 +28,69 @@ using uint64_t = std::uint64_t;
 
 class LRUTTLCache {
 private:
+    bool
+    ok(bool const fatal) const
+    {
+        bool ok = true;
+        if (size_ > capacity_) {
+            LOGGER_ERROR("size exceeds capacity");
+            ok = false;
+        }
+        if (map_.size() != lru_cache_.size()) {
+            // NOTE Because of the prediction, we can have fewer items in
+            //      the LRU queue than in the cache.
+            LOGGER_ERROR("mismatching map (%zu) vs LRU (%zu) size",
+                         map_.size(),
+                         lru_cache_.size());
+            ok = false;
+        }
+        if (map_.size() != ttl_cache_.size()) {
+            // NOTE Because of the prediction, we can have fewer items in
+            //      the TTL queue than in the cache.
+            LOGGER_ERROR("mismatching map (%zu) vs TTL (%zu) size",
+                         map_.size(),
+                         ttl_cache_.size());
+            ok = false;
+        }
+        if (map_.size() != 0 && size_ == 0) {
+            // NOTE It's possible (but unlikely) that the cache is filled
+            //      with zero-byte objects, so the number of objects is
+            //      non-zero but the size of the cache is zero. That's why I
+            //      don't error on this case explicitly.
+            LOGGER_WARN("all zero-sized objects in cache");
+            // TODO - make this not an error.
+            ok = false;
+        }
+        if (map_.size() == 0 && size_ != 0) {
+            LOGGER_ERROR("zero objects but non-zero cache size");
+            ok = false;
+        }
+
+        if (fatal && !ok) {
+            // The assertion outputs a convenient error message.
+            assert(ok && "FATAL: not OK!");
+            std::exit(1);
+        }
+        return ok;
+    }
+
     void
     insert(CacheAccess const &access)
     {
-        statistics_.insert(access.size_bytes);
+        statistics_.insert(access.value_size_b);
         map_.emplace(access.key, CacheMetadata{access});
         lru_cache_.access(access.key);
         ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
                            access.key);
-        size_ += access.size_bytes;
+        size_ += access.value_size_b;
     }
 
     void
     update(CacheAccess const &access, CacheMetadata &metadata)
     {
-        statistics_.update(metadata.size_, access.size_bytes);
-        metadata.visit(access.timestamp_ms, {});
+        size_ += access.value_size_b - metadata.size_;
+        statistics_.update(metadata.size_, access.value_size_b);
+        metadata.visit_without_ttl_refresh(access);
         lru_cache_.access(access.key);
     }
 
@@ -57,21 +106,21 @@ private:
         // Update metadata tracking
         switch (cause) {
         case EvictionCause::LRU:
-            statistics_.evict(m.size_);
+            statistics_.lru_evict(m.size_);
             break;
         case EvictionCause::TTL:
-            statistics_.expire(m.size_);
+            statistics_.ttl_expire(m.size_);
+            break;
+        case EvictionCause::NoRoom:
+            statistics_.no_room_evict(m.size_);
             break;
         default:
             assert(0 && "impossible");
         }
 
-        // Evict from map.
-        map_.erase(victim_key);
         size_ -= sz_bytes;
-        // Evict from LRU queue.
+        map_.erase(victim_key);
         lru_cache_.remove(victim_key);
-        // Evict from TTL queue.
         remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
     }
 
@@ -91,8 +140,35 @@ private:
         }
     }
 
+    /// @return number of bytes evicted.
+    uint64_t
+    evict_from_lru(uint64_t const target_bytes,
+                   std::optional<uint64_t> const ignored_key)
+    {
+        uint64_t evicted_bytes = 0;
+        std::vector<uint64_t> victims;
+        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+            if (evicted_bytes >= target_bytes) {
+                break;
+            }
+            if (ignored_key.has_value() && n->key == ignored_key.value()) {
+                continue;
+            }
+            auto &m = map_.at(n->key);
+            evicted_bytes += m.size_;
+            victims.push_back(n->key);
+        }
+        // One cannot evict elements from the map one is iterating over.
+        for (auto v : victims) {
+            evict(v, EvictionCause::LRU);
+        }
+        return evicted_bytes;
+    }
+
     bool
-    ensure_enough_room(size_t const old_nbytes, size_t const new_nbytes)
+    ensure_enough_room(size_t const old_nbytes,
+                       size_t const new_nbytes,
+                       std::optional<uint64_t> const ignored_key)
     {
         // We already have enough room if we're not increasing the data.
         if (old_nbytes >= new_nbytes) {
@@ -103,7 +179,7 @@ private:
         // We can't possibly fit the new object into the cache!
         // A side-effect is that in this case, we don't flush our cache
         // for no reason.
-        if (nbytes > capacity_) {
+        if (new_nbytes > capacity_) {
             if (DEBUG) {
                 LOGGER_WARN("not enough capacity (%zu) for object (%zu)",
                             capacity_,
@@ -116,40 +192,35 @@ private:
             return true;
         }
         uint64_t required_bytes = nbytes - (capacity_ - size_);
-        uint64_t evicted_bytes = 0;
-        std::vector<uint64_t> victims;
-        // Otherwise, make room in the cache for the new object.
-        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
-            if (evicted_bytes >= required_bytes) {
-                break;
-            }
-            auto &m = map_.at(n->key);
-            evicted_bytes += m.size_;
-            victims.push_back(n->key);
+        uint64_t const evicted_bytes =
+            evict_from_lru(required_bytes, ignored_key);
+        if (evicted_bytes >= required_bytes) {
+            return true;
         }
-        // One cannot evict elements from the map one is iterating over.
-        for (auto v : victims) {
-            evict(v, EvictionCause::LRU);
-        }
-        return true;
+        LOGGER_WARN("could not evict enough from cache: required %zu "
+                    "vs %zu -- %zu items left in cache with size %zu",
+                    required_bytes,
+                    evicted_bytes,
+                    map_.size(),
+                    size_);
+        return false;
     }
 
     void
-    evict_accessed_object(CacheAccess const &access)
+    evict_too_big_accessed_object(CacheAccess const &access)
     {
-        // TODO We should evict the old object, but I'm too lazy...
-        //      I'd have to change the causes of eviction.
-        (void)access;
-        return;
+        evict(access.key, EvictionCause::NoRoom);
     }
 
     void
     hit(CacheAccess const &access)
     {
         auto &metadata = map_.at(access.key);
-        if (!ensure_enough_room(metadata.size_, access.size_bytes)) {
-            statistics_.skip(access.size_bytes);
-            evict_accessed_object(access);
+        if (!ensure_enough_room(metadata.size_,
+                                access.value_size_b,
+                                access.key)) {
+            statistics_.skip(access.value_size_b);
+            evict_too_big_accessed_object(access);
             if (DEBUG) {
                 LOGGER_WARN("too big updated object");
             }
@@ -161,11 +232,11 @@ private:
     bool
     miss(CacheAccess const &access)
     {
-        if (!ensure_enough_room(0, access.size_bytes)) {
+        if (!ensure_enough_room(0, access.value_size_b, {})) {
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
-            statistics_.skip(access.size_bytes);
+            statistics_.skip(access.value_size_b);
             return false;
         }
         insert(access);
@@ -194,6 +265,8 @@ public:
     int
     access(CacheAccess const &access)
     {
+        ok(true);
+        assert(size_ == statistics_.size_);
         statistics_.time(access.timestamp_ms);
         assert(size_ == statistics_.size_);
         evict_expired_objects(access.timestamp_ms);

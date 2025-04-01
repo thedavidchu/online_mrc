@@ -34,13 +34,13 @@
 
 #define FORCE_INLINE    inline __attribute__((always_inline))
 
-inline uint32_t
+static inline uint32_t
 rotl32(uint32_t x, int8_t r)
 {
     return (x << r) | (x >> (32 - r));
 }
 
-inline uint64_t
+static inline uint64_t
 rotl64(uint64_t x, int8_t r)
 {
     return (x << r) | (x >> (64 - r));
@@ -322,7 +322,10 @@ MurmurHash3_x86_128(const void *key, const int len, uint32_t seed, void *out)
 //-----------------------------------------------------------------------------
 
 void
-MurmurHash3_x64_128(const void *key, const int len, const uint32_t seed, void *out)
+MurmurHash3_x64_128(const void *key,
+                    const int len,
+                    const uint32_t seed,
+                    void *out)
 {
     const uint8_t *data = (const uint8_t *)key;
     const int nblocks = len / 16;

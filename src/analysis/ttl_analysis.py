@@ -43,7 +43,7 @@ import matplotlib.pyplot as plt
 
 from src.analysis.common.trace import (
     read_trace,
-    TRACE_DTYPES,
+    TRACE_DTYPE,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,27 +95,25 @@ def filter_valid_ttl(
     tmpdir: Path, file: str, data: np.memmap, format: str
 ) -> np.memmap:
     """Filter out objects without TTLs."""
-    assert format in TRACE_DTYPES.keys()
+    assert format in TRACE_DTYPE.keys()
     valid_ttl, cnt_valid_ttl = get_valid_ttl_mask(data, tmpdir, format)
     logger.debug(f"{cnt_valid_ttl=}, {valid_ttl=}")
     filtered_data = np.memmap(
         tmpdir / file,
-        dtype=TRACE_DTYPES[format],
+        dtype=TRACE_DTYPE[format],
         mode="w+",
         shape=cnt_valid_ttl,
     )
     filtered_data[:cnt_valid_ttl] = data[valid_ttl]
     filtered_data.flush()
     # We re-open this file with a read-only permission!
-    filtered_data = np.memmap(
-        tmpdir / file, dtype=TRACE_DTYPES[format], mode="readonly"
-    )
+    filtered_data = np.memmap(tmpdir / file, dtype=TRACE_DTYPE[format], mode="readonly")
     return filtered_data
 
 
 def shuffle_data(tmpdir: Path, file: str, data: np.memmap, format: str) -> np.memmap:
     """Return only the relevant fields."""
-    assert format in TRACE_DTYPES.keys()
+    assert format in TRACE_DTYPE.keys()
     shfl_data = np.memmap(
         tmpdir / file, dtype=ANALYSIS_DTYPE, mode="w+", shape=len(data)
     )
@@ -146,7 +144,7 @@ def create_ttl_histogram(
             garbage collected ASAP. This is because I'm worried about
             running out of memory when processing the traces.
     """
-    assert format in TRACE_DTYPES.keys()
+    assert format in TRACE_DTYPE.keys()
 
     logger.info(f"Reading from {str(trace_path)} with {format}'s format")
     data = read_trace(trace_path, format, mode="readonly")

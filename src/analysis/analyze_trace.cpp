@@ -3,6 +3,7 @@
 
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_trace.hpp"
+#include "cpp_cache/cache_trace_format.hpp"
 #include "cpp_cache/format_measurement.hpp"
 #include "cpp_cache/histogram.hpp"
 #include "trace/reader.h"
@@ -35,7 +36,7 @@ struct AccessStatistics {
     void
     access(CacheAccess const &access)
     {
-        if (access.command == CacheAccessCommand::get) {
+        if (access.command == CacheCommand::Get) {
             if (!first_get_time_ms.has_value()) {
                 first_get_time_ms = access.timestamp_ms;
             }
@@ -44,7 +45,7 @@ struct AccessStatistics {
             }
             gets_after_last_set += 1;
             latest_get_time_ms = access.timestamp_ms;
-        } else if (access.command == CacheAccessCommand::set) {
+        } else if (access.command == CacheCommand::Set) {
             if (!first_set_time_ms.has_value()) {
                 first_set_time_ms = access.timestamp_ms;
             }
@@ -239,7 +240,7 @@ analyze_statistics_per_access(
 
 void
 analyze_trace(char const *const trace_path,
-              enum TraceFormat const format,
+              CacheTraceFormat const format,
               bool const verbose = false)
 {
     uint64_t cnt_gets = 0, cnt_sets = 0;
@@ -256,7 +257,7 @@ analyze_trace(char const *const trace_path,
 #endif
         auto &x = trace.get(i);
 
-        if (x.command == CacheAccessCommand::get) {
+        if (x.command == CacheCommand::Get) {
             cnt_gets += 1;
             map[x.key].access(x);
             continue;
@@ -305,8 +306,8 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
     char const *const trace_path = argv[1];
-    enum TraceFormat format = parse_trace_format_string(argv[2]);
-    assert(format == TRACE_FORMAT_KIA || format == TRACE_FORMAT_SARI);
+    CacheTraceFormat format = CacheTraceFormat__parse(argv[2]);
+    assert(CacheTraceFormat__valid(format));
     analyze_trace(trace_path, format);
     return 0;
 }

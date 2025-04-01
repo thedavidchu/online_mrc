@@ -88,7 +88,7 @@ Olken__get_histogram(struct Olken const *const me,
                      struct Histogram const **const histogram);
 
 /// @brief  Get the cardinality of the current working set size.
-inline size_t
+static inline size_t
 Olken__get_cardinality(struct Olken const *const me)
 {
     return KHashTable__get_size(&me->hash_table);
@@ -97,7 +97,7 @@ Olken__get_cardinality(struct Olken const *const me)
 /// @brief  Lookup a value in Olken.
 /// @note   This is simply to allow changing the implementation of the
 ///         hash table without breaking dependencies.
-inline struct LookupReturn
+static inline struct LookupReturn
 Olken__lookup(struct Olken const *const me, EntryType const key)
 {
     return KHashTable__lookup(&me->hash_table, key);
@@ -106,7 +106,7 @@ Olken__lookup(struct Olken const *const me, EntryType const key)
 /// @brief  Lookup a value in Olken.
 /// @note   This is simply to allow changing the implementation of the
 ///         hash table without breaking dependencies.
-inline enum PutUniqueStatus
+static inline enum PutUniqueStatus
 Olken__put(struct Olken *const me,
            EntryType const key,
            TimeStampType const value)
