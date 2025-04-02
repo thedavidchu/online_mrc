@@ -39,6 +39,9 @@ class ProgressBar {
     void
     print_progress_bar()
     {
+        if (!show_) {
+            return;
+        }
         std::time_t curr_time = std::time(nullptr);
         double dur_s = std::difftime(curr_time, start_time_);
         size_t progress = (double)counter_ / size_ * granularity_;
@@ -53,8 +56,13 @@ class ProgressBar {
     }
 
 public:
-    ProgressBar(size_t const size, size_t const granularity = 50)
+    /// @param size - the total size in terms of tick increments.
+    /// @param show - whether to show the progress bar.
+    /// @param granularity - the granularity at which to show the progress bar
+    ///                      ticks.
+    ProgressBar(size_t const size, bool show, size_t const granularity = 50)
         : size_(size),
+          show_(show),
           granularity_(granularity)
     {
         print_progress_bar();
@@ -62,15 +70,15 @@ public:
     }
 
     void
-    tick()
+    tick(size_t const increment = 1)
     {
-        ++counter_;
+        counter_ += increment;
         if (update()) {
             print_progress_bar();
         }
 
         // Create a new line after the counter when we're finished.
-        if (counter_ == size_) {
+        if (counter_ >= size_) {
             print_progress_bar();
             std::cout << std::endl;
         }
@@ -81,5 +89,6 @@ private:
     static constexpr size_t update_frequency_ = 1 << 20;
     size_t counter_ = 0;
     size_t const size_;
+    bool const show_;
     size_t const granularity_;
 };
