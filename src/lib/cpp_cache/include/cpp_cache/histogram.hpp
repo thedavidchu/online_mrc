@@ -3,13 +3,26 @@
 #include "cpp_cache/format_measurement.hpp"
 #include <cmath>
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <sstream>
+#include <string>
 #include <unordered_map>
 
 using uint64_t = std::uint64_t;
 
 class Histogram {
+    static std::string
+    stringify_double(double const x)
+    {
+        // Print integers exactly; print all else as a float.
+        if (std::isnormal(x) && (int64_t)x == x) {
+            return std::to_string((int64_t)x);
+        }
+        return std::to_string(x);
+    }
+
     std::map<double, uint64_t>
     ordered_histogram() const
     {
@@ -31,6 +44,7 @@ public:
     void
     update(double const bucket, uint64_t const frq = 1)
     {
+        assert(bucket != NAN);
         total_ += frq;
         histogram_[bucket] += frq;
     }
@@ -93,6 +107,23 @@ public:
     nonzero() const
     {
         return total_ - count_bucket(0.0);
+    }
+
+    /// @brief  Return a CSV of the buckets.
+    /// @note   This is for human readability, not for minimalism.
+    std::string
+    csv(std::string sep = ",") const
+    {
+        std::stringstream ss;
+        ss << "Total,Bucket,Frequency,PDF,CDF" << std::endl;
+        uint64_t accum = 0;
+        for (auto [b, f] : histogram_) {
+            accum += f;
+            ss << total_ << sep << stringify_double(b) << sep << f << sep
+               << (double)f / total_ << sep << (double)accum / total_
+               << std::endl;
+        }
+        return ss.str();
     }
 
     /// @brief  Print a time-based histogram.
