@@ -1,6 +1,7 @@
 /** @brief  Represent a cache access. */
 #pragma once
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -36,6 +37,20 @@ struct CacheAccess {
 
     std::optional<uint64_t>
     expiration_time_ms() const;
+
+    /// @brief  A wrapper around the hard-to-use ttl_ms.
+    double
+    time_to_live_ms() const
+    {
+        if (command != CacheCommand::Get && command != CacheCommand::Gets) {
+            double ttl = ttl_ms.value_or(INFINITY);
+            if (ttl == 0) {
+                ttl = INFINITY;
+            }
+            return ttl;
+        }
+        return NAN;
+    }
 
     /// @brief  Return a comma-separated string of the internals.
     ///         Format is the same as the Twitter trace CSVs.
