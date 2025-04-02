@@ -2,6 +2,7 @@
  */
 
 #include "cpp_cache/cache_access.hpp"
+#include "cpp_cache/cache_command.hpp"
 #include "cpp_cache/cache_trace.hpp"
 #include "cpp_cache/cache_trace_format.hpp"
 #include "cpp_cache/format_measurement.hpp"
@@ -13,17 +14,22 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <optional>
+#include <stdbool.h>
 #include <unordered_map>
 
-#define HIDE_PROGRESS_BAR
+// #define HIDE_PROGRESS_BAR
 
-using uint64_t = std::uint64_t;
 using size_t = std::size_t;
+using uint64_t = std::uint64_t;
+using uint32_t = std::uint32_t;
+using counter_t = uint32_t;
 
 static inline std::string
 prettify_number(uint64_t const num, uint64_t const den)
@@ -36,7 +42,9 @@ struct AccessStatistics {
     void
     access(CacheAccess const &access)
     {
-        if (access.command == CacheCommand::Get) {
+        if (access.command == CacheCommand::Get ||
+            access.command == CacheCommand::Gets) {
+            nr_read += 1;
             if (!first_get_time_ms.has_value()) {
                 first_get_time_ms = access.timestamp_ms;
             }
@@ -45,49 +53,50 @@ struct AccessStatistics {
             }
             gets_after_last_set += 1;
             latest_get_time_ms = access.timestamp_ms;
-        } else if (access.command == CacheCommand::Set) {
+        } else if (access.command >= CacheCommand::Set &&
+                   access.command <= CacheCommand::Decr) {
+            nr_write += 1;
             if (!first_set_time_ms.has_value()) {
                 first_set_time_ms = access.timestamp_ms;
             }
             gets_after_last_set = 0;
             latest_set_time_ms = access.timestamp_ms;
             if (current_ttl_ms.has_value() &&
-                current_ttl_ms.value() != access.ttl_ms.value_or(UINT64_MAX)) {
-                ttl_changes += 1;
-                if (current_ttl_ms.value() <
-                    access.ttl_ms.value_or(UINT64_MAX)) {
+                current_ttl_ms.value() != access.time_to_live_ms()) {
+                if (current_ttl_ms.value() < access.time_to_live_ms()) {
                     ttl_increases += 1;
-                } else if (current_ttl_ms.value() <
-                           access.ttl_ms.value_or(UINT64_MAX)) {
+                } else if (current_ttl_ms.value() < access.time_to_live_ms()) {
                     ttl_decreases += 1;
                 }
             } else {
                 ttl_remains += 1;
             }
-            uint64_t new_ttl = access.ttl_ms.value_or(UINT64_MAX);
+            double new_ttl = access.time_to_live_ms();
             current_ttl_ms = new_ttl;
             // The 'value_or' automatically sets it.
-            min_ttl_ms = std::min(min_ttl_ms.value_or(UINT64_MAX), new_ttl);
+            min_ttl_ms = std::min(min_ttl_ms.value_or(INFINITY), new_ttl);
             max_ttl_ms = std::max(max_ttl_ms.value_or(0), new_ttl);
         } else {
-            assert(0 && "impossible!");
+            assert(0 && "unrecognized operation!");
         }
     }
 
-    uint64_t gets_before_first_set = 0;
-    uint64_t gets_after_last_set = 0;
-    uint64_t ttl_changes = 0;
-    uint64_t ttl_remains = 0;
-    uint64_t ttl_increases = 0;
-    uint64_t ttl_decreases = 0;
+    counter_t nr_read = 0;
+    counter_t nr_write = 0;
 
-    std::optional<uint64_t> first_set_time_ms = std::nullopt;
-    std::optional<uint64_t> first_get_time_ms = std::nullopt;
-    std::optional<uint64_t> latest_set_time_ms = std::nullopt;
-    std::optional<uint64_t> latest_get_time_ms = std::nullopt;
-    std::optional<uint64_t> current_ttl_ms = std::nullopt;
-    std::optional<uint64_t> min_ttl_ms = std::nullopt;
-    std::optional<uint64_t> max_ttl_ms = std::nullopt;
+    counter_t gets_before_first_set = 0;
+    counter_t gets_after_last_set = 0;
+    counter_t ttl_remains = 0;
+    counter_t ttl_increases = 0;
+    counter_t ttl_decreases = 0;
+
+    std::optional<counter_t> first_set_time_ms = std::nullopt;
+    std::optional<counter_t> first_get_time_ms = std::nullopt;
+    std::optional<counter_t> latest_set_time_ms = std::nullopt;
+    std::optional<counter_t> latest_get_time_ms = std::nullopt;
+    std::optional<double> current_ttl_ms = std::nullopt;
+    std::optional<double> min_ttl_ms = std::nullopt;
+    std::optional<double> max_ttl_ms = std::nullopt;
 };
 
 void
@@ -125,7 +134,7 @@ analyze_statistics_per_key(
         }
 
         // Count the keys where the TTL changes at least once.
-        change_ttl += stats.ttl_changes ? 1 : 0;
+        change_ttl += (stats.ttl_increases || stats.ttl_decreases);
         incr_ttl += stats.ttl_increases ? 1 : 0;
         decr_ttl += stats.ttl_decreases ? 1 : 0;
         if (stats.first_set_time_ms.has_value() &&
@@ -208,7 +217,7 @@ analyze_statistics_per_access(
     for (auto [k, stats] : map) {
         gets_before_first_set += stats.gets_before_first_set;
         gets_after_last_set += stats.gets_after_last_set;
-        ttl_changes += stats.ttl_changes;
+        ttl_changes += stats.ttl_increases + stats.ttl_decreases;
         ttl_increase += stats.ttl_increases;
         ttl_decrease += stats.ttl_decreases;
     }
@@ -241,20 +250,18 @@ analyze_statistics_per_access(
 void
 analyze_trace(char const *const trace_path,
               CacheTraceFormat const format,
+              bool const show_progress,
               bool const verbose = false)
 {
     uint64_t cnt_gets = 0, cnt_sets = 0;
     Histogram ttl_diff_hist;
+    Histogram ttl_hist;
 
     std::unordered_map<uint64_t, AccessStatistics> map;
     CacheAccessTrace const trace(trace_path, format);
-#ifndef HIDE_PROGRESS_BAR
-    ProgressBar pbar(trace.size());
-#endif
+    ProgressBar pbar(trace.size(), show_progress);
     for (size_t i = 0; i < trace.size(); ++i) {
-#ifndef HIDE_PROGRESS_BAR
         pbar.tick();
-#endif
         auto &x = trace.get(i);
 
         if (x.command == CacheCommand::Get) {
@@ -263,11 +270,12 @@ analyze_trace(char const *const trace_path,
             continue;
         }
 
+        ttl_hist.update(x.time_to_live_ms());
         // Analyze whether the TTL has changed before we update the
         // object with the new TTL.
         if (map[x.key].current_ttl_ms.has_value()) {
-            uint64_t const old_ttl = map.at(x.key).current_ttl_ms.value();
-            uint64_t const new_ttl = x.ttl_ms.value();
+            double const old_ttl = map.at(x.key).current_ttl_ms.value();
+            double const new_ttl = x.ttl_ms.value_or(INFINITY);
             ttl_diff_hist.update((double)old_ttl - new_ttl);
             if (verbose && old_ttl != new_ttl) {
                 std::cout << "TTL mismatch: " << old_ttl << " vs " << new_ttl
@@ -289,25 +297,41 @@ analyze_trace(char const *const trace_path,
               << std::endl;
 
     std::cout << "## TTLs" << std::endl;
-    std::cout << "TTL Delta Histogram [ms]: " << std::endl;
-    ttl_diff_hist.print_time("TTL Deltas [ms]");
+    std::cout << "TTL Histogram [ms]: " << std::endl;
+    std::cout << ttl_hist.csv();
+    std::cout << "Changes in TTLs Histogram [ms]: " << std::endl;
+    std::cout << ttl_diff_hist.csv();
     std::cout << "---" << std::endl;
     analyze_statistics_per_key(map, map.size());
     std::cout << "---" << std::endl;
     analyze_statistics_per_access(map, trace.size(), cnt_sets);
 }
 
+bool
+parse_bool(char const *str)
+{
+    if (std::strcmp(str, "true") == 0) {
+        return true;
+    }
+    if (std::strcmp(str, "false") == 0) {
+        return true;
+    }
+    assert(0 && "unrecognized bool parameter");
+}
+
 int
 main(int argc, char *argv[])
 {
-    if (argc != 3) {
-        std::cout << "Usage: " << argv[0] << " <trace-path> <format>"
+    if (argc != 3 && argc != 4) {
+        std::cout << "Usage: " << argv[0]
+                  << " <trace-path> <format> [<show_progress>=true]"
                   << std::endl;
         return EXIT_FAILURE;
     }
     char const *const trace_path = argv[1];
     CacheTraceFormat format = CacheTraceFormat__parse(argv[2]);
+    bool const show_progress = (argc == 4) ? parse_bool(argv[3]) : true;
     assert(CacheTraceFormat__valid(format));
-    analyze_trace(trace_path, format);
+    analyze_trace(trace_path, format, show_progress);
     return 0;
 }
