@@ -20,16 +20,22 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <optional>
 #include <stdbool.h>
 #include <unordered_map>
-
-// #define HIDE_PROGRESS_BAR
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 using uint32_t = std::uint32_t;
-using counter_t = uint32_t;
+using scount_t = std::uint16_t;
+using tm_t = std::uint32_t;
+
+static constexpr tm_t INVALID_TIME = UINT32_MAX;
+
+static inline bool
+valid_time(tm_t const t)
+{
+    return t != INVALID_TIME;
+}
 
 static inline std::string
 prettify_number(uint64_t const num, uint64_t const den)
@@ -45,10 +51,10 @@ struct AccessStatistics {
         if (access.command == CacheCommand::Get ||
             access.command == CacheCommand::Gets) {
             nr_read += 1;
-            if (!first_get_time_ms.has_value()) {
+            if (!valid_time(first_get_time_ms)) {
                 first_get_time_ms = access.timestamp_ms;
             }
-            if (!first_set_time_ms.has_value()) {
+            if (!valid_time(first_set_time_ms)) {
                 gets_before_first_set += 1;
             }
             gets_after_last_set += 1;
@@ -56,47 +62,51 @@ struct AccessStatistics {
         } else if (access.command >= CacheCommand::Set &&
                    access.command <= CacheCommand::Decr) {
             nr_write += 1;
-            if (!first_set_time_ms.has_value()) {
+            if (!valid_time(first_set_time_ms)) {
                 first_set_time_ms = access.timestamp_ms;
             }
             gets_after_last_set = 0;
             latest_set_time_ms = access.timestamp_ms;
-            if (current_ttl_ms.has_value() &&
-                current_ttl_ms.value() != access.time_to_live_ms()) {
-                if (current_ttl_ms.value() < access.time_to_live_ms()) {
+            if (valid_time(current_ttl_ms) &&
+                current_ttl_ms != access.time_to_live_ms()) {
+                if (current_ttl_ms < access.time_to_live_ms()) {
                     ttl_increases += 1;
-                } else if (current_ttl_ms.value() < access.time_to_live_ms()) {
+                } else if (current_ttl_ms < access.time_to_live_ms()) {
                     ttl_decreases += 1;
                 }
             } else {
                 ttl_remains += 1;
             }
-            double new_ttl = access.time_to_live_ms();
+            tm_t new_ttl = access.time_to_live_ms();
             current_ttl_ms = new_ttl;
             // The 'value_or' automatically sets it.
-            min_ttl_ms = std::min(min_ttl_ms.value_or(INFINITY), new_ttl);
-            max_ttl_ms = std::max(max_ttl_ms.value_or(0), new_ttl);
+            min_ttl_ms = !valid_time(min_ttl_ms)
+                             ? new_ttl
+                             : std::min(min_ttl_ms, new_ttl);
+            max_ttl_ms = !valid_time(max_ttl_ms)
+                             ? new_ttl
+                             : std::min(max_ttl_ms, new_ttl);
         } else {
             assert(0 && "unrecognized operation!");
         }
     }
 
-    counter_t nr_read = 0;
-    counter_t nr_write = 0;
+    scount_t nr_read = 0;
+    scount_t nr_write = 0;
 
-    counter_t gets_before_first_set = 0;
-    counter_t gets_after_last_set = 0;
-    counter_t ttl_remains = 0;
-    counter_t ttl_increases = 0;
-    counter_t ttl_decreases = 0;
+    scount_t gets_before_first_set = 0;
+    scount_t gets_after_last_set = 0;
+    scount_t ttl_remains = 0;
+    scount_t ttl_increases = 0;
+    scount_t ttl_decreases = 0;
 
-    std::optional<counter_t> first_set_time_ms = std::nullopt;
-    std::optional<counter_t> first_get_time_ms = std::nullopt;
-    std::optional<counter_t> latest_set_time_ms = std::nullopt;
-    std::optional<counter_t> latest_get_time_ms = std::nullopt;
-    std::optional<double> current_ttl_ms = std::nullopt;
-    std::optional<double> min_ttl_ms = std::nullopt;
-    std::optional<double> max_ttl_ms = std::nullopt;
+    tm_t first_set_time_ms = INVALID_TIME;
+    tm_t first_get_time_ms = INVALID_TIME;
+    tm_t latest_set_time_ms = INVALID_TIME;
+    tm_t latest_get_time_ms = INVALID_TIME;
+    tm_t current_ttl_ms = INVALID_TIME;
+    tm_t min_ttl_ms = INVALID_TIME;
+    tm_t max_ttl_ms = INVALID_TIME;
 };
 
 void
@@ -123,47 +133,50 @@ analyze_statistics_per_key(
     // and the last SET happen at the same time. It is possible that the
     // first and last are the same or different times.
     uint64_t same_time = 0;
+    Histogram nr_reads, nr_writes;
     Histogram max_ttl_per_key;
     Histogram min_ttl_per_key;
     for (auto [k, stats] : map) {
-        if (stats.min_ttl_ms.has_value()) {
-            min_ttl_per_key.update(stats.min_ttl_ms.value());
+        nr_reads.update(stats.nr_read);
+        nr_writes.update(stats.nr_write);
+        if (valid_time(stats.min_ttl_ms)) {
+            min_ttl_per_key.update(stats.min_ttl_ms);
         }
-        if (stats.max_ttl_ms.has_value()) {
-            max_ttl_per_key.update(stats.max_ttl_ms.value());
+        if (valid_time(stats.max_ttl_ms)) {
+            max_ttl_per_key.update(stats.max_ttl_ms);
         }
 
         // Count the keys where the TTL changes at least once.
         change_ttl += (stats.ttl_increases || stats.ttl_decreases);
         incr_ttl += stats.ttl_increases ? 1 : 0;
         decr_ttl += stats.ttl_decreases ? 1 : 0;
-        if (stats.first_set_time_ms.has_value() &&
-            stats.first_get_time_ms.has_value()) {
-            assert(stats.latest_set_time_ms.has_value());
-            assert(stats.latest_get_time_ms.has_value());
+        if (valid_time(stats.first_set_time_ms) &&
+            valid_time(stats.first_get_time_ms)) {
+            assert(valid_time(stats.latest_set_time_ms));
+            assert(valid_time(stats.latest_get_time_ms));
 
-            if (stats.first_get_time_ms.value() >
-                    stats.first_set_time_ms.value() &&
-                stats.latest_get_time_ms.value() <
-                    stats.latest_set_time_ms.value()) {
+            if (valid_time(stats.first_get_time_ms) >
+                    valid_time(stats.first_set_time_ms) &&
+                valid_time(stats.latest_get_time_ms) <
+                    valid_time(stats.latest_set_time_ms)) {
                 set_get_set += 1;
-            } else if (stats.first_get_time_ms.value() <
-                           stats.first_set_time_ms.value() &&
-                       stats.latest_get_time_ms.value() >
-                           stats.latest_set_time_ms.value()) {
+            } else if (valid_time(stats.first_get_time_ms) <
+                           valid_time(stats.first_set_time_ms) &&
+                       valid_time(stats.latest_get_time_ms) >
+                           valid_time(stats.latest_set_time_ms)) {
                 get_set_get += 1;
-            } else if (stats.first_get_time_ms.value() <
-                       stats.first_set_time_ms.value()) {
+            } else if (valid_time(stats.first_get_time_ms) <
+                       valid_time(stats.first_set_time_ms)) {
                 get_set += 1;
-            } else if (stats.latest_get_time_ms.value() >
-                       stats.latest_set_time_ms.value()) {
+            } else if (valid_time(stats.latest_get_time_ms) >
+                       valid_time(stats.latest_set_time_ms)) {
                 set_get += 1;
             } else {
                 same_time += 1;
             }
-        } else if (!stats.first_set_time_ms.has_value()) {
+        } else if (!valid_time(stats.first_set_time_ms)) {
             get_only += 1;
-        } else if (!stats.first_get_time_ms.has_value()) {
+        } else if (!valid_time(stats.first_get_time_ms)) {
             set_only += 1;
         } else {
             // A key without any GETs or SETs should not be in the map.
@@ -178,10 +191,14 @@ analyze_statistics_per_key(
               << prettify_number(incr_ttl, num_keys) << std::endl;
     std::cout << "Number of keys with decreasing TTLs: "
               << prettify_number(decr_ttl, num_keys) << std::endl;
+    std::cout << "Nr. Reads:" << std::endl;
+    std::cout << nr_reads.csv();
+    std::cout << "Nr. Writes:" << std::endl;
+    std::cout << nr_writes.csv();
     std::cout << "Histogram of MIN TTLs: [ms] " << std::endl;
-    min_ttl_per_key.print_time("Min TTLs per key [ms]");
+    std::cout << min_ttl_per_key.csv();
     std::cout << "Histogram of MAX TTLs [ms]: " << std::endl;
-    max_ttl_per_key.print_time("Max TTLs per key [ms]");
+    std::cout << max_ttl_per_key.csv();
     std::cout << "GET of key only: " << prettify_number(get_only, num_keys)
               << std::endl;
     std::cout << "SET of key only: " << prettify_number(set_only, num_keys)
@@ -273,8 +290,8 @@ analyze_trace(char const *const trace_path,
         ttl_hist.update(x.time_to_live_ms());
         // Analyze whether the TTL has changed before we update the
         // object with the new TTL.
-        if (map[x.key].current_ttl_ms.has_value()) {
-            double const old_ttl = map.at(x.key).current_ttl_ms.value();
+        if (valid_time(map[x.key].current_ttl_ms)) {
+            double const old_ttl = map.at(x.key).current_ttl_ms;
             double const new_ttl = x.ttl_ms.value_or(INFINITY);
             ttl_diff_hist.update((double)old_ttl - new_ttl);
             if (verbose && old_ttl != new_ttl) {
