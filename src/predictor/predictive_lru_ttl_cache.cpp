@@ -229,7 +229,7 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes,
     return evicted_bytes;
 }
 
-bool
+uint64_t
 PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes,
                                     std::optional<uint64_t> const ignored_key)
 {
@@ -279,25 +279,22 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
     if (nbytes <= capacity_ - size_) {
         return true;
     }
-    uint64_t required_bytes = nbytes - (capacity_ - size_);
-    uint64_t evicted_bytes = evict_from_lru(required_bytes, ignored_key);
-    if (evicted_bytes >= required_bytes) {
+    uint64_t const reqd_b = nbytes - (capacity_ - size_);
+    uint64_t const lru_evicted_b = evict_from_lru(reqd_b, ignored_key);
+    if (lru_evicted_b >= reqd_b) {
         return true;
     }
     // Evict from TTL queue as well, since the LRU queue may not
     // have enough elements to create enough room, since it doesn't
     // have all the elements in it.
-    evicted_bytes +=
-        evict_smallest_ttl(required_bytes - evicted_bytes, ignored_key);
-    if (evicted_bytes >= required_bytes) {
+    uint64_t const ttl_evicted_b =
+        evict_smallest_ttl(reqd_b - lru_evicted_b, ignored_key);
+    if (lru_evicted_b + ttl_evicted_b >= reqd_b) {
         return true;
     }
-    LOGGER_WARN("could not evict enough from cache: required %zu "
-                "vs %zu -- %zu items left in cache with size %zu",
-                required_bytes,
-                evicted_bytes,
-                map_.size(),
-                size_);
+    // This is an error: it means that elements are in neither the TTL
+    // nor the LRU queue.
+    LOGGER_ERROR("could not evict enough from cache");
     return false;
 }
 

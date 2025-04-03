@@ -58,7 +58,7 @@ private:
     /// @param  target_bytes - the number of bytes to try to evict.
     /// @param  ignored_key - a key that should not be evicted.
     /// @return the number of bytes evicted.
-    bool
+    uint64_t
     evict_smallest_ttl(uint64_t const target_bytes,
                        std::optional<uint64_t> const ignored_key);
 
