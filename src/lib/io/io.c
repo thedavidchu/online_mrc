@@ -105,3 +105,16 @@ MemoryMap__destroy(struct MemoryMap *me)
     *me = (struct MemoryMap){0};
     return true;
 }
+
+bool
+MemoryMap__kdestroy(struct MemoryMap const *const me)
+{
+    if (me == NULL || me->buffer == NULL) {
+        return false;
+    }
+    if (munmap(me->buffer, me->num_bytes) != 0) {
+        LOGGER_ERROR("failed to unmap region");
+        return false;
+    }
+    return true;
+}

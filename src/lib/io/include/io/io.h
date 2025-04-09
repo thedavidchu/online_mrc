@@ -24,6 +24,11 @@ MemoryMap__write_as_json(FILE *stream, struct MemoryMap *me);
 bool
 MemoryMap__destroy(struct MemoryMap *me);
 
+/// @note   Destroy a memory mapping from a pointer to a const mmap.
+///         Useful for const C++ members.
+bool
+MemoryMap__kdestroy(struct MemoryMap const *me);
+
 bool
 write_buffer(char const *const file_name,
              void const *const buffer,
