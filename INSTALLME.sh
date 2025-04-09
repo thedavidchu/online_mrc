@@ -47,5 +47,4 @@ sudo apt install -y valgrind
 
 # Build Meson
 meson setup build
-cd build
-meson compile
+meson compile -C build

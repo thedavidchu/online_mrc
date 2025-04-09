@@ -8,7 +8,8 @@ project(
     # For C++, the more modern, the better for me <3
     default_options: [
         'c_std=gnu11',
-        'cpp_std=c++17',
+        # C++20 supports barriers and other synchronization primitives.
+        'cpp_std=c++20',
         # This is equivalent to "-Wall -Werror -Wextra -Wpedantic" according to
         # this: https://mesonbuild.com/Builtin-options.html#details-for-warning_level
         'warning_level=3',
