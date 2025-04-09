@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
 
@@ -91,3 +92,28 @@ def read_trace(path: Path, format: str, mode: str | None):
     else:
         data = np.fromfile(path, dtype=TRACE_DTYPE[format])
     return data
+
+
+def get_twitter_path(nr: int, format: str) -> Path | None:
+    match format:
+        case "Kia":
+            # We try to use disk2-8tb because it is faster.
+            path = Path(f"/mnt/disk2-8tb/kia/twitter/cluster{nr}.bin")
+            if path.exists():
+                return path
+            path = Path(f"/mnt/disk1-20tb/kia/twitter/cluster{nr}.bin")
+            if path.exists():
+                return path
+            warn(f"file '{str(path)}' DNE")
+            return None
+        case "Sari":
+            path = Path(
+                f"/mnt/disk1-20tb/Sari-Traces/FilteredTwitter_Binary/cluster{nr}.bin"
+            )
+            if path.exists():
+                return path
+            warn(f"file '{str(path)}' DNE")
+            return None
+        case _:
+            warn(f"unsupported format '{format}'")
+            return None
