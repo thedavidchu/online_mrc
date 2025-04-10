@@ -51,5 +51,8 @@ private:
     size_t const length_ = 0;
 
     // Synchronization
+    // NOTE I use the pthread barrier because it supports a dynamic
+    //      number of threads rather than the std::barrier whose number
+    //      of threads needs to be known at compile-time AFAIK.
     pthread_barrier_t barrier_ = {};
 };
