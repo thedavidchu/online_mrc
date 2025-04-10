@@ -2,11 +2,11 @@
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_metadata.hpp"
 #include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
-#include "lib/util.hpp"
 #include "list/list.hpp"
 #include "logger/logger.h"
 
@@ -20,6 +20,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <ostream>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
@@ -470,23 +471,23 @@ PredictiveCache::statistics() const
 }
 
 void
-PredictiveCache::print_statistics() const
+PredictiveCache::print_statistics(std::ostream &ostrm) const
 {
     auto r = lifetime_cache_.thresholds();
-    std::cout << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
-              << ", \"Lower Ratio\": " << lifetime_cache_.lower_ratio()
-              << ", \"Upper Ratio\": " << lifetime_cache_.upper_ratio()
-              << ", \"Lifetime Cache Mode\": \""
-              << LifeTimeCacheMode__str(lifetime_cache_.mode())
-              << "\", \"CacheStatistics\": " << statistics_.json()
-              << ", \"PredictionTracker\": " << pred_tracker.json()
-              << ", \"Numer of Threshold Refreshes\": "
-              << format_engineering(lifetime_cache_.refreshes())
-              << ", \"Since Refresh\": "
-              << format_engineering(lifetime_cache_.since_refresh())
-              << ", \"Evictions\": "
-              << format_engineering(lifetime_cache_.evictions())
-              << ", \"Lower Threshold\": " << format_time(r.first)
-              << ", \"Upper Threshold\": " << format_time(r.second) << "}"
-              << std::endl;
+    ostrm << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
+          << ", \"Lower Ratio\": " << lifetime_cache_.lower_ratio()
+          << ", \"Upper Ratio\": " << lifetime_cache_.upper_ratio()
+          << ", \"Lifetime Cache Mode\": \""
+          << LifeTimeCacheMode__str(lifetime_cache_.mode())
+          << "\", \"CacheStatistics\": " << statistics_.json()
+          << ", \"PredictionTracker\": " << pred_tracker.json()
+          << ", \"Numer of Threshold Refreshes\": "
+          << format_engineering(lifetime_cache_.refreshes())
+          << ", \"Since Refresh\": "
+          << format_engineering(lifetime_cache_.since_refresh())
+          << ", \"Evictions\": "
+          << format_engineering(lifetime_cache_.evictions())
+          << ", \"Lower Threshold\": " << format_time(r.first)
+          << ", \"Upper Threshold\": " << format_time(r.second) << "}"
+          << std::endl;
 }

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iostream>
+#include <optional>
 #include <ostream>
 #include <string>
 
@@ -13,6 +14,7 @@ using uint64_t = std::uint64_t;
 
 /// @brief  A progress bar based on Python's TQDM library
 class ProgressBar {
+    /// @brief  Format time as "<min>:<sec>", e.g. "10:20".
     static inline std::string
     format_time_min_sec(double const tm_s)
     {
@@ -23,11 +25,12 @@ class ProgressBar {
     }
 
     bool
-    update()
+    should_print() const
     {
         return counter_ % update_frequency_ == 0;
     }
 
+    /// @brief  Format a percentage with padding on the front, e.g. " 10%".
     std::string
     percentage_done()
     {
@@ -39,19 +42,19 @@ class ProgressBar {
     void
     print_progress_bar()
     {
-        if (!show_) {
+        if (!ostrm_) {
             return;
         }
         std::time_t curr_time = std::time(nullptr);
         double dur_s = std::difftime(curr_time, start_time_);
         size_t progress = (double)counter_ / size_ * granularity_;
-        std::cout << "\r" << percentage_done() << "|"
-                  << std::string(progress, '=')
-                  << std::string(granularity_ - progress, ' ') << "| "
-                  << format_underscore(counter_) << "/"
-                  << format_underscore(size_) << " ["
-                  << format_time_min_sec(dur_s) << "<?, "
-                  << (double)counter_ / dur_s << "it/s]";
+        *ostrm_ << "\r" << percentage_done() << "|"
+                << std::string(progress, '=')
+                << std::string(granularity_ - progress, ' ') << "| "
+                << format_underscore(counter_) << "/"
+                << format_underscore(size_) << " ["
+                << format_time_min_sec(dur_s) << "<?, "
+                << (double)counter_ / dur_s << "it/s]";
         std::flush(std::cout);
     }
 
@@ -60,9 +63,21 @@ public:
     /// @param show - whether to show the progress bar.
     /// @param granularity - the granularity at which to show the progress bar
     ///                      ticks.
-    ProgressBar(size_t const size, bool show, size_t const granularity = 50)
+    ProgressBar(size_t const size,
+                bool const show = true,
+                size_t const granularity = 50)
         : size_(size),
-          show_(show),
+          ostrm_(show ? &std::cout : nullptr),
+          granularity_(granularity)
+    {
+        print_progress_bar();
+        start_time_ = std::time(nullptr);
+    }
+    ProgressBar(size_t const size,
+                std::ostream *const ostrm,
+                size_t const granularity = 50)
+        : size_(size),
+          ostrm_(ostrm),
           granularity_(granularity)
     {
         print_progress_bar();
@@ -73,7 +88,7 @@ public:
     tick(size_t const increment = 1)
     {
         counter_ += increment;
-        if (update()) {
+        if (should_print()) {
             print_progress_bar();
         }
 
@@ -89,6 +104,6 @@ private:
     static constexpr size_t update_frequency_ = 1 << 20;
     size_t counter_ = 0;
     size_t const size_;
-    bool const show_;
+    std::ostream *const ostrm_;
     size_t const granularity_;
 };

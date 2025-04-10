@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 #include <optional>
+#include <ostream>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
@@ -131,7 +132,7 @@ public:
     statistics() const;
 
     void
-    print_statistics() const;
+    print_statistics(std::ostream &ostrm = std::cout) const;
 
 private:
     static constexpr bool DEBUG = false;

@@ -266,9 +266,9 @@ CacheStatistics::json() const
 {
     std::stringstream ss;
     ss << "{"
-       << "\"start_time_ms\": " << format_time(start_time_ms_.value_or(NAN))
-       << ", \"current_time_ms\": "
-       << format_time(current_time_ms_.value_or(NAN))
+       << "\"start_time_ms\": " << format_time(start_time_ms_.value_or(0))
+       << ", \"current_time_ms\": " << format_time(current_time_ms_.value_or(0))
+       << ", \"uptime_ms\": " << format_time(uptime_ms())
        << ", \"skip_ops\": " << format_engineering(skip_ops_)
        << ", \"skip_bytes\": " << format_memory_size(skip_bytes_)
        << ", \"insert_ops\": " << format_engineering(insert_ops_)
@@ -299,8 +299,10 @@ CacheStatistics::json() const
        << ", \"upperbound_ttl_wss\": "
        << format_memory_size(upperbound_ttl_wss_)
        // Aggregate measurements
-       << ", \"simulation time\": " << format_time(sim_uptime_ms())
-       << ", \"uptime\": " << format_time(sim_uptime_ms())
+       << ", \"sim_start_time_ms\": "
+       << format_time(sim_start_time_ms_.value_or(0))
+       << ", \"sim_end_time_ms\": " << format_time(sim_end_time_ms_.value_or(0))
+       << ", \"sim_uptime_ms\": " << format_time(sim_uptime_ms())
        << ", \"miss rate\": " << miss_rate() << "}";
     return ss.str();
 }

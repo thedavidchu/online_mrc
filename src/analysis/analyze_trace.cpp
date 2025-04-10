@@ -276,7 +276,7 @@ analyze_trace(char const *const trace_path,
 
     std::unordered_map<uint64_t, AccessStatistics> map;
     CacheAccessTrace const trace(trace_path, format);
-    ProgressBar pbar(trace.size(), show_progress);
+    ProgressBar pbar{trace.size(), show_progress};
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
         auto &x = trace.get(i);
