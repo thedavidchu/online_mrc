@@ -20,7 +20,7 @@ project(
         # 1. 'debug' for -O0 -g
         # 2. 'debugoptimized' for -O2 -g
         # 3. 'release' for -O3
-        'buildtype=debug',
+        'buildtype=debugoptimized',
         # Enable link-time optimizations
         'b_lto=false',
         # Disable profile guided optimization
