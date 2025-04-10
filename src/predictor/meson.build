@@ -48,6 +48,17 @@ test_lru_ttl_cache_exe = executable(
     dependencies: [cpp_cache_dep, list_dep],
 )
 
+test_predictive_lru_ttl_cache_exe = executable(
+    'test_predictive_lru_ttl_cache_exe',
+    'test_predictive_lru_ttl_cache.cpp',
+    include_directories: predictor_inc,
+    dependencies: [
+        cpp_cache_dep,
+        list_dep,
+        predictive_lru_ttl_cache_dep,
+    ],
+)
+
 predictor_exe = executable(
     'predictor_exe',
     'predictor.cpp',
@@ -86,4 +97,5 @@ test_iterator_spaces_exe = executable(
 test('list_test', list_exe)
 test('test_lifetime_thresholds', test_lifetime_thresholds_exe)
 test('test_lru_ttl_cache', test_lru_ttl_cache_exe)
+test('test_predictive_lru_ttl_cache', test_predictive_lru_ttl_cache_exe)
 test('test_iterator_spaces', test_iterator_spaces_exe)
