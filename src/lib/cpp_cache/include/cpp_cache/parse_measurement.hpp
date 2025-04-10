@@ -27,7 +27,8 @@ static const std::unordered_map<std::string, uint64_t> mem_units = {
     {"EiB", (uint64_t)1 << 60},
 };
 
-/// @brief  Parse memory size of form '100MiB'.
+/// @brief  Parse memory size of form '100MiB' or a plain number with
+///         implicit byte units.
 static inline std::optional<uint64_t>
 parse_memory_size(std::string const &str)
 {
@@ -40,7 +41,9 @@ parse_memory_size(std::string const &str)
     }
     std::string unit_str = std::string(str_end);
     if (!mem_units.count(unit_str)) {
-        LOGGER_ERROR("cannot parse '%s' as memory unit", unit_str.c_str());
+        LOGGER_ERROR("cannot parse memory unit ('%s') of '%s'",
+                     unit_str.c_str(),
+                     str.c_str());
         return {};
     }
     return ans * mem_units.at(unit_str);

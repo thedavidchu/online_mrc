@@ -1,8 +1,12 @@
 #pragma once
 
+#include "arrays/is_last.h"
 #include <cassert>
 #include <cstring>
 #include <map>
+#include <sstream>
+#include <string>
+#include <vector>
 
 template <typename K, typename V>
 static inline auto
@@ -40,4 +44,35 @@ atob_or_panic(char const *const a)
         return false;
     }
     assert(0 && "unexpected 'true' or 'false'");
+}
+
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+
+/// @brief  Split a string at any point where a delimiter is found.
+static inline std::vector<std::string>
+string_split(std::string const &src, std::string const &delim)
+{
+    std::vector<std::string> r;
+    boost::algorithm::split(r, src, boost::is_any_of(delim));
+    return r;
+}
+
+template <typename T>
+static inline std::string
+vec2str(std::vector<T> const &vec,
+        std::string const open = "[",
+        std::string const close = "]",
+        std::string const sep = ", ")
+{
+    std::stringstream ss;
+    ss << open;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        ss << vec[i];
+        if (!is_last(i, vec.size())) {
+            ss << sep;
+        }
+    }
+    ss << close;
+    return ss.str();
 }
