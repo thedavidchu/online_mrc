@@ -255,6 +255,20 @@ CacheAccess::CacheAccess(uint8_t const *const record,
 {
 }
 
+bool
+CacheAccess::is_read() const
+{
+    return command == CacheCommand::Get || command == CacheCommand::Gets ||
+           command == CacheCommand::Read;
+}
+
+bool
+CacheAccess::is_write() const
+{
+    return (CacheCommand::Set <= command && command <= CacheCommand::Decr) ||
+           command == CacheCommand::Update;
+}
+
 std::optional<uint64_t>
 CacheAccess::expiration_time_ms() const
 {

@@ -28,6 +28,16 @@ struct Data {
     uint16_t remained_with_client = 0;
 };
 
+template <typename T>
+void
+saturation_iincr(T &x)
+{
+    if (x == std::numeric_limits<T>::max()) {
+        return;
+    }
+    x += 1;
+}
+
 void
 analyze_clients(char const *const trace_path,
                 CacheTraceFormat const format,
@@ -35,6 +45,7 @@ analyze_clients(char const *const trace_path,
                 bool const verbose = false)
 {
     std::unordered_map<uint64_t, Data> map;
+    Histogram client_read, client_write;
     CacheAccessTrace const trace(trace_path, format);
     ProgressBar pbar{trace.size(), show_progress};
     for (size_t i = 0; i < trace.size(); ++i) {
@@ -44,9 +55,15 @@ analyze_clients(char const *const trace_path,
             map[x.key].client_id = x.client_id;
         } else if (map[x.key].client_id != x.client_id) {
             map[x.key].client_id = x.client_id;
-            map[x.key].switched_clients += 1;
+            saturation_iincr(map[x.key].switched_clients);
         } else {
-            map[x.key].remained_with_client += 1;
+            saturation_iincr(map[x.key].remained_with_client);
+        }
+
+        if (x.is_read()) {
+            client_read.update(x.client_id);
+        } else if (x.is_write()) {
+            client_write.update(x.client_id);
         }
     }
 
@@ -62,6 +79,10 @@ analyze_clients(char const *const trace_path,
     std::cout << stayed.csv();
     std::cout << "Switched Client" << std::endl;
     std::cout << switched.csv();
+    std::cout << "Reads per Client" << std::endl;
+    std::cout << client_read.csv();
+    std::cout << "Writes per client" << std::endl;
+    std::cout << client_write.csv();
 }
 
 bool

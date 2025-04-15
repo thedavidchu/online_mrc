@@ -35,6 +35,12 @@ struct CacheAccess {
 
     CacheAccess(uint8_t const *const ptr, CacheTraceFormat const format);
 
+    bool
+    is_read() const;
+
+    bool
+    is_write() const;
+
     std::optional<uint64_t>
     expiration_time_ms() const;
 
