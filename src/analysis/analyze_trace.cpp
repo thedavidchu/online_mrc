@@ -7,10 +7,8 @@
 #include "cpp_cache/cache_trace_format.hpp"
 #include "cpp_cache/format_measurement.hpp"
 #include "cpp_cache/histogram.hpp"
-#include "trace/reader.h"
-
-// This header is conditionally compiled out by defining HIDE_PROGRESS_BAR.
 #include "cpp_cache/progress_bar.hpp"
+#include "trace/reader.h"
 
 #include <algorithm>
 #include <cassert>

@@ -11,3 +11,10 @@ analyze_trace_exe = executable(
         cpp_cache_dep,
     ],
 )
+analyze_clients_exe = executable(
+    'analyze_clients_exe',
+    'analyze_clients.cpp',
+    dependencies: [
+        cpp_cache_dep,
+    ],
+)
