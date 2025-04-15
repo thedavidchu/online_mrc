@@ -83,7 +83,7 @@ parse_timestamp_ms(uint8_t const *const record, CacheTraceFormat const format)
         return read_le_u64(&record[0]);
     case CacheTraceFormat::Sari:
         return 1000 * (uint64_t)read_le_u32(&record[0]);
-    case CacheTraceFormat::YangTwitter:
+    case CacheTraceFormat::YangTwitterX:
         return read_le_u32(&record[0]);
     case CacheTraceFormat::Invalid:
         return 0;
@@ -100,7 +100,7 @@ parse_key(uint8_t const *const record, CacheTraceFormat const format)
         return read_le_u64(&record[9]);
     case CacheTraceFormat::Sari:
         return read_le_u64(&record[4]);
-    case CacheTraceFormat::YangTwitter:
+    case CacheTraceFormat::YangTwitterX:
         return read_le_u32(&record[4]);
     case CacheTraceFormat::Invalid:
         return 0;
@@ -117,7 +117,7 @@ parse_key_size_b(uint8_t const *const record, CacheTraceFormat const format)
         return 0;
     case CacheTraceFormat::Sari:
         return 0;
-    case CacheTraceFormat::YangTwitter: {
+    case CacheTraceFormat::YangTwitterX: {
         uint32_t kv_sz = read_le_u32(&record[12]);
         return kv_sz >> 22;
     }
@@ -136,7 +136,7 @@ parse_value_size_b(uint8_t const *const record, CacheTraceFormat const format)
         return read_le_u32(&record[17]);
     case CacheTraceFormat::Sari:
         return read_le_u32(&record[12]);
-    case CacheTraceFormat::YangTwitter: {
+    case CacheTraceFormat::YangTwitterX: {
         uint32_t kv_sz = read_le_u32(&record[12]);
         return kv_sz & 0x003FFFFF;
     }
@@ -156,7 +156,7 @@ parse_command(uint8_t const *const record, CacheTraceFormat const format)
                                                    : CacheCommand::Get);
     case CacheTraceFormat::Sari:
         return CacheCommand::Get;
-    case CacheTraceFormat::YangTwitter: {
+    case CacheTraceFormat::YangTwitterX: {
         uint32_t op_ttl = read_le_u32(&record[16]);
         return CacheCommand(op_ttl >> 24);
     }
@@ -179,7 +179,7 @@ parse_ttl_ms(uint8_t const *const record, CacheTraceFormat const format)
         uint64_t ttl = read_le_u32(&record[16]);
         return (ttl == 0) ? std::nullopt : std::optional<uint64_t>{1000 * ttl};
     }
-    case CacheTraceFormat::YangTwitter: {
+    case CacheTraceFormat::YangTwitterX: {
         uint32_t op_ttl = read_le_u32(&record[16]);
         uint64_t ttl = op_ttl & 0x00FFFFFF;
         return (ttl == 0) ? std::nullopt : std::optional<uint64_t>{1000 * ttl};
@@ -198,7 +198,7 @@ parse_client_id(uint8_t const *const record, CacheTraceFormat const format)
         return 0;
     case CacheTraceFormat::Sari:
         return 0;
-    case CacheTraceFormat::YangTwitter:
+    case CacheTraceFormat::YangTwitterX:
         return read_le_u32(&record[20]);
     case CacheTraceFormat::Invalid:
         return 0;

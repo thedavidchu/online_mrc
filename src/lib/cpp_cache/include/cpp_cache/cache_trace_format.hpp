@@ -8,7 +8,7 @@ using size_t = std::size_t;
 enum class CacheTraceFormat {
     Kia,
     Sari,
-    YangTwitter,
+    YangTwitterX,
     Invalid,
 };
 

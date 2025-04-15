@@ -12,7 +12,7 @@ static size_t const INVALID_ID = 3;
 static std::map<size_t, std::string> CACHE_TRACE_FORMAT_STRINGS = {
     {0, "Kia"},
     {1, "Sari"},
-    {2, "YangWithClient"},
+    {2, "YangTwitterX"},
     {INVALID_ID, "Invalid"},
 };
 
@@ -35,7 +35,7 @@ CacheTraceFormat__valid(CacheTraceFormat const format)
         return true;
     case CacheTraceFormat::Sari:
         return true;
-    case CacheTraceFormat::YangTwitter:
+    case CacheTraceFormat::YangTwitterX:
         return true;
     case CacheTraceFormat::Invalid:
         return false;
@@ -74,7 +74,7 @@ CacheTraceFormat__bytes_per_entry(CacheTraceFormat const format)
         return 25;
     case CacheTraceFormat::Sari:
         return 20;
-    case CacheTraceFormat::YangTwitter:
+    case CacheTraceFormat::YangTwitterX:
         return 24;
     case CacheTraceFormat::Invalid:
         return 0;
