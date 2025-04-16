@@ -71,7 +71,7 @@ filter_gets_before_sets(char const *const trace_path,
     }
 
     std::cout << "Total Keys: " << map.size() << std::endl;
-    std::cout << "Read-only Keys" << read_only << std::endl;
+    std::cout << "Read-only Keys: " << read_only << std::endl;
     std::cout << "Write-only Keys: " << write_only << std::endl;
     std::cout << "Read-Write Keys: " << rw << std::endl;
     std::cout << "Read-Miss without Write Keys: " << read_miss_without_write
