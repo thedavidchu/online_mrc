@@ -35,8 +35,8 @@ TRACE_DTYPE: dict[str, np.dtype] = {
             # Lower 22 bits: value size
             ("key_value_size", np.uint32),
             # Upper 8 bits: op
-            # Lower 24 bits: TTL [ms]
-            ("op_ttl_ms", np.uint32),
+            # Lower 24 bits: TTL [s]
+            ("op_ttl_s", np.uint32),
             ("client_id", np.uint32),
         ]
     ),

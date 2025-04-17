@@ -37,7 +37,7 @@ def print_header(format: str):
         )
     elif format == "YangTwitterX":
         print(
-            f"| {'ID':<5} | {'Position':<10} | {'Timestamp [ms]':<20} | Command | {'Key':<20} | {'Key Size [B]':<12} | {'Value Size [B]':<14} | {'TTL [ms]':<10} | {'Client ID':<10} |"
+            f"| {'ID':<5} | {'Position':<10} | {'Timestamp [ms]':<20} | Command | {'Key':<20} | {'Key Size [B]':<12} | {'Value Size [B]':<14} | {'TTL [s]':<10} | {'Client ID':<10} |"
         )
         print(
             f"|-------|------------|----------------------|---------|----------------------|--------------|----------------|------------|------------|"
@@ -59,10 +59,10 @@ def print_access(index: int, position: int, access: np.ndarray, format: str):
     elif format == "YangTwitterX":
         key_size_b = access["key_value_size"] >> 22
         value_size_b = access["key_value_size"] & 0x003F_FFFF
-        op = YANG_OP_NAMES[access["op_ttl_ms"] >> 24]
-        ttl_ms = access["op_ttl_ms"] & 0x00FF_FFFF
+        op = YANG_OP_NAMES[access["op_ttl_s"] >> 24]
+        ttl_s = access["op_ttl_s"] & 0x00FF_FFFF
         print(
-            f"| {index:>5} | {position:>10} | {access['timestamp_ms']:>20} | {op:>7} | {access['key']:>20} | {key_size_b:>12} | {value_size_b:>14} | {ttl_ms:>10} | {access['client_id']:>10} |"
+            f"| {index:>5} | {position:>10} | {access['timestamp_ms']:>20} | {op:>7} | {access['key']:>20} | {key_size_b:>12} | {value_size_b:>14} | {ttl_s:>10} | {access['client_id']:>10} |"
         )
     else:
         raise ValueError(f"unrecognized format {format}")

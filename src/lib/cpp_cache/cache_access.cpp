@@ -209,38 +209,46 @@ parse_client_id(uint8_t const *const record, CacheTraceFormat const format)
 
 /// @note   Kia's binary format is as follows:
 ///
-///         Field Name  | Size (bytes)  | Offset (bytes)
-///         ------------|---------------|---------------
-///         Timestamp   | u64 (8 bytes) | 0
-///         Command     | u64 (1 byte)  | 8
-///         Key         | u64 (8 bytes) | 9
-///         Object size | u32 (4 bytes) | 17
-///         Time-to-live| u32 (4 bytes) | 21
+///         Field Name      | Size (bytes)  | Offset (bytes)
+///         ----------------|---------------|---------------
+///         Timestamp [ms]  | u64 (8 bytes) | 0
+///         Command         | u64 (1 byte)  | 8
+///         Key             | u64 (8 bytes) | 9
+///         Object size [B] | u32 (4 bytes) | 17
+///         Time-to-live [s]| u32 (4 bytes) | 21
 ///
 ///         N.B. Everything is little-endian.
+///         N.B. Key is the MurmurHash3 64-bit hash of the original key.
+///         N.B. Object size = Key size + value size.
+///         N.B. Only includes GET and SET requests.
 /// @note   Sari's binary format is as follows:
 ///
-///         Field Name  | Size (bytes)  | Offset (bytes)
-///         ------------|---------------|---------------
-///         Timestamp   | u32 (4 bytes) | 0
-///         Key         | u64 (8 bytes) | 4
-///         Object size | u32 (4 bytes) | 12
-///         Time-to-live| u32 (4 bytes) | 16
+///         Field Name      | Size (bytes)  | Offset (bytes)
+///         ----------------|---------------|---------------
+///         Timestamp [s]   | u32 (4 bytes) | 0
+///         Key             | u64 (8 bytes) | 4
+///         Object size [B] | u32 (4 bytes) | 12
+///         Time-to-live [s]| u32 (4 bytes) | 16
 ///
 ///         N.B. Everything is little-endian as far as I can tell.
+///         N.B. Object size = Key size + value size.
+///         N.B. Only includes GET whose object has an associated TTL in
+///              the original Twitter trace. See Sari's TTLs Matter repo
+///              for more details.
 /// @note   Yang's Twitter binary format is as follows:
 ///
-///         Field Name  | Size (bytes)     | Offset (bytes)
-///         ------------|------------------|---------------
-///         Timestamp   | u32 (4 bytes)    | 0
-///         Key         | u64 (8 bytes)    | 4
-///         Key Size    | u32 (10/32 bits) | 12 (10 upper bits)
-///         Value Size  |     (22/32 bits) | 12 (22 lower bits)
-///         Command     | u32 (8/32 bits)  | 16 (8 upper bits)
-///         Time-to-live|     (24/32 bits) | 16 (24 lower bits)
-///         Client ID*  | u32 (4 bytes)    | 20
+///         Field Name      | Size (bytes)     | Offset (bytes)
+///         ----------------|------------------|---------------
+///         Timestamp [ms]  | u32 (4 bytes)    | 0
+///         Key             | u64 (8 bytes)    | 4
+///         Key Size [B]    | u32 (10/32 bits) | 12 (10 upper bits)
+///         Value Size [B]  |     (22/32 bits) | 12 (22 lower bits)
+///         Command         | u32 (8/32 bits)  | 16 (8 upper bits)
+///         Time-to-live [s]|     (24/32 bits) | 16 (24 lower bits)
+///         Client ID*      | u32 (4 bytes)    | 20
 ///
 ///         N.B. Everything is little-endian.
+///         N.B. Key is the MurmurHash3 64-bit hash of the original key.
 ///         N.B. *Client ID is not part of Yang's original format, but
 ///         it is included in the Twitter trace data, so I include it.
 CacheAccess::CacheAccess(uint8_t const *const record,
