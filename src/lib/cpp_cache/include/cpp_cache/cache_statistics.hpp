@@ -39,6 +39,8 @@ public:
     ttl_expire(uint64_t const size_bytes);
     void
     lazy_expire(uint64_t const size_bytes);
+    void
+    sampling_evict(uint64_t const size_bytes);
 
     // Deprecated, but useful for legacy TTL code.
     void
@@ -98,6 +100,9 @@ public:
     // Expirations done non-actively.
     uint64_t lazy_expire_ops_ = 0;
     uint64_t lazy_expire_bytes_ = 0;
+
+    uint64_t sampling_evict_ops_ = 0;
+    uint64_t sampling_evict_bytes_ = 0;
 
     // MRC statistics
     uint64_t hit_ops_ = 0;

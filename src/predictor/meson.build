@@ -78,6 +78,7 @@ predictor_exe = executable(
         cache_statistics_dep,
         cpp_cache_dep,
         predictive_lru_ttl_cache_dep,
+        shards_dep,
     ],
 )
 

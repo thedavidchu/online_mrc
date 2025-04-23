@@ -99,7 +99,8 @@ public:
     PredictiveCache(size_t const capacity,
                     double const lower_ratio,
                     double const upper_ratio,
-                    LifeTimeCacheMode const cache_mode);
+                    LifeTimeCacheMode const cache_mode,
+                    std::map<std::string, std::string> kwargs = {});
 
     void
     start_simulation();
@@ -161,4 +162,7 @@ private:
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
     LRUTTLCache oracle_;
+
+    // Extra metadata
+    std::map<std::string, std::string> const kwargs_;
 };

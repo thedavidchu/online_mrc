@@ -1,4 +1,5 @@
 #include "lib/predictive_lru_ttl_cache.hpp"
+#include "arrays/is_last.h"
 #include "cpp_cache/cache_access.hpp"
 #include "cpp_cache/cache_metadata.hpp"
 #include "cpp_cache/cache_statistics.hpp"
@@ -21,7 +22,9 @@
 #include <map>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <stdlib.h>
+#include <string>
 #include <sys/types.h>
 #include <unordered_map>
 #include <utility>
@@ -177,6 +180,9 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
         //      It wasn't evicted by LRU, it was evicted by
         //      running out of space in the cache for a re-accessed item.
         pred_tracker.update_correctly_evicted(sz_bytes);
+        break;
+    case EvictionCause::Sampling:
+        statistics_.sampling_evict(m.size_);
         break;
     default:
         assert(0 && "impossible");
@@ -363,11 +369,13 @@ PredictiveCache::miss(CacheAccess const &access)
 PredictiveCache::PredictiveCache(size_t const capacity,
                                  double const lower_ratio,
                                  double const upper_ratio,
-                                 LifeTimeCacheMode const cache_mode)
+                                 LifeTimeCacheMode const cache_mode,
+                                 std::map<std::string, std::string> kwargs)
     : capacity_(capacity),
       lifetime_cache_mode_(cache_mode),
       lifetime_cache_(capacity, lower_ratio, upper_ratio, cache_mode),
-      oracle_(capacity)
+      oracle_(capacity),
+      kwargs_(kwargs)
 {
 }
 
@@ -413,6 +421,14 @@ PredictiveCache::access(CacheAccess const &access)
     }
     return 0;
 }
+
+// bool
+// PredictiveCache::remove(uint64_t const key)
+// {
+//     bool const evicted = map_.contains(key);
+//     evict(key, EvictionCause::Sampling);
+//     return evicted;
+// }
 
 size_t
 PredictiveCache::size() const
@@ -470,6 +486,23 @@ PredictiveCache::statistics() const
     return statistics_;
 }
 
+/// @note   I do not escape any JSON-dangerous sequences in the key or values.
+static std::string
+jsonify_string_string_map(std::map<std::string, std::string> const &map)
+{
+    std::stringstream ss;
+    ss << "{";
+    size_t i = 0;
+    for (auto [k, v] : map) {
+        ss << "\"" << k << "\": \"" << v << "\"";
+        if (!is_last(i++, map.size())) {
+            ss << ", ";
+        }
+    }
+    ss << "}";
+    return ss.str();
+}
+
 void
 PredictiveCache::print_statistics(std::ostream &ostrm) const
 {
@@ -488,6 +521,7 @@ PredictiveCache::print_statistics(std::ostream &ostrm) const
           << ", \"Evictions\": "
           << format_engineering(lifetime_cache_.evictions())
           << ", \"Lower Threshold\": " << format_time(r.first)
-          << ", \"Upper Threshold\": " << format_time(r.second) << "}"
+          << ", \"Upper Threshold\": " << format_time(r.second)
+          << ", \"Kwargs\": " << jsonify_string_string_map(kwargs_) << "}"
           << std::endl;
 }

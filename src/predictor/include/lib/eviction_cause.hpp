@@ -15,6 +15,8 @@ enum class EvictionCause {
     AccessExpired,
     // Updated object is too big for the cache.
     NoRoom,
+    // Evicted due to sampling algorithm (e.g. Fixed-Size SHARDS)
+    Sampling,
 };
 
 static inline std::string
