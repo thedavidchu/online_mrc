@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_statistics.hpp"
 
 enum class YangCacheType {
     CLOCK,

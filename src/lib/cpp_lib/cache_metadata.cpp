@@ -1,5 +1,5 @@
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_access.hpp"
 
 #include "math/saturation_arithmetic.h"
 

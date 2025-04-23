@@ -48,7 +48,7 @@ private:
     struct ListNode const *node_;
 };
 
-class List {
+class HashList {
 private:
     /// @brief  Attach node to the tail.
     void
@@ -61,9 +61,9 @@ private:
     append_list_only(struct ListNode *node);
 
 public:
-    List();
+    HashList();
 
-    ~List();
+    ~HashList();
 
     ListNodeIterator
     begin() const;

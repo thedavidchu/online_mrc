@@ -1,13 +1,13 @@
 /** @brief  Analyze the GET and SET requests in Kia's trace.
  */
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_command.hpp"
-#include "cpp_cache/cache_trace.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
-#include "cpp_cache/format_measurement.hpp"
-#include "cpp_cache/histogram.hpp"
-#include "cpp_cache/progress_bar.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_command.hpp"
+#include "cpp_lib/cache_trace.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/format_measurement.hpp"
+#include "cpp_lib/histogram.hpp"
+#include "cpp_lib/progress_bar.hpp"
 #include "trace/reader.h"
 
 #include <algorithm>

@@ -8,13 +8,13 @@
 #include <string>
 #include <unordered_map>
 
-#include "list/list.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "logger/logger.h"
 
 constexpr bool DEBUG = false;
 
 void
-List::append(struct ListNode *node)
+HashList::append(struct ListNode *node)
 {
     LOGGER_TRACE("append(%zu)", node->key);
     validate();
@@ -32,7 +32,7 @@ List::append(struct ListNode *node)
 }
 
 struct ListNode *
-List::extract_list_only(uint64_t const key)
+HashList::extract_list_only(uint64_t const key)
 {
     LOGGER_TRACE("extract(%zu)", key);
     validate();
@@ -59,7 +59,7 @@ List::extract_list_only(uint64_t const key)
 }
 
 void
-List::append_list_only(struct ListNode *node)
+HashList::append_list_only(struct ListNode *node)
 {
     LOGGER_TRACE("append(%zu)", node->key);
     validate();
@@ -75,9 +75,9 @@ List::append_list_only(struct ListNode *node)
     tail_ = node;
 }
 
-List::List() {}
+HashList::HashList() {}
 
-List::~List()
+HashList::~HashList()
 {
     struct ListNode *next = nullptr;
     for (auto p = head_; p != nullptr; p = next) {
@@ -87,7 +87,7 @@ List::~List()
 }
 
 bool
-List::validate()
+HashList::validate()
 {
     bool r = false;
     if (!DEBUG) {
@@ -141,7 +141,7 @@ List::validate()
 }
 
 void
-List::debug_print()
+HashList::debug_print()
 {
     std::cout << "Map: ";
     for (auto [k, p] : map_) {
@@ -150,27 +150,27 @@ List::debug_print()
     std::cout << std::endl;
 
     std::cout << "Head: " << head_ << ", Tail: " << tail_ << std::endl;
-    std::cout << "List: ";
+    std::cout << "HashList: ";
     for (auto p = head_; p != nullptr; p = p->r) {
         std::cout << p << ": " << p->key << ", ";
     }
     std::cout << std::endl;
 }
 
-struct ListNode const *
-List::begin() const
+ListNodeIterator
+HashList::begin() const
 {
-    return head_;
+    return ListNodeIterator{head_};
 }
 
-struct ListNode const *
-List::end() const
+ListNodeIterator
+HashList::end() const
 {
-    return nullptr;
+    return ListNodeIterator{nullptr};
 }
 
 struct ListNode *
-List::extract(uint64_t const key)
+HashList::extract(uint64_t const key)
 {
     LOGGER_TRACE("extract(%zu)", key);
     validate();
@@ -198,7 +198,7 @@ List::extract(uint64_t const key)
 }
 
 bool
-List::remove(uint64_t const key)
+HashList::remove(uint64_t const key)
 {
     auto n = extract(key);
     std::free(n);
@@ -206,7 +206,7 @@ List::remove(uint64_t const key)
 }
 
 void
-List::access(uint64_t const key)
+HashList::access(uint64_t const key)
 {
     LOGGER_TRACE("access(%zu)", key);
     validate();
@@ -227,7 +227,7 @@ List::access(uint64_t const key)
 }
 
 struct ListNode const *
-List::get(uint64_t const key)
+HashList::get(uint64_t const key)
 {
     LOGGER_TRACE("get(%zu)", key);
     auto r = map_.find(key);
@@ -238,7 +238,7 @@ List::get(uint64_t const key)
 }
 
 struct ListNode *
-List::extract_head()
+HashList::extract_head()
 {
     LOGGER_TRACE("remove_head() -> %p(%s)",
                  head_,
@@ -252,7 +252,7 @@ List::extract_head()
 }
 
 size_t
-List::size() const
+HashList::size() const
 {
     return map_.size();
 }

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include "cpp_cache/cache_access.hpp"
+#include "cpp_lib/cache_access.hpp"
 #include "unused/mark_unused.h"
 #include "yang_cache/yang_cache.hpp"
 // NOTE It shouldn't be this painful to include a library file, but it is...

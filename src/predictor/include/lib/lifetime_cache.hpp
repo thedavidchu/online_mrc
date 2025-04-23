@@ -9,10 +9,10 @@
 #include <sys/types.h>
 #include <utility>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "lib/lifetime_thresholds.hpp"
-#include "list/list.hpp"
 #include "logger/logger.h"
 
 using size_t = std::size_t;
@@ -180,7 +180,7 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    List lru_cache_;
+    HashList lru_cache_;
 
     LifeTimeThresholds thresholds_;
 

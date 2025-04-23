@@ -10,8 +10,8 @@
 #include <unordered_map>
 
 #include "cache/base_cache.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
 #include "ttl/ttl.hpp"
 #include "unused/mark_unused.h"
 

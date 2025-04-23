@@ -6,8 +6,8 @@
 #include <optional>
 #include <string>
 
-#include "cpp_cache/cache_command.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
+#include "cpp_lib/cache_command.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
 #include "trace/trace.h"
 
 using uint64_t = std::uint64_t;

@@ -18,16 +18,16 @@
 #include <utility>
 #include <vector>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_command.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
-#include "cpp_cache/parse_measurement.hpp"
-#include "cpp_cache/progress_bar.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_command.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/parse_measurement.hpp"
+#include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "logger/logger.h"
 
-#include "cpp_cache/cache_trace.hpp"
+#include "cpp_lib/cache_trace.hpp"
 #include "lib/predictive_lru_ttl_cache.hpp"
 #include "shards/fixed_rate_shards_sampler.h"
 
@@ -86,7 +86,9 @@ run_single_cache(std::promise<std::string> ret,
                   LifeTimeCacheMode__str(lifetime_cache_mode),
                   shards_ratio);
     p.print_statistics(ss);
+    FixedRateShardsSampler__json(ss, frss);
     ret.set_value(ss.str());
+    FixedRateShardsSampler__destroy(&frss);
 
     return true;
 }

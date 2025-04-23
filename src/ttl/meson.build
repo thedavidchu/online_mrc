@@ -6,7 +6,7 @@ yang_cache_lib = library(
     include_directories: cache_inc,
     dependencies: [
         common_dep,
-        cpp_cache_dep,
+        cpp_lib_dep,
         io_dep,
         lib_cache_sim_dep,
         trace_dep,
@@ -18,7 +18,7 @@ yang_cache_dep = declare_dependency(
     include_directories: cache_inc,
     dependencies: [
         common_dep,
-        cpp_cache_dep,
+        cpp_lib_dep,
         io_dep,
         lib_cache_sim_dep,
     ],
@@ -32,7 +32,7 @@ ttl_exe = executable(
     dependencies: [
         boost_dep,
         common_dep,
-        cpp_cache_dep,
+        cpp_lib_dep,
         glib_dep,
         io_dep,
         histogram_dep,

@@ -5,9 +5,9 @@
 #include <optional>
 #include <sstream>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_command.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_command.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
 #include "math/saturation_arithmetic.h"
 #include "trace/trace.h"
 

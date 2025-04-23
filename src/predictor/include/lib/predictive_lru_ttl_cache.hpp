@@ -13,10 +13,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
-#include "list/list.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
+#include "cpp_struct/hash_list.hpp"
 
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
@@ -152,7 +152,7 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    List lru_cache_;
+    HashList lru_cache_;
 
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;

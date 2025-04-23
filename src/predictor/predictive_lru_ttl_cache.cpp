@@ -1,14 +1,14 @@
 #include "lib/predictive_lru_ttl_cache.hpp"
 #include "arrays/is_last.h"
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/util.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
-#include "list/list.hpp"
 #include "logger/logger.h"
 
 #include <cassert>
@@ -218,7 +218,7 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes,
     ok(true);
     uint64_t evicted_bytes = 0;
     std::vector<uint64_t> victims;
-    for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+    for (auto n : lru_cache_) {
         if (evicted_bytes >= target_bytes) {
             break;
         }
@@ -463,7 +463,7 @@ PredictiveCache::print()
     std::cout << "> PredictiveCache(sz: " << size_ << ", cap: " << capacity_
               << ")\n";
     std::cout << "> \tLRU: ";
-    for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+    for (auto n : lru_cache_) {
         std::cout << n->key << ", ";
     }
     std::cout << "\n";

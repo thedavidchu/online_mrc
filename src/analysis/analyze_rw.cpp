@@ -1,11 +1,11 @@
 /** @brief  Analyze the sets without gets or get-miss without set.
  */
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_trace.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
-#include "cpp_cache/histogram.hpp"
-#include "cpp_cache/progress_bar.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_trace.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/histogram.hpp"
+#include "cpp_lib/progress_bar.hpp"
 
 #include <cassert>
 #include <cmath>

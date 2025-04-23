@@ -1,9 +1,11 @@
-#include <list/list.hpp>
+#include "cpp_struct/hash_list.hpp"
+
+#include <cstdlib>
 
 int
 main()
 {
-    List l{};
+    HashList l{};
 
     l.access(0);
     l.access(1);

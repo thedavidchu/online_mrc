@@ -29,3 +29,4 @@ subdir('sampler')
 # Relies on 'io' and 'trace'
 subdir('cpp_cache')
 subdir('cpp_lib')
+subdir('cpp_struct')

@@ -5,7 +5,7 @@ test_format_measurement_exe = executable(
         mytester_include,
     ],
     dependencies: [
-        cpp_cache_dep,
+        cpp_lib_dep,
     ],
 )
 

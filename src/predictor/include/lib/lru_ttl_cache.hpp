@@ -1,13 +1,13 @@
 
 #pragma once
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
-#include "list/list.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "logger/logger.h"
 
-#include "cpp_cache/format_measurement.hpp"
+#include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
 
@@ -316,7 +316,7 @@ public:
         std::cout << "> LRUTTLCache(sz: " << size_ << ", cap: " << capacity_
                   << ")\n";
         std::cout << "> \tLRU: ";
-        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+        for (auto n : lru_cache_) {
             std::cout << n->key << ", ";
         }
         std::cout << "\n";
@@ -358,7 +358,7 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    List lru_cache_;
+    HashList lru_cache_;
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;
 
