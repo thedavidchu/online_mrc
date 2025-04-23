@@ -56,7 +56,7 @@ class LifeTimeCache {
     ensure_enough_room(CacheAccess const &access)
     {
         while (size_ + access.value_size_b > capacity_) {
-            auto x = lru_cache_.remove_head();
+            auto x = lru_cache_.extract_head();
             auto &node = map_.at(x->key);
             size_ -= node.size_;
             switch (mode_) {

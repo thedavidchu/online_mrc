@@ -15,6 +15,7 @@ struct ListNode {
 
 class List {
 private:
+    /// @brief  Attach node to the tail.
     void
     append(struct ListNode *node);
 
@@ -41,25 +42,26 @@ public:
     void
     debug_print();
 
+    /// @brief  Extract and return an owning pointer to a node.
     struct ListNode *
     extract(uint64_t const key);
 
+    /// @brief  Extract and free a node.
     bool
     remove(uint64_t const key);
 
     void
     access(uint64_t const key);
 
+    /// @brief  Get an immutable view of a node.
     struct ListNode const *
     get(uint64_t const key);
 
     size_t
-    size() const {
-        return map_.size();
-    }
+    size() const;
 
     struct ListNode *
-    remove_head();
+    extract_head();
 
     std::unordered_map<uint64_t, struct ListNode *const> map_;
     struct ListNode *head_ = nullptr;

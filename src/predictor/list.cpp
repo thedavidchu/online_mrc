@@ -238,7 +238,7 @@ List::get(uint64_t const key)
 }
 
 struct ListNode *
-List::remove_head()
+List::extract_head()
 {
     LOGGER_TRACE("remove_head() -> %p(%s)",
                  head_,
@@ -249,4 +249,10 @@ List::remove_head()
         return nullptr;
     }
     return extract(head_->key);
+}
+
+size_t
+List::size() const
+{
+    return map_.size();
 }

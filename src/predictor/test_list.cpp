@@ -13,10 +13,10 @@ main()
     std::free(l.extract(0));
     std::free(l.extract(0));
     std::free(l.extract(0));
-    std::free(l.remove_head());
-    std::free(l.remove_head());
-    std::free(l.remove_head());
-    std::free(l.remove_head());
+    std::free(l.extract_head());
+    std::free(l.extract_head());
+    std::free(l.extract_head());
+    std::free(l.extract_head());
 
     return 0;
 }
