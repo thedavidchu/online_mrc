@@ -12,6 +12,10 @@
 #include "shards/fixed_rate_shards_sampler.h"
 #include "types/entry_type.h"
 
+// The keys in the binary traces are the hash of the original key.
+// This means that we don't need to hash them again.
+static bool const REHASH_ENTRIES = false;
+
 bool
 FixedRateShardsSampler__init(struct FixedRateShardsSampler *me,
                              double const sampling_ratio,
@@ -42,7 +46,7 @@ FixedRateShardsSampler__sample(struct FixedRateShardsSampler *me,
 {
     assert(me != NULL);
     ++me->num_entries_seen;
-    Hash64BitType hash = Hash64Bit(entry);
+    Hash64BitType hash = REHASH_ENTRIES ? Hash64Bit(entry) : entry;
     // NOTE Taking the modulo of the hash by 1 << 24 reduces the accuracy
     //      significantly. I tried dividing the threshold by 1 << 24 and also
     //      leaving the threshold alone. Neither worked to improve accuracy.

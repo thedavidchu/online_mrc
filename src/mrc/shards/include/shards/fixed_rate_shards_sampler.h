@@ -1,4 +1,8 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif /*!__cplusplus*/
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -35,3 +39,7 @@ FixedRateShardsSampler__post_process(struct FixedRateShardsSampler *me,
 bool
 FixedRateShardsSampler__write_as_json(FILE *stream,
                                       struct FixedRateShardsSampler *me);
+
+#ifdef __cplusplus
+}
+#endif /*!__cplusplus*/
