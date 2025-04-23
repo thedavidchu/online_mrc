@@ -13,6 +13,41 @@ struct ListNode {
     struct ListNode *r;
 };
 
+class ListNodeIterator {
+public:
+    ListNodeIterator(ListNode const *node)
+        : node_(node)
+    {
+    }
+
+    ListNode const *
+    operator*() const
+    {
+        return node_;
+    }
+
+    void
+    operator++()
+    {
+        node_ = node_->r;
+    }
+
+    bool
+    operator==(ListNodeIterator const &rhs) const
+    {
+        return node_ == rhs.node_;
+    }
+
+    bool
+    operator!=(ListNodeIterator const &rhs) const
+    {
+        return node_ != rhs.node_;
+    }
+
+private:
+    struct ListNode const *node_;
+};
+
 class List {
 private:
     /// @brief  Attach node to the tail.
@@ -30,10 +65,10 @@ public:
 
     ~List();
 
-    struct ListNode const *
+    ListNodeIterator
     begin() const;
 
-    struct ListNode const *
+    ListNodeIterator
     end() const;
 
     bool

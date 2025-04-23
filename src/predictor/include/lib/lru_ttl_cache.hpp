@@ -147,7 +147,7 @@ private:
     {
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
-        for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+        for (auto n : lru_cache_) {
             if (evicted_bytes >= target_bytes) {
                 break;
             }
