@@ -237,6 +237,12 @@ HashList::get(uint64_t const key)
     return r->second;
 }
 
+bool
+HashList::contains(uint64_t const key) const
+{
+    return map_.contains(key);
+}
+
 struct ListNode *
 HashList::extract_head()
 {

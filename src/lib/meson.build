@@ -27,6 +27,6 @@ subdir('miss_rate_curve')
 subdir('sampler')
 
 # Relies on 'io' and 'trace'
-subdir('cpp_cache')
 subdir('cpp_lib')
 subdir('cpp_struct')
+subdir('cpp_cache')
