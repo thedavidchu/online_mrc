@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
-#include <vector>
 
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
