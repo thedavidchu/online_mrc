@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -19,8 +20,8 @@ class LifeTimeThresholds {
     std::pair<uint64_t, uint64_t>
     recalculate_thresholds() const
     {
-        bool found_lower = false, found_upper = false;
-        uint64_t lower = 0, upper = UINT64_MAX, accum = 0, prev_lifetime = 0;
+        std::optional<uint64_t> lower = std::nullopt, upper = std::nullopt;
+        uint64_t accum = 0, prev_lifetime = 0;
 
         // Handle special cases. If we didn't handle the case of 1.0
         // explicitly, we would simply set the upper_threshold_ to the
@@ -28,44 +29,39 @@ class LifeTimeThresholds {
         // possible.
         if (lower_ratio_ == 0.0) {
             lower = 0;
-            found_lower = true;
         } else if (lower_ratio_ == 1.0) {
             lower = UINT64_MAX;
-            found_lower = true;
         }
         if (upper_ratio_ == 0.0) {
             upper = 0;
-            found_upper = true;
         } else if (upper_ratio_ == 1.0) {
             upper = UINT64_MAX;
-            found_upper = true;
         }
 
         for (auto [lifetime, frq] : histogram_) {
-            if (found_lower && found_upper) {
+            if (lower.has_value() && upper.has_value()) {
                 break;
             }
             accum += frq;
-            if (!found_lower && (double)accum / total_ > lower_ratio_) {
+            if (!lower.has_value() && (double)accum / total_ > lower_ratio_) {
                 lower = prev_lifetime;
-                found_lower = true;
             }
-            if (!found_upper && (double)accum / total_ >= upper_ratio_) {
+            if (!upper.has_value() && (double)accum / total_ >= upper_ratio_) {
                 upper = lifetime;
-                found_upper = true;
             }
             prev_lifetime = lifetime;
         }
 
+        assert(lower.has_value() && upper.has_value());
         // If the ratios are the same, then we simply return the mean.
         // This does bias us to round down, however. It may be a bit of
         // an optimization to simply return the lower threshold in this
         // case, because we compute it earlier than the upper threshold.
         if (lower_ratio_ == upper_ratio_) {
-            double mean = (double)(lower + upper) / 2;
+            double mean = (double)(lower.value() + upper.value()) / 2;
             return {mean, mean};
         }
-        return {lower, upper};
+        return {lower.value(), upper.value()};
     }
 
     /// @brief  Return if the thresholds should be refreshed.
