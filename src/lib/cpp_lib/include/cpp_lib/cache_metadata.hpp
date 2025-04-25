@@ -65,5 +65,5 @@ struct CacheMetadata {
     unvisit();
 
     double
-    ttl_ms_from_last_access() const;
+    ttl_ms(uint64_t const current_time_ms) const;
 };

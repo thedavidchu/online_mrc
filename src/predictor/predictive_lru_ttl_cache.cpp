@@ -110,8 +110,7 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
     if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
         return;
     }
-    // We want the new TTL after the access (above).
-    double const ttl_ms = metadata.ttl_ms_from_last_access();
+    double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
     auto r = lifetime_cache_.thresholds();
     if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();

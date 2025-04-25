@@ -71,7 +71,7 @@ CacheMetadata::unvisit()
 }
 
 double
-CacheMetadata::ttl_ms_from_last_access() const
+CacheMetadata::ttl_ms(uint64_t const current_time_ms) const
 {
-    return expiration_time_ms_ - last_access_time_ms_;
+    return expiration_time_ms_ - current_time_ms;
 }
