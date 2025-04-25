@@ -188,7 +188,7 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
         pred_tracker.update_correctly_evicted(sz_bytes);
         break;
     case EvictionCause::Sampling:
-        statistics_.sampling_evict(m.size_);
+        statistics_.sampling_remove(m.size_);
         break;
     default:
         assert(0 && "impossible");
