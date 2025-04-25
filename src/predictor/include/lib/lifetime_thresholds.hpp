@@ -2,7 +2,7 @@
 
 /** @brief  [TODO]
  *
- *  @todo   Support different lower/upper uncertainties.
+ *  @todo   Change thresholds to double precision floats.
  **/
 
 #include <cassert>
@@ -97,6 +97,15 @@ public:
         assert(lower_ratio >= 0.0 && lower_ratio <= 1.0);
         assert(upper_ratio >= 0.0 && upper_ratio <= 1.0);
         assert(lower_ratio <= upper_ratio);
+
+        if (lower_ratio == 0 && upper_ratio == 0) {
+            lower_threshold_ = 0;
+            upper_threshold_ = 0;
+        }
+        if (lower_ratio == 1.0 && upper_ratio == 1.0) {
+            lower_threshold_ = UINT64_MAX;
+            upper_threshold_ = UINT64_MAX;
+        }
     }
 
     void

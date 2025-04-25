@@ -154,7 +154,7 @@ private:
     HashList lru_cache_;
 
     // Maps expiration time to keys.
-    std::multimap<uint64_t, uint64_t> ttl_cache_;
+    std::multimap<double, uint64_t> ttl_cache_;
 
     // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
     LifeTimeCache lifetime_cache_;

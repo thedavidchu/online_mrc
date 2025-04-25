@@ -86,17 +86,16 @@ void
 PredictiveCache::insert(CacheAccess const &access)
 {
     statistics_.insert(access.value_size_b);
-    uint64_t const ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
+    double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CacheMetadata{access});
     auto r = lifetime_cache_.thresholds();
-    if (ttl_ms >= r.first) {
+    if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
     }
-    if (ttl_ms <= r.second) {
+    if (r.second != 0 && ttl_ms <= r.second) {
         pred_tracker.record_store_ttl();
-        ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
-                           access.key);
+        ttl_cache_.emplace(access.expiration_time_ms(), access.key);
     }
     size_ += access.value_size_b;
 }
@@ -112,21 +111,21 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
         return;
     }
     // We want the new TTL after the access (above).
-    uint64_t const ttl_ms = metadata.ttl_ms();
+    double const ttl_ms = metadata.ttl_ms_from_last_access();
     auto r = lifetime_cache_.thresholds();
-    if (ttl_ms >= r.first) {
+    if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
     } else {
         lru_cache_.remove(access.key);
     }
-    if (ttl_ms <= r.second) {
+    if (r.second != 0 && ttl_ms <= r.second) {
         // Even if we don't re-insert into the TTL queue, we still
         // want to mark it as stored.
         pred_tracker.record_store_ttl();
         // Only insert the TTL if it hasn't been inserted already.
         if (find_multimap_kv(ttl_cache_,
-                             metadata.expiration_time_ms_,
+                             (double)metadata.expiration_time_ms_,
                              access.key) == ttl_cache_.end()) {
             ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
         }
@@ -145,7 +144,7 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
     ok(true);
     CacheMetadata &m = map_.at(victim_key);
     uint64_t sz_bytes = m.size_;
-    uint64_t exp_tm = m.expiration_time_ms_;
+    double exp_tm = m.expiration_time_ms_;
 
     // Update metadata tracking
     switch (cause) {

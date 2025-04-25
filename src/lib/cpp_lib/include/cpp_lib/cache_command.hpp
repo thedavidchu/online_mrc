@@ -1,3 +1,9 @@
+/** @brief  Cache commands, courtesy of Juncheng Yang.
+ *
+ *  @todo   Consider adding a generic "Access" to the CacheCommands,
+ *          which represents a "GET + SET-if-missed", like used in
+ *          Sari's format.
+ */
 #pragma once
 
 #include <cstdint>
@@ -29,3 +35,9 @@ CacheCommand__parse(char const *const str);
 
 std::string const &
 CacheCommand__string(CacheCommand const cmd);
+
+bool
+CacheCommand__is_any_read(CacheCommand const cmd);
+
+bool
+CacheCommand__is_any_write(CacheCommand const cmd);

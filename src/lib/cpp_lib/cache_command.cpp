@@ -43,3 +43,17 @@ CacheCommand__string(CacheCommand const cmd)
     }
     return CACHE_COMMAND_STRINGS.at(255);
 }
+
+bool
+CacheCommand__is_any_read(CacheCommand const cmd)
+{
+    return cmd == CacheCommand::Get || cmd == CacheCommand::Gets ||
+           cmd == CacheCommand::Read;
+}
+
+bool
+CacheCommand__is_any_write(CacheCommand const cmd)
+{
+    return (CacheCommand::Set <= cmd && cmd <= CacheCommand::Decr) ||
+           cmd == CacheCommand::Update;
+}

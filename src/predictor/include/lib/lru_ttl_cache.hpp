@@ -80,8 +80,7 @@ private:
         statistics_.insert(access.value_size_b);
         map_.emplace(access.key, CacheMetadata{access});
         lru_cache_.access(access.key);
-        ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
-                           access.key);
+        ttl_cache_.emplace(access.expiration_time_ms(), access.key);
         size_ += access.value_size_b;
     }
 

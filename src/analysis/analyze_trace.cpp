@@ -65,17 +65,16 @@ struct AccessStatistics {
             }
             gets_after_last_set = 0;
             latest_set_time_ms = access.timestamp_ms;
-            if (valid_time(current_ttl_ms) &&
-                current_ttl_ms != access.time_to_live_ms()) {
-                if (current_ttl_ms < access.time_to_live_ms()) {
+            if (valid_time(current_ttl_ms) && current_ttl_ms != access.ttl_ms) {
+                if (current_ttl_ms < access.ttl_ms) {
                     ttl_increases += 1;
-                } else if (current_ttl_ms < access.time_to_live_ms()) {
+                } else if (current_ttl_ms < access.ttl_ms) {
                     ttl_decreases += 1;
                 }
             } else {
                 ttl_remains += 1;
             }
-            tm_t new_ttl = access.time_to_live_ms();
+            tm_t new_ttl = access.ttl_ms;
             current_ttl_ms = new_ttl;
             // The 'value_or' automatically sets it.
             min_ttl_ms = !valid_time(min_ttl_ms)
@@ -285,12 +284,12 @@ analyze_trace(char const *const trace_path,
             continue;
         }
 
-        ttl_hist.update(x.time_to_live_ms());
+        ttl_hist.update(x.ttl_ms);
         // Analyze whether the TTL has changed before we update the
         // object with the new TTL.
         if (valid_time(map[x.key].current_ttl_ms)) {
             double const old_ttl = map.at(x.key).current_ttl_ms;
-            double const new_ttl = x.ttl_ms.value_or(INFINITY);
+            double const new_ttl = x.ttl_ms;
             ttl_diff_hist.update((double)old_ttl - new_ttl);
             if (verbose && old_ttl != new_ttl) {
                 std::cout << "TTL mismatch: " << old_ttl << " vs " << new_ttl

@@ -15,24 +15,26 @@ struct CacheMetadata {
     /// @note   We don't consider the first access in the frequency
     ///         counter. There's no real reason, I just think it's nice
     ///         to start at 0 rather than 1.
+    /// @todo   Start frequency counter from 1. It just makes more sense.
+    ///         This is sort of like the "hit counter".
     std::size_t frequency_ = 0;
     std::uint64_t insertion_time_ms_ = 0;
     std::uint64_t last_access_time_ms_ = 0;
     /// @note   I decided to store the expiration time rather than the
-    ///         TTL for convenience. The TTL can be calculated by
-    ///         subtracting the (last time the expiration time was set)
-    ///         from the (expiration time).
-    std::uint64_t expiration_time_ms_ = 0;
+    ///         TTL because the TTL stops making sense after time moves
+    ///         onward. Of course, we can figure out what the expiration
+    ///         time is, but that's more work.
+    double expiration_time_ms_ = 0;
     bool visited = false;
 
     /// @brief  Initialize metadata for unit-sized value size.
     CacheMetadata(std::uint64_t const insertion_time_ms,
-                  std::uint64_t const expiration_time_ms);
+                  double const expiration_time_ms);
 
     /// @brief  Initialize metadata for variable-sized value.
     CacheMetadata(std::size_t const value_size,
                   std::uint64_t const insertion_time_ms,
-                  std::uint64_t const expiration_time_ms);
+                  double const expiration_time_ms);
 
     CacheMetadata(CacheAccess const &access);
 
@@ -57,12 +59,11 @@ struct CacheMetadata {
     /// @note   Updates expiration time.
     void
     visit(std::uint64_t const access_time_ms,
-          std::optional<std::uint64_t> const new_expiration_time_ms);
+          std::optional<double> const new_expiration_time_ms = std::nullopt);
 
     void
     unvisit();
 
-    /// @brief  Get the TTL from the last access.
-    uint64_t
-    ttl_ms() const;
+    double
+    ttl_ms_from_last_access() const;
 };
