@@ -33,6 +33,12 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
+static inline bool
+object_is_expired(uint64_t expiration_time, uint64_t current_time)
+{
+    return current_time > expiration_time;
+}
+
 bool
 PredictiveCache::ok(bool const fatal) const
 {
@@ -199,7 +205,7 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
 {
     std::vector<uint64_t> victims;
     for (auto [exp_tm, key] : ttl_cache_) {
-        if (exp_tm >= current_time_ms) {
+        if (!object_is_expired(exp_tm, current_time_ms)) {
             break;
         }
         victims.push_back(key);
@@ -321,7 +327,7 @@ bool
 PredictiveCache::is_expired(CacheAccess const &access,
                             CacheMetadata const &metadata)
 {
-    return (access.timestamp_ms > metadata.expiration_time_ms_);
+    return object_is_expired(metadata.expiration_time_ms_, access.timestamp_ms);
 }
 
 void
