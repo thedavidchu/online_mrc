@@ -15,78 +15,44 @@ class LFUCache;
 
 class LFUIterator : public TotalEvictionOrderCacheIterator<ListNode const *> {
 public:
-    LFUIterator(LFUCache const &cache)
-        : cache_(cache)
-    {
-    }
+    LFUIterator(LFUCache const &cache);
 
     ListNode const *
-    operator*() const
-    {
-        return node_;
-    }
+    operator*() const;
 
     void
-    operator++()
-    {
-
-        auto &r = cache_.list_.upper_bound(frq);
-    }
+    operator++();
 
     bool
-    operator==(LFUIterator const &rhs) const
-    {
-        return idx == rhs.idx;
-    }
+    operator==(LFUIterator const &rhs) const;
 
     bool
-    operator!=(LFUIterator const &rhs) const
-    {
-        return idx != rhs.idx;
-    }
+    operator!=(LFUIterator const &rhs) const;
 
 private:
     LFUCache const &cache_;
+    ListNode const *node_ = nullptr;
     uint64_t frq = 0;
-    uint64_t idx = 0;
 };
 
 class LFUCache : TotalEvictionOrderCache<ListNode const *> {
 public:
-    LFUCache()
-        : TotalEvictionOrderCache<ListNode const *>()
-    {
-    }
+    LFUCache();
 
     void
-    access(uint64_t const key) override final
-    {
-        list_.access(key);
-    }
+    access(uint64_t const key) override final;
 
     void
-    remove(uint64_t const key) override final
-    {
-        list_.remove(key);
-    }
+    remove(uint64_t const key) override final;
 
     size_t
-    size() const override final
-    {
-        return list_.size();
-    }
+    size() const override final;
 
     TotalEvictionOrderCacheIterator<ListNode const *>
-    begin() const override final
-    {
-        return LFUIterator{*list_.begin()};
-    }
+    begin() const override final;
 
     TotalEvictionOrderCacheIterator<ListNode const *>
-    end() const override final
-    {
-        return LFUIterator{*list_.end()};
-    }
+    end() const override final;
 
 protected:
     friend LFUIterator;
