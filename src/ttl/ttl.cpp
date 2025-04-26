@@ -17,11 +17,11 @@
 #include "cache/lfu_cache.hpp"
 #include "cache/lru_cache.hpp"
 #include "cache/sieve_cache.hpp"
-#include "io/io.h"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_trace.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
 #include "logger/logger.h"
 #include "modified_clock_cache.hpp"
-#include "trace/reader.h"
-#include "trace/trace.h"
 #include "ttl_cache/new_ttl_clock_cache.hpp"
 #include "ttl_cache/ttl_clock_cache.hpp"
 #include "ttl_cache/ttl_fifo_cache.hpp"
@@ -31,45 +31,22 @@
 
 template <typename T>
 static double
-run_cache(struct MemoryMap const *const mm,
-          enum TraceFormat format,
-          uint64_t const capacity)
+run_cache(CacheAccessTrace const &trace, uint64_t const capacity)
 {
     LOGGER_TRACE("running '%s' algorithm for size %zu", T::name, capacity);
-    size_t num_entries = 0;
-    size_t bytes_per_trace_item = 0;
     T cache(capacity);
 
-    if (mm == NULL) {
-        LOGGER_ERROR("invalid input");
-        return -1.0;
-    }
-    // NOTE I let this helper function handle the format checks for me
-    //      so that all logic dealing with parsing trace formats is
-    //      contained within this library.
-    bytes_per_trace_item = get_bytes_per_trace_item(format);
-    if (bytes_per_trace_item == 0) {
-        LOGGER_ERROR("invalid trace format");
-        return -1.0;
-    }
-    num_entries = mm->num_bytes / bytes_per_trace_item;
-    for (size_t i = 0; i < num_entries; ++i) {
+    for (size_t i = 0; i < trace.size(); ++i) {
         if (i % 1000000 == 0) {
-            LOGGER_TRACE("Finished %zu / %zu", i, num_entries);
+            LOGGER_TRACE("Finished %zu / %zu", i, trace.size());
         }
-        struct FullTraceItemResult r = construct_full_trace_item(
-            &((uint8_t *)mm->buffer)[i * bytes_per_trace_item],
-            format);
-        assert(r.valid);
-
-        // Skip PUT requests.
-        if (r.item.command == 1) {
+        CacheAccess access = trace.get(i);
+        if (!access.is_read()) {
             continue;
         }
-
-        cache.access_item({&r.item});
+        cache.access_item(access);
     }
-    assert(cache.statistics_.total_ops() < num_entries);
+    assert(cache.statistics_.total_ops() < trace.size());
     cache.statistics_.print(T::name, capacity);
     return cache.statistics_.miss_rate();
 }
@@ -77,11 +54,11 @@ run_cache(struct MemoryMap const *const mm,
 template <typename T>
 static std::optional<std::map<std::uint64_t, double>>
 generate_mrc(char const *const trace_path,
-             enum TraceFormat const format,
+             CacheTraceFormat const format,
              std::vector<std::size_t> const &capacities)
 {
     // This initializes everything to the default, i.e. 0.
-    struct MemoryMap mm = {};
+    CacheAccessTrace trace = CacheAccessTrace{trace_path, format};
     std::map<std::size_t, double> mrc = {};
 
     if (trace_path == NULL) {
@@ -89,13 +66,8 @@ generate_mrc(char const *const trace_path,
         goto cleanup_error;
     }
 
-    // Memory map the input trace file
-    if (!MemoryMap__init(&mm, trace_path, "rb")) {
-        LOGGER_ERROR("failed to mmap '%s'", trace_path);
-        goto cleanup_error;
-    }
     for (auto cap : capacities) {
-        double mr = run_cache<T>(&mm, format, cap);
+        double mr = run_cache<T>(trace, cap);
         if (mr == -1.0) {
             LOGGER_ERROR("error in '%s' algorithm (N.B. name may be mangled)",
                          typeid(T).name());
@@ -103,10 +75,8 @@ generate_mrc(char const *const trace_path,
         };
         mrc[cap] = mr;
     }
-    MemoryMap__destroy(&mm);
     return std::make_optional(mrc);
 cleanup_error:
-    MemoryMap__destroy(&mm);
     return std::nullopt;
 }
 
@@ -148,7 +118,7 @@ main(int argc, char *argv[])
     std::map<std::string,
              std::function<std::optional<std::map<std::uint64_t, double>>(
                  char const *const trace_path,
-                 enum TraceFormat const format,
+                 CacheTraceFormat const format,
                  std::vector<std::size_t> const &capacities)>>
         algorithms =
             {
@@ -195,7 +165,7 @@ main(int argc, char *argv[])
     std::map<std::string, std::map<std::uint64_t, double>> mrcs;
 
     for (auto [name, fn] : run_algorithms) {
-        auto mrc = fn(trace_path.c_str(), TRACE_FORMAT_KIA, sizes);
+        auto mrc = fn(trace_path.c_str(), CacheTraceFormat::Kia, sizes);
         if (mrc) {
             mrcs.emplace(name, mrc.value());
             save_mrc(stem + "-" + name + "-mrc.dat", mrc.value());

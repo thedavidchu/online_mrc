@@ -12,6 +12,7 @@
 #include <tuple>
 #include <utility>
 
+#include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 
 using uint64_t = std::uint64_t;
@@ -39,6 +40,7 @@ class LifeTimeThresholds {
         }
 
         for (auto [lifetime, frq] : histogram_) {
+            // Do this first in case both lower and upper are already set.
             if (lower.has_value() && upper.has_value()) {
                 break;
             }
@@ -52,7 +54,11 @@ class LifeTimeThresholds {
             prev_lifetime = lifetime;
         }
 
-        assert(lower.has_value() && upper.has_value());
+        if (!lower.has_value() || !upper.has_value()) {
+            LOGGER_WARN("lower or upper does not have value, so defaulting to "
+                        "original (0, UINT64_MAX)");
+            return {0, UINT64_MAX};
+        }
         // If the ratios are the same, then we simply return the mean.
         // This does bias us to round down, however. It may be a bit of
         // an optimization to simply return the lower threshold in this
@@ -68,13 +74,13 @@ class LifeTimeThresholds {
     /// @note   I allow them to be 1% out of alignment. How did I choose 1%? I
     /// just did, that's how.
     bool
-    should_refresh() const
+    should_refresh(uint64_t const current_time_ms) const
     {
         double const error = 0.01 * coarse_counter_;
 
         // We don't readjust until we have at least 1 million data points!
         // TODO - consider putting a time bound on this.
-        if (coarse_counter_ < MIN_COARSE_COUNT) {
+        if (current_time_ms < prev_refresh_time_ms_ + MIN_TIME_DELTA) {
             return false;
         }
 
@@ -89,6 +95,11 @@ class LifeTimeThresholds {
     }
 
 public:
+    /// @todo   Allow setting the starting time. This is more for
+    ///         redundancy to make sure everything is safe.
+    ///         This isn't strictly necessary because we refresh the
+    ///         thresholds before we have any data, we just set it to
+    ///         the defaults (0, UINT64_MAX).
     LifeTimeThresholds(double const lower_ratio, double const upper_ratio)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
@@ -109,7 +120,9 @@ public:
     }
 
     void
-    register_cache_eviction(uint64_t const lifetime, uint64_t const size)
+    register_cache_eviction(uint64_t const lifetime,
+                            uint64_t const size,
+                            uint64_t const current_time_ms)
     {
         // We are counting objects for now.
         // TODO Count bytes in the future, maybe?
@@ -128,7 +141,8 @@ public:
             ++coarse_counter_;
         }
 
-        if (should_refresh()) {
+        if (should_refresh(current_time_ms)) {
+            prev_refresh_time_ms_ = current_time_ms;
             refresh_thresholds();
         }
     }
@@ -192,10 +206,12 @@ private:
     // This tells us how far off our current estimate of the thresholds
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
+    // The previous timestamp at which we refreshed.
+    uint64_t prev_refresh_time_ms_ = 0;
     uint64_t coarse_counter_ = 0;
     uint64_t num_refresh_ = 0;
 
 public:
     // TODO Make this configurable?
-    static constexpr uint64_t MIN_COARSE_COUNT = 1 << 20;
+    static constexpr uint64_t MIN_TIME_DELTA = 1000 * 3600;
 };

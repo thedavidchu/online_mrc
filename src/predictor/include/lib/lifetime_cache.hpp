@@ -63,12 +63,14 @@ class LifeTimeCache {
             case LifeTimeCacheMode::EvictionTime:
                 thresholds_.register_cache_eviction(
                     current_time_ms_ - node.last_access_time_ms_,
-                    node.size_);
+                    node.size_,
+                    access.timestamp_ms);
                 break;
             case LifeTimeCacheMode::LifeTime:
                 thresholds_.register_cache_eviction(current_time_ms_ -
                                                         node.insertion_time_ms_,
-                                                    node.size_);
+                                                    node.size_,
+                                                    access.timestamp_ms);
                 break;
             default:
                 break;

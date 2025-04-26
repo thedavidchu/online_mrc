@@ -1,10 +1,14 @@
 #include "lib/lifetime_thresholds.hpp"
 
+#include <glib.h>
+
 #include <cassert>
 #include <cstdint>
 #include <iostream>
-#include <limits>
 #include <utility>
+
+// An hour represented in milliseconds.
+static constexpr uint64_t HOUR = 1000 * 3600;
 
 template <typename A, typename B>
 static void
@@ -20,13 +24,17 @@ test_empty()
     std::pair<uint64_t, uint64_t> r;
 
     r = t.thresholds();
-    assert(r.first == 0 && r.second == std::numeric_limits<uint64_t>::max());
+    g_assert_cmpuint(r.first, ==, 0);
+    g_assert_cmpuint(r.second, ==, UINT64_MAX);
     r = t.thresholds();
-    assert(r.first == 0 && r.second == std::numeric_limits<uint64_t>::max());
+    g_assert_cmpuint(r.first, ==, 0);
+    g_assert_cmpuint(r.second, ==, UINT64_MAX);
     r = t.thresholds();
-    assert(r.first == 0 && r.second == std::numeric_limits<uint64_t>::max());
+    g_assert_cmpuint(r.first, ==, 0);
+    g_assert_cmpuint(r.second, ==, UINT64_MAX);
     r = t.thresholds();
-    assert(r.first == 0 && r.second == std::numeric_limits<uint64_t>::max());
+    g_assert_cmpuint(r.first, ==, 0);
+    g_assert_cmpuint(r.second, ==, UINT64_MAX);
 
     return true;
 }
@@ -38,7 +46,7 @@ test_thresholds(bool const debug = false)
     std::pair<uint64_t, uint64_t> r;
 
     for (uint64_t i = 1; i < 100; ++i) {
-        t.register_cache_eviction(i, 1);
+        t.register_cache_eviction(i, 1, 0);
         t.refresh_thresholds();
         r = t.thresholds();
         if (debug) {
@@ -58,36 +66,38 @@ test_refresh(bool const debug = false)
 
     // Sample from 1..=100 and make sure the thresholds change at the
     // expected times.
-    for (size_t i = 0; i < t.MIN_COARSE_COUNT - 1; ++i) {
-        t.register_cache_eviction(i % 100 + 1, 1);
+    for (size_t i = 0; i < 1000 - 1; ++i) {
+        t.register_cache_eviction(i % 100 + 1, 1, 0);
         r = t.thresholds();
-        assert(r.first == 0 &&
-               r.second == std::numeric_limits<uint64_t>::max());
+        g_assert_cmpuint(r.first, ==, 0);
+        g_assert_cmpuint(r.second, ==, UINT64_MAX);
     }
-    // It is only on the millionth access that we expect the thresholds
-    // to change.
-    t.register_cache_eviction(0, 1);
+    // We may only change the threshold once per hour.
+    t.register_cache_eviction(100, 1, HOUR);
     r = t.thresholds();
     if (debug) {
         print_pair(r);
     }
-    assert(r.first == 24 && r.second == 75);
+    g_assert_cmpuint(r.first, ==, 25);
+    g_assert_cmpuint(r.second, ==, 75);
 
     // Sample from a different population; the thresholds won't change
     // until expected.
-    for (size_t i = 0; i < t.MIN_COARSE_COUNT - 1; ++i) {
-        t.register_cache_eviction(i % 101 + 100, 1);
+    for (size_t i = 0; i < 1000 - 1; ++i) {
+        t.register_cache_eviction(i % 100 + 101, 1, HOUR);
         r = t.thresholds();
-        assert(r.first == 24 && r.second == 75);
+        g_assert_cmpuint(r.first, ==, 25);
+        g_assert_cmpuint(r.second, ==, 75);
     }
 
     // It is only now that the thresholds change.
-    t.register_cache_eviction(0, 1);
+    t.register_cache_eviction(200, 1, 2 * HOUR);
     r = t.thresholds();
     if (debug) {
         print_pair(r);
     }
-    assert(r.first == 49 && r.second == 150);
+    g_assert_cmpuint(r.first, ==, 50);
+    g_assert_cmpuint(r.second, ==, 150);
 
     return true;
 }
