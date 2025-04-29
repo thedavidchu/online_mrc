@@ -99,8 +99,13 @@ impl WriteChunk for Access {
         let key_value_size: u32 = (self.ksize as u32) << 22 | self.vsize;
         buf.extend_from_slice(&key_value_size.to_le_bytes());
         assert!((self.command.as_byte() as u32) < ((1 as u32) << 8));
-        assert!(self.ttl.unwrap_or(0) < 1 << 24);
-        let op_ttl: u32 = (self.command.as_byte() as u32) << 24 | self.ttl.unwrap_or(0);
+        let ttl = if self.ttl.unwrap_or(0) < 1 << 24 {
+            self.ttl.unwrap_or(0)
+        } else {
+            println!("warning: oversized TTL {}", self.ttl.unwrap_or(0));
+            1 << 24 - 1
+        };
+        let op_ttl: u32 = (self.command.as_byte() as u32) << 24 | ttl;
         buf.extend_from_slice(&op_ttl.to_le_bytes());
         buf.extend_from_slice(&self.cid.to_le_bytes());
 
