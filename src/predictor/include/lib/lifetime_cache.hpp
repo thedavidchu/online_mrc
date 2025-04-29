@@ -9,10 +9,10 @@
 #include <sys/types.h>
 #include <utility>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "lib/lifetime_thresholds.hpp"
-#include "list/list.hpp"
 #include "logger/logger.h"
 
 using size_t = std::size_t;
@@ -56,19 +56,21 @@ class LifeTimeCache {
     ensure_enough_room(CacheAccess const &access)
     {
         while (size_ + access.value_size_b > capacity_) {
-            auto x = lru_cache_.remove_head();
+            auto x = lru_cache_.extract_head();
             auto &node = map_.at(x->key);
             size_ -= node.size_;
             switch (mode_) {
             case LifeTimeCacheMode::EvictionTime:
                 thresholds_.register_cache_eviction(
                     current_time_ms_ - node.last_access_time_ms_,
-                    node.size_);
+                    node.size_,
+                    access.timestamp_ms);
                 break;
             case LifeTimeCacheMode::LifeTime:
                 thresholds_.register_cache_eviction(current_time_ms_ -
                                                         node.insertion_time_ms_,
-                                                    node.size_);
+                                                    node.size_,
+                                                    access.timestamp_ms);
                 break;
             default:
                 break;
@@ -180,7 +182,7 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    List lru_cache_;
+    HashList lru_cache_;
 
     LifeTimeThresholds thresholds_;
 

@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "cache/base_cache.hpp"
-#include "cpp_cache/cache_metadata.hpp"
+#include "cpp_lib/cache_metadata.hpp"
 #include "ttl_cache/base_ttl_cache.hpp"
 #include "unused/mark_unused.h"
 

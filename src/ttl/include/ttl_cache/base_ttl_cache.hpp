@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "cache/base_cache.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
 #include "math/saturation_arithmetic.h"
 
 constexpr std::size_t DEFAULT_EPOCH_TIME_MS = (std::size_t)1 << 40;

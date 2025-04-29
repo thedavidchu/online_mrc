@@ -1,50 +1,20 @@
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <endian.h>
-#include <optional>
 #include <sstream>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_command.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
-#include "math/saturation_arithmetic.h"
-#include "trace/trace.h"
-
-/// @brief  Initialize a CacheAccess object from a FullTraceItem.
-CacheAccess::CacheAccess(struct FullTraceItem const *const item)
-    : timestamp_ms(item->timestamp_ms),
-      command(item->command ? CacheCommand::Set : CacheCommand::Get),
-      key(item->key),
-      key_size_b(0),
-      value_size_b(item->size),
-      // A TTL of 0 in Kia's traces implies no TTL. I assume it's
-      // the same in Sari's, but I don't know.
-      ttl_ms(item->ttl_s == 0
-                 ? std::nullopt
-                 : std::optional(saturation_multiply(1000, item->ttl_s))),
-      client_id(0)
-{
-}
-
-CacheAccess::CacheAccess(std::uint64_t const timestamp_ms,
-                         std::uint64_t const key)
-    : timestamp_ms(timestamp_ms),
-      command(CacheCommand::Get),
-      key(key),
-      key_size_b(0),
-      value_size_b(1),
-      ttl_ms(std::nullopt),
-      client_id(0)
-{
-}
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_command.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
 
 CacheAccess::CacheAccess(std::uint64_t const timestamp_ms,
                          std::uint64_t const key,
                          std::uint64_t size_bytes,
-                         std::optional<std::uint64_t> ttl_ms)
+                         double const ttl_ms)
     : timestamp_ms(timestamp_ms),
-      command(CacheCommand::Get),
+      command(CacheCommand::GetSet),
       key(key),
       key_size_b(0),
       value_size_b(size_bytes),
@@ -57,6 +27,7 @@ static uint64_t
 read_le_u64(uint8_t const *const ptr)
 {
     uint64_t r = 0;
+    // Align the bytes.
     std::memcpy(&r, ptr, sizeof(r));
     return le64toh(r);
 }
@@ -65,6 +36,7 @@ static uint32_t
 read_le_u32(uint8_t const *const ptr)
 {
     uint32_t r = 0;
+    // Align the bytes.
     std::memcpy(&r, ptr, sizeof(r));
     return le32toh(r);
 }
@@ -155,7 +127,7 @@ parse_command(uint8_t const *const record, CacheTraceFormat const format)
         return CacheCommand(read_le_u8(&record[8]) ? CacheCommand::Set
                                                    : CacheCommand::Get);
     case CacheTraceFormat::Sari:
-        return CacheCommand::Get;
+        return CacheCommand::GetSet;
     case CacheTraceFormat::YangTwitterX: {
         uint32_t op_ttl = read_le_u32(&record[16]);
         return CacheCommand(op_ttl >> 24);
@@ -167,22 +139,29 @@ parse_command(uint8_t const *const record, CacheTraceFormat const format)
     }
 }
 
-static std::optional<uint64_t>
+static double
 parse_ttl_ms(uint8_t const *const record, CacheTraceFormat const format)
 {
+    double const ttl_ms =
+        CacheCommand__is_any_write(parse_command(record, format)) ? INFINITY
+                                                                  : NAN;
     switch (format) {
     case CacheTraceFormat::Kia: {
         uint64_t ttl = read_le_u32(&record[21]);
-        return (ttl == 0) ? std::nullopt : std::optional<uint64_t>{1000 * ttl};
+        return (ttl == 0) ? ttl_ms : 1000 * ttl;
     }
     case CacheTraceFormat::Sari: {
         uint64_t ttl = read_le_u32(&record[16]);
-        return (ttl == 0) ? std::nullopt : std::optional<uint64_t>{1000 * ttl};
+        // Sari processed his trace to assign TTLs to every GET and
+        // filter out all other accesses. This means that a TTL of 0
+        // corresponds to an item who should live in the cache
+        // indefinitely.
+        return (ttl == 0) ? INFINITY : 1000 * ttl;
     }
     case CacheTraceFormat::YangTwitterX: {
         uint32_t op_ttl = read_le_u32(&record[16]);
         uint64_t ttl = op_ttl & 0x00FFFFFF;
-        return (ttl == 0) ? std::nullopt : std::optional<uint64_t>{1000 * ttl};
+        return (ttl == 0) ? ttl_ms : 1000 * ttl;
     }
     case CacheTraceFormat::Invalid:
         return 0;
@@ -266,21 +245,27 @@ CacheAccess::CacheAccess(uint8_t const *const record,
 bool
 CacheAccess::is_read() const
 {
-    return command == CacheCommand::Get || command == CacheCommand::Gets ||
-           command == CacheCommand::Read;
+    return CacheCommand__is_any_read(command);
 }
 
 bool
 CacheAccess::is_write() const
 {
-    return (CacheCommand::Set <= command && command <= CacheCommand::Decr) ||
-           command == CacheCommand::Update;
+    return CacheCommand__is_any_write(command);
 }
 
-std::optional<uint64_t>
+/// @note   Based on the way we instantiate TTLs, this is essentially
+///         equivalent to checking if the operation is a write.
+bool
+CacheAccess::has_ttl() const
+{
+    return !std::isnan(ttl_ms);
+}
+
+double
 CacheAccess::expiration_time_ms() const
 {
-    return saturation_add(timestamp_ms, ttl_ms.value_or(UINT64_MAX));
+    return timestamp_ms + ttl_ms;
 }
 
 std::string
@@ -293,7 +278,7 @@ CacheAccess::twitter_csv(bool const newline) const
     ss << value_size_b << ",";
     ss << client_id << ",";
     ss << CacheCommand__string(command) << ",";
-    ss << ttl_ms.value_or(0);
+    ss << (std::isfinite(ttl_ms) ? (uint64_t)ttl_ms : 0);
     if (newline) {
         ss << std::endl;
     }

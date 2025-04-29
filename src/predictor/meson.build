@@ -1,45 +1,20 @@
 predictor_inc = include_directories('include')
 
-list_dep = declare_dependency(
-    link_with: library(
-        'list_lib',
-        'list.cpp',
-        include_directories: predictor_inc,
-        dependencies: [
-            common_dep,
-            cpp_cache_dep,
-        ],
-    ),
-    include_directories: predictor_inc,
-    dependencies: [
-        common_dep,
-    ],
-)
-
-test_list_exe = executable(
-    'test_list_exe',
-    ['test_list.cpp'],
-    dependencies: [
-        common_dep,
-        list_dep,
-    ],
-)
-
 predictive_lru_ttl_cache_dep = declare_dependency(
     link_with: library(
         'predictive_lru_ttl_cache_lib',
         'predictive_lru_ttl_cache.cpp',
         include_directories: predictor_inc,
         dependencies: [
-            cpp_lib_util_dep,
-            cpp_cache_dep,
+            cpp_lib_dep,
+            cpp_struct_dep,
             glib_dep,
         ],
     ),
     include_directories: predictor_inc,
     dependencies: [
         cpp_lib_util_dep,
-        cpp_cache_dep,
+        cpp_lib_dep,
     ],
 )
 
@@ -49,8 +24,8 @@ test_lru_ttl_cache_exe = executable(
     include_directories: predictor_inc,
     dependencies: [
         cpp_lib_util_dep,
-        cpp_cache_dep,
-        list_dep,
+        cpp_lib_dep,
+        cpp_struct_dep,
     ],
 )
 
@@ -59,8 +34,8 @@ test_predictive_lru_ttl_cache_exe = executable(
     'test_predictive_lru_ttl_cache.cpp',
     include_directories: predictor_inc,
     dependencies: [
-        cpp_cache_dep,
-        list_dep,
+        cpp_lib_dep,
+        cpp_struct_dep,
         predictive_lru_ttl_cache_dep,
     ],
 )
@@ -73,11 +48,12 @@ predictor_exe = executable(
         cpp_lib_util_dep,
         common_dep,
         io_dep,
-        list_dep,
+        cpp_struct_dep,
         trace_dep,
         cache_statistics_dep,
-        cpp_cache_dep,
+        cpp_lib_dep,
         predictive_lru_ttl_cache_dep,
+        shards_dep,
     ],
 )
 
@@ -87,6 +63,7 @@ test_lifetime_thresholds_exe = executable(
     include_directories: predictor_inc,
     dependencies: [
         common_dep,
+        glib_dep,
     ],
 )
 
@@ -96,12 +73,11 @@ test_iterator_spaces_exe = executable(
     include_directories: predictor_inc,
     dependencies: [
         common_dep,
-        cpp_cache_dep,
+        cpp_lib_dep,
         glib_dep,
     ],
 )
 
-test('list_test', test_list_exe)
 test('test_lifetime_thresholds', test_lifetime_thresholds_exe)
 test('test_lru_ttl_cache', test_lru_ttl_cache_exe)
 test('test_predictive_lru_ttl_cache', test_predictive_lru_ttl_cache_exe)

@@ -2,15 +2,17 @@
 
 /** @brief  [TODO]
  *
- *  @todo   Support different lower/upper uncertainties.
+ *  @todo   Change thresholds to double precision floats.
  **/
 
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <tuple>
 #include <utility>
 
+#include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 
 using uint64_t = std::uint64_t;
@@ -19,8 +21,8 @@ class LifeTimeThresholds {
     std::pair<uint64_t, uint64_t>
     recalculate_thresholds() const
     {
-        bool found_lower = false, found_upper = false;
-        uint64_t lower = 0, upper = UINT64_MAX, accum = 0, prev_lifetime = 0;
+        std::optional<uint64_t> lower = std::nullopt, upper = std::nullopt;
+        uint64_t accum = 0, prev_lifetime = 0;
 
         // Handle special cases. If we didn't handle the case of 1.0
         // explicitly, we would simply set the upper_threshold_ to the
@@ -28,57 +30,57 @@ class LifeTimeThresholds {
         // possible.
         if (lower_ratio_ == 0.0) {
             lower = 0;
-            found_lower = true;
         } else if (lower_ratio_ == 1.0) {
             lower = UINT64_MAX;
-            found_lower = true;
         }
         if (upper_ratio_ == 0.0) {
             upper = 0;
-            found_upper = true;
         } else if (upper_ratio_ == 1.0) {
             upper = UINT64_MAX;
-            found_upper = true;
         }
 
         for (auto [lifetime, frq] : histogram_) {
-            if (found_lower && found_upper) {
+            // Do this first in case both lower and upper are already set.
+            if (lower.has_value() && upper.has_value()) {
                 break;
             }
             accum += frq;
-            if (!found_lower && (double)accum / total_ > lower_ratio_) {
+            if (!lower.has_value() && (double)accum / total_ > lower_ratio_) {
                 lower = prev_lifetime;
-                found_lower = true;
             }
-            if (!found_upper && (double)accum / total_ >= upper_ratio_) {
+            if (!upper.has_value() && (double)accum / total_ >= upper_ratio_) {
                 upper = lifetime;
-                found_upper = true;
             }
             prev_lifetime = lifetime;
         }
 
+        if (!lower.has_value() || !upper.has_value()) {
+            LOGGER_WARN("lower or upper does not have value, so defaulting to "
+                        "original (0, UINT64_MAX)");
+            return {0, UINT64_MAX};
+        }
         // If the ratios are the same, then we simply return the mean.
         // This does bias us to round down, however. It may be a bit of
         // an optimization to simply return the lower threshold in this
         // case, because we compute it earlier than the upper threshold.
         if (lower_ratio_ == upper_ratio_) {
-            double mean = (double)(lower + upper) / 2;
+            double mean = (double)(lower.value() + upper.value()) / 2;
             return {mean, mean};
         }
-        return {lower, upper};
+        return {lower.value(), upper.value()};
     }
 
     /// @brief  Return if the thresholds should be refreshed.
     /// @note   I allow them to be 1% out of alignment. How did I choose 1%? I
     /// just did, that's how.
     bool
-    should_refresh() const
+    should_refresh(uint64_t const current_time_ms) const
     {
         double const error = 0.01 * coarse_counter_;
 
         // We don't readjust until we have at least 1 million data points!
         // TODO - consider putting a time bound on this.
-        if (coarse_counter_ < MIN_COARSE_COUNT) {
+        if (current_time_ms < prev_refresh_time_ms_ + MIN_TIME_DELTA) {
             return false;
         }
 
@@ -93,6 +95,11 @@ class LifeTimeThresholds {
     }
 
 public:
+    /// @todo   Allow setting the starting time. This is more for
+    ///         redundancy to make sure everything is safe.
+    ///         This isn't strictly necessary because we refresh the
+    ///         thresholds before we have any data, we just set it to
+    ///         the defaults (0, UINT64_MAX).
     LifeTimeThresholds(double const lower_ratio, double const upper_ratio)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
@@ -101,10 +108,21 @@ public:
         assert(lower_ratio >= 0.0 && lower_ratio <= 1.0);
         assert(upper_ratio >= 0.0 && upper_ratio <= 1.0);
         assert(lower_ratio <= upper_ratio);
+
+        if (lower_ratio == 0 && upper_ratio == 0) {
+            lower_threshold_ = 0;
+            upper_threshold_ = 0;
+        }
+        if (lower_ratio == 1.0 && upper_ratio == 1.0) {
+            lower_threshold_ = UINT64_MAX;
+            upper_threshold_ = UINT64_MAX;
+        }
     }
 
     void
-    register_cache_eviction(uint64_t const lifetime, uint64_t const size)
+    register_cache_eviction(uint64_t const lifetime,
+                            uint64_t const size,
+                            uint64_t const current_time_ms)
     {
         // We are counting objects for now.
         // TODO Count bytes in the future, maybe?
@@ -123,7 +141,8 @@ public:
             ++coarse_counter_;
         }
 
-        if (should_refresh()) {
+        if (should_refresh(current_time_ms)) {
+            prev_refresh_time_ms_ = current_time_ms;
             refresh_thresholds();
         }
     }
@@ -187,10 +206,12 @@ private:
     // This tells us how far off our current estimate of the thresholds
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
+    // The previous timestamp at which we refreshed.
+    uint64_t prev_refresh_time_ms_ = 0;
     uint64_t coarse_counter_ = 0;
     uint64_t num_refresh_ = 0;
 
 public:
     // TODO Make this configurable?
-    static constexpr uint64_t MIN_COARSE_COUNT = 1 << 20;
+    static constexpr uint64_t MIN_TIME_DELTA = 1000 * 3600;
 };

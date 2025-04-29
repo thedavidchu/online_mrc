@@ -18,17 +18,18 @@
 #include <utility>
 #include <vector>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_command.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
-#include "cpp_cache/parse_measurement.hpp"
-#include "cpp_cache/progress_bar.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_command.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/parse_measurement.hpp"
+#include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "logger/logger.h"
 
-#include "cpp_cache/cache_trace.hpp"
+#include "cpp_lib/cache_trace.hpp"
 #include "lib/predictive_lru_ttl_cache.hpp"
+#include "shards/fixed_rate_shards_sampler.h"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
@@ -40,39 +41,54 @@ run_single_cache(std::promise<std::string> ret,
                  size_t const capacity_bytes,
                  double const lower_ratio,
                  double const upper_ratio,
-                 LifeTimeCacheMode const lifetime_cache_mode)
+                 LifeTimeCacheMode const lifetime_cache_mode,
+                 double const shards_ratio)
 {
-    PredictiveCache p(capacity_bytes,
+    PredictiveCache p(capacity_bytes * shards_ratio,
                       lower_ratio,
                       upper_ratio,
-                      lifetime_cache_mode);
+                      lifetime_cache_mode,
+                      {{"shards_ratio", std::to_string(shards_ratio)}});
+    struct FixedRateShardsSampler frss = {};
+    if (!FixedRateShardsSampler__init(&frss, shards_ratio, true)) {
+        return false;
+    }
     std::stringstream ss;
-    LOGGER_TIMING(
-        "starting test_trace(trace: %s, cap: %zu, lt: %f, ut: %f, mode: %s)",
-        trace.path().c_str(),
-        capacity_bytes,
-        lower_ratio,
-        upper_ratio,
-        LifeTimeCacheMode__str(lifetime_cache_mode));
+    LOGGER_TIMING("starting test_trace(trace: %s, nominal cap: %zu, sampled "
+                  "cap: %zu, lt: %f, ut: "
+                  "%f, mode: %s, shards: %f)",
+                  trace.path().c_str(),
+                  capacity_bytes,
+                  (size_t)(capacity_bytes * shards_ratio),
+                  lower_ratio,
+                  upper_ratio,
+                  LifeTimeCacheMode__str(lifetime_cache_mode),
+                  shards_ratio);
     ProgressBar pbar{trace.size(), id == 0};
     p.start_simulation();
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
         auto const &access = trace.get_wait(i);
+        if (!FixedRateShardsSampler__sample(&frss, access.key)) {
+            continue;
+        }
         if (access.command == CacheCommand::Get) {
             p.access(access);
         }
     }
     p.end_simulation();
-    LOGGER_TIMING(
-        "finished test_trace(trace: %s, cap: %zu, lt: %f, ut: %f, mode: %s)",
-        trace.path().c_str(),
-        capacity_bytes,
-        lower_ratio,
-        upper_ratio,
-        LifeTimeCacheMode__str(lifetime_cache_mode));
+    LOGGER_TIMING("finished test_trace(trace: %s, cap: %zu, lt: %f, ut: "
+                  "%f, mode: %s, shards: %f)",
+                  trace.path().c_str(),
+                  capacity_bytes,
+                  lower_ratio,
+                  upper_ratio,
+                  LifeTimeCacheMode__str(lifetime_cache_mode),
+                  shards_ratio);
     p.print_statistics(ss);
+    FixedRateShardsSampler__json(ss, frss);
     ret.set_value(ss.str());
+    FixedRateShardsSampler__destroy(&frss);
 
     return true;
 }
@@ -83,7 +99,8 @@ run_caches(std::string const &path,
            std::vector<uint64_t> const &capacity_bytes,
            double const lower_ratio,
            double const upper_ratio,
-           LifeTimeCacheMode const lifetime_cache_mode)
+           LifeTimeCacheMode const lifetime_cache_mode,
+           double const shards_ratio)
 {
     CacheAccessTrace trace{path, format, capacity_bytes.size()};
     std::vector<std::thread> workers;
@@ -100,7 +117,8 @@ run_caches(std::string const &path,
                              c,
                              lower_ratio,
                              upper_ratio,
-                             lifetime_cache_mode);
+                             lifetime_cache_mode,
+                             shards_ratio);
     }
     for (auto &w : workers) {
         w.join();
@@ -135,11 +153,12 @@ parse_capacities(std::string const &str)
 int
 main(int argc, char *argv[])
 {
-    if (argc != 7) {
+    if (argc != 8) {
         std::cout
-            << "Usage: predictor [<trace> <format> <lower_ratio 0.0-1.0> "
-               "<upper_ratio 0.0-1.0> <cache-capacity>+ <lifetime_cache_mode "
-               "EvictionTime|LifeTime>"
+            << "Usage: predictor <trace> <format> <lower_ratio [0.0, 1.0]> "
+               "<upper_ratio [0.0, 1.0]> <cache-capacities>+ "
+               "<lifetime_cache_mode EvictionTime|LifeTime> "
+               "<shards-ratio [0.0, 1.0]>"
             << std::endl;
         exit(1);
     }
@@ -152,6 +171,7 @@ main(int argc, char *argv[])
     std::vector<uint64_t> capacity_bytes = parse_capacities(argv[5]);
     LifeTimeCacheMode const lifetime_cache_mode =
         LifeTimeCacheMode__parse(argv[6]);
+    double const shards_ratio = atof(argv[7]);
     LOGGER_INFO("Running: %s %s",
                 path.c_str(),
                 CacheTraceFormat__string(format).c_str());
@@ -160,7 +180,8 @@ main(int argc, char *argv[])
                capacity_bytes,
                lower_ratio,
                upper_ratio,
-               lifetime_cache_mode);
+               lifetime_cache_mode,
+               shards_ratio);
     std::cout << "OK!" << std::endl;
     return 0;
 }

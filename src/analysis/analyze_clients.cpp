@@ -1,11 +1,11 @@
 /** @brief  Analyze the activity per client.
  */
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_trace.hpp"
-#include "cpp_cache/cache_trace_format.hpp"
-#include "cpp_cache/histogram.hpp"
-#include "cpp_cache/progress_bar.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_trace.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/histogram.hpp"
+#include "cpp_lib/progress_bar.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -41,8 +41,7 @@ saturation_iincr(T &x)
 void
 analyze_clients(char const *const trace_path,
                 CacheTraceFormat const format,
-                bool const show_progress,
-                bool const verbose = false)
+                bool const show_progress)
 {
     std::unordered_map<uint64_t, Data> map;
     Histogram client_read, client_write;

@@ -1,13 +1,14 @@
 #include "lib/predictive_lru_ttl_cache.hpp"
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
+#include "arrays/is_last.h"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/util.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
-#include "list/list.hpp"
 #include "logger/logger.h"
 
 #include <cassert>
@@ -21,7 +22,9 @@
 #include <map>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <stdlib.h>
+#include <string>
 #include <sys/types.h>
 #include <unordered_map>
 #include <utility>
@@ -29,6 +32,12 @@
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
+
+static inline bool
+object_is_expired(uint64_t expiration_time, uint64_t current_time)
+{
+    return current_time > expiration_time;
+}
 
 bool
 PredictiveCache::ok(bool const fatal) const
@@ -77,17 +86,16 @@ void
 PredictiveCache::insert(CacheAccess const &access)
 {
     statistics_.insert(access.value_size_b);
-    uint64_t const ttl_ms = access.ttl_ms.value_or(UINT64_MAX);
+    double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CacheMetadata{access});
     auto r = lifetime_cache_.thresholds();
-    if (ttl_ms >= r.first) {
+    if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
     }
-    if (ttl_ms <= r.second) {
+    if (r.second != 0 && ttl_ms <= r.second) {
         pred_tracker.record_store_ttl();
-        ttl_cache_.emplace(access.expiration_time_ms().value_or(UINT64_MAX),
-                           access.key);
+        ttl_cache_.emplace(access.expiration_time_ms(), access.key);
     }
     size_ += access.value_size_b;
 }
@@ -102,22 +110,21 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
     if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
         return;
     }
-    // We want the new TTL after the access (above).
-    uint64_t const ttl_ms = metadata.ttl_ms();
+    double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
     auto r = lifetime_cache_.thresholds();
-    if (ttl_ms >= r.first) {
+    if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
     } else {
         lru_cache_.remove(access.key);
     }
-    if (ttl_ms <= r.second) {
+    if (r.second != 0 && ttl_ms <= r.second) {
         // Even if we don't re-insert into the TTL queue, we still
         // want to mark it as stored.
         pred_tracker.record_store_ttl();
         // Only insert the TTL if it hasn't been inserted already.
         if (find_multimap_kv(ttl_cache_,
-                             metadata.expiration_time_ms_,
+                             (double)metadata.expiration_time_ms_,
                              access.key) == ttl_cache_.end()) {
             ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
         }
@@ -136,7 +143,7 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
     ok(true);
     CacheMetadata &m = map_.at(victim_key);
     uint64_t sz_bytes = m.size_;
-    uint64_t exp_tm = m.expiration_time_ms_;
+    double exp_tm = m.expiration_time_ms_;
 
     // Update metadata tracking
     switch (cause) {
@@ -178,6 +185,9 @@ PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
         //      running out of space in the cache for a re-accessed item.
         pred_tracker.update_correctly_evicted(sz_bytes);
         break;
+    case EvictionCause::Sampling:
+        statistics_.sampling_remove(m.size_);
+        break;
     default:
         assert(0 && "impossible");
     }
@@ -193,7 +203,7 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
 {
     std::vector<uint64_t> victims;
     for (auto [exp_tm, key] : ttl_cache_) {
-        if (exp_tm >= current_time_ms) {
+        if (!object_is_expired(exp_tm, current_time_ms)) {
             break;
         }
         victims.push_back(key);
@@ -212,7 +222,7 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes,
     ok(true);
     uint64_t evicted_bytes = 0;
     std::vector<uint64_t> victims;
-    for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+    for (auto n : lru_cache_) {
         if (evicted_bytes >= target_bytes) {
             break;
         }
@@ -315,7 +325,7 @@ bool
 PredictiveCache::is_expired(CacheAccess const &access,
                             CacheMetadata const &metadata)
 {
-    return (access.timestamp_ms > metadata.expiration_time_ms_);
+    return object_is_expired(metadata.expiration_time_ms_, access.timestamp_ms);
 }
 
 void
@@ -363,11 +373,13 @@ PredictiveCache::miss(CacheAccess const &access)
 PredictiveCache::PredictiveCache(size_t const capacity,
                                  double const lower_ratio,
                                  double const upper_ratio,
-                                 LifeTimeCacheMode const cache_mode)
+                                 LifeTimeCacheMode const cache_mode,
+                                 std::map<std::string, std::string> kwargs)
     : capacity_(capacity),
       lifetime_cache_mode_(cache_mode),
       lifetime_cache_(capacity, lower_ratio, upper_ratio, cache_mode),
-      oracle_(capacity)
+      oracle_(capacity),
+      kwargs_(kwargs)
 {
 }
 
@@ -414,6 +426,14 @@ PredictiveCache::access(CacheAccess const &access)
     return 0;
 }
 
+// bool
+// PredictiveCache::remove(uint64_t const key)
+// {
+//     bool const evicted = map_.contains(key);
+//     evict(key, EvictionCause::Sampling);
+//     return evicted;
+// }
+
 size_t
 PredictiveCache::size() const
 {
@@ -447,7 +467,7 @@ PredictiveCache::print()
     std::cout << "> PredictiveCache(sz: " << size_ << ", cap: " << capacity_
               << ")\n";
     std::cout << "> \tLRU: ";
-    for (auto n = lru_cache_.begin(); n != lru_cache_.end(); n = n->r) {
+    for (auto n : lru_cache_) {
         std::cout << n->key << ", ";
     }
     std::cout << "\n";
@@ -470,6 +490,23 @@ PredictiveCache::statistics() const
     return statistics_;
 }
 
+/// @note   I do not escape any JSON-dangerous sequences in the key or values.
+static std::string
+jsonify_string_string_map(std::map<std::string, std::string> const &map)
+{
+    std::stringstream ss;
+    ss << "{";
+    size_t i = 0;
+    for (auto [k, v] : map) {
+        ss << "\"" << k << "\": \"" << v << "\"";
+        if (!is_last(i++, map.size())) {
+            ss << ", ";
+        }
+    }
+    ss << "}";
+    return ss.str();
+}
+
 void
 PredictiveCache::print_statistics(std::ostream &ostrm) const
 {
@@ -488,6 +525,7 @@ PredictiveCache::print_statistics(std::ostream &ostrm) const
           << ", \"Evictions\": "
           << format_engineering(lifetime_cache_.evictions())
           << ", \"Lower Threshold\": " << format_time(r.first)
-          << ", \"Upper Threshold\": " << format_time(r.second) << "}"
+          << ", \"Upper Threshold\": " << format_time(r.second)
+          << ", \"Kwargs\": " << jsonify_string_string_map(kwargs_) << "}"
           << std::endl;
 }

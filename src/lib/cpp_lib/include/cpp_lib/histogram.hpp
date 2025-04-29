@@ -1,9 +1,8 @@
 #pragma once
 
-#include "cpp_cache/format_measurement.hpp"
+#include "cpp_lib/format_measurement.hpp"
 #include <cmath>
 #include <cstdint>
-#include <iomanip>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -37,6 +36,16 @@ class Histogram {
     count_bucket(double bucket) const
     {
         return histogram_.count(bucket) ? histogram_.at(bucket) : 0.0;
+    }
+
+    std::map<double, uint64_t>
+    sorted_buckets() const
+    {
+        std::map<double, uint64_t> hist;
+        for (auto [b, frq] : histogram_) {
+            hist.emplace(b, frq);
+        }
+        return hist;
     }
 
 public:
@@ -117,7 +126,7 @@ public:
         std::stringstream ss;
         ss << "Total,Bucket,Frequency,PDF,CDF" << std::endl;
         uint64_t accum = 0;
-        for (auto [b, f] : histogram_) {
+        for (auto [b, f] : sorted_buckets()) {
             accum += f;
             ss << total_ << sep << stringify_double(b) << sep << f << sep
                << (double)f / total_ << sep << (double)accum / total_

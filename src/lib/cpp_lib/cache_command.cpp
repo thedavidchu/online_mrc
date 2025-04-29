@@ -1,4 +1,4 @@
-#include "cpp_cache/cache_command.hpp"
+#include "cpp_lib/cache_command.hpp"
 #include <cstddef>
 #include <map>
 #include <string>
@@ -21,6 +21,7 @@ static std::map<size_t, std::string> const CACHE_COMMAND_STRINGS = {
     {12, "read"},
     {13, "write"},
     {14, "update"},
+    {254, "getset"},
     {255, "invalid"},
 };
 
@@ -42,4 +43,18 @@ CacheCommand__string(CacheCommand const cmd)
         return CACHE_COMMAND_STRINGS.at((size_t)cmd);
     }
     return CACHE_COMMAND_STRINGS.at(255);
+}
+
+bool
+CacheCommand__is_any_read(CacheCommand const cmd)
+{
+    return cmd == CacheCommand::Get || cmd == CacheCommand::Gets ||
+           cmd == CacheCommand::Read || cmd == CacheCommand::GetSet;
+}
+
+bool
+CacheCommand__is_any_write(CacheCommand const cmd)
+{
+    return (CacheCommand::Set <= cmd && cmd <= CacheCommand::Decr) ||
+           cmd == CacheCommand::Update || cmd == CacheCommand::GetSet;
 }

@@ -5,7 +5,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/cache_trace.hpp"
+#include "cpp_lib/cache_trace_format.hpp"
 #include "io/io.h"
 #include "logger/logger.h"
 #include "math/saturation_arithmetic.h"
@@ -19,53 +22,28 @@ struct TTLForModifiedClock {
 };
 
 static inline double
-run_ttl_modified_clock_cache(char const *const trace_path,
-                             enum TraceFormat const format,
+run_ttl_modified_clock_cache(CacheAccessTrace const &trace,
                              uint64_t const capacity)
 {
     LOGGER_TRACE("running '%s()", __func__);
-    std::size_t const bytes_per_trace_item = get_bytes_per_trace_item(format);
 
-    // This initializes everything to the default, i.e. 0.
-    struct MemoryMap mm = {};
-    std::size_t num_entries = 0;
     std::unordered_map<uint64_t, struct TTLForModifiedClock> map;
     std::multimap<std::uint64_t, std::uint64_t> expiration_queue;
     CacheStatistics statistics;
     uint64_t ttl_s = 1 << 30;
 
-    if (trace_path == NULL || bytes_per_trace_item == 0) {
-        LOGGER_ERROR("invalid input", format);
-        goto cleanup_error;
-    }
-
-    // Memory map the input trace file
-    if (!MemoryMap__init(&mm, trace_path, "rb")) {
-        LOGGER_ERROR("failed to mmap '%s'", trace_path);
-        goto cleanup_error;
-    }
-    num_entries = mm.num_bytes / bytes_per_trace_item;
-
-    // Run trace
-    for (size_t i = 0; i < num_entries; ++i) {
+    for (size_t i = 0; i < trace.size(); ++i) {
         if (i % 1000000 == 0) {
-            LOGGER_TRACE("Finished %zu / %zu", i, num_entries);
+            LOGGER_TRACE("Finished %zu / %zu", i, trace.size());
         }
-        struct FullTraceItemResult r = construct_full_trace_item(
-            &((uint8_t *)mm.buffer)[i * bytes_per_trace_item],
-            format);
-        assert(r.valid);
-
-        // Skip PUT requests.
-        if (r.item.command == 1) {
+        CacheAccess access = trace.get(i);
+        if (!access.is_read()) {
             continue;
         }
-
         if (capacity == 0) {
             statistics.deprecated_miss();
             continue;
         }
-
         assert(map.size() == expiration_queue.size());
         if (map.size() >= capacity) {
             auto const x = expiration_queue.begin();
@@ -88,45 +66,42 @@ run_ttl_modified_clock_cache(char const *const trace_path,
             }
         }
 
-        if (map.count(r.item.key)) {
-            struct TTLForModifiedClock &s = map[r.item.key];
-            s.last_access_time_ms = r.item.timestamp_ms;
+        if (map.count(access.key)) {
+            struct TTLForModifiedClock &s = map[access.key];
+            s.last_access_time_ms = access.timestamp_ms;
             s.ttl_s = ttl_s;
 
             statistics.deprecated_hit();
         } else {
-            map[r.item.key] = {
-                r.item.timestamp_ms,
-                r.item.timestamp_ms,
+            map[access.key] = {
+                access.timestamp_ms,
+                access.timestamp_ms,
                 ttl_s,
             };
             uint64_t eviction_time_ms =
-                saturation_add(r.item.timestamp_ms,
+                saturation_add(access.timestamp_ms,
                                saturation_multiply(1000, ttl_s));
-            expiration_queue.emplace(eviction_time_ms, r.item.key);
+            expiration_queue.emplace(eviction_time_ms, access.key);
 
             statistics.deprecated_miss();
         }
     }
 
-    assert(statistics.total_ops() < num_entries);
+    assert(statistics.total_ops() < trace.size());
     statistics.print("LRU by TTLs", capacity);
 
-    MemoryMap__destroy(&mm);
     return statistics.miss_rate();
-cleanup_error:
-    MemoryMap__destroy(&mm);
-    return -1.0;
 }
 
 static inline std::optional<std::map<std::uint64_t, double>>
 generate_modified_clock_mrc(char const *const trace_path,
-                            enum TraceFormat const format,
+                            CacheTraceFormat const format,
                             std::vector<std::size_t> const &capacities)
 {
     std::map<std::size_t, double> mrc = {};
+    CacheAccessTrace trace = CacheAccessTrace{trace_path, format};
     for (auto sz : capacities) {
-        double mr = run_ttl_modified_clock_cache(trace_path, format, sz);
+        double mr = run_ttl_modified_clock_cache(trace, sz);
         assert(mr != -1.0);
         mrc[sz] = mr;
     }

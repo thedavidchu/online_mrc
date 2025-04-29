@@ -1,5 +1,5 @@
-#include "cpp_cache/cache_statistics.hpp"
-#include "cpp_cache/format_measurement.hpp"
+#include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/format_measurement.hpp"
 #include "logger/logger.h"
 
 #include <algorithm>
@@ -203,6 +203,21 @@ CacheStatistics::lazy_expire(uint64_t const size_bytes)
 }
 
 void
+CacheStatistics::sampling_remove(uint64_t const size_bytes)
+{
+    sampling_remove_ops_ += 1;
+    sampling_remove_bytes_ += size_bytes;
+
+    size_ -= size_bytes;
+    // Cannot set a new maximum size.
+
+    resident_objs_ -= 1;
+    // Cannot set a new maximum number of resident objects.
+
+    upperbound_ttl_wss_ -= size_bytes;
+}
+
+void
 CacheStatistics::deprecated_hit()
 {
     update(1, 1);
@@ -274,17 +289,36 @@ CacheStatistics::json() const
        << ", \"insert_ops\": " << format_engineering(insert_ops_)
        << ", \"insert_bytes\": " << format_memory_size(insert_bytes_)
        << ", \"update_ops\": " << format_engineering(update_ops_)
-       << ", \"update_bytes\": " << format_memory_size(update_bytes_)
+       << ", \"update_bytes\": "
+       << format_memory_size(update_bytes_)
+       // Eviction and expiration statistics.
        << ", \"lru_evict_ops\": " << format_engineering(lru_evict_ops_)
        << ", \"lru_evict_bytes\": " << format_memory_size(lru_evict_bytes_)
-       << ", \"no_room_evict_ops\": " << format_engineering(lru_evict_ops_)
-       << ", \"no_room_evict_bytes\": " << format_memory_size(lru_evict_bytes_)
+       << ", \"no_room_evict_ops\": " << format_engineering(no_room_ops_)
+       << ", \"no_room_evict_bytes\": " << format_memory_size(no_room_bytes_)
        << ", \"ttl_evict_ops\": " << format_engineering(ttl_evict_ops_)
        << ", \"ttl_evict_bytes\": " << format_memory_size(ttl_evict_bytes_)
        << ", \"ttl_expire_ops\": " << format_engineering(ttl_expire_ops_)
        << ", \"ttl_expire_bytes\": " << format_memory_size(ttl_expire_bytes_)
        << ", \"lazy_expire_ops\": " << format_engineering(lazy_expire_ops_)
-       << ", \"lazy_expire_bytes\": " << format_memory_size(lazy_expire_bytes_)
+       << ", \"lazy_expire_bytes\": "
+       << format_memory_size(lazy_expire_bytes_)
+       // Total statistics
+       << ", \"total_evict_ops\": "
+       << format_engineering(lru_evict_ops_ + no_room_ops_ + ttl_evict_ops_)
+       << ", \"total_evict_bytes\": "
+       << format_memory_size(lru_evict_bytes_ + no_room_bytes_ +
+                             ttl_evict_bytes_)
+       << ", \"total_expire_ops\": "
+       << format_engineering(ttl_expire_ops_ + lazy_expire_ops_)
+       << ", \"total_expire_bytes\": "
+       << format_memory_size(ttl_expire_bytes_ + lazy_expire_bytes_)
+       // Other reasons for removal.
+       << ", \"sampling_remove_ops\": "
+       << format_engineering(sampling_remove_ops_)
+       << ", \"sampling_remove_bytes\": "
+       << format_memory_size(sampling_remove_bytes_)
+       // General cache performance statistics.
        << ", \"hit_ops\": " << format_engineering(hit_ops_)
        << ", \"hit_bytes\": " << format_memory_size(hit_bytes_)
        << ", \"miss_ops\": " << format_engineering(miss_ops_)

@@ -11,12 +11,11 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
-#include <vector>
 
-#include "cpp_cache/cache_access.hpp"
-#include "cpp_cache/cache_metadata.hpp"
-#include "cpp_cache/cache_statistics.hpp"
-#include "list/list.hpp"
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
+#include "cpp_struct/hash_list.hpp"
 
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
@@ -99,7 +98,8 @@ public:
     PredictiveCache(size_t const capacity,
                     double const lower_ratio,
                     double const upper_ratio,
-                    LifeTimeCacheMode const cache_mode);
+                    LifeTimeCacheMode const cache_mode,
+                    std::map<std::string, std::string> kwargs = {});
 
     void
     start_simulation();
@@ -151,14 +151,17 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    List lru_cache_;
+    HashList lru_cache_;
 
     // Maps expiration time to keys.
-    std::multimap<uint64_t, uint64_t> ttl_cache_;
+    std::multimap<double, uint64_t> ttl_cache_;
 
     // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
     LifeTimeCache lifetime_cache_;
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
     LRUTTLCache oracle_;
+
+    // Extra metadata
+    std::map<std::string, std::string> const kwargs_;
 };

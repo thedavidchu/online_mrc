@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "cpp_cache/format_measurement.hpp"
+#include "cpp_lib/format_measurement.hpp"
 
 bool
 test_format_underscore()

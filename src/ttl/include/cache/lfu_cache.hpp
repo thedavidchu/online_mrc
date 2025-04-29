@@ -11,7 +11,7 @@
 
 #include "cache/base_cache.hpp"
 #include "cache/lru_cache.hpp"
-#include "cpp_cache/cache_statistics.hpp"
+#include "cpp_lib/cache_statistics.hpp"
 
 class LFUCache {
     std::unordered_map<std::uint64_t, std::uint64_t> map_;

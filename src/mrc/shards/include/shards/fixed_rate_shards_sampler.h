@@ -1,4 +1,8 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif /*!__cplusplus*/
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -35,3 +39,27 @@ FixedRateShardsSampler__post_process(struct FixedRateShardsSampler *me,
 bool
 FixedRateShardsSampler__write_as_json(FILE *stream,
                                       struct FixedRateShardsSampler *me);
+
+#ifdef __cplusplus
+#include <ostream>
+
+static inline void
+FixedRateShardsSampler__json(std::ostream &s,
+                             struct FixedRateShardsSampler const &me,
+                             bool const newline = true)
+{
+    s << "{";
+    s << "\"type\": \"FixedRateShardsSampler\", ";
+    s << "\".sampling_ratio\": " << me.sampling_ratio << ", ";
+    s << "\".threshold\": " << me.threshold << ", ";
+    s << "\".scale\": " << me.scale << ", ";
+    s << "\".adjustment\": " << (me.adjustment ? "true" : "false") << ", ";
+    s << "\".num_entries_seen\": " << me.num_entries_seen << ", ";
+    s << "\".num_entries_processed\": " << me.num_entries_processed;
+    s << "}";
+    if (newline) {
+        s << std::endl;
+    }
+}
+}
+#endif /*!__cplusplus*/
