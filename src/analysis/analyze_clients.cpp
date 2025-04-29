@@ -41,8 +41,7 @@ saturation_iincr(T &x)
 void
 analyze_clients(char const *const trace_path,
                 CacheTraceFormat const format,
-                bool const show_progress,
-                bool const verbose = false)
+                bool const show_progress)
 {
     std::unordered_map<uint64_t, Data> map;
     Histogram client_read, client_write;

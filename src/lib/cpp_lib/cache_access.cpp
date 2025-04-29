@@ -14,7 +14,7 @@ CacheAccess::CacheAccess(std::uint64_t const timestamp_ms,
                          std::uint64_t size_bytes,
                          double const ttl_ms)
     : timestamp_ms(timestamp_ms),
-      command(CacheCommand::Get),
+      command(CacheCommand::GetSet),
       key(key),
       key_size_b(0),
       value_size_b(size_bytes),
@@ -127,7 +127,7 @@ parse_command(uint8_t const *const record, CacheTraceFormat const format)
         return CacheCommand(read_le_u8(&record[8]) ? CacheCommand::Set
                                                    : CacheCommand::Get);
     case CacheTraceFormat::Sari:
-        return CacheCommand::Get;
+        return CacheCommand::GetSet;
     case CacheTraceFormat::YangTwitterX: {
         uint32_t op_ttl = read_le_u32(&record[16]);
         return CacheCommand(op_ttl >> 24);
@@ -252,6 +252,14 @@ bool
 CacheAccess::is_write() const
 {
     return CacheCommand__is_any_write(command);
+}
+
+/// @note   Based on the way we instantiate TTLs, this is essentially
+///         equivalent to checking if the operation is a write.
+bool
+CacheAccess::has_ttl() const
+{
+    return !std::isnan(ttl_ms);
 }
 
 double

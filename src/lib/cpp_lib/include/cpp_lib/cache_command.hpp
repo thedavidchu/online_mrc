@@ -27,6 +27,9 @@ enum class CacheCommand : uint8_t {
     Read = 12,
     Write = 13,
     Update = 14,
+    // This is what Sari's comprise of. They are GET requests that are
+    // processed to include TTLs. Thus on a GET-miss, it acts as a SET.
+    GetSet = 254,
     Invalid = 255
 };
 

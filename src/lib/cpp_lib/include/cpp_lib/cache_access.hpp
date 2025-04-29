@@ -36,6 +36,9 @@ struct CacheAccess {
     bool
     is_write() const;
 
+    bool
+    has_ttl() const;
+
     double
     expiration_time_ms() const;
 

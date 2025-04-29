@@ -27,3 +27,11 @@ analyze_rw_exe = executable(
         cpp_lib_dep,
     ],
 )
+
+analyze_ttls_exe = executable(
+    'analyze_ttls_exe',
+    'analyze_ttls.cpp',
+    dependencies: [
+        cpp_lib_dep,
+    ],
+)
