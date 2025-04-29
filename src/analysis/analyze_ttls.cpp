@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <stdbool.h>
 #include <sys/types.h>
 
@@ -25,11 +26,11 @@ using uint8_t = std::uint8_t;
 void
 count_ttls(char const *const trace_path,
            CacheTraceFormat const format,
-           bool const show_progress)
+           std::shared_ptr<std::ostream> progress_strm)
 {
     Histogram histogram{};
     CacheAccessTrace const trace{trace_path, format};
-    ProgressBar pbar{trace.size(), show_progress};
+    ProgressBar pbar{trace.size(), progress_strm};
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
         auto &x = trace.get(i);
@@ -40,31 +41,20 @@ count_ttls(char const *const trace_path,
     std::cout << histogram.csv();
 }
 
-bool
-parse_bool(char const *str)
-{
-    if (std::strcmp(str, "true") == 0) {
-        return true;
-    }
-    if (std::strcmp(str, "false") == 0) {
-        return true;
-    }
-    assert(0 && "unrecognized bool parameter");
-}
-
 int
 main(int argc, char *argv[])
 {
     if (argc != 3 && argc != 4) {
         std::cout << "Usage: " << argv[0]
-                  << " <trace-path> <format> [<show_progress>=false]"
+                  << " <trace-path> <format> [<progress-stream>=nullptr]"
                   << std::endl;
         return EXIT_FAILURE;
     }
     char const *const trace_path = argv[1];
     CacheTraceFormat format = CacheTraceFormat__parse(argv[2]);
-    bool const show_progress = (argc == 4) ? parse_bool(argv[3]) : false;
+    std::shared_ptr<std::ostream> const progress_strm =
+        (argc == 4) ? str2stream(argv[3]) : nullptr;
     assert(CacheTraceFormat__valid(format));
-    count_ttls(trace_path, format, show_progress);
+    count_ttls(trace_path, format, progress_strm);
     return 0;
 }

@@ -4,13 +4,31 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <fstream>
 #include <iostream>
-#include <optional>
+#include <memory>
 #include <ostream>
 #include <string>
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
+
+static inline std::shared_ptr<std::ostream>
+str2stream(std::string const &name)
+{
+    if (name == "") {
+        return std::shared_ptr<std::ostream>();
+    }
+    // NOTE We need to make sure not to run 'delete std::cout', so we
+    //      provide an explicit identity function as the destructor.
+    if (name == "stdout" || name == "cout") {
+        return std::shared_ptr<std::ostream>(&std::cout, [](void *) {});
+    }
+    if (name == "stderr" || name == "cerr") {
+        return std::shared_ptr<std::ostream>(&std::cerr, [](void *) {});
+    }
+    return std::make_shared<std::ofstream>(name);
+}
 
 /// @brief  A progress bar based on Python's TQDM library
 class ProgressBar {
@@ -40,7 +58,7 @@ class ProgressBar {
     }
 
     void
-    print_progress_bar()
+    print_progress_bar(bool const newline = false)
     {
         if (!ostrm_) {
             return;
@@ -55,7 +73,10 @@ class ProgressBar {
                 << format_underscore(size_) << " ["
                 << format_time_min_sec(dur_s) << "<?, "
                 << (double)counter_ / dur_s << "it/s]";
-        std::flush(std::cout);
+        if (newline) {
+            *ostrm_ << std::endl;
+        }
+        std::flush(*ostrm_);
     }
 
 public:
@@ -73,8 +94,9 @@ public:
         print_progress_bar();
         start_time_ = std::time(nullptr);
     }
+
     ProgressBar(size_t const size,
-                std::ostream *const ostrm,
+                std::shared_ptr<std::ostream> ostrm,
                 size_t const granularity = 50)
         : size_(size),
           ostrm_(ostrm),
@@ -94,8 +116,7 @@ public:
 
         // Create a new line after the counter when we're finished.
         if (counter_ >= size_) {
-            print_progress_bar();
-            std::cout << std::endl;
+            print_progress_bar(true);
         }
     }
 
@@ -104,6 +125,6 @@ private:
     static constexpr size_t update_frequency_ = 1 << 20;
     size_t counter_ = 0;
     size_t const size_;
-    std::ostream *const ostrm_;
+    std::shared_ptr<std::ostream> ostrm_;
     size_t const granularity_;
 };
