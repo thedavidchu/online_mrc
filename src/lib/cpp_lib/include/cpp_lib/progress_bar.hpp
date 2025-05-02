@@ -17,15 +17,15 @@ static inline std::shared_ptr<std::ostream>
 str2stream(std::string const &name)
 {
     if (name == "") {
-        return std::shared_ptr<std::ostream>();
+        return std::shared_ptr<std::ostream>{};
     }
     // NOTE We need to make sure not to run 'delete std::cout', so we
     //      provide an explicit identity function as the destructor.
     if (name == "stdout" || name == "cout") {
-        return std::shared_ptr<std::ostream>(&std::cout, [](void *) {});
+        return std::shared_ptr<std::ostream>{&std::cout, [](void *) {}};
     }
     if (name == "stderr" || name == "cerr") {
-        return std::shared_ptr<std::ostream>(&std::cerr, [](void *) {});
+        return std::shared_ptr<std::ostream>{&std::cerr, [](void *) {}};
     }
     return std::make_shared<std::ofstream>(name);
 }
@@ -83,23 +83,39 @@ public:
     /// @param size - the total size in terms of tick increments.
     /// @param show - whether to show the progress bar.
     /// @param granularity - the granularity at which to show the progress bar
-    ///                      ticks.
+    ///                      ticks. In other words, the number of pixels.
     ProgressBar(size_t const size,
                 bool const show = true,
                 size_t const granularity = 50)
         : size_(size),
-          ostrm_(show ? &std::cout : nullptr),
+          ostrm_(show ? std::shared_ptr<std::ostream>{&std::cout, [](void *) {}}
+                      : nullptr),
           granularity_(granularity)
     {
         print_progress_bar();
         start_time_ = std::time(nullptr);
     }
 
+    /// @param ostrm: an owning shared smart pointer to the output stream.
+    /// @note   If you want to wrap std::cout or std::cerr, then you
+    ///         need to make sure the destructor is [](void *){}.
     ProgressBar(size_t const size,
                 std::shared_ptr<std::ostream> ostrm,
                 size_t const granularity = 50)
         : size_(size),
           ostrm_(ostrm),
+          granularity_(granularity)
+    {
+        print_progress_bar();
+        start_time_ = std::time(nullptr);
+    }
+
+    /// @param  ostrm: a non-owning reference to the output stream.
+    ProgressBar(size_t const size,
+                std::ostream &ostrm,
+                size_t const granularity = 50)
+        : size_(size),
+          ostrm_{&ostrm, [](void *) {}},
           granularity_(granularity)
     {
         print_progress_bar();
