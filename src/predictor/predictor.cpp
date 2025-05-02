@@ -53,7 +53,7 @@ run_single_cache(std::promise<std::string> ret,
     if (!FixedRateShardsSampler__init(&frss, shards_ratio, true)) {
         return false;
     }
-    std::stringstream ss;
+    std::stringstream ss, shards_ss;
     LOGGER_TIMING("starting test_trace(trace: %s, nominal cap: %zu, sampled "
                   "cap: %zu, lt: %f, ut: "
                   "%f, mode: %s, shards: %f)",
@@ -85,8 +85,9 @@ run_single_cache(std::promise<std::string> ret,
                   upper_ratio,
                   LifeTimeCacheMode__str(lifetime_cache_mode),
                   shards_ratio);
-    p.print_statistics(ss);
-    FixedRateShardsSampler__json(ss, frss);
+
+    FixedRateShardsSampler__json(shards_ss, frss, false);
+    p.print_statistics(ss, {{"SHARDS", shards_ss.str()}});
     ret.set_value(ss.str());
     FixedRateShardsSampler__destroy(&frss);
 

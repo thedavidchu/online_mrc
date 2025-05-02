@@ -484,13 +484,19 @@ PredictiveCache::statistics() const
 
 /// @note   I do not escape any JSON-dangerous sequences in the key or values.
 static std::string
-jsonify_string_string_map(std::map<std::string, std::string> const &map)
+jsonify_string_string_map(std::map<std::string, std::string> const &map,
+                          bool const value_is_string = true)
 {
     std::stringstream ss;
     ss << "{";
     size_t i = 0;
     for (auto [k, v] : map) {
-        ss << "\"" << k << "\": \"" << v << "\"";
+        ss << "\"" << k << "\": ";
+        if (value_is_string) {
+            ss << "\"" << v << "\"";
+        } else {
+            ss << v;
+        }
         if (!is_last(i++, map.size())) {
             ss << ", ";
         }
@@ -500,7 +506,9 @@ jsonify_string_string_map(std::map<std::string, std::string> const &map)
 }
 
 void
-PredictiveCache::print_statistics(std::ostream &ostrm) const
+PredictiveCache::print_statistics(
+    std::ostream &ostrm,
+    std::map<std::string, std::string> extras) const
 {
     auto r = lifetime_cache_.thresholds();
     ostrm << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
@@ -518,6 +526,7 @@ PredictiveCache::print_statistics(std::ostream &ostrm) const
           << format_engineering(lifetime_cache_.evictions())
           << ", \"Lower Threshold\": " << format_time(r.first)
           << ", \"Upper Threshold\": " << format_time(r.second)
-          << ", \"Kwargs\": " << jsonify_string_string_map(kwargs_) << "}"
+          << ", \"Kwargs\": " << jsonify_string_string_map(kwargs_, true)
+          << ", \"Extras\": " << jsonify_string_string_map(extras, false) << "}"
           << std::endl;
 }

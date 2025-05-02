@@ -142,8 +142,11 @@ public:
     CacheStatistics const &
     statistics() const;
 
+    /// @param  extras: extra things to print in the statistics. The
+    ///                 values are taken literally without quoting.
     void
-    print_statistics(std::ostream &ostrm = std::cout) const;
+    print_statistics(std::ostream &ostrm = std::cout,
+                     std::map<std::string, std::string> extras = {}) const;
 
 private:
     static constexpr bool DEBUG = false;
