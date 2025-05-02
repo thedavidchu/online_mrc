@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cpp_lib/temporal_data.hpp"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -8,6 +9,16 @@ using uint64_t = std::uint64_t;
 
 struct CacheStatistics {
 private:
+    bool
+    should_sample();
+
+    void
+    sample();
+
+    /// @brief  This hook should be called on every public cache action.
+    void
+    register_cache_action();
+
     void
     hit(uint64_t const size_bytes);
     void
@@ -110,7 +121,7 @@ public:
     uint64_t miss_ops_ = 0;
     uint64_t miss_bytes_ = 0;
 
-    // Aggregate statistics
+    // --- Aggregate statistics ---
     uint64_t size_ = 0;
     uint64_t max_size_ = 0;
 
@@ -136,4 +147,11 @@ public:
     // sure if this is truly the upperbound because LRU+TTLs is a non-
     // stack algorithm.
     uint64_t upperbound_ttl_wss_ = 0;
+
+    // --- Averaged Statistics ---
+    uint64_t sampling_counter_ = 0;
+    // We want to let the cache warm up before collecting statistics, so
+    // we choose a moderately large sampling rate.
+    uint64_t sampling_period_ = 1 << 20;
+    TemporalData temporal_sizes_;
 };

@@ -1,6 +1,8 @@
 #include "cpp_lib/cache_statistics.hpp"
+#include "arrays/is_last.h"
 #include "cpp_lib/format_measurement.hpp"
 #include "logger/logger.h"
+#include "math/saturation_arithmetic.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -29,6 +31,31 @@ get_ms()
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return tv.tv_usec / 1000 + 1000 * tv.tv_sec;
+}
+
+bool
+CacheStatistics::should_sample()
+{
+    bool r = is_last(sampling_counter_ % sampling_period_, sampling_period_);
+    // I start counting from 0, so I ensure that the counter is incremented
+    // after the check.
+    ++sampling_counter_;
+    return r;
+}
+
+void
+CacheStatistics::sample()
+{
+    temporal_sizes_.update(size_);
+    saturation_multiply(2, sampling_period_);
+}
+
+void
+CacheStatistics::register_cache_action()
+{
+    if (should_sample()) {
+        sample();
+    }
 }
 
 void
@@ -92,6 +119,7 @@ CacheStatistics::skip(uint64_t const size_bytes)
     upperbound_ttl_wss_ += size_bytes;
 
     miss(size_bytes);
+    register_cache_action();
 }
 
 void
@@ -111,6 +139,7 @@ CacheStatistics::insert(uint64_t const size_bytes)
     upperbound_ttl_wss_ += size_bytes;
 
     miss(size_bytes);
+    register_cache_action();
 }
 
 void
@@ -131,6 +160,7 @@ CacheStatistics::update(uint64_t const old_size_bytes,
     // This changes the old semantics, where I would update the cache
     // hit based on the new size.
     hit(old_size_bytes);
+    register_cache_action();
 }
 
 void
@@ -144,6 +174,8 @@ CacheStatistics::lru_evict(uint64_t const size_bytes)
 
     resident_objs_ -= 1;
     // Cannot set a new maximum number of resident objects.
+
+    register_cache_action();
 }
 
 void
@@ -157,6 +189,8 @@ CacheStatistics::no_room_evict(uint64_t const size_bytes)
 
     resident_objs_ -= 1;
     // Cannot set a new maximum number of resident objects.
+
+    register_cache_action();
 }
 
 void
@@ -170,6 +204,8 @@ CacheStatistics::ttl_evict(uint64_t const size_bytes)
 
     resident_objs_ -= 1;
     // Cannot set a new maximum number of resident objects.
+
+    register_cache_action();
 }
 
 void
@@ -185,6 +221,8 @@ CacheStatistics::ttl_expire(uint64_t const size_bytes)
     // Cannot set a new maximum number of resident objects.
 
     upperbound_ttl_wss_ -= size_bytes;
+
+    register_cache_action();
 }
 
 void
@@ -200,6 +238,8 @@ CacheStatistics::lazy_expire(uint64_t const size_bytes)
     // Cannot set a new maximum number of resident objects.
 
     upperbound_ttl_wss_ -= size_bytes;
+
+    register_cache_action();
 }
 
 void
@@ -215,16 +255,21 @@ CacheStatistics::sampling_remove(uint64_t const size_bytes)
     // Cannot set a new maximum number of resident objects.
 
     upperbound_ttl_wss_ -= size_bytes;
+
+    register_cache_action();
 }
 
 void
 CacheStatistics::deprecated_hit()
 {
+    // NOTE The register_cache_action() is called in 'update(...)'.
     update(1, 1);
 }
+
 void
 CacheStatistics::deprecated_miss()
 {
+    // NOTE The register_cache_action() is called in 'insert(...)'.
     insert(1);
 }
 
@@ -337,7 +382,10 @@ CacheStatistics::json() const
        << format_time(sim_start_time_ms_.value_or(0))
        << ", \"sim_end_time_ms\": " << format_time(sim_end_time_ms_.value_or(0))
        << ", \"sim_uptime_ms\": " << format_time(sim_uptime_ms())
-       << ", \"miss rate\": " << miss_rate() << "}";
+       << ", \"miss rate\": " << miss_rate()
+       << ", \"sampling_counter\": " << sampling_counter_
+       << ", \"sampling_period\": " << sampling_period_
+       << ", \"mean_size\": " << temporal_sizes_.mean() << "}";
     return ss.str();
 }
 
