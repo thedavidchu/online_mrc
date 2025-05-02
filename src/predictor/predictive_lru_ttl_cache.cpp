@@ -138,7 +138,7 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 /// @brief  Evict an object in the cache (either due to the eviction
 ///         policy or TTL expiration).
 void
-PredictiveCache::evict(uint64_t const victim_key, EvictionCause const cause)
+PredictiveCache::remove(uint64_t const victim_key, EvictionCause const cause)
 {
     ok(true);
     CacheMetadata &m = map_.at(victim_key);
@@ -210,7 +210,7 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
     }
     // One cannot erase elements from a multimap while also iterating!
     for (auto victim : victims) {
-        evict(victim, EvictionCause::TTL);
+        remove(victim, EvictionCause::TTL);
     }
 }
 
@@ -235,7 +235,7 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes,
     }
     // One cannot evict elements from the map one is iterating over.
     for (auto v : victims) {
-        evict(v, EvictionCause::LRU);
+        remove(v, EvictionCause::LRU);
     }
     return evicted_bytes;
 }
@@ -259,7 +259,7 @@ PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes,
     }
     // One cannot evict elements from the map one is iterating over.
     for (auto v : victims) {
-        evict(v, EvictionCause::VolatileTTL);
+        remove(v, EvictionCause::VolatileTTL);
     }
     return evicted_bytes;
 }
@@ -312,13 +312,13 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
 void
 PredictiveCache::evict_expired_accessed_object(CacheAccess const &access)
 {
-    evict(access.key, EvictionCause::AccessExpired);
+    remove(access.key, EvictionCause::AccessExpired);
 }
 
 void
 PredictiveCache::evict_too_big_accessed_object(CacheAccess const &access)
 {
-    evict(access.key, EvictionCause::NoRoom);
+    remove(access.key, EvictionCause::NoRoom);
 }
 
 bool

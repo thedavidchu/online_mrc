@@ -41,11 +41,18 @@ private:
     /// @brief  Evict an object in the cache (either due to the eviction
     ///         policy or TTL expiration).
     void
-    evict(uint64_t const victim_key, EvictionCause const cause);
+    remove(uint64_t const victim_key, EvictionCause const cause);
 
+    /// @brief  Remove expired objects from the TTL queue. This does not
+    ///         remove expired objects that are not listed in the TTL
+    ///         queue, however.
     void
     evict_expired_objects(uint64_t const current_time_ms);
 
+    /// @brief  Remove the least recently used object(s) in the LRU queue.
+    ///         This only touches objects in the LRU queue so if the
+    ///         globally least recently used object isn't in the LRU
+    ///         queue, it won't be evicted.
     /// @param  target_bytes - the number of bytes to try to evict.
     /// @param  ignored_key - a key that should not be evicted.
     /// @return the number of bytes evicted.
@@ -67,8 +74,12 @@ private:
                        size_t const new_nbytes,
                        std::optional<uint64_t> const ignored_key);
 
+    /// @brief  Remove an expired object that the user is trying to access.
+    ///         c.f. Lazy TTLs.
     void
     evict_expired_accessed_object(CacheAccess const &access);
+
+    /// @brief  Remove an update object whose new size is too big for the cache.
     void
     evict_too_big_accessed_object(CacheAccess const &access);
 
