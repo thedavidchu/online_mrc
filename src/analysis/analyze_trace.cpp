@@ -46,8 +46,7 @@ struct AccessStatistics {
     void
     access(CacheAccess const &access)
     {
-        if (access.command == CacheCommand::Get ||
-            access.command == CacheCommand::Gets) {
+        if (access.is_read()) {
             nr_read += 1;
             if (!valid_time(first_get_time_ms)) {
                 first_get_time_ms = access.timestamp_ms;
@@ -278,7 +277,7 @@ analyze_trace(char const *const trace_path,
         pbar.tick();
         auto &x = trace.get(i);
 
-        if (x.command == CacheCommand::Get) {
+        if (x.is_read()) {
             cnt_gets += 1;
             map[x.key].access(x);
             continue;

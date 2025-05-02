@@ -72,7 +72,7 @@ run_single_cache(std::promise<std::string> ret,
         if (!FixedRateShardsSampler__sample(&frss, access.key)) {
             continue;
         }
-        if (access.command == CacheCommand::Get) {
+        if (access.is_read()) {
             p.access(access);
         }
     }
