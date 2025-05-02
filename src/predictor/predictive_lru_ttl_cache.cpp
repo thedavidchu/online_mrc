@@ -426,14 +426,6 @@ PredictiveCache::access(CacheAccess const &access)
     return 0;
 }
 
-// bool
-// PredictiveCache::remove(uint64_t const key)
-// {
-//     bool const evicted = map_.contains(key);
-//     evict(key, EvictionCause::Sampling);
-//     return evicted;
-// }
-
 size_t
 PredictiveCache::size() const
 {
