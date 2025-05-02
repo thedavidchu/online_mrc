@@ -41,6 +41,11 @@ FixedRateShardsSampler__write_as_json(FILE *stream,
                                       struct FixedRateShardsSampler *me);
 
 #ifdef __cplusplus
+}
+#endif /*!__cplusplus*/
+
+// Here is some C++ only functionality.
+#ifdef __cplusplus
 #include <ostream>
 
 static inline void
@@ -60,6 +65,5 @@ FixedRateShardsSampler__json(std::ostream &s,
     if (newline) {
         s << std::endl;
     }
-}
 }
 #endif /*!__cplusplus*/
