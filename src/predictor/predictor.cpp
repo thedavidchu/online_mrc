@@ -21,6 +21,7 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_command.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/parse_boolean.hpp"
 #include "cpp_lib/parse_measurement.hpp"
 #include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
@@ -42,7 +43,8 @@ run_single_cache(std::promise<std::string> ret,
                  double const lower_ratio,
                  double const upper_ratio,
                  LifeTimeCacheMode const lifetime_cache_mode,
-                 double const shards_ratio)
+                 double const shards_ratio,
+                 bool const show_progress)
 {
     PredictiveCache p(capacity_bytes * shards_ratio,
                       lower_ratio,
@@ -64,7 +66,7 @@ run_single_cache(std::promise<std::string> ret,
                   upper_ratio,
                   LifeTimeCacheMode__str(lifetime_cache_mode),
                   shards_ratio);
-    ProgressBar pbar{trace.size(), id == 0};
+    ProgressBar pbar{trace.size(), show_progress && id == 0};
     p.start_simulation();
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
@@ -101,7 +103,8 @@ run_caches(std::string const &path,
            double const lower_ratio,
            double const upper_ratio,
            LifeTimeCacheMode const lifetime_cache_mode,
-           double const shards_ratio)
+           double const shards_ratio,
+           bool const show_progress)
 {
     CacheAccessTrace trace{path, format, capacity_bytes.size()};
     std::vector<std::thread> workers;
@@ -119,7 +122,8 @@ run_caches(std::string const &path,
                              lower_ratio,
                              upper_ratio,
                              lifetime_cache_mode,
-                             shards_ratio);
+                             shards_ratio,
+                             show_progress);
     }
     for (auto &w : workers) {
         w.join();
@@ -154,12 +158,12 @@ parse_capacities(std::string const &str)
 int
 main(int argc, char *argv[])
 {
-    if (argc != 8) {
+    if (argc != 8 && argc != 9) {
         std::cout
             << "Usage: predictor <trace> <format> <lower_ratio [0.0, 1.0]> "
                "<upper_ratio [0.0, 1.0]> <cache-capacities>+ "
                "<lifetime_cache_mode EvictionTime|LifeTime> "
-               "<shards-ratio [0.0, 1.0]>"
+               "<shards-ratio [0.0, 1.0]> [show_progress=false]"
             << std::endl;
         exit(1);
     }
@@ -173,6 +177,8 @@ main(int argc, char *argv[])
     LifeTimeCacheMode const lifetime_cache_mode =
         LifeTimeCacheMode__parse(argv[6]);
     double const shards_ratio = atof(argv[7]);
+    bool const show_progress =
+        parse_bool_or(argc == 9 ? std::string(argv[8]) : "false", false);
     LOGGER_INFO("Running: %s %s",
                 path.c_str(),
                 CacheTraceFormat__string(format).c_str());
@@ -182,7 +188,8 @@ main(int argc, char *argv[])
                lower_ratio,
                upper_ratio,
                lifetime_cache_mode,
-               shards_ratio);
+               shards_ratio,
+               show_progress);
     std::cout << "OK!" << std::endl;
     return 0;
 }
