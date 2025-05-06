@@ -385,7 +385,7 @@ CacheStatistics::json() const
        << ", \"miss rate\": " << miss_rate()
        << ", \"sampling_counter\": " << sampling_counter_
        << ", \"sampling_period\": " << sampling_period_
-       << ", \"mean_size\": " << temporal_sizes_.mean() << "}";
+       << ", \"mean_size\": " << temporal_sizes_.finite_mean_or(0.0) << "}";
     return ss.str();
 }
 

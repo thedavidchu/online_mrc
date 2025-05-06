@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstddef>
 #include <deque>
 
@@ -23,12 +24,19 @@ public:
         return data_.size();
     }
 
+    /// @note   Skip non-finite (INF or NAN) values; return alternate
+    ///         value if the data array is empty.
     double
-    mean() const
+    finite_mean_or(double const alt) const
     {
         double sum = 0.0;
+        if (data_.size() == 0) {
+            return alt;
+        }
         for (auto d : data_) {
-            sum += d;
+            if (std::isfinite(d)) {
+                sum += d;
+            }
         }
         return sum / data_.size();
     }
