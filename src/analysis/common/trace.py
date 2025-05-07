@@ -40,6 +40,13 @@ TRACE_DTYPE: dict[str, np.dtype] = {
             ("client_id", np.uint32),
         ]
     ),
+    "TimeSizeTTL": np.dtype(
+        [
+            ("timestamp_ms", np.uint64),
+            ("size_b", np.uint32),
+            ("ttl_ms", np.float64),
+        ],
+    ),
 }
 
 TRACE_DTYPE_KEY = list(TRACE_DTYPE.keys())
@@ -67,6 +74,59 @@ YANG_OP_NAMES = {
     14: "UPDATE",
     255: "INVALID",
 }
+
+
+def convert_to_time_size_ttl(
+    src: np.ndarray, format: str, dst: np.ndarray, process_ttl: bool = False
+):
+    """Convert other formats to the TimeSizeTTL format for analysis.
+
+    NOTE    I thought there was a major performance difference (3x)
+            between processing the TTL versus not. Initially, I measured
+            it to be around 25 s vs 7 s. However, I don't notice the
+            difference anymore. I'm leaving the parameter in though, not
+            just to pollute my code base with dead code. TBH processing
+            the data is useless because the Numpy histogram doesn't
+            support NAN, so I need to filter out the NANs anyways.
+    """
+    match format:
+        case "Sari":
+            dst[:]["timestamp_ms"] = 1000 * src[:]["timestamp_s"]
+            dst[:]["size_b"] = src[:]["size_b"]
+            dst[:]["ttl_ms"] = 1000 * src[:]["ttl_s"]
+        case "Kia":
+            dst[:]["timestamp_ms"] = src[:]["timestamp_ms"]
+            dst[:]["size_b"] = src[:]["size_b"]
+            if not process_ttl:
+                dst[:]["ttl_ms"] = 1000 * src[:]["ttl_s"]
+            else:
+                dst[:]["ttl_ms"] = np.where(
+                    src[:]["command"] == 0,
+                    np.nan,
+                    np.where(src[:]["ttl_s"] != 0, 1000 * src[:]["ttl_s"], np.inf),
+                )
+        case "YangTwitterX":
+            dst[:]["timestamp_ms"] = src[:]["timestamp_s"]
+            dst[:]["size_b"] = (src[:]["key_value_size_b"] >> 22) + (
+                src[:]["key_value_size_b"] & 0x003F_FFFF
+            )
+            if not process_ttl:
+                dst[:]["ttl_ms"] = 1000 * (src[:]["op_ttl_s"] & 0x00FF_FFFF)
+            else:
+                dst[:]["ttl_ms"] = np.where(
+                    (src[:]["op_ttl_s"] >> 24) not in range(3, 255),
+                    np.nan,
+                    np.where(
+                        src[:]["op_ttl_s"] & 0x00FF_FFFF != 0,
+                        1000 * (src[:]["op_ttl_s"] & 0x00FF_FFFF),
+                        np.inf,
+                    ),
+                )
+        case "TimeSizeTTL":
+            dst[:] = src[:]
+        case _:
+            raise ValueError(f"unrecognized format '{format}'")
+
 
 # NOTE  Default date format is: datefmt=r"%Y-%m-%d %H:%M:%S"
 #       according to https://docs.python.org/3/howto/logging.html#formatters.

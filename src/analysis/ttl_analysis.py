@@ -43,24 +43,19 @@ import matplotlib.pyplot as plt
 
 from src.analysis.common.trace import (
     read_trace,
+    convert_to_time_size_ttl,
     TRACE_DTYPE,
     TRACE_DTYPE_KEY,
 )
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_DTYPE = np.dtype(
-    [
-        ("timestamp_ms", np.uint64),
-        ("size_b", np.uint32),
-        ("ttl_ms", np.uint32),
-    ],
-)
+ANALYSIS_DTYPE = TRACE_DTYPE["TimeSizeTTL"]
 
 
 def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
     """Create a mask of which TTLs are valid."""
-    assert trace_format in {"Kia", "Sari"}
+    assert trace_format in TRACE_DTYPE_KEY
     assert tmpdir.exists()
 
     mask = np.memmap(tmpdir / "mask.bin", dtype=bool, mode="w+", shape=data.shape)
@@ -87,6 +82,11 @@ def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
         #       'puts & mortals', but this leads to the error:
         #       'ValueError: The truth value of an array with more than
         #       one element is ambiguous. Use a.any() or a.all()'.
+        mask[:] = np.logical_and(puts, mortals)
+        mask.flush()
+    elif trace_format == "YangTwitterX":
+        puts = (data[:]["op_ttl_s"] >> 24) not in range(3, 255)
+        mortals = (data[:]["op_ttl_s"] & 0x00FF_FFFF) != 0
         mask[:] = np.logical_and(puts, mortals)
         mask.flush()
     return mask, mask.sum()
@@ -118,17 +118,7 @@ def shuffle_data(tmpdir: Path, file: str, data: np.memmap, format: str) -> np.me
     shfl_data = np.memmap(
         tmpdir / file, dtype=ANALYSIS_DTYPE, mode="w+", shape=len(data)
     )
-    match format:
-        case "Sari":
-            shfl_data[:]["timestamp_ms"] = 1000 * data[:]["timestamp_s"]
-            shfl_data[:]["size_b"] = data[:]["size_b"]
-            shfl_data[:]["ttl_ms"] = 1000 * data[:]["ttl_s"]
-        case "Kia":
-            shfl_data[:]["timestamp_ms"] = data[:]["timestamp_ms"]
-            shfl_data[:]["size_b"] = data[:]["size_b"]
-            shfl_data[:]["ttl_ms"] = 1000 * data[:]["ttl_s"]
-        case _:
-            raise ValueError(f"unrecognized format '{format}'")
+    convert_to_time_size_ttl(data, format, shfl_data)
     shfl_data.flush()
     shfl_data = np.memmap(tmpdir / file, dtype=ANALYSIS_DTYPE, mode="readonly")
     return shfl_data
