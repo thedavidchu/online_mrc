@@ -90,7 +90,7 @@ run_ttl_modified_clock_cache(CacheAccessTrace const &trace,
     assert(statistics.total_ops() < trace.size());
     statistics.print("LRU by TTLs", capacity);
 
-    return statistics.miss_rate();
+    return statistics.miss_ratio();
 }
 
 static inline std::optional<std::map<std::uint64_t, double>>

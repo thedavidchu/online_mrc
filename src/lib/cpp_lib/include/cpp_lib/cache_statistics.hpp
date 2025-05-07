@@ -72,7 +72,7 @@ public:
     uint64_t
     total_bytes() const;
     double
-    miss_rate() const;
+    miss_ratio() const;
     uint64_t
     uptime_ms() const;
     uint64_t

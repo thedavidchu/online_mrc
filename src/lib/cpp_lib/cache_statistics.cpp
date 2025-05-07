@@ -283,7 +283,7 @@ CacheStatistics::total_bytes() const
 }
 
 double
-CacheStatistics::miss_rate() const
+CacheStatistics::miss_ratio() const
 {
     uint64_t total_bytes_ = hit_bytes_ + miss_bytes_;
     if (total_bytes_ == 0) {
@@ -373,10 +373,10 @@ CacheStatistics::json() const
        << format_time(sim_start_time_ms_.value_or(0))
        << ", \"sim_end_time_ms\": " << format_time(sim_end_time_ms_.value_or(0))
        << ", \"sim_uptime_ms\": " << format_time(sim_uptime_ms())
-       << ", \"miss rate\": " << miss_rate()
+       << ", \"Miss Ratio\": " << miss_ratio()
        << ", \"sampling_counter\": " << sampling_counter_
        << ", \"sampling_period\": " << sampling_period_
-       << ", \"mean_size\": " << temporal_sizes_.finite_mean_or(0.0) << "}";
+       << ", \"Mean Size [B]\": " << temporal_sizes_.finite_mean_or(0.0) << "}";
     return ss.str();
 }
 

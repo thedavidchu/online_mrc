@@ -340,7 +340,7 @@ public:
                   << format_engineering(statistics_.insert_ops_)
                   << ", \"Number of Updates\": "
                   << format_engineering(statistics_.update_ops_)
-                  << ", \"Miss Ratio\": " << statistics_.miss_rate()
+                  << ", \"Miss Ratio\": " << statistics_.miss_ratio()
                   << ", \"Statistics\": " << statistics_.json() << "}"
                   << std::endl;
     }

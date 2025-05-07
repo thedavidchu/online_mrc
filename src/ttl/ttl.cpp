@@ -48,7 +48,7 @@ run_cache(CacheAccessTrace const &trace, uint64_t const capacity)
     }
     assert(cache.statistics_.total_ops() < trace.size());
     cache.statistics_.print(T::name, capacity);
-    return cache.statistics_.miss_rate();
+    return cache.statistics_.miss_ratio();
 }
 
 template <typename T>
