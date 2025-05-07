@@ -105,13 +105,13 @@ private:
         // Update metadata tracking
         switch (cause) {
         case EvictionCause::LRU:
-            statistics_.lru_evict(m.size_);
+            statistics_.lru_evict(m.size_, 0);
             break;
         case EvictionCause::TTL:
             statistics_.ttl_expire(m.size_);
             break;
         case EvictionCause::NoRoom:
-            statistics_.no_room_evict(m.size_);
+            statistics_.no_room_evict(m.size_, 0);
             break;
         default:
             assert(0 && "impossible");

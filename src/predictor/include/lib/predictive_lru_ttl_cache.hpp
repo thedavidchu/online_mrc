@@ -41,7 +41,9 @@ private:
     /// @brief  Evict an object in the cache (either due to the eviction
     ///         policy or TTL expiration).
     void
-    remove(uint64_t const victim_key, EvictionCause const cause);
+    remove(uint64_t const victim_key,
+           EvictionCause const cause,
+           CacheAccess const *const current_access);
 
     /// @brief  Remove expired objects from the TTL queue. This does not
     ///         remove expired objects that are not listed in the TTL
@@ -54,25 +56,19 @@ private:
     ///         globally least recently used object isn't in the LRU
     ///         queue, it won't be evicted.
     /// @param  target_bytes - the number of bytes to try to evict.
-    /// @param  ignored_key - a key that should not be evicted.
     /// @return the number of bytes evicted.
     uint64_t
-    evict_from_lru(uint64_t const target_bytes,
-                   std::optional<uint64_t> const ignored_key);
+    evict_from_lru(uint64_t const target_bytes, CacheAccess const &access);
 
     /// @brief  Get the soonest expiring keys that would be enough to
     ///         make sufficient room in the cache.
     /// @param  target_bytes - the number of bytes to try to evict.
-    /// @param  ignored_key - a key that should not be evicted.
     /// @return the number of bytes evicted.
     uint64_t
-    evict_smallest_ttl(uint64_t const target_bytes,
-                       std::optional<uint64_t> const ignored_key);
+    evict_smallest_ttl(uint64_t const target_bytes, CacheAccess const &access);
 
     bool
-    ensure_enough_room(size_t const old_nbytes,
-                       size_t const new_nbytes,
-                       std::optional<uint64_t> const ignored_key);
+    ensure_enough_room(size_t const old_nbytes, CacheAccess const &access);
 
     /// @brief  Remove an expired object that the user is trying to access.
     ///         c.f. Lazy TTLs.

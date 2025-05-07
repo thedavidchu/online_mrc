@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cpp_lib/eviction_counter.hpp"
 #include "cpp_lib/temporal_data.hpp"
 #include <cstdint>
 #include <optional>
@@ -41,15 +42,21 @@ public:
     void
     update(uint64_t const old_size_bytes, uint64_t const new_size_bytes);
     void
-    lru_evict(uint64_t const size_bytes);
+    lru_evict(uint64_t const size_bytes, double const remaining_lifespan_ms);
     void
-    no_room_evict(uint64_t const size_bytes);
+    no_room_evict(uint64_t const size_bytes,
+                  double const remaining_lifespan_ms);
     void
-    ttl_evict(uint64_t const size_bytes);
+    ttl_evict(uint64_t const size_bytes, double const remaining_lifespan_ms);
     void
     ttl_expire(uint64_t const size_bytes);
+    /// @note   The TTL should be negative (because it expired in the past).
     void
-    lazy_expire(uint64_t const size_bytes);
+    lazy_expire(uint64_t const size_bytes,
+                uint64_t const remaining_lifespan_ms);
+    /// @todo   Add remaining lifespan parameter [ms] to this.
+    ///         I didn't because this function isn't even used AFAIK so
+    ///         it would be a waste of time.
     void
     sampling_remove(uint64_t const size_bytes);
 
@@ -95,22 +102,15 @@ public:
     uint64_t update_ops_ = 0;
     uint64_t update_bytes_ = 0;
 
-    uint64_t lru_evict_ops_ = 0;
-    uint64_t lru_evict_bytes_ = 0;
-
-    uint64_t no_room_ops_ = 0;
-    uint64_t no_room_bytes_ = 0;
-
+    EvictionCounter lru_evict_;
+    // Evictions because the object is too big on update.
+    EvictionCounter no_room_evict_;
     // Evictions by the secondary eviction policy, volatile TTLs.
-    uint64_t ttl_evict_ops_ = 0;
-    uint64_t ttl_evict_bytes_ = 0;
-
-    uint64_t ttl_expire_ops_ = 0;
-    uint64_t ttl_expire_bytes_ = 0;
-
+    EvictionCounter ttl_evict_;
+    // Expirations done proactively.
+    EvictionCounter ttl_expire_;
     // Expirations done non-actively.
-    uint64_t lazy_expire_ops_ = 0;
-    uint64_t lazy_expire_bytes_ = 0;
+    EvictionCounter ttl_lazy_expire_;
 
     uint64_t sampling_remove_ops_ = 0;
     uint64_t sampling_remove_bytes_ = 0;

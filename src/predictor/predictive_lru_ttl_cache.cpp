@@ -20,7 +20,6 @@
 #include <glib.h>
 #include <iostream>
 #include <map>
-#include <optional>
 #include <ostream>
 #include <sstream>
 #include <stdlib.h>
@@ -138,7 +137,9 @@ PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
 /// @brief  Evict an object in the cache (either due to the eviction
 ///         policy or TTL expiration).
 void
-PredictiveCache::remove(uint64_t const victim_key, EvictionCause const cause)
+PredictiveCache::remove(uint64_t const victim_key,
+                        EvictionCause const cause,
+                        CacheAccess const *const current_access)
 {
     ok(true);
     CacheMetadata &m = map_.at(victim_key);
@@ -148,7 +149,8 @@ PredictiveCache::remove(uint64_t const victim_key, EvictionCause const cause)
     // Update metadata tracking
     switch (cause) {
     case EvictionCause::LRU:
-        statistics_.lru_evict(m.size_);
+        assert(current_access != NULL);
+        statistics_.lru_evict(m.size_, m.ttl_ms(current_access->timestamp_ms));
         if (statistics_.current_time_ms_ <= exp_tm) {
             // Not yet expired.
             pred_tracker.update_correctly_evicted(sz_bytes);
@@ -165,13 +167,16 @@ PredictiveCache::remove(uint64_t const victim_key, EvictionCause const cause)
         }
         break;
     case EvictionCause::VolatileTTL:
-        statistics_.ttl_evict(m.size_);
+        assert(current_access != NULL);
+        statistics_.ttl_evict(m.size_, m.ttl_ms(current_access->timestamp_ms));
         // NOTE This isn't exactly the correct classification...
         //      It wasn't expired, but rather it was the soonest-to-expire.
         pred_tracker.update_wrongly_expired(sz_bytes);
         break;
     case EvictionCause::AccessExpired:
-        statistics_.lazy_expire(m.size_);
+        assert(current_access != NULL);
+        statistics_.lazy_expire(m.size_,
+                                m.ttl_ms(current_access->timestamp_ms));
         // NOTE This isn't exactly the correct classification...
         //      It wasn't evicted by LRU, it was evicted by
         //      reaccessing an expired object. However, it would
@@ -179,7 +184,9 @@ PredictiveCache::remove(uint64_t const victim_key, EvictionCause const cause)
         pred_tracker.update_wrongly_evicted(sz_bytes);
         break;
     case EvictionCause::NoRoom:
-        statistics_.no_room_evict(m.size_);
+        assert(current_access != NULL);
+        statistics_.no_room_evict(m.size_,
+                                  m.ttl_ms(current_access->timestamp_ms));
         // NOTE This isn't exactly the correct classification...
         //      It wasn't evicted by LRU, it was evicted by
         //      running out of space in the cache for a re-accessed item.
@@ -210,23 +217,24 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
     }
     // One cannot erase elements from a multimap while also iterating!
     for (auto victim : victims) {
-        remove(victim, EvictionCause::TTL);
+        remove(victim, EvictionCause::TTL, nullptr);
     }
 }
 
 /// @return number of bytes evicted.
 uint64_t
 PredictiveCache::evict_from_lru(uint64_t const target_bytes,
-                                std::optional<uint64_t> const ignored_key)
+                                CacheAccess const &access)
 {
     ok(true);
+    uint64_t const ignored_key = access.key;
     uint64_t evicted_bytes = 0;
     std::vector<uint64_t> victims;
     for (auto n : lru_cache_) {
         if (evicted_bytes >= target_bytes) {
             break;
         }
-        if (ignored_key.has_value() && n->key == ignored_key.value()) {
+        if (n->key == ignored_key) {
             continue;
         }
         auto &m = map_.at(n->key);
@@ -235,22 +243,23 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes,
     }
     // One cannot evict elements from the map one is iterating over.
     for (auto v : victims) {
-        remove(v, EvictionCause::LRU);
+        remove(v, EvictionCause::LRU, &access);
     }
     return evicted_bytes;
 }
 
 uint64_t
 PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes,
-                                    std::optional<uint64_t> const ignored_key)
+                                    CacheAccess const &access)
 {
+    uint64_t const ignored_key = access.key;
     uint64_t evicted_bytes = 0;
     std::vector<uint64_t> victims;
     for (auto [tm, key] : ttl_cache_) {
         if (evicted_bytes >= target_bytes) {
             break;
         }
-        if (ignored_key.has_value() && key == ignored_key.value()) {
+        if (key == ignored_key) {
             continue;
         }
         auto &m = map_.at(key);
@@ -259,16 +268,16 @@ PredictiveCache::evict_smallest_ttl(uint64_t const target_bytes,
     }
     // One cannot evict elements from the map one is iterating over.
     for (auto v : victims) {
-        remove(v, EvictionCause::VolatileTTL);
+        remove(v, EvictionCause::VolatileTTL, &access);
     }
     return evicted_bytes;
 }
 
 bool
 PredictiveCache::ensure_enough_room(size_t const old_nbytes,
-                                    size_t const new_nbytes,
-                                    std::optional<uint64_t> const ignored_key)
+                                    CacheAccess const &access)
 {
+    size_t const new_nbytes = access.key_size_b + access.value_size_b;
     assert(size_ <= capacity_);
     // We already have enough room if we're not increasing the data.
     if (old_nbytes >= new_nbytes) {
@@ -291,7 +300,7 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
         return true;
     }
     uint64_t const reqd_b = nbytes - (capacity_ - size_);
-    uint64_t const lru_evicted_b = evict_from_lru(reqd_b, ignored_key);
+    uint64_t const lru_evicted_b = evict_from_lru(reqd_b, access);
     if (lru_evicted_b >= reqd_b) {
         return true;
     }
@@ -299,7 +308,7 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
     // have enough elements to create enough room, since it doesn't
     // have all the elements in it.
     uint64_t const ttl_evicted_b =
-        evict_smallest_ttl(reqd_b - lru_evicted_b, ignored_key);
+        evict_smallest_ttl(reqd_b - lru_evicted_b, access);
     if (lru_evicted_b + ttl_evicted_b >= reqd_b) {
         return true;
     }
@@ -312,13 +321,13 @@ PredictiveCache::ensure_enough_room(size_t const old_nbytes,
 void
 PredictiveCache::evict_expired_accessed_object(CacheAccess const &access)
 {
-    remove(access.key, EvictionCause::AccessExpired);
+    remove(access.key, EvictionCause::AccessExpired, &access);
 }
 
 void
 PredictiveCache::evict_too_big_accessed_object(CacheAccess const &access)
 {
-    remove(access.key, EvictionCause::NoRoom);
+    remove(access.key, EvictionCause::NoRoom, &access);
 }
 
 bool
@@ -332,7 +341,7 @@ void
 PredictiveCache::hit(CacheAccess const &access)
 {
     auto &metadata = map_.at(access.key);
-    if (!ensure_enough_room(metadata.size_, access.value_size_b, access.key)) {
+    if (!ensure_enough_room(metadata.size_, access)) {
         statistics_.skip(access.value_size_b);
         evict_too_big_accessed_object(access);
         if (DEBUG) {
@@ -346,7 +355,7 @@ PredictiveCache::hit(CacheAccess const &access)
 bool
 PredictiveCache::miss(CacheAccess const &access)
 {
-    if (!ensure_enough_room(0, access.value_size_b, {})) {
+    if (!ensure_enough_room(0, access)) {
         if (DEBUG) {
             LOGGER_WARN("not enough room to insert!");
         }
