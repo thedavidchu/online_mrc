@@ -44,6 +44,7 @@ import matplotlib.pyplot as plt
 from src.analysis.common.trace import (
     read_trace,
     TRACE_DTYPE,
+    TRACE_DTYPE_KEY,
 )
 
 logger = logging.getLogger(__name__)
@@ -174,7 +175,7 @@ def load_or_create_ttl_histogram(
     trace_path: Path, trace_format: Path, tmp_prefix: str, histogram_path: Path
 ) -> tuple[np.memmap, np.memmap, np.memmap, np.memmap]:
     if histogram_path is None:
-        logger.info(f"Creating histogram from {str(trace_path)}")
+        logger.info(f"Creating histogram from {str(trace_path)} (no cache)")
         hist, ttl_edges, size_edges, timestamp_edges = create_ttl_histogram(
             trace_path, trace_format, tmp_prefix
         )
@@ -307,7 +308,7 @@ def main():
         "--format",
         "-f",
         type=str,
-        choices=["Kia", "Sari"],
+        choices=TRACE_DTYPE_KEY,
         default="Kia",
         help="input trace format",
     )
@@ -323,12 +324,14 @@ def main():
     )
     parser.add_argument(
         "--plot-correlated",
+        "-c",
         type=Path,
         default=None,
         help="output path for plot of TTL correlated with size and timestamp.",
     )
     parser.add_argument(
         "--plot-independent",
+        "-n",
         type=Path,
         default=None,
         help="output path for plot of TTL, size, and timestamp independently.",
@@ -369,9 +372,9 @@ def main():
     # lead to these NEVER evaluating to True. For example, if I got the
     # number of elements in the list wrong, then it would always result
     # in a False evaluation.
-    if [args.histogram, args.plot_correlated, args.plot_independent] == [None] * 3:
+    if {args.histogram, args.plot_correlated, args.plot_independent} == {None}:
         raise ValueError("no useful work!")
-    elif [args.plot_correlated, args.plot_independent] == [None] * 2:
+    elif {args.plot_correlated, args.plot_independent} == {None}:
         warn("no output plot specified!")
     elif args.plot_correlated == args.plot_independent:
         # We know these paths are not None, since we checked that in an
