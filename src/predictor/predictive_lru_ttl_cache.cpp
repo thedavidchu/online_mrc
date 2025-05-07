@@ -32,9 +32,11 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
+/// @note   An object is expired when its expiration time is past.
 static inline bool
 object_is_expired(uint64_t expiration_time, uint64_t current_time)
 {
+    // An object at its expiration time is still valid; past is invalid.
     return current_time > expiration_time;
 }
 
