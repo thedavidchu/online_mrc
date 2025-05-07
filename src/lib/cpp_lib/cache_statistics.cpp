@@ -222,7 +222,7 @@ CacheStatistics::ttl_expire(uint64_t const size_bytes)
 }
 
 void
-CacheStatistics::lazy_expire(uint64_t const size_bytes, uint64_t const ttl_ms)
+CacheStatistics::lazy_expire(uint64_t const size_bytes, double const ttl_ms)
 {
     ttl_lazy_expire_.evict(size_bytes, ttl_ms);
 

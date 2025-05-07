@@ -52,8 +52,7 @@ public:
     ttl_expire(uint64_t const size_bytes);
     /// @note   The TTL should be negative (because it expired in the past).
     void
-    lazy_expire(uint64_t const size_bytes,
-                uint64_t const remaining_lifespan_ms);
+    lazy_expire(uint64_t const size_bytes, double const remaining_lifespan_ms);
     /// @todo   Add remaining lifespan parameter [ms] to this.
     ///         I didn't because this function isn't even used AFAIK so
     ///         it would be a waste of time.
