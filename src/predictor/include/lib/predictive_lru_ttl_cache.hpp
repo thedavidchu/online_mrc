@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
-#include <optional>
 #include <ostream>
 #include <stdlib.h>
 #include <sys/types.h>
