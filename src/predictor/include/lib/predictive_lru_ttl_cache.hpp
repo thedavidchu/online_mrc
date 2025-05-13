@@ -1,5 +1,14 @@
 #pragma once
 
+#include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/remaining_lifetime.hpp"
+#include "cpp_struct/hash_list.hpp"
+#include "lib/eviction_cause.hpp"
+#include "lib/lifetime_cache.hpp"
+#include "lib/lru_ttl_cache.hpp"
+#include "lib/prediction_tracker.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -8,18 +17,9 @@
 #include <map>
 #include <ostream>
 #include <stdlib.h>
+#include <string>
 #include <sys/types.h>
 #include <unordered_map>
-
-#include "cpp_lib/cache_access.hpp"
-#include "cpp_lib/cache_metadata.hpp"
-#include "cpp_lib/cache_statistics.hpp"
-#include "cpp_struct/hash_list.hpp"
-
-#include "lib/eviction_cause.hpp"
-#include "lib/lifetime_cache.hpp"
-#include "lib/lru_ttl_cache.hpp"
-#include "lib/prediction_tracker.hpp"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
@@ -127,6 +127,13 @@ public:
 
     CacheMetadata const *
     get(uint64_t const key);
+
+    std::string
+    record_remaining_lifetime(CacheAccess const &access) const
+    {
+        RemainingLifetime rl{lru_cache_, map_, access.timestamp_ms, 100};
+        return rl.json();
+    }
 
     void
     print();

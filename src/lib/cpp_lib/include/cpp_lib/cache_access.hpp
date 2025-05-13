@@ -3,12 +3,10 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <optional>
 #include <string>
 
 #include "cpp_lib/cache_command.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
-#include "trace/trace.h"
 
 using uint64_t = std::uint64_t;
 using uint32_t = std::uint32_t;

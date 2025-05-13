@@ -7,7 +7,6 @@ hash_list_dep = declare_dependency(
         include_directories: cpp_struct_inc,
         dependencies: [
             common_dep,
-            cpp_lib_dep,
         ],
     ),
     include_directories: cpp_struct_inc,

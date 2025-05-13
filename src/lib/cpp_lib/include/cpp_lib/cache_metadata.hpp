@@ -64,6 +64,9 @@ struct CacheMetadata {
     void
     unvisit();
 
+    /// @brief  Return the TTL from the current time.
+    /// @note   This may be negative (meaning it has expired by the
+    ///         magnitude).
     double
     ttl_ms(uint64_t const current_time_ms) const;
 };

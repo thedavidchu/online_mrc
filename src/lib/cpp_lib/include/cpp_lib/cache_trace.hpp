@@ -2,7 +2,6 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
 
-#include "cpp_lib/progress_bar.hpp"
 #include "io/io.h"
 
 #include <cassert>
@@ -36,6 +35,12 @@ public:
     /// @brief  Get the thing and potentially wait for a barrier.
     CacheAccess const
     get_wait(size_t const i);
+
+    CacheAccess const
+    front() const;
+
+    CacheAccess const
+    back() const;
 
 private:
     static constexpr size_t SYNC_SIZE = 1024;

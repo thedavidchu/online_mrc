@@ -96,6 +96,22 @@ cache_trace_dep = declare_dependency(
     ],
 )
 
+remaining_lifetime_dep = declare_dependency(
+    link_with: library(
+        'remaining_lifetime_lib',
+        'remaining_lifetime.cpp',
+        include_directories: cpp_lib_inc,
+        dependencies: [
+            cache_metadata_dep,
+            cpp_struct_dep,
+        ],
+    ),
+    dependencies: [
+        cache_metadata_dep,
+        cpp_struct_dep,
+    ],
+)
+
 # Bundled dependencies
 cpp_lib_dep = declare_dependency(
     dependencies: [
@@ -106,6 +122,7 @@ cpp_lib_dep = declare_dependency(
         cache_trace_dep,
         cache_trace_format,
         cache_command_dep,
+        remaining_lifetime_dep,
     ],
     include_directories: cpp_lib_inc,
 )

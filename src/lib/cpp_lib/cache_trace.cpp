@@ -95,3 +95,21 @@ CacheAccessTrace::get_wait(size_t const i)
     }
     return CacheAccess{&((uint8_t *)mm_.buffer)[i * bytes_per_obj_], format_};
 }
+
+CacheAccess const
+CacheAccessTrace::front() const
+{
+    if (size() == 0) {
+        return CacheAccess{0, 0, 0, 0};
+    }
+    return get(0);
+}
+
+CacheAccess const
+CacheAccessTrace::back() const
+{
+    if (size() == 0) {
+        return CacheAccess{0, 0, 0, 0};
+    }
+    return get(size() - 1);
+}

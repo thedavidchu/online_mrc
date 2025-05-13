@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "arrays/is_last.h"
 #include <cstring>
 #include <map>
 #include <sstream>
