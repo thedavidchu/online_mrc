@@ -2,6 +2,7 @@
 
 #include "cpp_lib/eviction_counter.hpp"
 #include "cpp_lib/temporal_data.hpp"
+#include "cpp_lib/temporal_sampler.hpp"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -148,9 +149,6 @@ public:
     uint64_t upperbound_ttl_wss_ = 0;
 
     // --- Averaged Statistics ---
-    uint64_t sampling_counter_ = 0;
-    // We want to let the cache warm up before collecting statistics, so
-    // we choose a moderately large sampling rate.
-    uint64_t sampling_period_ = 1 << 20;
+    TemporalSampler temporal_sampler_{};
     TemporalData temporal_sizes_;
 };

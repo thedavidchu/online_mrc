@@ -36,18 +36,13 @@ get_ms()
 bool
 CacheStatistics::should_sample()
 {
-    bool r = is_last(sampling_counter_ % sampling_period_, sampling_period_);
-    // I start counting from 0, so I ensure that the counter is incremented
-    // after the check.
-    ++sampling_counter_;
-    return r;
+    return temporal_sampler_.should_sample(current_time_ms_.value_or(0));
 }
 
 void
 CacheStatistics::sample()
 {
     temporal_sizes_.update(size_);
-    saturation_multiply(2, sampling_period_);
 }
 
 void
@@ -374,8 +369,7 @@ CacheStatistics::json() const
        << ", \"sim_end_time_ms\": " << format_time(sim_end_time_ms_.value_or(0))
        << ", \"sim_uptime_ms\": " << format_time(sim_uptime_ms())
        << ", \"Miss Ratio\": " << miss_ratio()
-       << ", \"sampling_counter\": " << sampling_counter_
-       << ", \"sampling_period\": " << sampling_period_
+       << ", \"temporal_sampler\": " << temporal_sampler_.json()
        << ", \"Mean Size [B]\": " << temporal_sizes_.finite_mean_or(0.0) << "}";
     return ss.str();
 }
