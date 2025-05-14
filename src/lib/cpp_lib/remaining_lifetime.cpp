@@ -43,9 +43,9 @@ RemainingLifetime::json() const
     std::stringstream ss;
     ss << "{";
     ss << "\".type\": " << "\"RemainingLifetime\", ";
-    ss << "\"nr_samples\": " << nr_samples_ << ", ";
-    ss << "\"sizes\": " << vec2str(sizes_) << ", ";
-    ss << "\"remaining_lifetimes\": " << vec2str(remaining_lifetimes_);
+    ss << "\"Samples [#]\": " << nr_samples_ << ", ";
+    ss << "\"Cache Sizes [B]\": " << vec2str(sizes_) << ", ";
+    ss << "\"Remaining Lifetimes [ms]\": " << vec2str(remaining_lifetimes_);
     ss << "}";
     return ss.str();
 }

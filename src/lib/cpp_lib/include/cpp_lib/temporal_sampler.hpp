@@ -39,9 +39,9 @@ public:
         std::stringstream ss;
         ss << "{";
         ss << "\".type\": \"TemporalSampler\", ";
-        ss << "\"sampling_period\": " << format_time(sampling_period_ms_)
+        ss << "\"Sampling Period [ms]\": " << format_time(sampling_period_ms_)
            << ", ";
-        ss << "\"last_sampled_time\": "
+        ss << "\"Last Sampled Time [ms]\": "
            << format_time(last_sampled_time_ms_.value_or(0));
         ss << "}";
         return ss.str();

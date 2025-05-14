@@ -529,14 +529,14 @@ PredictiveCache::print_statistics(
           << LifeTimeCacheMode__str(lifetime_cache_.mode())
           << "\", \"CacheStatistics\": " << statistics_.json()
           << ", \"PredictionTracker\": " << pred_tracker.json()
-          << ", \"Numer of Threshold Refreshes\": "
+          << ", \"Threshold Refreshes [#]\": "
           << format_engineering(lifetime_cache_.refreshes())
-          << ", \"Since Refresh\": "
+          << ", \"Time Since Threshold Refresh [ms]\": "
           << format_engineering(lifetime_cache_.since_refresh())
-          << ", \"Evictions\": "
+          << ", \"LRU Lifetime Evictions [#]\": "
           << format_engineering(lifetime_cache_.evictions())
-          << ", \"Lower Threshold\": " << format_time(r.first)
-          << ", \"Upper Threshold\": " << format_time(r.second)
+          << ", \"Lower Threshold [ms]\": " << format_time(r.first)
+          << ", \"Upper Threshold [ms]\": " << format_time(r.second)
           << ", \"Kwargs\": " << jsonify_string_string_map(kwargs_, true)
           << ", \"Extras\": " << jsonify_string_string_map(extras, false) << "}"
           << std::endl;

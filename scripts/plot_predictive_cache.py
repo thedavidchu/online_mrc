@@ -267,8 +267,8 @@ def main():
             *CAPACITY_GIB_ARGS,
             "Evicted + Expired [GiB]",
             lambda d: (
-                get_stat(d, ["CacheStatistics", "total_evict_bytes"])
-                + get_stat(d, ["CacheStatistics", "total_expire_bytes"])
+                get_stat(d, ["CacheStatistics", "Total Evicts [B]"])
+                + get_stat(d, ["CacheStatistics", "Total Expires [B]"])
             ),
             *GiB_SHARDS_ARGS,
         )
@@ -278,8 +278,8 @@ def main():
             *CAPACITY_GIB_ARGS,
             "Properly Evicted + Expired [GiB]",
             lambda d: (
-                get_stat(d, ["CacheStatistics", "lru_evict", "bytes"])
-                + get_stat(d, ["CacheStatistics", "ttl_expire", "bytes"])
+                get_stat(d, ["CacheStatistics", "lru_evict", "[B]"])
+                + get_stat(d, ["CacheStatistics", "ttl_expire", "[B]"])
             ),
             *GiB_SHARDS_ARGS,
         )
@@ -289,8 +289,8 @@ def main():
             *CAPACITY_GIB_ARGS,
             "Improperly Evicted + Expired [GiB]",
             lambda d: (
-                get_stat(d, ["CacheStatistics", "ttl_evict", "bytes"])
-                + get_stat(d, ["CacheStatistics", "ttl_lazy_expire", "bytes"])
+                get_stat(d, ["CacheStatistics", "ttl_evict", "[B]"])
+                + get_stat(d, ["CacheStatistics", "ttl_lazy_expire", "[B]"])
             ),
             *GiB_SHARDS_ARGS,
         )
@@ -299,7 +299,7 @@ def main():
             data,
             *CAPACITY_GIB_ARGS,
             "Evicted [GiB]",
-            lambda d: get_stat(d, ["CacheStatistics", "total_evict_bytes"]),
+            lambda d: get_stat(d, ["CacheStatistics", "Total Evicts [B]"]),
             *GiB_SHARDS_ARGS,
         )
         plot(
@@ -307,7 +307,7 @@ def main():
             data,
             *CAPACITY_GIB_ARGS,
             "Expired [GiB]",
-            lambda d: get_stat(d, ["CacheStatistics", "total_expire_bytes"]),
+            lambda d: get_stat(d, ["CacheStatistics", "Total Expires [B]"]),
             *GiB_SHARDS_ARGS,
         )
         plot(
@@ -315,7 +315,7 @@ def main():
             data,
             *CAPACITY_GIB_ARGS,
             "LRU Evicted [GiB]",
-            lambda d: get_stat(d, ["CacheStatistics", "lru_evict", "bytes"]),
+            lambda d: get_stat(d, ["CacheStatistics", "lru_evict", "[B]"]),
             *GiB_SHARDS_ARGS,
         )
         plot(
@@ -323,7 +323,7 @@ def main():
             data,
             *CAPACITY_GIB_ARGS,
             "TTL Evicted [GiB]",
-            lambda d: get_stat(d, ["CacheStatistics", "ttl_evict", "bytes"]),
+            lambda d: get_stat(d, ["CacheStatistics", "ttl_evict", "[B]"]),
             *GiB_SHARDS_ARGS,
         )
         plot(
@@ -331,7 +331,7 @@ def main():
             data,
             *CAPACITY_GIB_ARGS,
             "TTL Proactice Expired [GiB]",
-            lambda d: get_stat(d, ["CacheStatistics", "ttl_expire", "bytes"]),
+            lambda d: get_stat(d, ["CacheStatistics", "ttl_expire", "[B]"]),
             *GiB_SHARDS_ARGS,
         )
         plot(
@@ -339,7 +339,7 @@ def main():
             data,
             *CAPACITY_GIB_ARGS,
             "TTL Lazy Expired [GiB]",
-            lambda d: get_stat(d, ["CacheStatistics", "ttl_lazy_expire", "bytes"]),
+            lambda d: get_stat(d, ["CacheStatistics", "ttl_lazy_expire", "[B]"]),
             *GiB_SHARDS_ARGS,
         )
         fig.savefig(args.removal_stats.resolve())
@@ -348,14 +348,18 @@ def main():
         fig.suptitle("Eviction vs Expiration Time")
         fig.set_size_inches(10, 10)
         # Mean remaining lifespan.
-        y_numer_keys = ["CacheStatistics", "lru_evict", "preexpire_evict_ms"]
-        y_numer_keys_1 = ["CacheStatistics", "ttl_evict", "preexpire_evict_ms"]
-        y_numer_keys_2 = ["CacheStatistics", "no_room_evict", "preexpire_evict_ms"]
-        y_numer_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "preexpire_evict_ms"]
-        y_denom_keys = ["CacheStatistics", "lru_evict", "preexpire_evict_ops"]
-        y_denom_keys_1 = ["CacheStatistics", "ttl_evict", "preexpire_evict_ops"]
-        y_denom_keys_2 = ["CacheStatistics", "no_room_evict", "preexpire_evict_ops"]
-        y_denom_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "preexpire_evict_ops"]
+        y_numer_keys = ["CacheStatistics", "lru_evict", "Pre-Expire Evicts [ms]"]
+        y_numer_keys_1 = ["CacheStatistics", "ttl_evict", "Pre-Expire Evicts [ms]"]
+        y_numer_keys_2 = ["CacheStatistics", "no_room_evict", "Pre-Expire Evicts [ms]"]
+        y_numer_keys_3 = [
+            "CacheStatistics",
+            "ttl_lazy_expire",
+            "Pre-Expire Evicts [ms]",
+        ]
+        y_denom_keys = ["CacheStatistics", "lru_evict", "Pre-Expire Evicts [#]"]
+        y_denom_keys_1 = ["CacheStatistics", "ttl_evict", "Pre-Expire Evicts [#]"]
+        y_denom_keys_2 = ["CacheStatistics", "no_room_evict", "Pre-Expire Evicts [#]"]
+        y_denom_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "Pre-Expire Evicts [#]"]
         plot(
             axes[0, 0],
             data,
@@ -377,14 +381,22 @@ def main():
         )
 
         # Mean stay past expiration.
-        y_numer_keys = ["CacheStatistics", "lru_evict", "postexpire_evict_ms"]
-        y_numer_keys_1 = ["CacheStatistics", "ttl_evict", "postexpire_evict_ms"]
-        y_numer_keys_2 = ["CacheStatistics", "no_room_evict", "postexpire_evict_ms"]
-        y_numer_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "postexpire_evict_ms"]
-        y_denom_keys = ["CacheStatistics", "lru_evict", "postexpire_evict_ops"]
-        y_denom_keys_1 = ["CacheStatistics", "ttl_evict", "postexpire_evict_ops"]
-        y_denom_keys_2 = ["CacheStatistics", "no_room_evict", "postexpire_evict_ops"]
-        y_denom_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "postexpire_evict_ops"]
+        y_numer_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [ms]"]
+        y_numer_keys_1 = ["CacheStatistics", "ttl_evict", "Post-Expire Evicts [ms]"]
+        y_numer_keys_2 = ["CacheStatistics", "no_room_evict", "Post-Expire Evicts [ms]"]
+        y_numer_keys_3 = [
+            "CacheStatistics",
+            "ttl_lazy_expire",
+            "Post-Expire Evicts [ms]",
+        ]
+        y_denom_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
+        y_denom_keys_1 = ["CacheStatistics", "ttl_evict", "Post-Expire Evicts [#]"]
+        y_denom_keys_2 = ["CacheStatistics", "no_room_evict", "Post-Expire Evicts [#]"]
+        y_denom_keys_3 = [
+            "CacheStatistics",
+            "ttl_lazy_expire",
+            "Post-Expire Evicts [#]",
+        ]
         plot(
             axes[0, 1],
             data,
@@ -406,10 +418,10 @@ def main():
         )
 
         # Number of objects evicted before their expiration.
-        y_keys_0 = ["CacheStatistics", "lru_evict", "preexpire_evict_ops"]
-        y_keys_1 = ["CacheStatistics", "ttl_evict", "preexpire_evict_ops"]
-        y_keys_2 = ["CacheStatistics", "no_room_evict", "preexpire_evict_ops"]
-        y_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "preexpire_evict_ops"]
+        y_keys_0 = ["CacheStatistics", "lru_evict", "Pre-Expire Evicts [#]"]
+        y_keys_1 = ["CacheStatistics", "ttl_evict", "Pre-Expire Evicts [#]"]
+        y_keys_2 = ["CacheStatistics", "no_room_evict", "Pre-Expire Evicts [#]"]
+        y_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "Pre-Expire Evicts [#]"]
         plot(
             axes[1, 0],
             data,
@@ -423,10 +435,10 @@ def main():
         )
 
         # Number of objects evicted after their expiration.
-        y_keys_0 = ["CacheStatistics", "lru_evict", "postexpire_evict_ops"]
-        y_keys_1 = ["CacheStatistics", "ttl_evict", "postexpire_evict_ops"]
-        y_keys_2 = ["CacheStatistics", "no_room_evict", "postexpire_evict_ops"]
-        y_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "postexpire_evict_ops"]
+        y_keys_0 = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
+        y_keys_1 = ["CacheStatistics", "ttl_evict", "Post-Expire Evicts [#]"]
+        y_keys_2 = ["CacheStatistics", "no_room_evict", "Post-Expire Evicts [#]"]
+        y_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "Post-Expire Evicts [#]"]
         plot(
             axes[1, 1],
             data,
@@ -440,7 +452,7 @@ def main():
         )
         fig.savefig(args.eviction_time.resolve())
     if args.other is not None:
-        y_keys = ["CacheStatistics", "lru_evict", "postexpire_evict_ops"]
+        y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
         y_label = "Mean Time from Eviction until Expiry [h]"
         # NOTE  I don't set a suptitle because there is only 1 plot.
         fig, ax = plt.subplots()

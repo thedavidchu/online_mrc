@@ -315,16 +315,19 @@ std::string
 CacheStatistics::json() const
 {
     std::stringstream ss;
+    // NOTE Times end in '[ms]' simply to denote that it's a time value
+    //      for downstream processing. The actual unit is included.
     ss << "{"
-       << "\"start_time_ms\": " << format_time(start_time_ms_.value_or(0))
-       << ", \"current_time_ms\": " << format_time(current_time_ms_.value_or(0))
-       << ", \"uptime_ms\": " << format_time(uptime_ms())
-       << ", \"skip_ops\": " << format_engineering(skip_ops_)
-       << ", \"skip_bytes\": " << format_memory_size(skip_bytes_)
-       << ", \"insert_ops\": " << format_engineering(insert_ops_)
-       << ", \"insert_bytes\": " << format_memory_size(insert_bytes_)
-       << ", \"update_ops\": " << format_engineering(update_ops_)
-       << ", \"update_bytes\": "
+       << "\"Start Time [ms]\": " << format_time(start_time_ms_.value_or(0))
+       << ", \"Current Time [ms]\": "
+       << format_time(current_time_ms_.value_or(0))
+       << ", \"Uptime [ms]\": " << format_time(uptime_ms())
+       << ", \"Skips [#]\": " << format_engineering(skip_ops_)
+       << ", \"Skips [B]\": " << format_memory_size(skip_bytes_)
+       << ", \"Inserts [#]\": " << format_engineering(insert_ops_)
+       << ", \"Inserts [B]\": " << format_memory_size(insert_bytes_)
+       << ", \"Updates [#]\": " << format_engineering(update_ops_)
+       << ", \"Updates [B]\": "
        << format_memory_size(update_bytes_)
        // Eviction and expiration statistics.
        << ", \"lru_evict\": " << lru_evict_.json()
@@ -334,42 +337,45 @@ CacheStatistics::json() const
        << ", \"ttl_lazy_expire\": "
        << ttl_lazy_expire_.json()
        // Total statistics
-       << ", \"total_evict_ops\": "
+       << ", \"Total Evicts [#]\": "
        << format_engineering(lru_evict_.ops() + no_room_evict_.ops() +
                              ttl_evict_.ops())
-       << ", \"total_evict_bytes\": "
+       << ", \"Total Evicts [B]\": "
        << format_memory_size(lru_evict_.bytes() + no_room_evict_.bytes() +
                              ttl_evict_.bytes())
-       << ", \"total_expire_ops\": "
+       << ", \"Total Expires [#]\": "
        << format_engineering(ttl_expire_.ops() + ttl_lazy_expire_.ops())
-       << ", \"total_expire_bytes\": "
+       << ", \"Total Expires [B]\": "
        << format_memory_size(ttl_expire_.bytes() + ttl_lazy_expire_.bytes())
        // Other reasons for removal.
-       << ", \"sampling_remove_ops\": "
+       << ", \"Sampling Removes [#]\": "
        << format_engineering(sampling_remove_ops_)
-       << ", \"sampling_remove_bytes\": "
+       << ", \"Sampling Removes [B]\": "
        << format_memory_size(sampling_remove_bytes_)
        // General cache performance statistics.
-       << ", \"hit_ops\": " << format_engineering(hit_ops_)
-       << ", \"hit_bytes\": " << format_memory_size(hit_bytes_)
-       << ", \"miss_ops\": " << format_engineering(miss_ops_)
-       << ", \"miss_bytes\": " << format_memory_size(miss_bytes_)
-       << ", \"size\": " << format_memory_size(size_)
-       << ", \"max_size\": " << format_memory_size(max_size_)
-       << ", \"resident_objs\": " << format_engineering(resident_objs_)
-       << ", \"max_resident_objs\": " << format_engineering(max_resident_objs_)
-       << ", \"upperbound_unique_objs\": "
+       << ", \"Hits [#]\": " << format_engineering(hit_ops_)
+       << ", \"Hits [B]\": " << format_memory_size(hit_bytes_)
+       << ", \"Misses [#]\": " << format_engineering(miss_ops_)
+       << ", \"Misses [B]\": " << format_memory_size(miss_bytes_)
+       << ", \"Current Size [B]\": " << format_memory_size(size_)
+       << ", \"Max Size [B]\": " << format_memory_size(max_size_)
+       << ", \"Current Resident Objects [#]\": "
+       << format_engineering(resident_objs_)
+       << ", \"Max Resident Objects [#]\": "
+       << format_engineering(max_resident_objs_)
+       << ", \"Upperbound Unique Objects [#]\": "
        << format_engineering(upperbound_unique_objs_)
-       << ", \"upperbound_wss\": " << format_memory_size(upperbound_wss_)
-       << ", \"upperbound_ttl_wss\": "
+       << ", \"Upperbound WSS [B]\": " << format_memory_size(upperbound_wss_)
+       << ", \"Upperbound TTL WSS [B]\": "
        << format_memory_size(upperbound_ttl_wss_)
        // Aggregate measurements
-       << ", \"sim_start_time_ms\": "
+       << ", \"Simulation Start Time [ms]\": "
        << format_time(sim_start_time_ms_.value_or(0))
-       << ", \"sim_end_time_ms\": " << format_time(sim_end_time_ms_.value_or(0))
-       << ", \"sim_uptime_ms\": " << format_time(sim_uptime_ms())
+       << ", \"Simulation End Time [ms]\": "
+       << format_time(sim_end_time_ms_.value_or(0))
+       << ", \"Simulation Uptime [ms]\": " << format_time(sim_uptime_ms())
        << ", \"Miss Ratio\": " << miss_ratio()
-       << ", \"temporal_sampler\": " << temporal_sampler_.json()
+       << ", \"Temporal Sampler\": " << temporal_sampler_.json()
        << ", \"Mean Size [B]\": " << temporal_sizes_.finite_mean_or(0.0) << "}";
     return ss.str();
 }

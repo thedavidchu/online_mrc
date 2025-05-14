@@ -63,19 +63,22 @@ public:
     json() const
     {
         std::stringstream ss;
-        ss << "{" << "\"guess_lru\": " << format_engineering(guess_lru)
-           << ", \"guess_ttl\": " << format_engineering(guess_ttl)
-           << ", \"right_evict_ops\": " << format_engineering(right_evict_ops)
-           << ", \"right_evict_bytes\": "
+        ss << "{" << "\"Guess LRU [#]\": " << format_engineering(guess_lru)
+           << ", \"Guess TTL [#]\": " << format_engineering(guess_ttl)
+           << ", \"Correct Evicts [#]\": "
+           << format_engineering(right_evict_ops)
+           << ", \"Correct Evicts [B]\": "
            << format_memory_size(right_evict_bytes)
-           << ", \"right_expire_ops\": " << format_engineering(right_expire_ops)
-           << ", \"right_expire_bytes\": "
+           << ", \"Correct Expires [#]\": "
+           << format_engineering(right_expire_ops)
+           << ", \"Correct Expires [B]\": "
            << format_memory_size(right_expire_bytes)
-           << ", \"wrong_evict_ops\": " << format_engineering(wrong_evict_ops)
-           << ", \"wrong_evict_bytes\": "
+           << ", \"Wrong Evicts [#]\": " << format_engineering(wrong_evict_ops)
+           << ", \"Wrong Evicts [B]\": "
            << format_memory_size(wrong_evict_bytes)
-           << ", \"wrong_expire_ops\": " << format_engineering(wrong_expire_ops)
-           << ", \"wrong_expire_bytes\": "
+           << ", \"Wrong Expires [#]\": "
+           << format_engineering(wrong_expire_ops)
+           << ", \"Wrong Expires [B]\": "
            << format_memory_size(wrong_expire_bytes) << "}";
         return ss.str();
     }

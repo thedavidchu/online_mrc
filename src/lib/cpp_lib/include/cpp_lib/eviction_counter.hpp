@@ -54,32 +54,33 @@ public:
     {
         std::stringstream ss;
         ss << "{";
-        ss << "\"ops\": " << format_engineering(ops_);
-        ss << ", \"bytes\": " << format_memory_size(bytes_);
+        ss << "\"[#]\": " << format_engineering(ops_);
+        ss << ", \"[B]\": " << format_memory_size(bytes_);
 
         // --- Pre-expire statistics. ---
-        ss << ", \"preexpire_evict_ops\": "
+        ss << ", \"Pre-Expire Evicts [#]\": "
            << format_engineering(preexpire_evict_ops_);
-        ss << ", \"preexpire_evict_bytes\": "
+        ss << ", \"Pre-Expire Evicts [B]\": "
            << format_memory_size(preexpire_evict_bytes_);
-        ss << ", \"preexpire_evict_ms\": " << format_time(preexpire_evict_ms_);
-        ss << ", \"preexpire_evict_ms_bytes\": "
+        ss << ", \"Pre-Expire Evicts [ms]\": "
+           << format_time(preexpire_evict_ms_);
+        ss << ", \"Pre-Expire Evicts [ms.B]\": "
            << format_engineering(preexpire_evict_ms_bytes_);
 
         // --- At-expire statistics. ---
-        ss << ", \"atexpire_evict_ops\": "
+        ss << ", \"At-Expire Evicts [#]\": "
            << format_engineering(atexpire_evict_ops_);
-        ss << ", \"atexpire_evict_bytes\": "
+        ss << ", \"At-Expire Evicts [B]\": "
            << format_memory_size(atexpire_evict_bytes_);
 
         // --- Post-expire statistics. ---
-        ss << ", \"postexpire_evict_ops\": "
+        ss << ", \"Post-Expire Evicts [#]\": "
            << format_engineering(postexpire_evict_ops_);
-        ss << ", \"postexpire_evict_bytes\": "
+        ss << ", \"Post-Expire Evicts [B]\": "
            << format_memory_size(postexpire_evict_bytes_);
-        ss << ", \"postexpire_evict_ms\": "
+        ss << ", \"Post-Expire Evicts [ms]\": "
            << format_time(postexpire_evict_ms_);
-        ss << ", \"postexpire_evict_ms_bytes\": "
+        ss << ", \"Post-Expire Evicts [ms.B]\": "
            << format_engineering(postexpire_evict_ms_bytes_);
 
         ss << "}";
