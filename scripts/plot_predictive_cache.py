@@ -223,6 +223,7 @@ def main():
     parser.add_argument(
         "--eviction-time", type=Path, help="eviction time statistics output path"
     )
+    parser.add_argument("--sizes", type=Path, help="cache sizes statistics output path")
     parser.add_argument("--other", type=Path, help="other plot")
     args = parser.parse_args()
 
@@ -451,6 +452,27 @@ def main():
             *GiB_SHARDS_ARGS,
         )
         fig.savefig(args.eviction_time.resolve())
+    if args.sizes is not None:
+        fig, axes = plt.subplots(1, 2, sharex=True, sharey=True)
+        fig.set_size_inches(10, 5)
+        fig.suptitle("Cache Sizes")
+        plot(
+            axes[0],
+            data,
+            *CAPACITY_GIB_ARGS,
+            "Maximum Cache Size [GiB]",
+            lambda d: get_stat(d, ["CacheStatistics", "Max Size [B]"]),
+            *GiB_SHARDS_ARGS,
+        )
+        plot(
+            axes[1],
+            data,
+            *CAPACITY_GIB_ARGS,
+            "Mean Cache Size [GiB]",
+            lambda d: get_stat(d, ["CacheStatistics", "Mean Size [B]"]),
+            *GiB_SHARDS_ARGS,
+        )
+        fig.savefig(args.sizes.resolve())
     if args.other is not None:
         y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
         y_label = "Mean Time from Eviction until Expiry [h]"
