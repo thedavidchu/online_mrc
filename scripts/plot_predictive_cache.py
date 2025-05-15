@@ -432,7 +432,7 @@ def main():
             + get_stat(d, y_keys_1)
             + get_stat(d, y_keys_2)
             + get_stat(d, y_keys_3),
-            *GiB_SHARDS_ARGS,
+            *COUNT_SHARDS_ARGS,
         )
 
         # Number of objects evicted after their expiration.
@@ -449,7 +449,7 @@ def main():
             + get_stat(d, y_keys_1)
             + get_stat(d, y_keys_2)
             + get_stat(d, y_keys_3),
-            *GiB_SHARDS_ARGS,
+            *COUNT_SHARDS_ARGS,
         )
         fig.savefig(args.eviction_time.resolve())
     if args.sizes is not None:
