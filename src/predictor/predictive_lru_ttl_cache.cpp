@@ -3,6 +3,7 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
@@ -531,7 +532,7 @@ PredictiveCache::print_statistics(
           << ", \"PredictionTracker\": " << pred_tracker.json()
           << ", \"Threshold Refreshes [#]\": "
           << format_engineering(lifetime_cache_.refreshes())
-          << ", \"Time Since Threshold Refresh [ms]\": "
+          << ", \"Samples Since Threshold Refresh [#]\": "
           << format_engineering(lifetime_cache_.since_refresh())
           << ", \"LRU Lifetime Evictions [#]\": "
           << format_engineering(lifetime_cache_.evictions())
