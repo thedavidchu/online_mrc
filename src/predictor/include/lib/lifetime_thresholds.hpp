@@ -12,6 +12,7 @@
 #include <tuple>
 #include <utility>
 
+#include "cpp_lib/temporal_sampler.hpp"
 #include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 
@@ -74,13 +75,15 @@ class LifeTimeThresholds {
     /// @note   I allow them to be 1% out of alignment. How did I choose 1%? I
     /// just did, that's how.
     bool
-    should_refresh(uint64_t const current_time_ms) const
+    should_refresh(uint64_t const current_time_ms)
     {
         double const error = 0.01 * coarse_counter_;
 
-        // We don't readjust until we have at least 1 million data points!
-        // TODO - consider putting a time bound on this.
-        if (current_time_ms < prev_refresh_time_ms_ + MIN_TIME_DELTA) {
+        // NOTE An update may occur any time after a hour past the last
+        //      sample once the coarse histogram is off by the error
+        //      margin. This is as opposed to checking once per hour
+        //      whether both are true.
+        if (!refresher_.should_sample(current_time_ms)) {
             return false;
         }
 
@@ -142,7 +145,6 @@ public:
         }
 
         if (should_refresh(current_time_ms)) {
-            prev_refresh_time_ms_ = current_time_ms;
             refresh_thresholds();
         }
     }
@@ -155,7 +157,6 @@ public:
         upper_threshold_ = x.second;
         coarse_histogram_ = {0, 0, 0};
         coarse_counter_ = 0;
-        ++num_refresh_;
     }
 
     /// @note   Automatically refresh the thresholds when there's a mismatch.
@@ -168,7 +169,7 @@ public:
     uint64_t
     refreshes() const
     {
-        return num_refresh_;
+        return refresher_.nr_samples();
     }
 
     uint64_t
@@ -207,9 +208,8 @@ private:
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
     // The previous timestamp at which we refreshed.
-    uint64_t prev_refresh_time_ms_ = 0;
+    TemporalSampler refresher_{MIN_TIME_DELTA, false};
     uint64_t coarse_counter_ = 0;
-    uint64_t num_refresh_ = 0;
 
 public:
     // TODO Make this configurable?

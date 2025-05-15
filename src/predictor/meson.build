@@ -63,6 +63,7 @@ test_lifetime_thresholds_exe = executable(
     include_directories: predictor_inc,
     dependencies: [
         common_dep,
+        cpp_lib_dep,
         glib_dep,
     ],
 )

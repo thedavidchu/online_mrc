@@ -45,6 +45,12 @@ atob_or_panic(char const *const a);
 std::vector<std::string>
 string_split(std::string const &src, std::string const &delim);
 
+static inline std::string
+bool2str(bool const b)
+{
+    return b ? "true" : "false";
+}
+
 template <typename T>
 static inline std::string
 vec2str(std::vector<T> const &vec,
