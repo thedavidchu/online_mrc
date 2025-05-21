@@ -19,6 +19,10 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -54,3 +58,7 @@ ZipfianRandom__next(struct ZipfianRandom *me);
 
 void
 ZipfianRandom__destroy(struct ZipfianRandom *me);
+
+#ifdef __cplusplus
+}
+#endif

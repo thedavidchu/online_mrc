@@ -1,11 +1,13 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "cpp_lib/format_measurement.hpp"
+#include "logger/logger.h"
 
 bool
 test_format_underscore()
@@ -50,11 +52,36 @@ test_format_underscore()
     return ok;
 }
 
+bool
+test_format_binary()
+{
+    std::map<uint64_t, std::string> map{
+        {0, "0b" + std::string(64, '0')},
+        {1, "0b" + std::string(63, '0') + "1"},
+        {2, "0b" + std::string(62, '0') + "10"},
+        {3, "0b" + std::string(62, '0') + "11"},
+        {UINT64_MAX, "0b" + std::string(64, '1')},
+    };
+    for (auto [x, str] : map) {
+        if (format_binary(x) != str) {
+            LOGGER_DEBUG("for %zu: got %s, expected %s",
+                         x,
+                         format_binary(x).c_str(),
+                         str.c_str());
+            return false;
+        }
+    }
+    return true;
+}
+
 int
 main()
 {
+    LOGGER_LEVEL = LOGGER_LEVEL_DEBUG;
     bool r = false;
     r = test_format_underscore();
+    assert(r);
+    r = test_format_binary();
     assert(r);
     return 0;
 }

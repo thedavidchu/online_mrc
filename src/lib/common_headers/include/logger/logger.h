@@ -1,6 +1,10 @@
 /** This is based on my EasyLib logger. */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -12,13 +16,13 @@
 // NOTE These are globally configurable parameters. Having these as macros
 //      means there is no performance overhead for unused logging (assuming
 //      effective dead code elimination).
-#define LOGGER_STREAM stdout
-#define LOGGER_LEVEL  LOGGER_LEVEL_INFO
+#define LOGGER_STREAM         stdout
+#define LOGGER_COMPILER_LEVEL LOGGER_LEVEL_DEBUG
 
 // NOTE The relationship between these levels is subject to change. But
 //      if you do go ahead and change them, you need to change the
 //      EASY_LOGGER_LEVEL_STRINGS too.
-enum LoggerLevels {
+enum LoggerLevel {
     LOGGER_LEVEL_VERBOSE = 0,
     LOGGER_LEVEL_TRACE = 1,
     LOGGER_LEVEL_DEBUG = 2,
@@ -29,19 +33,23 @@ enum LoggerLevels {
     LOGGER_LEVEL_TIMING = 7,
 };
 
+// NOTE This is mutable by others.
+static enum LoggerLevel LOGGER_LEVEL = LOGGER_LEVEL_INFO;
+
 static char const *const LOGGER_LEVEL_STRINGS[] =
     {"VERBOSE", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TIMING"};
 
 static inline bool
 _logger_header(FILE *const stream,
-               enum LoggerLevels const threshold_level,
-               enum LoggerLevels const log_level,
+               enum LoggerLevel const compiler_threshold_level,
+               enum LoggerLevel const threshold_level,
+               enum LoggerLevel const log_level,
                int const errno_,
                char const *const file,
                int const line)
 {
     time_t t = {0};
-    if (log_level < threshold_level) {
+    if (log_level < compiler_threshold_level || log_level < threshold_level) {
         return false;
     }
     t = time(NULL);
@@ -71,8 +79,9 @@ _logger_header(FILE *const stream,
 ///         library call (e.g. printf) can change the value of errno.
 static inline void
 _logger(FILE *const stream,
-        enum LoggerLevels const threshold_level,
-        enum LoggerLevels const log_level,
+        enum LoggerLevel const compiler_threshold_level,
+        enum LoggerLevel const threshold_level,
+        enum LoggerLevel const log_level,
         int const errno_,
         char const *const file,
         int const line,
@@ -80,7 +89,13 @@ _logger(FILE *const stream,
         ...)
 {
     va_list ap;
-    if (!_logger_header(stream, threshold_level, log_level, errno_, file, line))
+    if (!_logger_header(stream,
+                        compiler_threshold_level,
+                        threshold_level,
+                        log_level,
+                        errno_,
+                        file,
+                        line))
         return;
     va_start(ap, format);
     vfprintf(stream, format, ap);
@@ -91,6 +106,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_VERBOSE(...)                                                    \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_VERBOSE,                                              \
             errno,                                                             \
@@ -100,6 +116,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_TRACE(...)                                                      \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_TRACE,                                                \
             errno,                                                             \
@@ -109,6 +126,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_DEBUG(...)                                                      \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_DEBUG,                                                \
             errno,                                                             \
@@ -118,6 +136,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_INFO(...)                                                       \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_INFO,                                                 \
             errno,                                                             \
@@ -127,6 +146,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_WARN(...)                                                       \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_WARN,                                                 \
             errno,                                                             \
@@ -136,6 +156,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_ERROR(...)                                                      \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_ERROR,                                                \
             errno,                                                             \
@@ -145,6 +166,7 @@ _logger(FILE *const stream,
 
 #define LOGGER_FATAL(...)                                                      \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_FATAL,                                                \
             errno,                                                             \
@@ -154,9 +176,14 @@ _logger(FILE *const stream,
 
 #define LOGGER_TIMING(...)                                                     \
     _logger(LOGGER_STREAM,                                                     \
+            LOGGER_COMPILER_LEVEL,                                             \
             LOGGER_LEVEL,                                                      \
             LOGGER_LEVEL_TIMING,                                               \
             errno,                                                             \
             __FILE__,                                                          \
             __LINE__,                                                          \
             __VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif

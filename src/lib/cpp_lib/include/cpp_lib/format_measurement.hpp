@@ -118,3 +118,15 @@ format_pretty_ratio(uint64_t const num, uint64_t const den)
        << format_percent((double)num / den) << ")";
     return ss.str();
 }
+
+template <typename T>
+static inline std::string
+format_binary(T const x)
+{
+    uint64_t const bits = sizeof(T) * 8;
+    std::string binary(bits, '0');
+    for (uint64_t i = 0; i < bits; ++i) {
+        binary[63 - i] = (x & 1ULL << i) ? '1' : '0';
+    }
+    return "0b" + binary;
+}

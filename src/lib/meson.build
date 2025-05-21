@@ -1,7 +1,6 @@
 subdir('common_headers')
 subdir('file')
 subdir('hash')
-subdir('hyperloglog')
 subdir('io')
 subdir('priority_queue')
 subdir('random')
@@ -30,3 +29,6 @@ subdir('sampler')
 subdir('cpp_struct')
 subdir('cpp_lib')
 subdir('cpp_cache')
+
+# Relies (foolishly) on 'cpp_lib'.
+subdir('hyperloglog')

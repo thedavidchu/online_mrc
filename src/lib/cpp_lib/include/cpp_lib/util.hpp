@@ -6,6 +6,7 @@
 #pragma once
 
 #include "arrays/is_last.h"
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <sstream>
@@ -51,7 +52,13 @@ bool2str(bool const b)
     return b ? "true" : "false";
 }
 
-template <typename T>
+static inline double
+calculate_error(double const x, double const y)
+{
+    return std::abs(x - y) / std::max(x, y);
+}
+
+template <typename T, typename S = T>
 static inline std::string
 vec2str(std::vector<T> const &vec,
         std::string const open = "[",
@@ -61,7 +68,7 @@ vec2str(std::vector<T> const &vec,
     std::stringstream ss;
     ss << open;
     for (size_t i = 0; i < vec.size(); ++i) {
-        ss << vec[i];
+        ss << static_cast<S>(vec[i]);
         if (!is_last(i, vec.size())) {
             ss << sep;
         }

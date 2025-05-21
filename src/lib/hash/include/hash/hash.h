@@ -1,6 +1,10 @@
 /** @brief  Wrappers for hash functions. */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "hash/MurmurHash3.h"
@@ -35,11 +39,11 @@ Hash64Bit(KeyType const key)
         // NOTE splitmix64 is the fastest hashing algorithm currently.
         return splitmix64_hash(key);
     case 2:
-        return RSHash((void const *)&key, sizeof(key));
+        return RSHash((char const *)&key, sizeof(key));
     case 3:
-        return SDBMHash((void const *)&key, sizeof(key));
+        return SDBMHash((char const *)&key, sizeof(key));
     case 4:
-        return APHash((void const *)&key, sizeof(key));
+        return APHash((char const *)&key, sizeof(key));
     default:
 #if HASH_FUNCTION_SELECT < 0 || HASH_FUNCTION_SELECT > 4
 // NOTE This could go anywhere, but I decided to stick it with the code
@@ -57,3 +61,7 @@ Hash128Bit(KeyType const key)
     MurmurHash3_x64_128(&key, sizeof(key), 0, &hash.hash);
     return hash;
 }
+
+#ifdef __cplusplus
+}
+#endif

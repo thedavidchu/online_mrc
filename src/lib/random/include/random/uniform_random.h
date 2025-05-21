@@ -19,6 +19,10 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -73,3 +77,7 @@ UniformRandom__non_uniform_within(struct UniformRandom *me,
 
 void
 UniformRandom__destroy(struct UniformRandom *me);
+
+#ifdef __cplusplus
+}
+#endif
