@@ -71,16 +71,52 @@ test_uniform()
     return analyze(set.size(), hll.count());
 }
 
+static bool
+test_zipfian_merge(double const skew)
+{
+    uint64_t const N = 1 << 20;
+    HyperLogLog hll_0{1 << 13}, hll_1{1 << 13};
+    std::unordered_set<uint64_t> set_0, set_1;
+    ZipfianRandom zrng = {};
+    ZipfianRandom__init(&zrng, N, skew, 0);
+    for (uint64_t i = 0; i < N; ++i) {
+        // Track the real number, regardless of hash collisions!
+        uint64_t x = ZipfianRandom__next(&zrng);
+        set_0.insert(x);
+        uint64_t h = Hash64Bit(x);
+        hll_0.add(h);
+    }
+
+    for (uint64_t i = 0; i < N; ++i) {
+        // Track the real number, regardless of hash collisions!
+        uint64_t x = ZipfianRandom__next(&zrng);
+        set_1.insert(x);
+        uint64_t h = Hash64Bit(x);
+        hll_1.add(h);
+    }
+
+    set_0.merge(set_1);
+    hll_0.imerge(hll_1);
+
+    return analyze(set_0.size(), hll_0.count());
+}
+
 int
 main()
 {
     LOGGER_LEVEL = LOGGER_LEVEL_DEBUG;
     assert(test_linear_growth());
+    assert(test_uniform());
     assert(test_zipfian(0.0));
     assert(test_zipfian(0.1));
     assert(test_zipfian(0.5));
     assert(test_zipfian(0.9));
     assert(test_zipfian(0.99));
-    assert(test_uniform());
+
+    assert(test_zipfian_merge(0.0));
+    assert(test_zipfian_merge(0.1));
+    assert(test_zipfian_merge(0.5));
+    assert(test_zipfian_merge(0.9));
+    assert(test_zipfian_merge(0.99));
     return 0;
 }

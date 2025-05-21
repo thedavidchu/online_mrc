@@ -1,6 +1,7 @@
 #pragma once
 
 #include "logger/logger.h"
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -66,6 +67,17 @@ private:
         return r;
     }
 
+    uint64_t
+    calculate_fresh_V() const
+    {
+        uint64_t r = 0;
+        for (auto m : M_) {
+            // I rely on C++ casting 'true' to 1 and 'false' to 0.
+            r += !m;
+        }
+        return r;
+    }
+
     double
     linear_counting() const;
 
@@ -77,6 +89,20 @@ public:
     /// @brief  Get the cardinality estimate.
     uint64_t
     count() const;
+
+    bool
+    imerge(HyperLogLog const &hll)
+    {
+        if (hll.m_ != m_) {
+            return false;
+        }
+        for (uint64_t i = 0; i < m_; ++i) {
+            M_[i] = std::max(M_[i], hll.M_[i]);
+        }
+        V_ = calculate_fresh_V();
+        inv_Z_ = calculate_fresh_inv_Z();
+        return true;
+    }
 
     /// @brief  Get the number of buckets.
     uint64_t
