@@ -56,8 +56,7 @@ struct AccessStatistics {
             }
             gets_after_last_set += 1;
             latest_get_time_ms = access.timestamp_ms;
-        } else if (access.command >= CacheCommand::Set &&
-                   access.command <= CacheCommand::Decr) {
+        } else if (access.is_write()) {
             nr_write += 1;
             if (!valid_time(first_set_time_ms)) {
                 first_set_time_ms = access.timestamp_ms;
