@@ -83,3 +83,27 @@ vec2str(std::vector<T> const &vec,
     ss << close;
     return ss.str();
 }
+
+template <typename M>
+static inline std::string
+map2str(M const &map, bool const quote_value = false)
+{
+    std::stringstream ss;
+    size_t i = 0;
+    ss << "{";
+    for (auto [k, v] : map) {
+        ss << "\"" << k << "\": ";
+        if (quote_value) {
+            ss << "\"";
+        }
+        ss << v;
+        if (quote_value) {
+            ss << "\"";
+        }
+        if (!is_last(i++, map.size())) {
+            ss << ", ";
+        }
+    }
+    ss << "}";
+    return ss.str();
+}
