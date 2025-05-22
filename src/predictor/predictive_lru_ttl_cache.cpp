@@ -494,29 +494,6 @@ PredictiveCache::statistics() const
     return statistics_;
 }
 
-/// @note   I do not escape any JSON-dangerous sequences in the key or values.
-static std::string
-jsonify_string_string_map(std::map<std::string, std::string> const &map,
-                          bool const value_is_string = true)
-{
-    std::stringstream ss;
-    ss << "{";
-    size_t i = 0;
-    for (auto [k, v] : map) {
-        ss << "\"" << k << "\": ";
-        if (value_is_string) {
-            ss << "\"" << v << "\"";
-        } else {
-            ss << v;
-        }
-        if (!is_last(i++, map.size())) {
-            ss << ", ";
-        }
-    }
-    ss << "}";
-    return ss.str();
-}
-
 void
 PredictiveCache::print_statistics(
     std::ostream &ostrm,
@@ -538,7 +515,8 @@ PredictiveCache::print_statistics(
           << format_engineering(lifetime_cache_.evictions())
           << ", \"Lower Threshold [ms]\": " << format_time(r.first)
           << ", \"Upper Threshold [ms]\": " << format_time(r.second)
-          << ", \"Kwargs\": " << jsonify_string_string_map(kwargs_, true)
-          << ", \"Extras\": " << jsonify_string_string_map(extras, false) << "}"
-          << std::endl;
+          << ", \"Lifetime Cache\": " << lifetime_cache_.json()
+          << ", \"Kwargs\": " << map2str(kwargs_, true)
+          << ", \"Extras\": " << map2str(extras, false);
+    ostrm << "}" << std::endl;
 }

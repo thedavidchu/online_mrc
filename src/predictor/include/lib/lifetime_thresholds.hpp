@@ -9,10 +9,13 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <sstream>
+#include <string>
 #include <tuple>
 #include <utility>
 
 #include "cpp_lib/temporal_sampler.hpp"
+#include "cpp_lib/util.hpp"
 #include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 
@@ -194,6 +197,19 @@ public:
     upper_ratio() const
     {
         return upper_ratio_;
+    }
+
+    std::string
+    json() const
+    {
+        std::stringstream ss;
+        ss << "{";
+        ss << "\"Histogram\": " << map2str(histogram_) << ", ";
+        ss << "\"Coarse Histogram\": [" << std::get<0>(coarse_histogram_)
+           << ", " << std::get<1>(coarse_histogram_) << ", "
+           << std::get<2>(coarse_histogram_) << "]";
+        ss << "}";
+        return ss.str();
     }
 
 private:

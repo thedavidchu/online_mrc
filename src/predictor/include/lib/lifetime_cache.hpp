@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <optional>
+#include <string>
 #include <sys/types.h>
 #include <utility>
 
@@ -168,6 +169,16 @@ public:
     mode() const
     {
         return mode_;
+    }
+
+    std::string
+    json() const
+    {
+        std::stringstream ss;
+        ss << "{";
+        ss << "\"Thresholds\": " << thresholds_.json();
+        ss << "}";
+        return ss.str();
     }
 
 private:
