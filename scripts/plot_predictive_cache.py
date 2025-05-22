@@ -217,14 +217,15 @@ def plot(
 def plot_lines(
     ax: plt.Axes,
     all_data: dict[str, list[object]],
+    label_func: Callable[[dict[str, object]], str | None],
     # X-axis data
     x_label: str,
-    get_x_func: list[str] | Callable[[dict[str, object]], float],
+    get_x_list_func: list[str] | Callable[[dict[str, object]], list[float] | None],
     scale_x_func: Callable[[dict[str, object]], float],
     fix_x_func: Callable[[float, dict[str, object]], float],
     # Y-axis data
     y_label: str,
-    get_y_func: Callable[[dict[str, object]], float],
+    get_y_list_func: Callable[[dict[str, object]], list[float] | None],
     scale_y_func: Callable[[dict[str, object]], float],
     fix_y_func: Callable[[float, dict[str, object]], float],
     *,
@@ -239,8 +240,16 @@ def plot_lines(
     @param fix_{x,y}_func: fn (float, JSON) -> float. Correct data (e.g. SHARDS).
     """
     # Get corrected y value from a JSON
-    f_x = lambda d: fix_x_func(scale_x_func(get_x_func(d)), d)
-    f_y = lambda d: fix_y_func(scale_y_func(get_y_func(d)), d)
+    f_x = lambda d: (
+        [fix_x_func(scale_x_func(x), d) for x in get_x_list_func(d)]
+        if get_x_list_func(d) is not None
+        else None
+    )
+    f_y = lambda d: (
+        [fix_y_func(scale_y_func(x), d) for x in get_y_list_func(d)]
+        if get_y_list_func(d) is not None
+        else None
+    )
 
     ax.set_title(f"{y_label} vs {x_label}")
     if plot_x_axis:
@@ -248,10 +257,11 @@ def plot_lines(
     for (l, u, tm), d_list in all_data.items():
         x_list = [f_x(d) for d in d_list]
         y_list = [f_y(d) for d in d_list]
-        for x, y in zip(x_list, y_list):
+        labels = [label_func(d) for d in d_list]
+        for x, y, label in zip(x_list, y_list, labels):
             if x is None or y is None:
                 continue
-            ax.plot(x, y)
+            ax.plot(x, y, label=label)
     ax.legend()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -270,6 +280,9 @@ def main():
     parser.add_argument("--sizes", type=Path, help="cache sizes statistics output path")
     parser.add_argument(
         "--remaining-lifetime", type=Path, help="cache sizes statistics output path"
+    )
+    parser.add_argument(
+        "--temporal-statistics", type=Path, help="temporal statistics output plot"
     )
     parser.add_argument("--other", type=Path, help="other plot")
     args = parser.parse_args()
@@ -524,9 +537,13 @@ def main():
         fig, axes = plt.subplots(2, 2, sharex=True, sharey=True)
         fig.set_size_inches(10, 10)
         fig.suptitle("Remaining Lifetime in Cache vs Position in LRU Queue")
+        label_func = (
+            lambda d: f'{SCALE_SHARDS_FUNC(get_stat(d, ["Capacity [B]"]) / (1<<30), d):.3} GiB'
+        )
         plot_lines(
             axes[0, 0],
             data,
+            label_func,
             "(LRU-only) LRU Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
@@ -534,22 +551,16 @@ def main():
                 and get_stat(d, ["Upper Ratio"]) == 0
                 else None
             ),
-            lambda xs: [SCALE_B_TO_GiB(x) for x in xs] if xs is not None else None,
-            lambda xs, d: (
-                [SCALE_SHARDS_FUNC(x, d) for x in xs] if xs is not None else None
-            ),
+            *GiB_SHARDS_ARGS,
             "Remaining Lifetime [h]",
             lambda d: d["Extras"]["remaining_lifetime"]["Remaining Lifetimes [ms]"],
-            lambda xs: (
-                [SCALE_MS_TO_HOUR(x) for x in xs if x is not None]
-                if xs is not None
-                else None
-            ),
-            lambda xs, _d: xs if xs is not None else None,
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
         )
         plot_lines(
             axes[0, 1],
             data,
+            label_func,
             "(LRU-TTL) LRU Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
@@ -557,22 +568,16 @@ def main():
                 and get_stat(d, ["Upper Ratio"]) == 1
                 else None
             ),
-            lambda xs: [SCALE_B_TO_GiB(x) for x in xs] if xs is not None else None,
-            lambda xs, d: (
-                [SCALE_SHARDS_FUNC(x, d) for x in xs] if xs is not None else None
-            ),
+            *GiB_SHARDS_ARGS,
             "Remaining Lifetime [h]",
             lambda d: d["Extras"]["remaining_lifetime"]["Remaining Lifetimes [ms]"],
-            lambda xs: (
-                [SCALE_MS_TO_HOUR(x) for x in xs if x is not None]
-                if xs is not None
-                else None
-            ),
-            lambda xs, _d: xs if xs is not None else None,
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
         )
         plot_lines(
             axes[1, 0],
             data,
+            label_func,
             "(TTL-only) LRU Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
@@ -580,22 +585,16 @@ def main():
                 and get_stat(d, ["Lower Ratio"]) == 1
                 else None
             ),
-            lambda xs: [SCALE_B_TO_GiB(x) for x in xs] if xs is not None else None,
-            lambda xs, d: (
-                [SCALE_SHARDS_FUNC(x, d) for x in xs] if xs is not None else None
-            ),
+            *GiB_SHARDS_ARGS,
             "Remaining Lifetime [h]",
             lambda d: d["Extras"]["remaining_lifetime"]["Remaining Lifetimes [ms]"],
-            lambda xs: (
-                [SCALE_MS_TO_HOUR(x) for x in xs if x is not None]
-                if xs is not None
-                else None
-            ),
-            lambda xs, _d: xs if xs is not None else None,
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
         )
         plot_lines(
             axes[1, 1],
             data,
+            label_func,
             "(Predictive) LRU Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
@@ -603,20 +602,57 @@ def main():
                 and get_stat(d, ["Lower Ratio"]) == 0.5
                 else None
             ),
-            lambda xs: [SCALE_B_TO_GiB(x) for x in xs] if xs is not None else None,
-            lambda xs, d: (
-                [SCALE_SHARDS_FUNC(x, d) for x in xs] if xs is not None else None
-            ),
+            *GiB_SHARDS_ARGS,
             "Remaining Lifetime [h]",
             lambda d: d["Extras"]["remaining_lifetime"]["Remaining Lifetimes [ms]"],
-            lambda xs: (
-                [SCALE_MS_TO_HOUR(x) for x in xs if x is not None]
-                if xs is not None
-                else None
-            ),
-            lambda xs, _d: xs if xs is not None else None,
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
         )
         fig.savefig(args.remaining_lifetime.resolve())
+    if args.temporal_statistics is not None:
+        fig, axes = plt.subplots(2, 2, sharex=True, sharey="row")
+        fig.set_size_inches(10, 10)
+        fig.suptitle("Temporal Statistics")
+        label_func = (
+            lambda d: f'{SCALE_SHARDS_FUNC(get_stat(d, ["Capacity [B]"]) / (1<<30), d):.3} GiB'
+        )
+        plot_lines(
+            axes[0, 0],
+            data,
+            label_func,
+            "Time [h]",
+            lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
+            "Cache Size [GiB]",
+            lambda d: d["CacheStatistics"]["Temporal Sizes [B]"],
+            *GiB_SHARDS_ARGS,
+        )
+        plot_lines(
+            axes[0, 1],
+            data,
+            label_func,
+            "Time [h]",
+            lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
+            "High Watermark Cache Size [GiB]",
+            lambda d: d["CacheStatistics"]["Temporal Max Sizes [B]"],
+            *GiB_SHARDS_ARGS,
+        )
+        plot_lines(
+            axes[1, 0],
+            data,
+            label_func,
+            "Time [h]",
+            lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
+            SCALE_MS_TO_HOUR,
+            IDENTITY_X_D,
+            "Resident Objects [#]",
+            lambda d: d["CacheStatistics"]["Temporal Resident Objects [#]"],
+            *COUNT_SHARDS_ARGS,
+        )
+        fig.savefig(args.temporal_statistics.resolve())
     if args.other is not None:
         y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
         y_label = "Mean Time from Eviction until Expiry [h]"
