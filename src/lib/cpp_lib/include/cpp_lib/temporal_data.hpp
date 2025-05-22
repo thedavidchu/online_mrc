@@ -1,8 +1,11 @@
 #pragma once
 
+#include "cpp_lib/util.hpp"
 #include <cmath>
 #include <cstddef>
 #include <deque>
+#include <string>
+#include <vector>
 
 using size_t = std::size_t;
 
@@ -39,6 +42,15 @@ public:
             }
         }
         return sum / data_.size();
+    }
+
+    std::string
+    str() const
+    {
+        // Admittedly not efficient to construct a whole new object.
+        // But this is called infrequently and it's maintainable.
+        std::vector<double> tmp(data_.begin(), data_.end());
+        return vec2str(tmp);
     }
 
 private:
