@@ -63,12 +63,19 @@ static inline std::string
 vec2str(std::vector<T> const &vec,
         std::string const open = "[",
         std::string const close = "]",
-        std::string const sep = ", ")
+        std::string const sep = ", ",
+        bool const quote_value = false)
 {
     std::stringstream ss;
     ss << open;
     for (size_t i = 0; i < vec.size(); ++i) {
+        if (quote_value) {
+            ss << "\"";
+        }
         ss << static_cast<S>(vec[i]);
+        if (quote_value) {
+            ss << "\"";
+        }
         if (!is_last(i, vec.size())) {
             ss << sep;
         }
