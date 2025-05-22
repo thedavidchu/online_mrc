@@ -7,6 +7,13 @@
 #include <sstream>
 #include <string>
 
+/// @brief  Sample no more than once every time interval.
+/// @note   The default (hard-coded) time interval is 1 hour
+///         (denominated in milliseconds), but if we have time intervals
+///         separated by 2 hours, it will simply skip the hour.
+///         Additionally, if we don't sample right on the hour, but a
+///         little after, then the next sample time will be based on an
+///         hour after this later time.
 class TemporalSampler {
 private:
     static constexpr uint64_t HOUR_IN_MS = 3600 * 1000;
