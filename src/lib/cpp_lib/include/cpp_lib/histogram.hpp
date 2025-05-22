@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cpp_lib/format_measurement.hpp"
+#include "cpp_lib/util.hpp"
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -166,6 +167,18 @@ public:
                   << std::endl;
         std::cout << prefix << "# TOTAL: " << format_underscore(total_)
                   << std::endl;
+    }
+
+    std::string
+    json() const
+    {
+        std::stringstream ss;
+        ss << "{";
+        ss << "\".type\": \"Histogram\", ";
+        ss << "\"total\": " << total_ << ", ";
+        ss << "\"histogram\": " << map2str(histogram_);
+        ss << "}";
+        return ss.str();
     }
 
 private:
