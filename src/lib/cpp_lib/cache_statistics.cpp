@@ -42,7 +42,10 @@ CacheStatistics::should_sample()
 void
 CacheStatistics::sample()
 {
+    temporal_times_ms_.update(current_time_ms_.value_or(NAN));
     temporal_sizes_.update(size_);
+    temporal_max_sizes_.update(max_size_);
+    temporal_resident_objects_.update(resident_objs_);
 }
 
 void
@@ -376,7 +379,13 @@ CacheStatistics::json() const
        << ", \"Simulation Uptime [ms]\": " << format_time(sim_uptime_ms())
        << ", \"Miss Ratio\": " << miss_ratio()
        << ", \"Temporal Sampler\": " << temporal_sampler_.json()
-       << ", \"Mean Size [B]\": " << temporal_sizes_.finite_mean_or(0.0) << "}";
+       << ", \"Mean Size [B]\": " << temporal_sizes_.finite_mean_or(0.0)
+       << ", \"Temporal Times [ms]\": " << temporal_times_ms_.str()
+       << ", \"Temporal Sizes [B]\": " << temporal_sizes_.str()
+       << ", \"Temporal Max Sizes [B]\": " << temporal_max_sizes_.str()
+       << ", \"Temporal Resident Objects [#]\": "
+       << temporal_resident_objects_.str();
+    ss << "}";
     return ss.str();
 }
 

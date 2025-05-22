@@ -18,6 +18,7 @@ private:
     sample();
 
     /// @brief  This hook should be called on every public cache action.
+    ///         This should be called after the action has occurred.
     void
     register_cache_action();
 
@@ -150,5 +151,8 @@ public:
 
     // --- Averaged Statistics ---
     TemporalSampler temporal_sampler_{};
+    TemporalData temporal_times_ms_;
+    TemporalData temporal_max_sizes_;
     TemporalData temporal_sizes_;
+    TemporalData temporal_resident_objects_;
 };
