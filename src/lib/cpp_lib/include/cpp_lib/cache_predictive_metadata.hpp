@@ -1,3 +1,6 @@
+#pragma once
+
+#include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/format_measurement.hpp"
 #include <cstdint>
@@ -77,6 +80,11 @@ private:
 };
 
 struct CachePredictiveMetadata : public CacheMetadata {
+    CachePredictiveMetadata(CacheAccess const &access)
+        : CacheMetadata(access)
+    {
+    }
+
     void
     set_ttl()
     {

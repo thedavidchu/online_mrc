@@ -1,7 +1,5 @@
 #include "lib/predictive_lru_ttl_cache.hpp"
-#include "arrays/is_last.h"
 #include "cpp_lib/cache_access.hpp"
-#include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
@@ -89,7 +87,7 @@ PredictiveCache::insert(CacheAccess const &access)
 {
     statistics_.insert(access.value_size_b);
     double const ttl_ms = access.ttl_ms;
-    map_.emplace(access.key, CacheMetadata{access});
+    map_.emplace(access.key, CachePredictiveMetadata{access});
     auto r = lifetime_cache_.thresholds();
     if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
@@ -104,7 +102,8 @@ PredictiveCache::insert(CacheAccess const &access)
 
 /// @brief  Process an access to an item in the cache.
 void
-PredictiveCache::update(CacheAccess const &access, CacheMetadata &metadata)
+PredictiveCache::update(CacheAccess const &access,
+                        CachePredictiveMetadata &metadata)
 {
     size_ += access.value_size_b - metadata.size_;
     statistics_.update(metadata.size_, access.value_size_b);
@@ -145,7 +144,7 @@ PredictiveCache::remove(uint64_t const victim_key,
                         CacheAccess const *const current_access)
 {
     ok(true);
-    CacheMetadata &m = map_.at(victim_key);
+    CachePredictiveMetadata &m = map_.at(victim_key);
     uint64_t sz_bytes = m.size_;
     double exp_tm = m.expiration_time_ms_;
 
@@ -203,9 +202,13 @@ PredictiveCache::remove(uint64_t const victim_key,
     }
 
     size_ -= sz_bytes;
+    if (m.uses_lru()) {
+        lru_cache_.remove(victim_key);
+    }
+    if (m.uses_ttl()) {
+        remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
+    }
     map_.erase(victim_key);
-    lru_cache_.remove(victim_key);
-    remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
 }
 
 void
@@ -335,7 +338,7 @@ PredictiveCache::evict_too_big_accessed_object(CacheAccess const &access)
 
 bool
 PredictiveCache::is_expired(CacheAccess const &access,
-                            CacheMetadata const &metadata)
+                            CachePredictiveMetadata const &metadata)
 {
     return object_is_expired(metadata.expiration_time_ms_, access.timestamp_ms);
 }
@@ -457,7 +460,7 @@ PredictiveCache::lifetime_cache_mode() const
     return lifetime_cache_mode_;
 }
 
-CacheMetadata const *
+CachePredictiveMetadata const *
 PredictiveCache::get(uint64_t const key)
 {
     if (map_.count(key)) {

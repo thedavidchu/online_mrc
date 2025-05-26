@@ -11,7 +11,7 @@
 
 RemainingLifetime::RemainingLifetime(
     HashList const &list,
-    std::unordered_map<uint64_t, CacheMetadata> const &cache,
+    std::unordered_map<uint64_t, CachePredictiveMetadata> const &cache,
     uint64_t const current_time_ms,
     uint64_t const nr_samples)
     : nr_samples_(std::min(nr_samples, list.size())),

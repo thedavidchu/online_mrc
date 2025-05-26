@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cpp_lib/cache_access.hpp"
-#include "cpp_lib/cache_metadata.hpp"
+#include "cpp_lib/cache_predictive_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/remaining_lifetime.hpp"
 #include "cpp_struct/hash_list.hpp"
@@ -36,7 +36,7 @@ private:
 
     /// @brief  Process an access to an item in the cache.
     void
-    update(CacheAccess const &access, CacheMetadata &metadata);
+    update(CacheAccess const &access, CachePredictiveMetadata &metadata);
 
     /// @brief  Evict an object in the cache (either due to the eviction
     ///         policy or TTL expiration).
@@ -80,7 +80,8 @@ private:
     evict_too_big_accessed_object(CacheAccess const &access);
 
     bool
-    is_expired(CacheAccess const &access, CacheMetadata const &metadata);
+    is_expired(CacheAccess const &access,
+               CachePredictiveMetadata const &metadata);
 
     void
     hit(CacheAccess const &access);
@@ -126,7 +127,7 @@ public:
     LifeTimeCacheMode
     lifetime_cache_mode() const;
 
-    CacheMetadata const *
+    CachePredictiveMetadata const *
     get(uint64_t const key);
 
     std::string
@@ -166,7 +167,7 @@ private:
     CacheStatistics statistics_;
 
     // Maps key to [last access time, expiration time]
-    std::unordered_map<uint64_t, CacheMetadata> map_;
+    std::unordered_map<uint64_t, CachePredictiveMetadata> map_;
     // Maps last access time to keys.
     HashList lru_cache_;
 
