@@ -7,6 +7,7 @@
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
+#include "lib/lifetime_thresholds.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
 #include <cassert>
@@ -174,6 +175,7 @@ private:
 
     // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
     LifeTimeCache lifetime_cache_;
+    LifeTimeThresholds lifetime_thresholds_;
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
     LRUTTLCache oracle_;

@@ -8,6 +8,7 @@
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_cache.hpp"
+#include "lib/lifetime_thresholds.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
 #include "logger/logger.h"
@@ -22,7 +23,6 @@
 #include <iostream>
 #include <map>
 #include <ostream>
-#include <sstream>
 #include <stdlib.h>
 #include <string>
 #include <sys/types.h>
@@ -390,6 +390,7 @@ PredictiveCache::PredictiveCache(size_t const capacity,
     : capacity_(capacity),
       lifetime_cache_mode_(cache_mode),
       lifetime_cache_(capacity, lower_ratio, upper_ratio, cache_mode),
+      lifetime_thresholds_(lower_ratio, upper_ratio),
       oracle_(capacity),
       kwargs_(kwargs)
 {
@@ -507,6 +508,7 @@ PredictiveCache::print_statistics(
           << LifeTimeCacheMode__str(lifetime_cache_.mode())
           << "\", \"CacheStatistics\": " << statistics_.json()
           << ", \"PredictionTracker\": " << pred_tracker.json()
+          << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
           << ", \"Threshold Refreshes [#]\": "
           << format_engineering(lifetime_cache_.refreshes())
           << ", \"Samples Since Threshold Refresh [#]\": "
