@@ -85,7 +85,7 @@ def get_valid_ttl_mask(data: np.memmap, tmpdir: Path, trace_format: str):
         mask[:] = np.logical_and(puts, mortals)
         mask.flush()
     elif trace_format == "YangTwitterX":
-        puts = (data[:]["op_ttl_s"] >> 24) not in range(3, 255)
+        puts = np.logical_and(3 <= (data[:]["op_ttl_s"] >> 24), (data[:]["op_ttl_s"] >> 24) < 255)
         mortals = (data[:]["op_ttl_s"] & 0x00FF_FFFF) != 0
         mask[:] = np.logical_and(puts, mortals)
         mask.flush()

@@ -31,8 +31,8 @@ TRACE_DTYPE: dict[str, np.dtype] = {
         [
             ("timestamp_ms", np.uint32),
             ("key", np.uint64),
-            # Upper 10 bits: key size
-            # Lower 22 bits: value size
+            # Upper 10 bits: key size [bytes]
+            # Lower 22 bits: value size [bytes]
             ("key_value_size", np.uint32),
             # Upper 8 bits: op
             # Lower 24 bits: TTL [s]
@@ -106,9 +106,9 @@ def convert_to_time_size_ttl(
                     np.where(src[:]["ttl_s"] != 0, 1000 * src[:]["ttl_s"], np.inf),
                 )
         case "YangTwitterX":
-            dst[:]["timestamp_ms"] = src[:]["timestamp_s"]
-            dst[:]["size_b"] = (src[:]["key_value_size_b"] >> 22) + (
-                src[:]["key_value_size_b"] & 0x003F_FFFF
+            dst[:]["timestamp_ms"] = src[:]["timestamp_ms"]
+            dst[:]["size_b"] = (src[:]["key_value_size"] >> 22) + (
+                src[:]["key_value_size"] & 0x003F_FFFF
             )
             if not process_ttl:
                 dst[:]["ttl_ms"] = 1000 * (src[:]["op_ttl_s"] & 0x00FF_FFFF)
