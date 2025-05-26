@@ -284,6 +284,9 @@ def main():
     parser.add_argument(
         "--temporal-statistics", type=Path, help="temporal statistics output plot"
     )
+    parser.add_argument(
+        "--eviction-histograms", type=Path, help="eviction histograms output plot"
+    )
     parser.add_argument("--other", type=Path, help="other plot")
     args = parser.parse_args()
 
@@ -653,6 +656,23 @@ def main():
             *COUNT_SHARDS_ARGS,
         )
         fig.savefig(args.temporal_statistics.resolve())
+    if args.eviction_histograms is not None:
+        hist_keys = ["Lifetime Cache", "Thresholds", "Histogram"]
+        fig, ax = plt.subplots()
+        fig.suptitle("LRU Eviction Time Histograms")
+        for (l, u, mode), d_list in data.items():
+            for d in d_list:
+                hist = {
+                    float(k): float(v)
+                    for k, v in d["Lifetime Cache"]["Thresholds"]["Histogram"].items()
+                }
+                ax.loglog(
+                    hist.keys(),
+                    hist.values(),
+                    label=f"{l}:{u} {SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
+                )
+        ax.legend()
+        fig.savefig(args.eviction_histograms.resolve())
     if args.other is not None:
         y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
         y_label = "Mean Time from Eviction until Expiry [h]"
