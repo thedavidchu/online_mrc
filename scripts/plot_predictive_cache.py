@@ -207,7 +207,7 @@ def plot(
             # (0.25, 0.75): "gold",
             # (0.75, 0.75): "teal",
             (1.0, 1.0): "slategrey",
-            # (0.5, 0.5): "red",
+            (0.5, 0.5): "red",
             (0.0, 1.0): "purple",
         }.get((l, u), None)
         if colour is None or marker is None:
@@ -622,48 +622,54 @@ def main():
         )
         fig.savefig(args.remaining_lifetime.resolve())
     if args.temporal_statistics is not None:
-        fig, axes = plt.subplots(2, 2, sharex=True, sharey="row")
-        fig.set_size_inches(10, 10)
+        fig, axes = plt.subplots(3, len(data), sharex=True, sharey="row")
+        fig.set_size_inches(5 * len(data), 15)
         fig.suptitle("Temporal Statistics")
         label_func = (
-            lambda d: f'{SCALE_SHARDS_FUNC(get_stat(d, ["Capacity [B]"]) / (1<<30), d):.3} GiB'
+            lambda d: f'{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB'
         )
-        plot_lines(
-            axes[0, 0],
-            data,
-            label_func,
-            "Time [h]",
-            lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
-            SCALE_MS_TO_HOUR,
-            IDENTITY_X_D,
-            "Cache Size [GiB]",
-            lambda d: d["CacheStatistics"]["Temporal Sizes [B]"],
-            *GiB_SHARDS_ARGS,
-        )
-        plot_lines(
-            axes[0, 1],
-            data,
-            label_func,
-            "Time [h]",
-            lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
-            SCALE_MS_TO_HOUR,
-            IDENTITY_X_D,
-            "High Watermark Cache Size [GiB]",
-            lambda d: d["CacheStatistics"]["Temporal Max Sizes [B]"],
-            *GiB_SHARDS_ARGS,
-        )
-        plot_lines(
-            axes[1, 0],
-            data,
-            label_func,
-            "Time [h]",
-            lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
-            SCALE_MS_TO_HOUR,
-            IDENTITY_X_D,
-            "Resident Objects [#]",
-            lambda d: d["CacheStatistics"]["Temporal Resident Objects [#]"],
-            *COUNT_SHARDS_ARGS,
-        )
+        for i, ((l, u, mode), d_list) in enumerate(data.items()):
+            tmp_data = {(l, u, mode): d_list}
+            plot_lines(
+                axes[0, i],
+                tmp_data,
+                label_func,
+                "Time [h]",
+                lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
+                SCALE_MS_TO_HOUR,
+                IDENTITY_X_D,
+                "Cache Size [GiB]",
+                lambda d: d["CacheStatistics"]["Temporal Sizes [B]"],
+                *GiB_SHARDS_ARGS,
+            )
+            plot_lines(
+                axes[1, i],
+                tmp_data,
+                label_func,
+                "Time [h]",
+                lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
+                SCALE_MS_TO_HOUR,
+                IDENTITY_X_D,
+                "High Watermark Cache Size [GiB]",
+                lambda d: d["CacheStatistics"]["Temporal Max Sizes [B]"],
+                *GiB_SHARDS_ARGS,
+            )
+            plot_lines(
+                axes[2, i],
+                tmp_data,
+                label_func,
+                "Time [h]",
+                lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
+                SCALE_MS_TO_HOUR,
+                IDENTITY_X_D,
+                "Resident Objects [#]",
+                lambda d: d["CacheStatistics"]["Temporal Resident Objects [#]"],
+                *COUNT_SHARDS_ARGS,
+            )
+            # Overwrite titles
+            axes[0, i].set_title(f"{get_label(l,u,mode)} Sizes vs. Time")
+            axes[1, i].set_title(f"{get_label(l,u,mode)} High Watermark vs. Time")
+            axes[2, i].set_title(f"{get_label(l,u,mode)} Objects vs. Time")
         fig.savefig(args.temporal_statistics.resolve())
     if args.eviction_histograms is not None:
         hist_keys = ["Lifetime Cache", "Thresholds", "Histogram"]
@@ -672,10 +678,10 @@ def main():
         fig.set_size_inches(5 * len(data), 10)
         for i, ((l, u, mode), d_list) in enumerate(data.items()):
             axes[0, i].set_title(
-                f"{get_label(l,u,mode)} Lifetime Histograms in Theoretical Pure LRU Queue"
+                f"{get_label(l,u,mode)} Lifetime Histograms\nin Theoretical Pure LRU Queue"
             )
             axes[1, i].set_title(
-                f"{get_label(l,u,mode)} Lifetime Histograms in LRU-TTL's LRU Queue"
+                f"{get_label(l,u,mode)} Lifetime Histogram\nin LRU-TTL's LRU Queue"
             )
             for d in d_list:
                 hist = {
