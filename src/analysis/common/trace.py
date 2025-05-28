@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from string import Template
 from warnings import warn
 
 import numpy as np
@@ -154,7 +155,20 @@ def read_trace(path: Path, format: str, mode: str | None):
     return data
 
 
-def get_twitter_path(nr: int, format: str) -> Path | None:
+def get_twitter_path(
+    nr: int, format: str, template: Template | None = None
+) -> Path | None:
+    """
+    @brief   Get the Twitter path from Michael's Intel 2023 server.
+    @param template:    None => use default; otherwise, replace '$cluster'
+                        with the 'nr' variable.
+    """
+    if template is not None:
+        path = Path(template.substitute(cluster=nr)).resolve()
+        if path.exists():
+            return path
+        warn(f"file '{str(path)}' DNE")
+        return None
     match format:
         case "Kia":
             # We try to use disk2-8tb because it is faster.

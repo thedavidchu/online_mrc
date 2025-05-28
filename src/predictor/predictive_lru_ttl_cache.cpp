@@ -1,5 +1,6 @@
 #include "lib/predictive_lru_ttl_cache.hpp"
 #include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/cache_predictive_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
@@ -88,14 +89,17 @@ PredictiveCache::insert(CacheAccess const &access)
     statistics_.insert(access.value_size_b);
     double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CachePredictiveMetadata{access});
+    auto &metadata = map_.at(access.key);
     auto r = lifetime_cache_.thresholds();
     if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
+        metadata.set_lru();
     }
     if (r.second != 0 && ttl_ms <= r.second) {
         pred_tracker.record_store_ttl();
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
+        metadata.set_ttl();
     }
     size_ += access.value_size_b;
 }
@@ -116,23 +120,40 @@ PredictiveCache::update(CacheAccess const &access,
     if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
-    } else {
+        metadata.set_lru();
+    } else if (metadata.uses_lru()) {
         lru_cache_.remove(access.key);
+        metadata.unset_lru();
     }
     if (r.second != 0 && ttl_ms <= r.second) {
         // Even if we don't re-insert into the TTL queue, we still
         // want to mark it as stored.
         pred_tracker.record_store_ttl();
         // Only insert the TTL if it hasn't been inserted already.
-        if (find_multimap_kv(ttl_cache_,
-                             (double)metadata.expiration_time_ms_,
-                             access.key) == ttl_cache_.end()) {
+        if (!metadata.uses_ttl()) {
             ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
+            metadata.set_ttl();
         }
-    } else {
+    } else if (metadata.uses_ttl()) {
         remove_multimap_kv(ttl_cache_,
                            metadata.expiration_time_ms_,
                            access.key);
+        metadata.unset_ttl();
+    }
+}
+
+void
+PredictiveCache::remove_lru(uint64_t const victim_key,
+                            CachePredictiveMetadata const &m,
+                            CacheAccess const *const current_access,
+                            EvictionCause const cause)
+{
+    lru_cache_.remove(victim_key);
+    if (cause == EvictionCause::LRU) {
+        lifetime_thresholds_.register_cache_eviction(
+            current_access->timestamp_ms - m.last_access_time_ms_,
+            m.size_,
+            current_access->timestamp_ms);
     }
 }
 
@@ -203,7 +224,7 @@ PredictiveCache::remove(uint64_t const victim_key,
 
     size_ -= sz_bytes;
     if (m.uses_lru()) {
-        lru_cache_.remove(victim_key);
+        remove_lru(victim_key, m, current_access, cause);
     }
     if (m.uses_ttl()) {
         remove_multimap_kv(ttl_cache_, exp_tm, victim_key);

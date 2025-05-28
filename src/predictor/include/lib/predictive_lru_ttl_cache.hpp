@@ -38,6 +38,13 @@ private:
     void
     update(CacheAccess const &access, CachePredictiveMetadata &metadata);
 
+    /// @brief  Helper function to remove object from LRU queue.
+    void
+    remove_lru(uint64_t const victim_key,
+               CachePredictiveMetadata const &m,
+               CacheAccess const *const current_access,
+               EvictionCause const cause);
+
     /// @brief  Evict an object in the cache (either due to the eviction
     ///         policy or TTL expiration).
     void

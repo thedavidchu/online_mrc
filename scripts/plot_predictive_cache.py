@@ -152,6 +152,20 @@ def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
     return data
 
 
+def get_label(
+    lower_ratio: float, upper_ratio: float, eviction_mode: str = "EvictionTime"
+) -> str:
+    return {
+        "0:1 EvictionTime": "LRU-with-proactive-TTL",
+        "0:0 EvictionTime": "LRU-with-lazy-TTL",
+        "0.5:0.5 EvictionTime": "Unbiased Binary Predictor",
+        "1:1 EvictionTime": "TTL-only",
+    }.get(
+        f"{lower_ratio}:{upper_ratio} {eviction_mode}",
+        f"{lower_ratio}:{upper_ratio} {eviction_mode}",
+    )
+
+
 def plot(
     ax: plt.Axes,
     all_data: dict[str, list[object]],
@@ -199,12 +213,7 @@ def plot(
         if colour is None or marker is None:
             continue
         # Prettify labels
-        label = {
-            "0:1 EvictionTime": "LRU-TTL (proactive TTL)",
-            "0:0 EvictionTime": "LRU (with lazy TTL)",
-            "0.5:0.5 EvictionTime": "Unbiased Binary Predictor",
-            "1:1 EvictionTime": "TTL (with volatile TTL)",
-        }.get(f"{l}:{u} {tm}", f"{l}:{u} {tm}")
+        label = get_label(l, u, tm)
         ax.plot(cache_sizes, y, marker + ":", color=colour, label=label)
     # Plot between [0.0, 1.0] for MRC curves.
     if set_ylim_to_one:
@@ -658,20 +667,39 @@ def main():
         fig.savefig(args.temporal_statistics.resolve())
     if args.eviction_histograms is not None:
         hist_keys = ["Lifetime Cache", "Thresholds", "Histogram"]
-        fig, ax = plt.subplots()
+        fig, axes = plt.subplots(2, len(data), sharex=True, sharey=True)
         fig.suptitle("LRU Eviction Time Histograms")
-        for (l, u, mode), d_list in data.items():
+        fig.set_size_inches(5 * len(data), 10)
+        for i, ((l, u, mode), d_list) in enumerate(data.items()):
+            axes[0, i].set_title(
+                f"{get_label(l,u,mode)} Lifetime Histograms in Theoretical Pure LRU Queue"
+            )
+            axes[1, i].set_title(
+                f"{get_label(l,u,mode)} Lifetime Histograms in LRU-TTL's LRU Queue"
+            )
             for d in d_list:
                 hist = {
-                    float(k): float(v)
+                    1.0 if float(k) == 0 else float(k): float(v)
                     for k, v in d["Lifetime Cache"]["Thresholds"]["Histogram"].items()
                 }
-                ax.loglog(
+                print(min(hist.keys()) if hist else None)
+                axes[0, i].loglog(
                     hist.keys(),
                     hist.values(),
-                    label=f"{l}:{u} {SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
+                    label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
                 )
-        ax.legend()
+                hist = {
+                    1.0 if float(k) == 0 else float(k): float(v)
+                    for k, v in d["Lifetime Thresholds"]["Histogram"].items()
+                }
+                print(min(hist.keys()) if hist else None)
+                axes[1, i].loglog(
+                    hist.keys(),
+                    hist.values(),
+                    label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
+                )
+            axes[0, i].legend()
+            axes[1, i].legend()
         fig.savefig(args.eviction_histograms.resolve())
     if args.other is not None:
         y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
