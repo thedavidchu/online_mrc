@@ -90,7 +90,8 @@ PredictiveCache::insert(CacheAccess const &access)
     double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CachePredictiveMetadata{access});
     auto &metadata = map_.at(access.key);
-    auto r = lifetime_cache_.thresholds();
+    auto r = lru_only_mode_ ? lifetime_cache_.thresholds()
+                            : lifetime_thresholds_.thresholds();
     if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
@@ -116,7 +117,8 @@ PredictiveCache::update(CacheAccess const &access,
         return;
     }
     double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
-    auto r = lifetime_cache_.thresholds();
+    auto r = lru_only_mode_ ? lifetime_cache_.thresholds()
+                            : lifetime_thresholds_.thresholds();
     if (r.first != UINT64_MAX && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
@@ -410,11 +412,13 @@ PredictiveCache::PredictiveCache(size_t const capacity,
                                  double const lower_ratio,
                                  double const upper_ratio,
                                  LifeTimeCacheMode const cache_mode,
+                                 bool const lru_only_mode,
                                  std::map<std::string, std::string> kwargs)
     : capacity_(capacity),
       lifetime_cache_mode_(cache_mode),
       lifetime_cache_(capacity, lower_ratio, upper_ratio, cache_mode),
       lifetime_thresholds_(lower_ratio, upper_ratio),
+      lru_only_mode_(lru_only_mode),
       oracle_(capacity),
       kwargs_(kwargs)
 {
@@ -533,6 +537,8 @@ PredictiveCache::print_statistics(
           << "\", \"CacheStatistics\": " << statistics_.json()
           << ", \"PredictionTracker\": " << pred_tracker.json()
           << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
+          << ", \"Lifetime Thresholds Mode\": "
+          << (lru_only_mode_ ? "\"LRU-only\"" : "\"LRU-from-LRU-TTL\"")
           << ", \"Threshold Refreshes [#]\": "
           << format_engineering(lifetime_cache_.refreshes())
           << ", \"Samples Since Threshold Refresh [#]\": "

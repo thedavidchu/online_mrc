@@ -43,6 +43,7 @@ run_single_cache(std::promise<std::string> ret,
                  double const lower_ratio,
                  double const upper_ratio,
                  LifeTimeCacheMode const lifetime_cache_mode,
+                 bool const lru_only_mode,
                  double const shards_ratio,
                  bool const show_progress)
 {
@@ -50,6 +51,7 @@ run_single_cache(std::promise<std::string> ret,
                       lower_ratio,
                       upper_ratio,
                       lifetime_cache_mode,
+                      lru_only_mode,
                       {{"shards_ratio", std::to_string(shards_ratio)}});
     struct FixedRateShardsSampler frss = {};
     if (!FixedRateShardsSampler__init(&frss, shards_ratio, true)) {
@@ -110,6 +112,7 @@ run_caches(std::string const &path,
            double const lower_ratio,
            double const upper_ratio,
            LifeTimeCacheMode const lifetime_cache_mode,
+           bool const lru_only_mode,
            double const shards_ratio,
            bool const show_progress)
 {
@@ -129,6 +132,7 @@ run_caches(std::string const &path,
                              lower_ratio,
                              upper_ratio,
                              lifetime_cache_mode,
+                             lru_only_mode,
                              shards_ratio,
                              show_progress);
     }
@@ -165,11 +169,12 @@ parse_capacities(std::string const &str)
 int
 main(int argc, char *argv[])
 {
-    if (argc != 8 && argc != 9) {
+    if (argc != 9 && argc != 10) {
         std::cout
             << "Usage: predictor <trace> <format> <lower_ratio [0.0, 1.0]> "
                "<upper_ratio [0.0, 1.0]> <cache-capacities>+ "
                "<lifetime_cache_mode EvictionTime|LifeTime> "
+               "<lifetime_lru_only_mode true|false> "
                "<shards-ratio [0.0, 1.0]> [show_progress=false]"
             << std::endl;
         exit(1);
@@ -183,9 +188,10 @@ main(int argc, char *argv[])
     std::vector<uint64_t> capacity_bytes = parse_capacities(argv[5]);
     LifeTimeCacheMode const lifetime_cache_mode =
         LifeTimeCacheMode__parse(argv[6]);
-    double const shards_ratio = atof(argv[7]);
+    bool const lru_only_mode = atob_or_panic(argv[7]);
+    double const shards_ratio = atof(argv[8]);
     bool const show_progress =
-        parse_bool_or(argc == 9 ? std::string(argv[8]) : "false", false);
+        parse_bool_or(argc == 10 ? std::string(argv[9]) : "false", false);
     LOGGER_INFO("Running: %s %s",
                 path.c_str(),
                 CacheTraceFormat__string(format).c_str());
@@ -195,6 +201,7 @@ main(int argc, char *argv[])
                lower_ratio,
                upper_ratio,
                lifetime_cache_mode,
+               lru_only_mode,
                shards_ratio,
                show_progress);
     std::cout << "OK!" << std::endl;

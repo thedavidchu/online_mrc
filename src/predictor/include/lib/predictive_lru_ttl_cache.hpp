@@ -114,6 +114,7 @@ public:
                     double const lower_ratio,
                     double const upper_ratio,
                     LifeTimeCacheMode const cache_mode,
+                    bool const lru_only_mode = true,
                     std::map<std::string, std::string> kwargs = {});
 
     void
@@ -184,6 +185,7 @@ private:
     // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
     LifeTimeCache lifetime_cache_;
     LifeTimeThresholds lifetime_thresholds_;
+    bool const lru_only_mode_;
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
     LRUTTLCache oracle_;
