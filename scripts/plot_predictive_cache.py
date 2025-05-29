@@ -26,6 +26,10 @@ import matplotlib.pyplot as plt
 IDENTITY_X = lambda x: x
 IDENTITY_X_D = lambda x, _d: x
 
+# Smooth log functions by converting 0 to 1.0.
+# AKA "Laplace smoothing".
+ADDITIVE_SMOOTHING = lambda x: 1.0 if x == 0.0 else x
+
 SCALE_B_TO_GiB = lambda x: x / (1 << 30)
 SCALE_MS_TO_HOUR = lambda x: x / 1000 / 3600
 # NOTE  Not all results have the SHARDS ratio, so if they don't, I assume the
@@ -685,22 +689,20 @@ def main():
             )
             for d in d_list:
                 hist = {
-                    1.0 if float(k) == 0 else float(k): float(v)
+                    float(k): float(v)
                     for k, v in d["Lifetime Cache"]["Thresholds"]["Histogram"].items()
                 }
-                print(min(hist.keys()) if hist else None)
                 axes[0, i].loglog(
-                    hist.keys(),
+                    [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
                     hist.values(),
                     label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
                 )
                 hist = {
-                    1.0 if float(k) == 0 else float(k): float(v)
+                    float(k): float(v)
                     for k, v in d["Lifetime Thresholds"]["Histogram"].items()
                 }
-                print(min(hist.keys()) if hist else None)
                 axes[1, i].loglog(
-                    hist.keys(),
+                    [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
                     hist.values(),
                     label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
                 )
