@@ -151,7 +151,11 @@ def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
     # Group data by (lower-ratio, upper-ratio, lifetime-mode).
     data: dict[tuple[float, float, str], list[dict]] = {}
     for d in accum:
-        key = (d["Lower Ratio"], d["Upper Ratio"], d["Lifetime Cache Mode"])
+        key = (
+            float(d["Lower Ratio"]),
+            float(d["Upper Ratio"]),
+            d["Lifetime Cache Mode"],
+        )
         data.setdefault(key, []).append(d)
     return data
 
@@ -626,7 +630,7 @@ def main():
         )
         fig.savefig(args.remaining_lifetime.resolve())
     if args.temporal_statistics is not None:
-        fig, axes = plt.subplots(3, len(data), sharex=True, sharey="row")
+        fig, axes = plt.subplots(3, len(data), sharex=True, sharey="row", squeeze=False)
         fig.set_size_inches(5 * len(data), 15)
         fig.suptitle("Temporal Statistics")
         label_func = (
@@ -677,7 +681,7 @@ def main():
         fig.savefig(args.temporal_statistics.resolve())
     if args.eviction_histograms is not None:
         hist_keys = ["Lifetime Cache", "Thresholds", "Histogram"]
-        fig, axes = plt.subplots(2, len(data), sharex=True, sharey=True)
+        fig, axes = plt.subplots(2, len(data), sharex=True, sharey=True, squeeze=False)
         fig.suptitle("LRU Eviction Time Histograms")
         fig.set_size_inches(5 * len(data), 10)
         for i, ((l, u, mode), d_list) in enumerate(data.items()):
