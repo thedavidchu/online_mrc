@@ -53,6 +53,7 @@ parser.add_argument("--shards", "-s", type=float, default=1.0, help="shards rati
 parser.add_argument(
     "--overwrite", action="store_true", help="overwrite existing output (versus append)"
 )
+parser.add_argument("--verbose", action="store_true", help="verbosely print outputs")
 args = parser.parse_args()
 
 INPUT_TEMPLATE = args.input_template
@@ -96,6 +97,7 @@ capacities = [
     # "12GiB",
     # "16GiB",
 ]
+verbose = args.verbose
 
 
 def stdout_file(cluster_id: int, version: int):
@@ -119,6 +121,8 @@ def run_predictor(
     lifetime_lru_mode: bool,
     shards_ratio: float,
     version: int,
+    *,
+    verbose: bool = False,
 ):
     cmd = [
         # NOTE  I use '/usr/bin/time' because 'time' alone seems
@@ -135,9 +139,11 @@ def run_predictor(
         str(lifetime_lru_mode).lower(),
         str(shards_ratio),
     ]
+    print(cmd)
     r = run(cmd, capture_output=True, text=True)
-    print(r.stdout)
-    print(r.stderr)
+    if verbose:
+        print(r.stdout)
+        print(r.stderr)
     with open(stdout_file(cluster_id, version), "a") as f:
         f.write(r.stdout)
     with open(stderr_file(cluster_id, version), "a") as f:
@@ -175,6 +181,7 @@ def main():
             lifetime_lru_only_mode,
             shards_ratio,
             version,
+            verbose=verbose,
         )
 
 
