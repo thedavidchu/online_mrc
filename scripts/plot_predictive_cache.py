@@ -19,6 +19,7 @@ python3 scripts/plot_predictive_cache.py -i data.txt [...]
 import argparse
 import json
 from pathlib import Path
+from string import Template
 from typing import Callable
 
 import matplotlib.pyplot as plt
@@ -160,17 +161,36 @@ def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
     return data
 
 
+def plot_this_configuration(
+    lower_ratio: int | float,
+    upper_ratio: int | float,
+    eviction_mode: str,
+) -> bool:
+    return get_label(lower_ratio, upper_ratio, eviction_mode, default=None) is not None
+
+
 def get_label(
-    lower_ratio: float, upper_ratio: float, eviction_mode: str = "EvictionTime"
+    lower_ratio: int | float,
+    upper_ratio: int | float,
+    eviction_mode: str = "EvictionTime",
+    *,
+    default: Template | None = Template("$lower_ratio:$upper_ratio $eviction_mode"),
 ) -> str:
+    l, u = float(lower_ratio), float(upper_ratio)
     return {
-        "0:1 EvictionTime": "LRU-with-proactive-TTL",
-        "0:0 EvictionTime": "LRU-with-lazy-TTL",
-        "0.5:0.5 EvictionTime": "Unbiased Binary Predictor",
-        "1:1 EvictionTime": "TTL-only",
+        (0, 1, "EvictionTime"): "LRU/Proactive-TTL",
+        (0, 0, "EvictionTime"): "LRU/Lazy-TTL",
+        (0.5, 0.5, "EvictionTime"): "Unbiased Binary Predictor",
+        (1, 1, "EvictionTime"): "TTL-only",
     }.get(
-        f"{lower_ratio}:{upper_ratio} {eviction_mode}",
-        f"{lower_ratio}:{upper_ratio} {eviction_mode}",
+        (l, u, eviction_mode),
+        (
+            default.substitute(
+                lower_ratio=l, upper_ratio=u, eviction_mode=eviction_mode
+            )
+            if default is not None
+            else None
+        ),
     )
 
 
@@ -630,13 +650,18 @@ def main():
         )
         fig.savefig(args.remaining_lifetime.resolve())
     if args.temporal_statistics is not None:
-        fig, axes = plt.subplots(3, len(data), sharex=True, sharey="row", squeeze=False)
-        fig.set_size_inches(5 * len(data), 15)
+        used_data = {
+            (l, u, mode): d_list
+            for (l, u, mode), d_list in data.items()
+            if plot_this_configuration(l, u, mode)
+        }
+        fig, axes = plt.subplots(3, len(used_data), sharex=True, sharey="row", squeeze=False)
+        fig.set_size_inches(5 * len(used_data), 15)
         fig.suptitle("Temporal Statistics")
         label_func = (
             lambda d: f'{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB'
         )
-        for i, ((l, u, mode), d_list) in enumerate(data.items()):
+        for i, ((l, u, mode), d_list) in enumerate(used_data.items()):
             tmp_data = {(l, u, mode): d_list}
             plot_lines(
                 axes[0, i],
@@ -680,11 +705,15 @@ def main():
             axes[2, i].set_title(f"{get_label(l,u,mode)} Objects vs. Time")
         fig.savefig(args.temporal_statistics.resolve())
     if args.eviction_histograms is not None:
-        hist_keys = ["Lifetime Cache", "Thresholds", "Histogram"]
-        fig, axes = plt.subplots(2, len(data), sharex=True, sharey=True, squeeze=False)
+        used_data = {
+            (l, u, mode): d_list
+            for (l, u, mode), d_list in data.items()
+            if plot_this_configuration(l, u, mode)
+        }
+        fig, axes = plt.subplots(2, len(used_data), sharex=True, sharey=True, squeeze=False)
         fig.suptitle("LRU Eviction Time Histograms")
-        fig.set_size_inches(5 * len(data), 10)
-        for i, ((l, u, mode), d_list) in enumerate(data.items()):
+        fig.set_size_inches(5 * len(used_data), 10)
+        for i, ((l, u, mode), d_list) in enumerate(used_data.items()):
             axes[0, i].set_title(
                 f"{get_label(l,u,mode)} Lifetime Histograms\nin Theoretical Pure LRU Queue"
             )
