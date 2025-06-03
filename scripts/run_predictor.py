@@ -151,9 +151,9 @@ def run_predictor(
 
 
 def main():
-    print(f"Input: {INPUT_TEMPLATE}")
-    print(f"stdout: {OUTPUT_TEMPLATE}")
-    print(f"stderr: {ERROR_OUTPUT_TEMPLATE}")
+    print(f"Input: {INPUT_TEMPLATE.safe_substitute()}")
+    print(f"stdout: {OUTPUT_TEMPLATE.safe_substitute()}")
+    print(f"stderr: {ERROR_OUTPUT_TEMPLATE.safe_substitute()}")
     print(f"{version=}")
     print(f"{cluster_ids=}")
     print(f"{modes=}")
