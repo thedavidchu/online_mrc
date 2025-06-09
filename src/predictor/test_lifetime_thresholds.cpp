@@ -1,5 +1,6 @@
 #include "lib/lifetime_thresholds.hpp"
 
+#include <cmath>
 #include <glib.h>
 
 #include <cassert>
@@ -23,17 +24,17 @@ test_empty()
     LifeTimeThresholds t(0.25, 0.75);
 
     auto r = t.thresholds();
-    g_assert_cmpuint(r.first, ==, 0);
-    g_assert_cmpuint(r.second, ==, UINT64_MAX);
+    g_assert_cmpfloat(r.first, ==, 0);
+    g_assert_cmpfloat(r.second, ==, INFINITY);
     r = t.thresholds();
-    g_assert_cmpuint(r.first, ==, 0);
-    g_assert_cmpuint(r.second, ==, UINT64_MAX);
+    g_assert_cmpfloat(r.first, ==, 0);
+    g_assert_cmpfloat(r.second, ==, INFINITY);
     r = t.thresholds();
-    g_assert_cmpuint(r.first, ==, 0);
-    g_assert_cmpuint(r.second, ==, UINT64_MAX);
+    g_assert_cmpfloat(r.first, ==, 0);
+    g_assert_cmpfloat(r.second, ==, INFINITY);
     r = t.thresholds();
-    g_assert_cmpuint(r.first, ==, 0);
-    g_assert_cmpuint(r.second, ==, UINT64_MAX);
+    g_assert_cmpfloat(r.first, ==, 0);
+    g_assert_cmpfloat(r.second, ==, INFINITY);
 
     return true;
 }
@@ -67,8 +68,8 @@ test_refresh(bool const debug = false)
     for (size_t i = 0; i < 1000 - 1; ++i) {
         t.register_cache_eviction(i % 100 + 1, 1, 0);
         r = t.thresholds();
-        g_assert_cmpuint(r.first, ==, 0);
-        g_assert_cmpuint(r.second, ==, UINT64_MAX);
+        g_assert_cmpfloat(r.first, ==, 0);
+        g_assert_cmpfloat(r.second, ==, INFINITY);
     }
     // We may only change the threshold once per hour.
     t.register_cache_eviction(100, 1, HOUR);
@@ -76,16 +77,16 @@ test_refresh(bool const debug = false)
     if (debug) {
         print_pair(r);
     }
-    g_assert_cmpuint(r.first, ==, 25);
-    g_assert_cmpuint(r.second, ==, 75);
+    g_assert_cmpfloat(r.first, ==, 25);
+    g_assert_cmpfloat(r.second, ==, 75);
 
     // Sample from a different population; the thresholds won't change
     // until expected.
     for (size_t i = 0; i < 1000 - 1; ++i) {
         t.register_cache_eviction(i % 100 + 101, 1, HOUR);
         r = t.thresholds();
-        g_assert_cmpuint(r.first, ==, 25);
-        g_assert_cmpuint(r.second, ==, 75);
+        g_assert_cmpfloat(r.first, ==, 25);
+        g_assert_cmpfloat(r.second, ==, 75);
     }
 
     // It is only now that the thresholds change.
@@ -94,8 +95,8 @@ test_refresh(bool const debug = false)
     if (debug) {
         print_pair(r);
     }
-    g_assert_cmpuint(r.first, ==, 50);
-    g_assert_cmpuint(r.second, ==, 150);
+    g_assert_cmpfloat(r.first, ==, 50);
+    g_assert_cmpfloat(r.second, ==, 150);
 
     return true;
 }
