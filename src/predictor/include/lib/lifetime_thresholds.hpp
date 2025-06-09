@@ -14,7 +14,7 @@
 #include <tuple>
 #include <utility>
 
-#include "cpp_lib/sorted_histogram.hpp"
+#include "cpp_lib/histogram.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
 #include "logger/logger.h"
 #include "math/doubles_are_equal.h"
@@ -22,11 +22,13 @@
 using uint64_t = std::uint64_t;
 
 class LifeTimeThresholds {
+    /// @note   This is a relatively expensive function that I removed
+    ///         the optimization for because it is only called a small
+    ///         number of times.
     std::pair<double, double>
     recalculate_thresholds() const
     {
         double lower = NAN, upper = NAN;
-        uint64_t accum = 0, prev_lifetime = 0;
 
         // Handle special cases. If we didn't handle the case of 1.0
         // explicitly, we would simply set the upper_threshold_ to the
@@ -37,31 +39,14 @@ class LifeTimeThresholds {
         } else if (lower_ratio_ == 1.0) {
             lower = INFINITY;
         } else {
-            lower = histogram_.exclusive_percentile(lower_ratio_);
+            lower = histogram_.lower_bound_percentile(lower_ratio_);
         }
         if (upper_ratio_ == 0.0) {
             upper = 0;
         } else if (upper_ratio_ == 1.0) {
             upper = INFINITY;
         } else {
-            upper = histogram_.inclusive_percentile(upper_ratio_);
-        }
-
-        double lower_target = histogram_.total() * lower_ratio_;
-        double upper_target = histogram_.total() * upper_ratio_;
-        for (auto [lifetime, frq] : histogram_) {
-            // Do this first in case both lower and upper are already set.
-            if (!std::isnan(lower) && !std::isnan(upper)) {
-                break;
-            }
-            accum += frq;
-            if (std::isnan(lower) && (double)accum > lower_target) {
-                lower = prev_lifetime;
-            }
-            if (std::isnan(upper) && (double)accum >= upper_target) {
-                upper = lifetime;
-            }
-            prev_lifetime = lifetime;
+            upper = histogram_.percentile(upper_ratio_);
         }
 
         if (std::isnan(lower) || std::isnan(upper)) {
@@ -69,16 +54,14 @@ class LifeTimeThresholds {
             if (lower_ratio_ == upper_ratio_) {
                 return {INFINITY, INFINITY};
             }
+            // NOTE DEAD CODE BELOW!
             LOGGER_WARN("lower or upper does not have value, so defaulting to "
                         "original (0, INFINITY)");
             return {0, INFINITY};
         }
         // If the ratios are the same, then we simply return the mean.
-        // This does bias us to round down, however. It may be a bit of
-        // an optimization to simply return the lower threshold in this
-        // case, because we compute it earlier than the upper threshold.
         if (lower_ratio_ == upper_ratio_) {
-            double mean = (double)(lower + upper) / 2;
+            double mean = (lower + upper) / 2;
             return {mean, mean};
         }
         return {lower, upper};
@@ -242,7 +225,7 @@ private:
 
     bool training_period_ = true;
 
-    SortedHistogram histogram_;
+    Histogram histogram_;
     // This tells us how far off our current estimate of the thresholds
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;

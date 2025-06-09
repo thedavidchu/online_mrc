@@ -1,13 +1,12 @@
 #pragma once
 #ifdef __cplusplus
 extern "C" {
-#endif /*!__cplusplus*/
+#endif /* __cplusplus */
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "histogram/histogram.h"
 #include "types/entry_type.h"
 
 struct FixedRateShardsSampler {
@@ -33,16 +32,26 @@ bool
 FixedRateShardsSampler__sample(struct FixedRateShardsSampler *me,
                                EntryType entry);
 
+#ifndef __cplusplus
+#include "histogram/histogram.h"
+
+/// @note   I don't include "histogram.h" in C++ compiles because I use this
+/// sampler in my C++ project, which has its own histogram class. This means I'd
+/// encounter a naming conflict. I understand this is my bad C++ hygiene, but I
+/// don't want to do a major refactor and I figure I don't need the struct
+/// definition to create a pointer to it.
 void
 FixedRateShardsSampler__post_process(struct FixedRateShardsSampler *me,
                                      struct Histogram *histogram);
+#endif /* !__cplusplus */
+
 bool
 FixedRateShardsSampler__write_as_json(FILE *stream,
                                       struct FixedRateShardsSampler *me);
 
 #ifdef __cplusplus
 }
-#endif /*!__cplusplus*/
+#endif /* __cplusplus */
 
 // Here is some C++ only functionality.
 #ifdef __cplusplus
@@ -66,4 +75,4 @@ FixedRateShardsSampler__json(std::ostream &s,
         s << std::endl;
     }
 }
-#endif /*!__cplusplus*/
+#endif /* __cplusplus */

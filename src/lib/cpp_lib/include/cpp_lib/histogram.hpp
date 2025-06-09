@@ -13,6 +13,11 @@
 using uint64_t = std::uint64_t;
 
 class Histogram {
+    enum class Bound {
+        Lower,
+        UpperOrEqual,
+    };
+
     static std::string
     stringify_double(double const x)
     {
@@ -39,14 +44,35 @@ class Histogram {
         return histogram_.count(bucket) ? histogram_.at(bucket) : 0.0;
     }
 
-    std::map<double, uint64_t>
-    sorted_buckets() const
+    /// @brief  Duh, this percentile is ordered. I just say it's ordered
+    ///         to disambiguate the name from the public method.
+    double
+    ordered_percentile(double const ratio, Bound const bound) const
     {
-        std::map<double, uint64_t> hist;
-        for (auto [b, frq] : histogram_) {
-            hist.emplace(b, frq);
+        double target = ratio * total_;
+        double cnt = 0.0;
+        // QUESTION Does this make sense?
+        double prev_b = -INFINITY;
+        if (histogram_.size() == 0) {
+            return NAN;
         }
-        return hist;
+        for (auto [b, frq] : ordered_histogram()) {
+            cnt += frq;
+            switch (bound) {
+            case Bound::Lower:
+                if (cnt > target) {
+                    return prev_b;
+                }
+                prev_b = b;
+                break;
+            case Bound::UpperOrEqual:
+                if (cnt >= target) {
+                    return b;
+                }
+                break;
+            }
+        }
+        return INFINITY;
     }
 
 public:
@@ -89,16 +115,13 @@ public:
     double
     percentile(double const ratio) const
     {
-        double target = ratio * total_;
-        double cnt = 0.0;
-        std::map<double, uint64_t> ordered_hist = ordered_histogram();
-        for (auto [b, frq] : ordered_hist) {
-            cnt += frq;
-            if (cnt >= target) {
-                return b;
-            }
-        }
-        return INFINITY;
+        return ordered_percentile(ratio, Bound::UpperOrEqual);
+    }
+
+    double
+    lower_bound_percentile(double const ratio) const
+    {
+        return ordered_percentile(ratio, Bound::Lower);
     }
 
     uint64_t
@@ -127,7 +150,7 @@ public:
         std::stringstream ss;
         ss << "Total,Bucket,Frequency,PDF,CDF" << std::endl;
         uint64_t accum = 0;
-        for (auto [b, f] : sorted_buckets()) {
+        for (auto [b, f] : ordered_histogram()) {
             accum += f;
             ss << total_ << sep << stringify_double(b) << sep << f << sep
                << (double)f / total_ << sep << (double)accum / total_
