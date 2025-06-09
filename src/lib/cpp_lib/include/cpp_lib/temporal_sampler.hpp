@@ -16,7 +16,6 @@
 ///         hour after this later time.
 class TemporalSampler {
 private:
-    static constexpr uint64_t HOUR_IN_MS = 3600 * 1000;
     struct UpdateRecommendation {
         bool should_sample;
         bool should_update_time;
@@ -34,6 +33,8 @@ private:
     }
 
 public:
+    static constexpr uint64_t HOUR_IN_MS = 3600 * 1000;
+
     TemporalSampler(uint64_t const sampling_period_ms = HOUR_IN_MS,
                     bool const should_sample_first = false)
         : sampling_period_ms_(sampling_period_ms),
