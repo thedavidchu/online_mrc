@@ -73,6 +73,11 @@ PredictiveCache::ok(bool const fatal) const
         LOGGER_ERROR("zero objects but non-zero cache size");
         ok = false;
     }
+    if (lru_size_ > size_ || ttl_size_ > size_) {
+        LOGGER_ERROR("LRU or TTL size larger than overall size");
+        return ok;
+        ok = false;
+    }
 
     if (fatal && !ok) {
         // The assertion outputs a convenient error message.
@@ -91,15 +96,16 @@ PredictiveCache::insert(CacheAccess const &access)
     map_.emplace(access.key, CachePredictiveMetadata{access});
     auto &metadata = map_.at(access.key);
     auto r = lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
-    std::cout << pair2str(r) << std::endl;
     if (r.first != INFINITY && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
+        lru_size_ += access.key_size_b + access.value_size_b;
         metadata.set_lru();
     }
     if (r.second != 0 && ttl_ms <= r.second) {
         pred_tracker.record_store_ttl();
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
+        ttl_size_ += access.key_size_b + access.value_size_b;
         metadata.set_ttl();
     }
     size_ += access.value_size_b;
@@ -118,9 +124,11 @@ PredictiveCache::update(CacheAccess const &access,
     if (r.first != INFINITY && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
+        lru_size_ += access.key_size_b + access.value_size_b;
         metadata.set_lru();
     } else if (metadata.uses_lru()) {
         lru_cache_.remove(access.key);
+        lru_size_ -= metadata.size_;
         metadata.unset_lru();
     }
     if (r.second != 0 && ttl_ms <= r.second) {
@@ -130,12 +138,14 @@ PredictiveCache::update(CacheAccess const &access,
         // Only insert the TTL if it hasn't been inserted already.
         if (!metadata.uses_ttl()) {
             ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
+            ttl_size_ += access.key_size_b + access.value_size_b;
             metadata.set_ttl();
         }
     } else if (metadata.uses_ttl()) {
         remove_multimap_kv(ttl_cache_,
                            metadata.expiration_time_ms_,
                            access.key);
+        ttl_size_ -= metadata.size_;
         metadata.unset_ttl();
     }
 }
@@ -147,6 +157,7 @@ PredictiveCache::remove_lru(uint64_t const victim_key,
                             EvictionCause const cause)
 {
     lru_cache_.remove(victim_key);
+    lru_size_ -= m.size_;
     if (cause == EvictionCause::LRU) {
         lifetime_thresholds_.register_cache_eviction(
             current_access->timestamp_ms - m.last_access_time_ms_,
@@ -225,7 +236,14 @@ PredictiveCache::remove(uint64_t const victim_key,
         remove_lru(victim_key, m, current_access, cause);
     }
     if (m.uses_ttl()) {
+        if (false && cause == EvictionCause::VolatileTTL) {
+            lifetime_thresholds_.register_cache_eviction(
+                current_access->timestamp_ms - m.last_access_time_ms_,
+                m.size_,
+                current_access->timestamp_ms);
+        }
         remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
+        ttl_size_ -= m.size_;
     }
     map_.erase(victim_key);
 }

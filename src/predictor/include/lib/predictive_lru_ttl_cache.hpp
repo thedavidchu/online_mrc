@@ -8,6 +8,7 @@
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_thresholds.hpp"
 #include "lib/lru_ttl_cache.hpp"
+#include "lib/lru_ttl_cache_statistics.hpp"
 #include "lib/prediction_tracker.hpp"
 #include <cassert>
 #include <cmath>
@@ -165,6 +166,8 @@ private:
 
     // Number of bytes in the current cache.
     size_t size_ = 0;
+    size_t lru_size_ = 0;
+    size_t ttl_size_ = 0;
     // Statistics related to prediction.
     PredictionTracker pred_tracker;
     // Statistics related to cache performance.
