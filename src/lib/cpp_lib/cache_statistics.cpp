@@ -1,8 +1,6 @@
 #include "cpp_lib/cache_statistics.hpp"
-#include "arrays/is_last.h"
 #include "cpp_lib/format_measurement.hpp"
 #include "logger/logger.h"
-#include "math/saturation_arithmetic.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -46,6 +44,10 @@ CacheStatistics::sample()
     temporal_sizes_.update(size_);
     temporal_max_sizes_.update(max_size_);
     temporal_resident_objects_.update(resident_objs_);
+    temporal_miss_bytes_.update(miss_bytes_ -
+                                temporal_miss_bytes_.back().value_or(0));
+    temporal_hit_bytes_.update(hit_bytes_ -
+                               temporal_hit_bytes_.back().value_or(0));
 }
 
 void
@@ -384,7 +386,9 @@ CacheStatistics::json() const
        << ", \"Temporal Sizes [B]\": " << temporal_sizes_.str()
        << ", \"Temporal Max Sizes [B]\": " << temporal_max_sizes_.str()
        << ", \"Temporal Resident Objects [#]\": "
-       << temporal_resident_objects_.str();
+       << temporal_resident_objects_.str()
+       << ", \"Temporal Hits [B]\": " << temporal_hit_bytes_.str()
+       << ", \"Temporal Misses [B]\": " << temporal_max_sizes_.str();
     ss << "}";
     return ss.str();
 }

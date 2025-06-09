@@ -155,4 +155,6 @@ public:
     TemporalData temporal_max_sizes_;
     TemporalData temporal_sizes_;
     TemporalData temporal_resident_objects_;
+    TemporalData temporal_miss_bytes_;
+    TemporalData temporal_hit_bytes_;
 };

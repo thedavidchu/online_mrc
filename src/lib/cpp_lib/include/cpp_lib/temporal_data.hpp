@@ -3,7 +3,9 @@
 #include "cpp_lib/util.hpp"
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,6 +21,15 @@ public:
             data_.pop_front();
         }
         data_.push_back(x);
+    }
+
+    std::optional<double>
+    back()
+    {
+        if (data_.size() == 0) {
+            return std::nullopt;
+        }
+        return data_.back();
     }
 
     size_t
