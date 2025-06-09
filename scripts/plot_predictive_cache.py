@@ -180,10 +180,10 @@ def get_label(
 ) -> str:
     l, u = float(lower_ratio), float(upper_ratio)
     return {
-        (0, 1, "EvictionTime"): "LRU/Proactive-TTL",
-        (0, 0, "EvictionTime"): "LRU/Lazy-TTL",
+        (0.0, 1.0, "EvictionTime"): "LRU/Proactive-TTL",
+        (0.0, 0.0, "EvictionTime"): "LRU/Lazy-TTL",
         (0.5, 0.5, "EvictionTime"): "Unbiased Binary Predictor",
-        (1, 1, "EvictionTime"): "TTL-only",
+        (1.0, 1.0, "EvictionTime"): "TTL-only",
     }.get(
         (l, u, eviction_mode),
         (
