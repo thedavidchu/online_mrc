@@ -137,6 +137,8 @@ def div_or(numerator: float, denominator: float, default: float = 0.0) -> float:
 
 def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
     """@return {(lower-ratio: float, upper-ratio: float, lifetime-mode: str): JSON}"""
+    if not input_file.exists():
+        raise FileNotFoundError(f"'{str(input_file)}' not found")
     file_data = input_file.read_text().splitlines()
     # Parse into JSON for each run of the cache
     accum = []
@@ -155,7 +157,7 @@ def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
         key = (
             float(d["Lower Ratio"]),
             float(d["Upper Ratio"]),
-            d["Lifetime Cache Mode"],
+            "EvictionTime",
         )
         data.setdefault(key, []).append(d)
     return data
@@ -655,7 +657,9 @@ def main():
             for (l, u, mode), d_list in data.items()
             if plot_this_configuration(l, u, mode)
         }
-        fig, axes = plt.subplots(3, len(used_data), sharex=True, sharey="row", squeeze=False)
+        fig, axes = plt.subplots(
+            3, len(used_data), sharex=True, sharey="row", squeeze=False
+        )
         fig.set_size_inches(5 * len(used_data), 15)
         fig.suptitle("Temporal Statistics")
         label_func = (
@@ -710,37 +714,28 @@ def main():
             for (l, u, mode), d_list in data.items()
             if plot_this_configuration(l, u, mode)
         }
-        fig, axes = plt.subplots(2, len(used_data), sharex=True, sharey=True, squeeze=False)
+        fig, axes = plt.subplots(
+            1, len(used_data), sharex=True, sharey=True, squeeze=False
+        )
         fig.suptitle("LRU Eviction Time Histograms")
-        fig.set_size_inches(5 * len(used_data), 10)
+        fig.set_size_inches(5 * len(used_data), 5)
         for i, ((l, u, mode), d_list) in enumerate(used_data.items()):
             axes[0, i].set_title(
-                f"{get_label(l,u,mode)} Lifetime Histograms\nin Theoretical Pure LRU Queue"
-            )
-            axes[1, i].set_title(
                 f"{get_label(l,u,mode)} Lifetime Histogram\nin LRU-TTL's LRU Queue"
             )
             for d in d_list:
                 hist = {
                     float(k): float(v)
-                    for k, v in d["Lifetime Cache"]["Thresholds"]["Histogram"].items()
+                    for k, v in d["Lifetime Thresholds"]["Histogram"][
+                        "histogram"
+                    ].items()
                 }
                 axes[0, i].loglog(
                     [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
                     hist.values(),
                     label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
                 )
-                hist = {
-                    float(k): float(v)
-                    for k, v in d["Lifetime Thresholds"]["Histogram"].items()
-                }
-                axes[1, i].loglog(
-                    [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
-                    hist.values(),
-                    label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
-                )
             axes[0, i].legend()
-            axes[1, i].legend()
         fig.savefig(args.eviction_histograms.resolve())
     if args.other is not None:
         y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
