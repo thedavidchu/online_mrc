@@ -6,7 +6,6 @@
 #include "cpp_lib/util.hpp"
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
-#include "lib/lifetime_cache.hpp"
 #include "lib/lifetime_thresholds.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
@@ -90,9 +89,9 @@ PredictiveCache::insert(CacheAccess const &access)
     double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CachePredictiveMetadata{access});
     auto &metadata = map_.at(access.key);
-    auto r = lru_only_mode_ ? lifetime_cache_.thresholds()
-                            : lifetime_thresholds_.thresholds();
-    if (r.first != UINT64_MAX && ttl_ms >= r.first) {
+    auto r = lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
+    std::cout << pair2str(r) << std::endl;
+    if (r.first != INFINITY && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
         metadata.set_lru();
@@ -113,13 +112,9 @@ PredictiveCache::update(CacheAccess const &access,
     size_ += access.value_size_b - metadata.size_;
     statistics_.update(metadata.size_, access.value_size_b);
     metadata.visit_without_ttl_refresh(access);
-    if (lifetime_cache_.mode() == LifeTimeCacheMode::LifeTime) {
-        return;
-    }
     double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
-    auto r = lru_only_mode_ ? lifetime_cache_.thresholds()
-                            : lifetime_thresholds_.thresholds();
-    if (r.first != UINT64_MAX && ttl_ms >= r.first) {
+    auto r = lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
+    if (r.first != INFINITY && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
         metadata.set_lru();
@@ -411,14 +406,9 @@ PredictiveCache::miss(CacheAccess const &access)
 PredictiveCache::PredictiveCache(size_t const capacity,
                                  double const lower_ratio,
                                  double const upper_ratio,
-                                 LifeTimeCacheMode const cache_mode,
-                                 bool const lru_only_mode,
                                  std::map<std::string, std::string> kwargs)
     : capacity_(capacity),
-      lifetime_cache_mode_(cache_mode),
-      lifetime_cache_(capacity, lower_ratio, upper_ratio, cache_mode),
       lifetime_thresholds_(lower_ratio, upper_ratio),
-      lru_only_mode_(lru_only_mode),
       oracle_(capacity),
       kwargs_(kwargs)
 {
@@ -445,7 +435,6 @@ PredictiveCache::access(CacheAccess const &access)
     g_assert_cmpuint(size_, ==, statistics_.size_);
     statistics_.time(access.timestamp_ms);
     evict_expired_objects(access.timestamp_ms);
-    lifetime_cache_.access(access);
     oracle_.access(access);
     if (map_.count(access.key)) {
         auto &metadata = map_.at(access.key);
@@ -477,12 +466,6 @@ size_t
 PredictiveCache::capacity() const
 {
     return capacity_;
-}
-
-LifeTimeCacheMode
-PredictiveCache::lifetime_cache_mode() const
-{
-    return lifetime_cache_mode_;
 }
 
 CachePredictiveMetadata const *
@@ -528,26 +511,21 @@ PredictiveCache::print_statistics(
     std::ostream &ostrm,
     std::map<std::string, std::string> extras) const
 {
-    auto r = lifetime_cache_.thresholds();
+    auto r = lifetime_thresholds_.thresholds();
     ostrm << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
-          << ", \"Lower Ratio\": " << lifetime_cache_.lower_ratio()
-          << ", \"Upper Ratio\": " << lifetime_cache_.upper_ratio()
-          << ", \"Lifetime Cache Mode\": \""
-          << LifeTimeCacheMode__str(lifetime_cache_.mode())
-          << "\", \"CacheStatistics\": " << statistics_.json()
+          << ", \"Lower Ratio\": " << lifetime_thresholds_.lower_ratio()
+          << ", \"Upper Ratio\": " << lifetime_thresholds_.upper_ratio()
+          << ", \"CacheStatistics\": " << statistics_.json()
           << ", \"PredictionTracker\": " << pred_tracker.json()
           << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
-          << ", \"Lifetime Thresholds Mode\": "
-          << (lru_only_mode_ ? "\"LRU-only\"" : "\"LRU-from-LRU-TTL\"")
           << ", \"Threshold Refreshes [#]\": "
-          << format_engineering(lifetime_cache_.refreshes())
+          << format_engineering(lifetime_thresholds_.refreshes())
           << ", \"Samples Since Threshold Refresh [#]\": "
-          << format_engineering(lifetime_cache_.since_refresh())
+          << format_engineering(lifetime_thresholds_.since_refresh())
           << ", \"LRU Lifetime Evictions [#]\": "
-          << format_engineering(lifetime_cache_.evictions())
+          << format_engineering(lifetime_thresholds_.evictions())
           << ", \"Lower Threshold [ms]\": " << format_time(r.first)
           << ", \"Upper Threshold [ms]\": " << format_time(r.second)
-          << ", \"Lifetime Cache\": " << lifetime_cache_.json()
           << ", \"Kwargs\": " << map2str(kwargs_, true)
           << ", \"Extras\": " << map2str(extras, false);
     ostrm << "}" << std::endl;

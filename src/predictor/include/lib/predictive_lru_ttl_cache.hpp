@@ -6,7 +6,6 @@
 #include "cpp_lib/remaining_lifetime.hpp"
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
-#include "lib/lifetime_cache.hpp"
 #include "lib/lifetime_thresholds.hpp"
 #include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
@@ -113,8 +112,6 @@ public:
     PredictiveCache(size_t const capacity,
                     double const lower_ratio,
                     double const upper_ratio,
-                    LifeTimeCacheMode const cache_mode,
-                    bool const lru_only_mode = true,
                     std::map<std::string, std::string> kwargs = {});
 
     void
@@ -131,9 +128,6 @@ public:
 
     size_t
     capacity() const;
-
-    LifeTimeCacheMode
-    lifetime_cache_mode() const;
 
     CachePredictiveMetadata const *
     get(uint64_t const key);
@@ -165,7 +159,6 @@ private:
 
     // Maximum number of bytes in the cache.
     size_t const capacity_;
-    LifeTimeCacheMode const lifetime_cache_mode_;
 
     // Number of bytes in the current cache.
     size_t size_ = 0;
@@ -182,10 +175,7 @@ private:
     // Maps expiration time to keys.
     std::multimap<double, uint64_t> ttl_cache_;
 
-    // Real (or SHARDS-ified) LRU cache to monitor the lifetime of elements.
-    LifeTimeCache lifetime_cache_;
     LifeTimeThresholds lifetime_thresholds_;
-    bool const lru_only_mode_;
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
     LRUTTLCache oracle_;

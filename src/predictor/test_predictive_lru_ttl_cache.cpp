@@ -1,16 +1,13 @@
+#include "cpp_lib/cache_access.hpp"
+#include "lib/predictive_lru_ttl_cache.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
-#include <optional>
 #include <stdlib.h>
 #include <sys/types.h>
-
-#include "cpp_lib/cache_access.hpp"
-#include "lib/lifetime_cache.hpp"
-#include "lib/predictive_lru_ttl_cache.hpp"
 
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
@@ -18,7 +15,7 @@ using uint64_t = std::uint64_t;
 bool
 test_lru()
 {
-    PredictiveCache p(2, 0.0, 1.0, LifeTimeCacheMode::EvictionTime);
+    PredictiveCache p(2, 0.0, 1.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 10},
                               CacheAccess{1, 1, 1, 10},
                               CacheAccess{2, 2, 1, 10}};
@@ -54,7 +51,7 @@ test_lru()
 bool
 test_ttl()
 {
-    PredictiveCache p(2, 0.0, 1.0, LifeTimeCacheMode::EvictionTime);
+    PredictiveCache p(2, 0.0, 1.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 1},
                               CacheAccess{1001, 1, 1, 10}};
     // Test initial state.
