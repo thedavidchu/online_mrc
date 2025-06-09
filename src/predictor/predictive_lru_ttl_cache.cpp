@@ -21,6 +21,7 @@
 #include <iostream>
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <stdlib.h>
 #include <string>
 #include <sys/types.h>
@@ -436,6 +437,11 @@ PredictiveCache::access(CacheAccess const &access)
     statistics_.time(access.timestamp_ms);
     evict_expired_objects(access.timestamp_ms);
     oracle_.access(access);
+    lru_ttl_statistics_.access(access,
+                               lru_cache_.size(),
+                               lru_size_,
+                               ttl_cache_.size(),
+                               ttl_size_);
     if (map_.count(access.key)) {
         auto &metadata = map_.at(access.key);
         if (!is_expired(access, metadata)) {
@@ -506,27 +512,34 @@ PredictiveCache::statistics() const
     return statistics_;
 }
 
-void
-PredictiveCache::print_statistics(
-    std::ostream &ostrm,
-    std::map<std::string, std::string> extras) const
+std::string
+PredictiveCache::json(std::map<std::string, std::string> extras) const
 {
+    std::stringstream ss;
     auto r = lifetime_thresholds_.thresholds();
-    ostrm << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
-          << ", \"Lower Ratio\": " << lifetime_thresholds_.lower_ratio()
-          << ", \"Upper Ratio\": " << lifetime_thresholds_.upper_ratio()
-          << ", \"CacheStatistics\": " << statistics_.json()
-          << ", \"PredictionTracker\": " << pred_tracker.json()
-          << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
-          << ", \"Threshold Refreshes [#]\": "
-          << format_engineering(lifetime_thresholds_.refreshes())
-          << ", \"Samples Since Threshold Refresh [#]\": "
-          << format_engineering(lifetime_thresholds_.since_refresh())
-          << ", \"LRU Lifetime Evictions [#]\": "
-          << format_engineering(lifetime_thresholds_.evictions())
-          << ", \"Lower Threshold [ms]\": " << format_time(r.first)
-          << ", \"Upper Threshold [ms]\": " << format_time(r.second)
-          << ", \"Kwargs\": " << map2str(kwargs_, true)
-          << ", \"Extras\": " << map2str(extras, false);
-    ostrm << "}" << std::endl;
+    ss << "{\"Capacity [B]\": " << format_memory_size(capacity_)
+       << ", \"Lower Ratio\": " << lifetime_thresholds_.lower_ratio()
+       << ", \"Upper Ratio\": " << lifetime_thresholds_.upper_ratio()
+       << ", \"CacheStatistics\": " << statistics_.json()
+       << ", \"PredictionTracker\": " << pred_tracker.json()
+       << ", \"Oracle\": " << oracle_.json()
+       << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
+       << ", \"Threshold Refreshes [#]\": "
+       << format_engineering(lifetime_thresholds_.refreshes())
+       << ", \"Samples Since Threshold Refresh [#]\": "
+       << format_engineering(lifetime_thresholds_.since_refresh())
+       << ", \"LRU Lifetime Evictions [#]\": "
+       << format_engineering(lifetime_thresholds_.evictions())
+       << ", \"Lower Threshold [ms]\": " << format_time(r.first)
+       << ", \"Upper Threshold [ms]\": " << format_time(r.second)
+       << ", \"Kwargs\": " << map2str(kwargs_, true)
+       << ", \"Extras\": " << map2str(extras, false) << "}";
+    return ss.str();
+}
+
+void
+PredictiveCache::print_json(std::ostream &ostrm,
+                            std::map<std::string, std::string> extras) const
+{
+    ostrm << "> " << json(extras) << std::endl;
 }

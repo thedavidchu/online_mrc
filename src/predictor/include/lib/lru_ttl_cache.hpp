@@ -1,23 +1,21 @@
-
 #pragma once
 
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
-#include "cpp_struct/hash_list.hpp"
-#include "logger/logger.h"
-
 #include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
+#include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
-
+#include "lib/lifetime_thresholds.hpp"
+#include "logger/logger.h"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <map>
-#include <optional>
+#include <sstream>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
@@ -96,7 +94,9 @@ private:
     /// @brief  Evict an object in the cache (either due to the eviction
     ///         policy or TTL expiration).
     void
-    evict(uint64_t const victim_key, EvictionCause const cause)
+    evict(uint64_t const victim_key,
+          EvictionCause const cause,
+          CacheAccess const *const current_access)
     {
         CacheMetadata &m = map_.at(victim_key);
         uint64_t sz_bytes = m.size_;
@@ -105,12 +105,15 @@ private:
         // Update metadata tracking
         switch (cause) {
         case EvictionCause::LRU:
+            assert(current_access != NULL);
             statistics_.lru_evict(m.size_, 0);
             break;
         case EvictionCause::TTL:
+            assert(current_access == NULL);
             statistics_.ttl_expire(m.size_);
             break;
         case EvictionCause::NoRoom:
+            assert(current_access != NULL);
             statistics_.no_room_evict(m.size_, 0);
             break;
         default:
@@ -120,6 +123,12 @@ private:
         size_ -= sz_bytes;
         map_.erase(victim_key);
         lru_cache_.remove(victim_key);
+        if (cause == EvictionCause::LRU) {
+            lifetime_thresholds_.register_cache_eviction(
+                current_access->timestamp_ms - m.last_access_time_ms_,
+                m.size_,
+                current_access->timestamp_ms);
+        }
         remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
     }
 
@@ -135,22 +144,23 @@ private:
         }
         // One cannot erase elements from a multimap while also iterating!
         for (auto victim : victims) {
-            evict(victim, EvictionCause::TTL);
+            evict(victim, EvictionCause::TTL, nullptr);
         }
     }
 
     /// @return number of bytes evicted.
     uint64_t
-    evict_from_lru(uint64_t const target_bytes,
-                   std::optional<uint64_t> const ignored_key)
+    evict_from_lru(uint64_t const target_bytes, CacheAccess const &access)
     {
+        uint64_t const ignored_key = access.key;
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
         for (auto n : lru_cache_) {
+            assert(n);
             if (evicted_bytes >= target_bytes) {
                 break;
             }
-            if (ignored_key.has_value() && n->key == ignored_key.value()) {
+            if (n->key == ignored_key) {
                 continue;
             }
             auto &m = map_.at(n->key);
@@ -159,16 +169,16 @@ private:
         }
         // One cannot evict elements from the map one is iterating over.
         for (auto v : victims) {
-            evict(v, EvictionCause::LRU);
+            evict(v, EvictionCause::LRU, &access);
         }
         return evicted_bytes;
     }
 
     bool
-    ensure_enough_room(size_t const old_nbytes,
-                       size_t const new_nbytes,
-                       std::optional<uint64_t> const ignored_key)
+    ensure_enough_room(size_t const old_nbytes, CacheAccess const &access)
     {
+        size_t const new_nbytes = access.key_size_b + access.value_size_b;
+        assert(size_ <= capacity_);
         // We already have enough room if we're not increasing the data.
         if (old_nbytes >= new_nbytes) {
             assert(size_ <= capacity_);
@@ -191,8 +201,7 @@ private:
             return true;
         }
         uint64_t required_bytes = nbytes - (capacity_ - size_);
-        uint64_t const evicted_bytes =
-            evict_from_lru(required_bytes, ignored_key);
+        uint64_t const evicted_bytes = evict_from_lru(required_bytes, access);
         if (evicted_bytes >= required_bytes) {
             return true;
         }
@@ -208,16 +217,14 @@ private:
     void
     evict_too_big_accessed_object(CacheAccess const &access)
     {
-        evict(access.key, EvictionCause::NoRoom);
+        evict(access.key, EvictionCause::NoRoom, &access);
     }
 
     void
     hit(CacheAccess const &access)
     {
         auto &metadata = map_.at(access.key);
-        if (!ensure_enough_room(metadata.size_,
-                                access.value_size_b,
-                                access.key)) {
+        if (!ensure_enough_room(metadata.size_, access)) {
             statistics_.skip(access.value_size_b);
             evict_too_big_accessed_object(access);
             if (DEBUG) {
@@ -231,7 +238,7 @@ private:
     bool
     miss(CacheAccess const &access)
     {
-        if (!ensure_enough_room(0, access.value_size_b, {})) {
+        if (!ensure_enough_room(0, access)) {
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
@@ -245,7 +252,8 @@ private:
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
     LRUTTLCache(size_t const capacity)
-        : capacity_(capacity)
+        : capacity_(capacity),
+          lifetime_thresholds_(0.0, 1.0)
     {
     }
 
@@ -326,23 +334,24 @@ public:
         std::cout << "\n";
     }
 
-    void
-    print_statistics() const
+    std::string
+    json() const
     {
-        std::cout << "> {\"Capacity [B]\": " << format_memory_size(capacity_)
-                  << ", \"Max Size [B]\": "
-                  << format_memory_size(statistics_.max_size_)
-                  << ", \"Max Resident Objects\": "
-                  << format_engineering(statistics_.max_resident_objs_)
-                  << ", \"Uptime [ms]\": "
-                  << format_time(statistics_.uptime_ms())
-                  << ", \"Number of Insertions\": "
-                  << format_engineering(statistics_.insert_ops_)
-                  << ", \"Number of Updates\": "
-                  << format_engineering(statistics_.update_ops_)
-                  << ", \"Miss Ratio\": " << statistics_.miss_ratio()
-                  << ", \"Statistics\": " << statistics_.json() << "}"
-                  << std::endl;
+        std::stringstream ss;
+        ss << "{\"Capacity [B]\": " << format_memory_size(capacity_)
+           << ", \"Max Size [B]\": "
+           << format_memory_size(statistics_.max_size_)
+           << ", \"Max Resident Objects\": "
+           << format_engineering(statistics_.max_resident_objs_)
+           << ", \"Uptime [ms]\": " << format_time(statistics_.uptime_ms())
+           << ", \"Number of Insertions\": "
+           << format_engineering(statistics_.insert_ops_)
+           << ", \"Number of Updates\": "
+           << format_engineering(statistics_.update_ops_)
+           << ", \"Miss Ratio\": " << statistics_.miss_ratio()
+           << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
+           << ", \"Statistics\": " << statistics_.json() << "}";
+        return ss.str();
     }
 
 private:
@@ -363,4 +372,6 @@ private:
 
     // Statistics related to cache performance.
     CacheStatistics statistics_;
+
+    LifeTimeThresholds lifetime_thresholds_;
 };

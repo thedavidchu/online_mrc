@@ -150,9 +150,12 @@ public:
 
     /// @param  extras: extra things to print in the statistics. The
     ///                 values are taken literally without quoting.
+    std::string
+    json(std::map<std::string, std::string> extras) const;
+
     void
-    print_statistics(std::ostream &ostrm = std::cout,
-                     std::map<std::string, std::string> extras = {}) const;
+    print_json(std::ostream &ostrm = std::cout,
+               std::map<std::string, std::string> extras = {}) const;
 
 private:
     static constexpr bool DEBUG = false;
@@ -166,6 +169,7 @@ private:
     PredictionTracker pred_tracker;
     // Statistics related to cache performance.
     CacheStatistics statistics_;
+    LRUTTLStatistics lru_ttl_statistics_;
 
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CachePredictiveMetadata> map_;

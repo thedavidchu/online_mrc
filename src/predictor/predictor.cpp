@@ -83,14 +83,14 @@ run_single_cache(std::promise<std::string> ret,
                   shards_ratio);
 
     FixedRateShardsSampler__json(shards_ss, frss, false);
-    p.print_statistics(ss,
-                       {
-                           {"SHARDS", shards_ss.str()},
-                           {
-                               "remaining_lifetime",
-                               p.record_remaining_lifetime(trace.back()),
-                           },
-                       });
+    p.print_json(ss,
+                 {
+                     {"SHARDS", shards_ss.str()},
+                     {
+                         "remaining_lifetime",
+                         p.record_remaining_lifetime(trace.back()),
+                     },
+                 });
     ret.set_value(ss.str());
     FixedRateShardsSampler__destroy(&frss);
 
