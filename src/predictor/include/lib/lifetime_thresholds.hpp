@@ -99,6 +99,10 @@ class LifeTimeThresholds {
         if (!refresher_.should_sample(current_time_ms)) {
             return false;
         }
+        if (training_period_) {
+            training_period_ = false;
+            return true;
+        }
 
         double const low_cnt = lower_ratio_ * coarse_counter_;
         double const mid_cnt = (upper_ratio_ - lower_ratio_) * coarse_counter_;
@@ -235,6 +239,8 @@ private:
     double const upper_ratio_;
     double lower_threshold_ = 0.0;
     double upper_threshold_ = INFINITY;
+
+    bool training_period_ = true;
 
     SortedHistogram histogram_;
     // This tells us how far off our current estimate of the thresholds
