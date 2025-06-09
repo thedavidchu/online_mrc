@@ -715,18 +715,22 @@ def main():
             if plot_this_configuration(l, u, mode)
         }
         fig, axes = plt.subplots(
-            1, len(used_data), sharex=True, sharey=True, squeeze=False
+            2, len(used_data), sharex=True, sharey=True, squeeze=False
         )
         fig.suptitle("LRU Eviction Time Histograms")
-        fig.set_size_inches(5 * len(used_data), 5)
+        fig.set_size_inches(5 * len(used_data), 2 * 5)
         for i, ((l, u, mode), d_list) in enumerate(used_data.items()):
             axes[0, i].set_title(
+                f"{get_label(0,1,mode)} Lifetime Histogram\nin LRU-TTL's LRU Queue"
+            )
+            axes[1, i].set_title(
                 f"{get_label(l,u,mode)} Lifetime Histogram\nin LRU-TTL's LRU Queue"
             )
             for d in d_list:
+                # LRU/Proactive-TTLs
                 hist = {
                     float(k): float(v)
-                    for k, v in d["Lifetime Thresholds"]["Histogram"][
+                    for k, v in d["Oracle"]["Lifetime Thresholds"]["Histogram"][
                         "histogram"
                     ].items()
                 }
@@ -735,7 +739,20 @@ def main():
                     hist.values(),
                     label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
                 )
+                # Other eviction histogram
+                hist = {
+                    float(k): float(v)
+                    for k, v in d["Lifetime Thresholds"]["Histogram"][
+                        "histogram"
+                    ].items()
+                }
+                axes[1, i].loglog(
+                    [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
+                    hist.values(),
+                    label=f"{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB",
+                )
             axes[0, i].legend()
+            axes[1, i].legend()
         fig.savefig(args.eviction_histograms.resolve())
     if args.other is not None:
         y_keys = ["CacheStatistics", "lru_evict", "Post-Expire Evicts [#]"]
