@@ -34,6 +34,13 @@ public:
     void
     end_simulation();
 
+    uint64_t
+    current_time_ms() const
+    {
+        return current_time_ms_.value_or(0);
+    }
+
+    /// @brief  Mark a time.
     void
     time(uint64_t const tm_ms);
 
