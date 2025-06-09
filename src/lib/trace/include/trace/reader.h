@@ -3,7 +3,7 @@
 #ifdef __cplusplus
 extern "C" {
 #define restrict __restrict__
-#endif /* !__cplusplus */
+#endif /* __cplusplus */
 
 #include "trace/trace.h"
 
@@ -72,4 +72,4 @@ construct_full_trace_item(uint8_t const *const restrict bytes,
 
 #ifdef __cplusplus
 }
-#endif /* !__cplusplus */
+#endif /* __cplusplus */

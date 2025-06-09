@@ -2,7 +2,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* !__cplusplus */
+#endif /* __cplusplus */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -32,4 +32,4 @@ get_file_size(char const *const relative_path);
 
 #ifdef __cplusplus
 }
-#endif /* !__cplusplus */
+#endif /* __cplusplus */

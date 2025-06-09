@@ -7,7 +7,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* !__cplusplus */
+#endif /* __cplusplus */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -74,4 +74,4 @@ Heap__destroy(struct Heap *me);
 
 #ifdef __cplusplus
 }
-#endif /* !__cplusplus */
+#endif /* __cplusplus */

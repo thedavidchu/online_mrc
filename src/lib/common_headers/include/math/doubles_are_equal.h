@@ -9,7 +9,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* !__cplusplus*/
+#endif /* __cplusplus*/
 
 #include <float.h>
 #include <math.h>
@@ -29,4 +29,4 @@ doubles_are_close(double x, double y, double delta)
 
 #ifdef __cplusplus
 }
-#endif /* !__cplusplus*/
+#endif /* __cplusplus*/

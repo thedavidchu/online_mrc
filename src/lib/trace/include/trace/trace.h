@@ -2,7 +2,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* !__cplusplus */
+#endif /* __cplusplus */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -45,4 +45,4 @@ Trace__destroy(struct Trace *const me);
 
 #ifdef __cplusplus
 }
-#endif /* !__cplusplus */
+#endif /* __cplusplus */

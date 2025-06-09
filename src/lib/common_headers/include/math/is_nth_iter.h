@@ -2,7 +2,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* !__cplusplus */
+#endif /* __cplusplus */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -16,4 +16,4 @@ is_nth_iter(size_t const i, size_t const n)
 
 #ifdef __cplusplus
 }
-#endif /* !__cplusplus */
+#endif /* __cplusplus */
