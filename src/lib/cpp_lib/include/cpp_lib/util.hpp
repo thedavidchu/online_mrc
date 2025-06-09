@@ -107,3 +107,18 @@ map2str(M const &map, bool const quote_value = false)
     ss << "}";
     return ss.str();
 }
+
+template <typename A, typename B>
+static inline std::string
+pair2str(std::pair<A, B> const &pair,
+         bool const quote_first = false,
+         bool const quote_second = false)
+{
+    std::stringstream ss;
+    std::string const first_quote = quote_first ? "\"" : "";
+    std::string const second_quote = quote_second ? "\"" : "";
+
+    ss << "[" << first_quote << pair.first << first_quote << ", ";
+    ss << second_quote << pair.second << second_quote << "]";
+    return ss.str();
+}
