@@ -76,9 +76,9 @@ thresholds = [
     (0.0, 1.0),  # Accurate LRU-TTL Simulation
     # (0.25, 0.75),  # Conservative classifier
     (0.0, 0.0),  # TTLs-Only (with Volatile-TTLs)
-    (0.25, 0.25),  # Biased-to-TTL binary classifier
+    # (0.25, 0.25),  # Biased-to-TTL binary classifier
     (0.5, 0.5),  # Unbiased binary classifier
-    (0.75, 0.75),  # Biased-to-LRU binary classifier
+    # (0.75, 0.75),  # Biased-to-LRU binary classifier
     (1.0, 1.0),  # LRU-Only (with passive TTLs)
 ]
 # AWS's serverless offers as little as 128MB of cache.
