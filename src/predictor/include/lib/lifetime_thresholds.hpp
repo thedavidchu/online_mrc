@@ -6,26 +6,26 @@
  **/
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
-#include <map>
-#include <optional>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
 
+#include "cpp_lib/sorted_histogram.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
-#include "cpp_lib/util.hpp"
 #include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 
 using uint64_t = std::uint64_t;
 
 class LifeTimeThresholds {
-    std::pair<uint64_t, uint64_t>
+    std::pair<double, double>
     recalculate_thresholds() const
     {
-        std::optional<uint64_t> lower = std::nullopt, upper = std::nullopt;
+        double lower = NAN, upper = NAN;
         uint64_t accum = 0, prev_lifetime = 0;
 
         // Handle special cases. If we didn't handle the case of 1.0
@@ -35,43 +35,53 @@ class LifeTimeThresholds {
         if (lower_ratio_ == 0.0) {
             lower = 0;
         } else if (lower_ratio_ == 1.0) {
-            lower = UINT64_MAX;
+            lower = INFINITY;
+        } else {
+            lower = histogram_.exclusive_percentile(lower_ratio_);
         }
         if (upper_ratio_ == 0.0) {
             upper = 0;
         } else if (upper_ratio_ == 1.0) {
-            upper = UINT64_MAX;
+            upper = INFINITY;
+        } else {
+            upper = histogram_.inclusive_percentile(upper_ratio_);
         }
 
+        double lower_target = histogram_.total() * lower_ratio_;
+        double upper_target = histogram_.total() * upper_ratio_;
         for (auto [lifetime, frq] : histogram_) {
             // Do this first in case both lower and upper are already set.
-            if (lower.has_value() && upper.has_value()) {
+            if (!std::isnan(lower) && !std::isnan(upper)) {
                 break;
             }
             accum += frq;
-            if (!lower.has_value() && (double)accum / total_ > lower_ratio_) {
+            if (std::isnan(lower) && (double)accum > lower_target) {
                 lower = prev_lifetime;
             }
-            if (!upper.has_value() && (double)accum / total_ >= upper_ratio_) {
+            if (std::isnan(upper) && (double)accum >= upper_target) {
                 upper = lifetime;
             }
             prev_lifetime = lifetime;
         }
 
-        if (!lower.has_value() || !upper.has_value()) {
+        if (std::isnan(lower) || std::isnan(upper)) {
+            // TODO: Figure out something smarter to do!
+            if (lower_ratio_ == upper_ratio_) {
+                return {INFINITY, INFINITY};
+            }
             LOGGER_WARN("lower or upper does not have value, so defaulting to "
-                        "original (0, UINT64_MAX)");
-            return {0, UINT64_MAX};
+                        "original (0, INFINITY)");
+            return {0, INFINITY};
         }
         // If the ratios are the same, then we simply return the mean.
         // This does bias us to round down, however. It may be a bit of
         // an optimization to simply return the lower threshold in this
         // case, because we compute it earlier than the upper threshold.
         if (lower_ratio_ == upper_ratio_) {
-            double mean = (double)(lower.value() + upper.value()) / 2;
+            double mean = (double)(lower + upper) / 2;
             return {mean, mean};
         }
-        return {lower.value(), upper.value()};
+        return {lower, upper};
     }
 
     /// @brief  Return if the thresholds should be refreshed.
@@ -105,7 +115,7 @@ public:
     ///         redundancy to make sure everything is safe.
     ///         This isn't strictly necessary because we refresh the
     ///         thresholds before we have any data, we just set it to
-    ///         the defaults (0, UINT64_MAX).
+    ///         the defaults (0, INFINITY).
     LifeTimeThresholds(double const lower_ratio, double const upper_ratio)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
@@ -120,8 +130,8 @@ public:
             upper_threshold_ = 0;
         }
         if (lower_ratio == 1.0 && upper_ratio == 1.0) {
-            lower_threshold_ = UINT64_MAX;
-            upper_threshold_ = UINT64_MAX;
+            lower_threshold_ = INFINITY;
+            upper_threshold_ = INFINITY;
         }
     }
 
@@ -133,8 +143,7 @@ public:
         // We are counting objects for now.
         // TODO Count bytes in the future, maybe?
         (void)size;
-        total_ += 1;
-        histogram_[lifetime] += 1;
+        histogram_.update(lifetime);
 
         if (lower_threshold_ > lifetime) {
             ++std::get<0>(coarse_histogram_);
@@ -163,9 +172,18 @@ public:
     }
 
     /// @note   Automatically refresh the thresholds when there's a mismatch.
-    std::pair<uint64_t, uint64_t>
+    std::pair<double, double>
     thresholds() const
     {
+        return {lower_threshold_, upper_threshold_};
+    }
+
+    std::pair<double, double>
+    get_updated_thresholds(uint64_t const current_time_ms)
+    {
+        if (should_refresh(current_time_ms)) {
+            refresh_thresholds();
+        }
         return {lower_threshold_, upper_threshold_};
     }
 
@@ -178,7 +196,7 @@ public:
     uint64_t
     evictions() const
     {
-        return total_;
+        return histogram_.total();
     }
 
     uint64_t
@@ -204,7 +222,7 @@ public:
     {
         std::stringstream ss;
         ss << "{";
-        ss << "\"Histogram\": " << map2str(histogram_) << ", ";
+        ss << "\"Histogram\": " << histogram_.json() << ", ";
         ss << "\"Coarse Histogram\": [" << std::get<0>(coarse_histogram_)
            << ", " << std::get<1>(coarse_histogram_) << ", "
            << std::get<2>(coarse_histogram_) << "]";
@@ -215,11 +233,10 @@ public:
 private:
     double const lower_ratio_;
     double const upper_ratio_;
-    uint64_t lower_threshold_ = 0;
-    uint64_t upper_threshold_ = UINT64_MAX;
+    double lower_threshold_ = 0.0;
+    double upper_threshold_ = INFINITY;
 
-    uint64_t total_ = 0;
-    std::map<uint64_t, uint64_t> histogram_;
+    SortedHistogram histogram_;
     // This tells us how far off our current estimate of the thresholds
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;

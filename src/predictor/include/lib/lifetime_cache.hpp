@@ -126,7 +126,7 @@ public:
     }
 
     /// @brief  Get the time thresholds in milliseconds.
-    std::pair<uint64_t, uint64_t>
+    std::pair<double, double>
     thresholds() const
     {
         auto r = thresholds_.thresholds();

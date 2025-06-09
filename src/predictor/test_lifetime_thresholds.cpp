@@ -21,9 +21,8 @@ static bool
 test_empty()
 {
     LifeTimeThresholds t(0.25, 0.75);
-    std::pair<uint64_t, uint64_t> r;
 
-    r = t.thresholds();
+    auto r = t.thresholds();
     g_assert_cmpuint(r.first, ==, 0);
     g_assert_cmpuint(r.second, ==, UINT64_MAX);
     r = t.thresholds();
@@ -43,12 +42,11 @@ static bool
 test_thresholds(bool const debug = false)
 {
     LifeTimeThresholds t(0.25, 0.75);
-    std::pair<uint64_t, uint64_t> r;
 
     for (uint64_t i = 1; i < 100; ++i) {
         t.register_cache_eviction(i, 1, 0);
         t.refresh_thresholds();
-        r = t.thresholds();
+        auto r = t.thresholds();
         if (debug) {
             std::cout << "> " << i << ": " << r.first << ", " << r.second
                       << std::endl;
@@ -62,7 +60,7 @@ static bool
 test_refresh(bool const debug = false)
 {
     LifeTimeThresholds t(0.25, 0.75);
-    std::pair<uint64_t, uint64_t> r;
+    std::pair<double, double> r;
 
     // Sample from 1..=100 and make sure the thresholds change at the
     // expected times.
