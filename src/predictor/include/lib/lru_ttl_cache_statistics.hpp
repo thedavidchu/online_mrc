@@ -18,6 +18,8 @@ class LRUTTLStatistics {
     void
     sample()
     {
+        temporal_times_.update(current_time_ms_.value_or(0));
+
         temporal_lru_sizes_.update(lru_size_);
         temporal_lru_sizes_bytes_.update(lru_size_bytes_);
         temporal_ttl_sizes_.update(ttl_size_);
@@ -48,7 +50,8 @@ public:
     json() const
     {
         std::stringstream ss;
-        ss << "{\"LRU Size [#]\": " << lru_size_
+        ss << "{\"Temporal Times [ms]\": " << temporal_times_.str()
+           << ", \"LRU Size [#]\": " << lru_size_
            << ", \"LRU Size [B]\": " << lru_size_bytes_
            << ", \"TTL Size [#]\": " << ttl_size_
            << ", \"TTL Size [B]\": " << ttl_size_bytes_
@@ -71,6 +74,7 @@ private:
 
     TemporalSampler temporal_sampler_{TemporalSampler::HOUR_IN_MS, false};
 
+    TemporalData temporal_times_;
     TemporalData temporal_lru_sizes_;
     TemporalData temporal_lru_sizes_bytes_;
     TemporalData temporal_ttl_sizes_;
