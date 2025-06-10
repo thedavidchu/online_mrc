@@ -74,8 +74,11 @@ PredictiveCache::ok(bool const fatal) const
         ok = false;
     }
     if (lru_size_ > size_ || ttl_size_ > size_) {
-        LOGGER_ERROR("LRU or TTL size larger than overall size");
-        return ok;
+        LOGGER_ERROR(
+            "LRU (%zu) or TTL (%zu) size larger than overall size (%zu)",
+            lru_size_,
+            ttl_size_,
+            size_);
         ok = false;
     }
 
@@ -108,7 +111,7 @@ PredictiveCache::insert(CacheAccess const &access)
         ttl_size_ += access.key_size_b + access.value_size_b;
         metadata.set_ttl();
     }
-    size_ += access.value_size_b;
+    size_ += access.key_size_b + access.value_size_b;
 }
 
 /// @brief  Process an access to an item in the cache.
@@ -116,7 +119,7 @@ void
 PredictiveCache::update(CacheAccess const &access,
                         CachePredictiveMetadata &metadata)
 {
-    size_ += access.value_size_b - metadata.size_;
+    size_ += access.key_size_b + access.value_size_b - metadata.size_;
     statistics_.update(metadata.size_, access.value_size_b);
     metadata.visit_without_ttl_refresh(access);
     double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
@@ -124,6 +127,10 @@ PredictiveCache::update(CacheAccess const &access,
     if (r.first != INFINITY && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
+        // Update sizes.
+        if (metadata.uses_lru()) {
+            lru_size_ -= metadata.size_;
+        }
         lru_size_ += access.key_size_b + access.value_size_b;
         metadata.set_lru();
     } else if (metadata.uses_lru()) {
@@ -135,10 +142,14 @@ PredictiveCache::update(CacheAccess const &access,
         // Even if we don't re-insert into the TTL queue, we still
         // want to mark it as stored.
         pred_tracker.record_store_ttl();
+        // Update sizes.
+        if (metadata.uses_ttl()) {
+            ttl_size_ -= metadata.size_;
+        }
+        ttl_size_ += access.key_size_b + access.value_size_b;
         // Only insert the TTL if it hasn't been inserted already.
         if (!metadata.uses_ttl()) {
             ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
-            ttl_size_ += access.key_size_b + access.value_size_b;
             metadata.set_ttl();
         }
     } else if (metadata.uses_ttl()) {
@@ -539,6 +550,7 @@ PredictiveCache::json(std::map<std::string, std::string> extras) const
        << ", \"Lower Ratio\": " << lifetime_thresholds_.lower_ratio()
        << ", \"Upper Ratio\": " << lifetime_thresholds_.upper_ratio()
        << ", \"CacheStatistics\": " << statistics_.json()
+       << ", \"LRU-TTL Statistics\": " << lru_ttl_statistics_.json()
        << ", \"PredictionTracker\": " << pred_tracker.json()
        << ", \"Oracle\": " << oracle_.json()
        << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
