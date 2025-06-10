@@ -658,9 +658,9 @@ def main():
             if plot_this_configuration(l, u, mode)
         }
         fig, axes = plt.subplots(
-            3, len(used_data), sharex=True, sharey="row", squeeze=False
+            5, len(used_data), sharex=True, sharey="row", squeeze=False
         )
-        fig.set_size_inches(5 * len(used_data), 15)
+        fig.set_size_inches(5 * len(used_data), 5 * 5)
         fig.suptitle("Temporal Statistics")
         label_func = (
             lambda d: f'{SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB'
@@ -699,14 +699,40 @@ def main():
                 lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
                 SCALE_MS_TO_HOUR,
                 IDENTITY_X_D,
-                "Resident Objects [#]",
+                "LRU Objects [#]",
                 lambda d: d["CacheStatistics"]["Temporal Resident Objects [#]"],
+                *COUNT_SHARDS_ARGS,
+            )
+            plot_lines(
+                axes[3, i],
+                tmp_data,
+                label_func,
+                "Time [h]",
+                lambda d: d["LRU-TTL Statistics"]["Temporal Times [ms]"],
+                SCALE_MS_TO_HOUR,
+                IDENTITY_X_D,
+                "LRU Objects [#]",
+                lambda d: d["LRU-TTL Statistics"]["Temporal LRU Sizes [#]"],
+                *COUNT_SHARDS_ARGS,
+            )
+            plot_lines(
+                axes[4, i],
+                tmp_data,
+                label_func,
+                "Time [h]",
+                lambda d: d["LRU-TTL Statistics"]["Temporal Times [ms]"],
+                SCALE_MS_TO_HOUR,
+                IDENTITY_X_D,
+                "TTL Objects [#]",
+                lambda d: d["LRU-TTL Statistics"]["Temporal TTL Sizes [#]"],
                 *COUNT_SHARDS_ARGS,
             )
             # Overwrite titles
             axes[0, i].set_title(f"{get_label(l,u,mode)} Sizes vs. Time")
             axes[1, i].set_title(f"{get_label(l,u,mode)} High Watermark vs. Time")
             axes[2, i].set_title(f"{get_label(l,u,mode)} Objects vs. Time")
+            axes[3, i].set_title(f"{get_label(l,u,mode)} LRU Objects vs. Time")
+            axes[4, i].set_title(f"{get_label(l,u,mode)} TTL Objects vs. Time")
         fig.savefig(args.temporal_statistics.resolve())
     if args.eviction_histograms is not None:
         used_data = {
@@ -734,6 +760,7 @@ def main():
                         "histogram"
                     ].items()
                 }
+                hist = dict(sorted(hist.items()))
                 axes[0, i].loglog(
                     [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
                     hist.values(),
@@ -746,6 +773,7 @@ def main():
                         "histogram"
                     ].items()
                 }
+                hist = dict(sorted(hist.items()))
                 axes[1, i].loglog(
                     [ADDITIVE_SMOOTHING(x) for x in hist.keys()],
                     hist.values(),
