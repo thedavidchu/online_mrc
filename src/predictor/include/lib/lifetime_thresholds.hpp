@@ -16,7 +16,6 @@
 
 #include "cpp_lib/histogram.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
-#include "logger/logger.h"
 #include "math/doubles_are_equal.h"
 
 using uint64_t = std::uint64_t;
@@ -55,8 +54,6 @@ class LifeTimeThresholds {
                 return {INFINITY, INFINITY};
             }
             // NOTE DEAD CODE BELOW!
-            LOGGER_WARN("lower or upper does not have value, so defaulting to "
-                        "original (0, INFINITY)");
             return {0, INFINITY};
         }
         // If the ratios are the same, then we simply return the mean.

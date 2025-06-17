@@ -40,6 +40,22 @@ test_predictive_lru_ttl_cache_exe = executable(
     ],
 )
 
+accurate_exe = executable(
+    'accurate_exe',
+    'accurate.cpp',
+    include_directories: predictor_inc,
+    dependencies: [
+        cpp_lib_util_dep,
+        common_dep,
+        io_dep,
+        cpp_struct_dep,
+        trace_dep,
+        cache_statistics_dep,
+        cpp_lib_dep,
+        shards_dep,
+    ],
+)
+
 predictor_exe = executable(
     'predictor_exe',
     'predictor.cpp',

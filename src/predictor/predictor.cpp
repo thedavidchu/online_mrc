@@ -9,7 +9,6 @@
 #include <functional>
 #include <future>
 #include <iostream>
-#include <optional>
 #include <sstream>
 #include <stdlib.h>
 #include <string>
@@ -21,10 +20,8 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
 #include "cpp_lib/parse_boolean.hpp"
-#include "cpp_lib/parse_measurement.hpp"
 #include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
-#include "lib/lifetime_cache.hpp"
 #include "logger/logger.h"
 
 #include "cpp_lib/cache_trace.hpp"
@@ -134,22 +131,6 @@ run_caches(std::string const &path,
                   << capacity_bytes[i++] << " " << std::endl;
         std::cout << r.get();
     }
-}
-
-static std::vector<uint64_t>
-parse_capacities(std::string const &str)
-{
-    std::vector<std::string> strs = string_split(str, " ");
-    if (strs.size() > 10) {
-        LOGGER_WARN("potentially too many sizes (%zu), may exceed DRAM",
-                    strs.size());
-    }
-    std::vector<uint64_t> caps;
-    for (auto s : strs) {
-        caps.push_back(parse_memory_size(s).value());
-    }
-    std::cout << "Capacities [B]: " << vec2str(caps) << std::endl;
-    return caps;
 }
 
 int

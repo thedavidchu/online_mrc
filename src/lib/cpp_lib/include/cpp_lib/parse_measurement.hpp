@@ -1,7 +1,6 @@
 #pragma once
 
 #include "logger/logger.h"
-#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>

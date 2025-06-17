@@ -24,7 +24,7 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
-class LRU_TTL_Cache {
+class LFU_TTL_Cache {
 private:
     bool
     ok(bool const fatal) const
@@ -34,14 +34,8 @@ private:
             LOGGER_ERROR("size exceeds capacity");
             ok = false;
         }
-        if (map_.size() != lfu_cache_.size()) {
-            // NOTE Because of the prediction, we can have fewer items in
-            //      the LRU queue than in the cache.
-            LOGGER_ERROR("mismatching map (%zu) vs LRU (%zu) size",
-                         map_.size(),
-                         lfu_cache_.size());
-            ok = false;
-        }
+        // The lfu_cache_ contains a non-flat topology of the objects,
+        // so its "size()" is smaller than map_'s.
         if (map_.size() != ttl_cache_.size()) {
             // NOTE Because of the prediction, we can have fewer items in
             //      the TTL queue than in the cache.
@@ -77,7 +71,7 @@ private:
     {
         statistics_.insert(access.value_size_b);
         map_.emplace(access.key, CacheMetadata{access});
-        lfu_cache_.access(access.key);
+        lfu_cache_[1].access(access.key);
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
         size_ += access.value_size_b;
     }
@@ -87,8 +81,9 @@ private:
     {
         size_ += access.value_size_b - metadata.size_;
         statistics_.update(metadata.size_, access.value_size_b);
+        lfu_cache_[metadata.frequency_].remove(access.key);
         metadata.visit_without_ttl_refresh(access);
-        lfu_cache_.access(access.key);
+        lfu_cache_[metadata.frequency_].access(access.key);
     }
 
     /// @brief  Evict an object in the cache (either due to the eviction
@@ -121,14 +116,17 @@ private:
         }
 
         size_ -= sz_bytes;
-        map_.erase(victim_key);
-        lfu_cache_.remove(victim_key);
+        lfu_cache_[m.frequency_].remove(victim_key);
         if (cause == EvictionCause::MainCapacity) {
-            lifetime_thresholds_.register_cache_eviction(
-                current_access->timestamp_ms - m.last_access_time_ms_,
-                m.size_,
-                current_access->timestamp_ms);
+            lifetime_thresholds_.emplace(m.frequency_,
+                                         LifeTimeThresholds{0.0, 1.0});
+            lifetime_thresholds_.at(m.frequency_)
+                .register_cache_eviction(current_access->timestamp_ms -
+                                             m.last_access_time_ms_,
+                                         m.size_,
+                                         current_access->timestamp_ms);
         }
+        map_.erase(victim_key);
         remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
     }
 
@@ -150,22 +148,27 @@ private:
 
     /// @return number of bytes evicted.
     uint64_t
-    evict_from_lru(uint64_t const target_bytes, CacheAccess const &access)
+    evict_from_lfu(uint64_t const target_bytes, CacheAccess const &access)
     {
         uint64_t const ignored_key = access.key;
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
-        for (auto n : lfu_cache_) {
-            assert(n);
+        for (auto [frq, lru_cache_] : lfu_cache_) {
+            for (auto n : lru_cache_) {
+                assert(n);
+                if (evicted_bytes >= target_bytes) {
+                    break;
+                }
+                if (n->key == ignored_key) {
+                    continue;
+                }
+                auto &m = map_.at(n->key);
+                evicted_bytes += m.size_;
+                victims.push_back(n->key);
+            }
             if (evicted_bytes >= target_bytes) {
                 break;
             }
-            if (n->key == ignored_key) {
-                continue;
-            }
-            auto &m = map_.at(n->key);
-            evicted_bytes += m.size_;
-            victims.push_back(n->key);
         }
         // One cannot evict elements from the map one is iterating over.
         for (auto v : victims) {
@@ -201,7 +204,7 @@ private:
             return true;
         }
         uint64_t required_bytes = nbytes - (capacity_ - size_);
-        uint64_t const evicted_bytes = evict_from_lru(required_bytes, access);
+        uint64_t const evicted_bytes = evict_from_lfu(required_bytes, access);
         if (evicted_bytes >= required_bytes) {
             return true;
         }
@@ -251,9 +254,8 @@ private:
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    LRU_TTL_Cache(size_t const capacity)
-        : capacity_(capacity),
-          lifetime_thresholds_(0.0, 1.0)
+    LFU_TTL_Cache(size_t const capacity)
+        : capacity_(capacity)
     {
     }
 
@@ -320,11 +322,13 @@ public:
     void
     print() const
     {
-        std::cout << "> LRUTTLCache(sz: " << size_ << ", cap: " << capacity_
+        std::cout << "> LFU-TTL-Cache(sz: " << size_ << ", cap: " << capacity_
                   << ")\n";
-        std::cout << "> \tLRU: ";
-        for (auto n : lfu_cache_) {
-            std::cout << n->key << ", ";
+        std::cout << "> \tLFU: ";
+        for (auto [frq, lru_cache_] : lfu_cache_) {
+            for (auto n : lru_cache_) {
+                std::cout << n->key << ", ";
+            }
         }
         std::cout << "\n";
         std::cout << "> \tTTL: ";
@@ -335,9 +339,13 @@ public:
     }
 
     std::string
-    json() const
+    json(std::unordered_map<std::string, std::string> extras = {}) const
     {
         std::stringstream ss;
+        std::function<std::string(LifeTimeThresholds const &val)> lambda =
+            [](LifeTimeThresholds const &val) -> std::string {
+            return val.json();
+        };
         ss << "{\"Capacity [B]\": " << format_memory_size(capacity_)
            << ", \"Max Size [B]\": "
            << format_memory_size(statistics_.max_size_)
@@ -349,8 +357,10 @@ public:
            << ", \"Number of Updates\": "
            << format_engineering(statistics_.update_ops_)
            << ", \"Miss Ratio\": " << statistics_.miss_ratio()
-           << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
-           << ", \"Statistics\": " << statistics_.json() << "}";
+           << ", \"Lifetime Thresholds\": "
+           << map2str(lifetime_thresholds_, lambda)
+           << ", \"Statistics\": " << statistics_.json()
+           << ",\"Extras\": " << map2str(extras) << "}";
         return ss.str();
     }
 
@@ -366,12 +376,12 @@ private:
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Maps last access time to keys.
-    HashList lfu_cache_;
+    std::map<uint64_t, HashList> lfu_cache_;
     // Maps expiration time to keys.
     std::multimap<uint64_t, uint64_t> ttl_cache_;
 
     // Statistics related to cache performance.
     CacheStatistics statistics_;
 
-    LifeTimeThresholds lifetime_thresholds_;
+    std::map<uint64_t, LifeTimeThresholds> lifetime_thresholds_;
 };

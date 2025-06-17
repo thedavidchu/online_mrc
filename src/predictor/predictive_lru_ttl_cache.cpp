@@ -169,7 +169,7 @@ PredictiveCache::remove_lru(uint64_t const victim_key,
 {
     lru_cache_.remove(victim_key);
     lru_size_ -= m.size_;
-    if (cause == EvictionCause::LRU) {
+    if (cause == EvictionCause::MainCapacity) {
         lifetime_thresholds_.register_cache_eviction(
             current_access->timestamp_ms - m.last_access_time_ms_,
             m.size_,
@@ -191,7 +191,7 @@ PredictiveCache::remove(uint64_t const victim_key,
 
     // Update metadata tracking
     switch (cause) {
-    case EvictionCause::LRU:
+    case EvictionCause::MainCapacity:
         assert(current_access != NULL);
         statistics_.lru_evict(m.size_, m.ttl_ms(current_access->timestamp_ms));
         if (statistics_.current_time_ms_ <= exp_tm) {
@@ -247,7 +247,7 @@ PredictiveCache::remove(uint64_t const victim_key,
         remove_lru(victim_key, m, current_access, cause);
     }
     if (m.uses_ttl()) {
-        if (false && cause == EvictionCause::VolatileTTL) {
+        if (cause == EvictionCause::VolatileTTL) {
             lifetime_thresholds_.register_cache_eviction(
                 current_access->timestamp_ms - m.last_access_time_ms_,
                 m.size_,
@@ -297,7 +297,7 @@ PredictiveCache::evict_from_lru(uint64_t const target_bytes,
     }
     // One cannot evict elements from the map one is iterating over.
     for (auto v : victims) {
-        remove(v, EvictionCause::LRU, &access);
+        remove(v, EvictionCause::MainCapacity, &access);
     }
     return evicted_bytes;
 }

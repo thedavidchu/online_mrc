@@ -4,7 +4,8 @@
 #include <string>
 
 enum class EvictionCause {
-    LRU,
+    // Main capacity-based eviction policy.
+    MainCapacity,
     TTL,
     // We ran out of LRU objects to evict, so we fell back to our
     // secondary eviction policy, which is to evict the soonest expiring
@@ -23,7 +24,7 @@ static inline std::string
 EvictionCause__string(EvictionCause const cause)
 {
     switch (cause) {
-    case EvictionCause::LRU:
+    case EvictionCause::MainCapacity:
         return "LRU";
     case EvictionCause::TTL:
         return "TTL";
