@@ -9,8 +9,8 @@ using uint64_t = std::uint64_t;
 
 struct ListNode {
     uint64_t key;
-    struct ListNode *l;
-    struct ListNode *r;
+    ListNode *l;
+    ListNode *r;
 };
 
 class ListNodeIterator {
@@ -45,7 +45,7 @@ public:
     }
 
 private:
-    struct ListNode const *node_;
+    ListNode const *node_;
 };
 
 /// @brief  A hash table indexed doubly linked list.
@@ -61,15 +61,20 @@ private:
 ///             HEAD                      TAIL (append)
 class HashList {
 private:
+    void
+    validate() const;
+
+    void
+    debug_print() const;
+
     /// @brief  Attach node to the tail.
     void
-    append(struct ListNode *node);
+    append(ListNode *node, bool const add_to_map);
 
-    struct ListNode *
-    extract_list_only(uint64_t const key);
-
-    void
-    append_list_only(struct ListNode *node);
+    /// @brief  Extract and return an owning pointer to a node.
+    std::pair<std::unordered_map<uint64_t, ListNode *const>::iterator,
+              ListNode *>
+    extract(uint64_t const key);
 
 public:
     HashList();
@@ -82,16 +87,6 @@ public:
     ListNodeIterator
     end() const;
 
-    bool
-    validate();
-
-    void
-    debug_print();
-
-    /// @brief  Extract and return an owning pointer to a node.
-    struct ListNode *
-    extract(uint64_t const key);
-
     /// @brief  Extract and free a node.
     bool
     remove(uint64_t const key);
@@ -101,8 +96,8 @@ public:
     access(uint64_t const key);
 
     /// @brief  Get an immutable view of a node.
-    struct ListNode const *
-    get(uint64_t const key);
+    ListNode const *
+    get(uint64_t const key) const;
 
     bool
     contains(uint64_t const key) const;
@@ -110,10 +105,11 @@ public:
     size_t
     size() const;
 
-    struct ListNode *
+    ListNode *
     extract_head();
 
-    std::unordered_map<uint64_t, struct ListNode *const> map_;
-    struct ListNode *head_ = nullptr;
-    struct ListNode *tail_ = nullptr;
+private:
+    std::unordered_map<uint64_t, ListNode *const> map_;
+    ListNode *head_ = nullptr;
+    ListNode *tail_ = nullptr;
 };

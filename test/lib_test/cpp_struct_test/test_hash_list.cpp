@@ -11,10 +11,6 @@ main()
     l.access(1);
     l.access(2);
     l.access(0);
-    std::free(l.extract(0));
-    std::free(l.extract(0));
-    std::free(l.extract(0));
-    std::free(l.extract(0));
     std::free(l.extract_head());
     std::free(l.extract_head());
     std::free(l.extract_head());
