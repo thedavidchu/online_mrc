@@ -49,6 +49,10 @@ public:
     std::string policy;
     std::vector<uint64_t> cache_capacities;
     double shards_ratio;
+    // I hard-code this as false because I have everything print at the end so
+    // it doesn't make sense to include progress bars if they're not printed in
+    // real time.
+    bool const show_progress = false;
 };
 
 bool
