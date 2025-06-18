@@ -69,18 +69,18 @@ private:
     void
     insert(CacheAccess const &access)
     {
-        statistics_.insert(access.value_size_b);
+        statistics_.insert(access.size_bytes());
         map_.emplace(access.key, CacheMetadata{access});
-        lfu_cache_[1].access(access.key);
+        lfu_cache_[0].access(access.key);
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
-        size_ += access.value_size_b;
+        size_ += access.size_bytes();
     }
 
     void
     update(CacheAccess const &access, CacheMetadata &metadata)
     {
-        size_ += access.value_size_b - metadata.size_;
-        statistics_.update(metadata.size_, access.value_size_b);
+        size_ += access.size_bytes() - metadata.size_;
+        statistics_.update(metadata.size_, access.size_bytes());
         lfu_cache_[metadata.frequency_].remove(access.key);
         metadata.visit_without_ttl_refresh(access);
         lfu_cache_[metadata.frequency_].access(access.key);
@@ -180,7 +180,7 @@ private:
     bool
     ensure_enough_room(size_t const old_nbytes, CacheAccess const &access)
     {
-        size_t const new_nbytes = access.key_size_b + access.value_size_b;
+        size_t const new_nbytes = access.size_bytes();
         assert(size_ <= capacity_);
         // We already have enough room if we're not increasing the data.
         if (old_nbytes >= new_nbytes) {
@@ -228,7 +228,7 @@ private:
     {
         auto &metadata = map_.at(access.key);
         if (!ensure_enough_room(metadata.size_, access)) {
-            statistics_.skip(access.value_size_b);
+            statistics_.skip(access.size_bytes());
             evict_too_big_accessed_object(access);
             if (DEBUG) {
                 LOGGER_WARN("too big updated object");
@@ -245,7 +245,7 @@ private:
             if (DEBUG) {
                 LOGGER_WARN("not enough room to insert!");
             }
-            statistics_.skip(access.value_size_b);
+            statistics_.skip(access.size_bytes());
             return false;
         }
         insert(access);

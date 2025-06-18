@@ -28,6 +28,9 @@ struct CacheAccess {
 
     CacheAccess(uint8_t const *const ptr, CacheTraceFormat const format);
 
+    uint64_t
+    size_bytes() const;
+
     bool
     is_read() const;
 

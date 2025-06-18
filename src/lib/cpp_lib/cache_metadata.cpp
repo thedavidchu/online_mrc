@@ -28,7 +28,7 @@ CacheMetadata::CacheMetadata(std::size_t const value_size,
 }
 
 CacheMetadata::CacheMetadata(CacheAccess const &access)
-    : size_(access.value_size_b),
+    : size_(access.key_size_b + access.value_size_b),
       insertion_time_ms_(access.timestamp_ms),
       last_access_time_ms_(access.timestamp_ms),
       expiration_time_ms_(std::isnan(access.ttl_ms)

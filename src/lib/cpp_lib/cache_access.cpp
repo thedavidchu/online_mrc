@@ -242,6 +242,12 @@ CacheAccess::CacheAccess(uint8_t const *const record,
 {
 }
 
+uint64_t
+CacheAccess::size_bytes() const
+{
+    return key_size_b + value_size_b;
+}
+
 bool
 CacheAccess::is_read() const
 {
