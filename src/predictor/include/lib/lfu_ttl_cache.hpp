@@ -153,8 +153,12 @@ private:
         uint64_t const ignored_key = access.key;
         uint64_t evicted_bytes = 0;
         std::vector<uint64_t> victims;
-        for (auto [frq, lru_cache_] : lfu_cache_) {
-            for (auto n : lru_cache_) {
+        // If we iterate on a non-reference version, then we are copy
+        // assigning a new LRU cache. This means that we call the
+        // destructor at the end of the loop, which deletes the original
+        // linked list but doesn't touch the map (which was copied).
+        for (auto const &[frq, lru_cache_] : lfu_cache_) {
+            for (auto const n : lru_cache_) {
                 assert(n);
                 if (evicted_bytes >= target_bytes) {
                     break;
@@ -325,8 +329,8 @@ public:
         std::cout << "> LFU-TTL-Cache(sz: " << size_ << ", cap: " << capacity_
                   << ")\n";
         std::cout << "> \tLFU: ";
-        for (auto [frq, lru_cache_] : lfu_cache_) {
-            for (auto n : lru_cache_) {
+        for (auto const &[frq, lru_cache_] : lfu_cache_) {
+            for (auto const n : lru_cache_) {
                 std::cout << n->key << ", ";
             }
         }
