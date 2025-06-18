@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+from typing import Callable
 
 import matplotlib.pyplot as plt
 
@@ -71,34 +72,60 @@ def parse_number(num: str | float | int) -> float | int:
     )
 
 
+def data_vs_capacity(
+    data_list: list[dict[str, object]], get_value: Callable[[dict[str, object]], object]
+) -> dict[float, object]:
+    return dict(
+        sorted(
+            (
+                parse_number(d["Capacity [B]"])
+                / d["Extras"]["SHARDS"][".sampling_ratio"]
+                / (1 << 30),
+                get_value(d),
+            )
+            for d in data_list
+        )
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", "-i", type=Path, required=True, help="input file")
     parser.add_argument("--mrc", type=Path, help="MRC output path")
+    parser.add_argument(
+        "--lifetime-threshold", type=Path, help="Lifetime threshold output path"
+    )
     args = parser.parse_args()
 
     input_file = args.input.resolve()
     data_list = parse_data(input_file)
 
     if args.mrc is not None:
+        mrc = data_vs_capacity(data_list, lambda d: d["Miss Ratio"])
         fig, ax = plt.subplots()
-        mrc = dict(
-            sorted(
-                [
-                    (
-                        parse_number(d["Capacity [B]"])
-                        / d["Extras"]["SHARDS"][".sampling_ratio"]
-                        / (1 << 30),
-                        d["Miss Ratio"],
-                    )
-                    for d in data_list
-                ]
-            )
-        )
         ax.set_title("Miss Ratio Curve")
         ax.set_xlabel("Cache Size [GiB]")
-        ax.plot(mrc.keys(), mrc.values(), "x")
+        ax.set_ylabel("Miss Ratio")
+        ax.plot(mrc.keys(), mrc.values(), "x-")
+        ax.set_ylim(0.0, 1.0)
         fig.savefig(args.mrc.resolve())
+    if args.lifetime_threshold is not None:
+        lifetime_thresholds = data_vs_capacity(
+            data_list,
+            lambda d: (
+                max(parse_number(k) for k in d["Lifetime Thresholds"].keys()) + 1
+                if d["Lifetime Thresholds"]
+                else 0
+            ),
+        )
+        fig, ax = plt.subplots()
+        ax.set_title("Maximum Evicted Frequency")
+        ax.set_xlabel("Cache Size [GiB]")
+        ax.set_ylabel("Maximum Evicted Frequency")
+        ax.plot(lifetime_thresholds.keys(), lifetime_thresholds.values(), "x-")
+        fig.savefig(args.lifetime_threshold.resolve())
+        for d in data_list:
+            print(d["Lifetime Thresholds"].keys())
 
 
 if __name__ == "__main__":
