@@ -11,6 +11,20 @@ struct ListNode {
     uint64_t key;
     ListNode *l;
     ListNode *r;
+
+    void
+    reset()
+    {
+        key = 0;
+        l = r = nullptr;
+    }
+
+    /// @brief  Remove dangling pointers.
+    void
+    sanitize()
+    {
+        l = r = nullptr;
+    }
 };
 
 class ListNodeIterator {

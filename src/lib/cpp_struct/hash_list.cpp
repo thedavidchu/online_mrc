@@ -24,11 +24,13 @@ HashList::append(ListNode *node, bool const add_to_map)
     }
     if (tail_ == nullptr) {
         head_ = tail_ = node;
-        node->l = node->r = nullptr;
+        node->sanitize();
         validate();
         return;
     }
-    assert(head_ != nullptr && tail_->r == nullptr && map_.size() != 0);
+    g_assert_nonnull(head_);
+    g_assert_null(tail_->r);
+    g_assert_cmpuint(map_.size(), !=, 0);
     tail_->r = node;
     node->l = tail_;
     tail_ = node;
@@ -55,7 +57,7 @@ HashList::extract(uint64_t const key)
         tail_ = n->l;
     }
     // Reset internal pointers so we don't dangle invalid pointers.
-    n->l = n->r = nullptr;
+    n->sanitize();
     return {it, n};
 }
 
@@ -66,7 +68,8 @@ HashList::~HashList()
     ListNode *next = nullptr;
     for (auto p = head_; p != nullptr; p = next) {
         next = p->r;
-        free(p);
+        p->reset();
+        std::free(p);
     }
 }
 
@@ -117,14 +120,14 @@ HashList::validate() const
 void
 HashList::debug_print() const
 {
-    std::cout << "Map: ";
+    std::cout << "- Map(" << map_.size() << "): ";
     for (auto [k, p] : map_) {
         std::cout << k << ": " << p << ", ";
     }
-    std::cout << std::endl;
-
-    std::cout << "Head: " << head_ << ", Tail: " << tail_ << std::endl;
-    std::cout << "HashList: ";
+    std::cout << std::endl
+              << "- Head: " << head_ << std::endl
+              << "- Tail: " << tail_ << std::endl
+              << "- HashList: ";
     for (auto p = head_; p != nullptr; p = p->r) {
         std::cout << p << ": " << p->key << ", ";
     }
