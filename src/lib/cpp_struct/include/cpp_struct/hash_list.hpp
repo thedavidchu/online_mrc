@@ -78,8 +78,15 @@ private:
 
 public:
     HashList();
-
     ~HashList();
+
+    // Delete the copy constructor. This is because my linked list has
+    // no implicit copy constructor.
+    HashList(HashList const &) = delete;
+    // Delete the copy assignment operator. This is also because my
+    // linked list has no implicit copy constructor.
+    HashList &
+    operator=(HashList const &) = delete;
 
     ListNodeIterator
     begin() const;
