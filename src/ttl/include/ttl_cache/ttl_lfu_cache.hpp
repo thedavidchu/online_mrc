@@ -10,6 +10,8 @@
 #include "math/saturation_arithmetic.h"
 
 struct myTTLForLFU {
+    static constexpr std::uint64_t BASE_FRQ = 1;
+
     std::uint64_t frequency;
     std::uint64_t last_access_time_ms;
     std::uint64_t ttl_s;
@@ -95,11 +97,10 @@ public:
             if (map_.size() >= capacity_) {
                 this->evict_soonest_expiring();
             }
-            map_[access.key] = {
-                0,
-                logical_time_,
-                ttl_s_,
-            };
+            map_.emplace(access.key,
+                         myTTLForLFU::BASE_FRQ,
+                         logical_time_,
+                         ttl_s_);
             uint64_t eviction_time_ms =
                 TTLLFUCache::get_expiry_time_ms(logical_time_, ttl_s_, 0);
             expiration_queue_.emplace(eviction_time_ms, access.key);

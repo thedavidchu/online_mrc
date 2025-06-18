@@ -32,6 +32,9 @@ public:
 private:
     LFUCache const &cache_;
     ListNode const *node_ = nullptr;
+    // This should be 0 (not 1) because I take the upper_bound with this
+    // as the argument. For a frequency of 1, I need to pass in 0 to
+    // "upper_bound" it. See the implementation of the operator++.
     uint64_t frq = 0;
 };
 

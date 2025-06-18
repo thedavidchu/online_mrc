@@ -71,7 +71,7 @@ private:
     {
         statistics_.insert(access.size_bytes());
         map_.emplace(access.key, CacheMetadata{access});
-        lfu_cache_[0].access(access.key);
+        lfu_cache_[1].access(access.key);
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
         size_ += access.size_bytes();
     }

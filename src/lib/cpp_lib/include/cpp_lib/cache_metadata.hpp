@@ -17,7 +17,7 @@ struct CacheMetadata {
     ///         to start at 0 rather than 1.
     /// @todo   Start frequency counter from 1. It just makes more sense.
     ///         This is sort of like the "hit counter".
-    std::size_t frequency_ = 0;
+    std::size_t frequency_ = 1;
     std::uint64_t insertion_time_ms_ = 0;
     std::uint64_t last_access_time_ms_ = 0;
     /// @note   I decided to store the expiration time rather than the
