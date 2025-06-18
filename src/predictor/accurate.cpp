@@ -63,7 +63,7 @@ run_single_lfu_cache(std::promise<std::string> promise,
                      double const shards_ratio,
                      bool const show_progress)
 {
-    LFU_TTL_Cache cache{capacity_bytes};
+    LFU_TTL_Cache cache{(uint64_t)(capacity_bytes * shards_ratio)};
     FixedRateShardsSampler sampler = {};
     if (!FixedRateShardsSampler__init(&sampler, shards_ratio, true)) {
         return false;
