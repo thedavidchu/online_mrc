@@ -97,10 +97,9 @@ public:
             if (map_.size() >= capacity_) {
                 this->evict_soonest_expiring();
             }
-            map_.emplace(access.key,
-                         myTTLForLFU::BASE_FRQ,
-                         logical_time_,
-                         ttl_s_);
+            map_.emplace(
+                access.key,
+                myTTLForLFU{myTTLForLFU::BASE_FRQ, logical_time_, ttl_s_});
             uint64_t eviction_time_ms =
                 TTLLFUCache::get_expiry_time_ms(logical_time_, ttl_s_, 0);
             expiration_queue_.emplace(eviction_time_ms, access.key);

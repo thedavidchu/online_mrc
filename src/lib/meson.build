@@ -28,7 +28,6 @@ subdir('sampler')
 # Relies on 'io' and 'trace'
 subdir('cpp_struct')
 subdir('cpp_lib')
-subdir('cpp_cache')
 
 # Relies (foolishly) on 'cpp_lib'.
 subdir('hyperloglog')
