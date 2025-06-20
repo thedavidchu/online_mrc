@@ -113,7 +113,7 @@ def main():
         lifetime_thresholds = data_vs_capacity(
             data_list,
             lambda d: (
-                max(parse_number(k) for k in d["Lifetime Thresholds"].keys()) + 1
+                max(parse_number(k) for k in d["Lifetime Thresholds"].keys())
                 if d["Lifetime Thresholds"]
                 else 0
             ),
@@ -123,6 +123,7 @@ def main():
         ax.set_xlabel("Cache Size [GiB]")
         ax.set_ylabel("Maximum Evicted Frequency")
         ax.plot(lifetime_thresholds.keys(), lifetime_thresholds.values(), "x-")
+        ax.axhline(y=0, color="black", linestyle="--", label="y=0")
         fig.savefig(args.lifetime_threshold.resolve())
         for d in data_list:
             print(d["Lifetime Thresholds"].keys())
