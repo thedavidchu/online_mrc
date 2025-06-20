@@ -112,18 +112,30 @@ def main():
     if args.lifetime_threshold is not None:
         lifetime_thresholds = data_vs_capacity(
             data_list,
-            lambda d: (
-                max(parse_number(k) for k in d["Lifetime Thresholds"].keys())
-                if d["Lifetime Thresholds"]
-                else 0
-            ),
+            lambda d: {
+                parse_number(f): hist["Histogram"]["total"]
+                for f, hist in d["Lifetime Thresholds"].items()
+            },
         )
-        fig, ax = plt.subplots()
-        ax.set_title("Maximum Evicted Frequency")
-        ax.set_xlabel("Cache Size [GiB]")
-        ax.set_ylabel("Maximum Evicted Frequency")
-        ax.plot(lifetime_thresholds.keys(), lifetime_thresholds.values(), "x-")
-        ax.axhline(y=0, color="black", linestyle="--", label="y=0")
+        print(lifetime_thresholds)
+        fig, axes = plt.subplots(
+            nrows=1,
+            ncols=len(lifetime_thresholds),
+            squeeze=False,
+            sharey=True,
+            sharex=True,
+            figsize=(1 * len(lifetime_thresholds), 9),
+        )
+        fig.suptitle("Maximum Evicted Frequency")
+        fig.supxlabel("Cache Size [GiB]")
+        fig.supylabel("LFU Frequency")
+        for ax, (c, hist) in zip(axes[0], lifetime_thresholds.items()):
+            ax.set_title(f"{c:.3} GiB")
+            ax.set_xlabel("\nHistogram\nFrequency")
+            # I was going to use a violin plot, but it tries to map your
+            # data to a Gaussian distribution, which my data isn't.
+            ax.plot(hist.values(), hist.keys(), "x-")
+            ax.axhline(y=0, color="black", linestyle="--", label="y=0")
         fig.savefig(args.lifetime_threshold.resolve())
         for d in data_list:
             print(d["Lifetime Thresholds"].keys())
