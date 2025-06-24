@@ -29,10 +29,9 @@ class LifeTimeThresholds {
     {
         double lower = NAN, upper = NAN;
 
-        // Handle special cases. If we didn't handle the case of 1.0
-        // explicitly, we would simply set the upper_threshold_ to the
-        // largest lifespan we have seen yet, rather than the maximum
-        // possible.
+        // We handle the case of 1.0 explicitly, we would simply set the
+        // upper_threshold_ to the largest lifespan we have seen yet,
+        // rather than the maximum possible.
         if (lower_ratio_ == 0.0) {
             lower = 0;
         } else if (lower_ratio_ == 1.0) {
@@ -54,6 +53,8 @@ class LifeTimeThresholds {
                 return {INFINITY, INFINITY};
             }
             // NOTE DEAD CODE BELOW!
+            // This would extend the 'training' period until we see an
+            // eviction.
             return {0, INFINITY};
         }
         // If the ratios are the same, then we simply return the mean.

@@ -18,6 +18,24 @@ predictive_lru_ttl_cache_dep = declare_dependency(
     ],
 )
 
+predictive_lfu_ttl_cache_dep = declare_dependency(
+    link_with: library(
+        'predictive_lfu_ttl_cache_lib',
+        'predictive_lfu_ttl_cache.cpp',
+        include_directories: predictor_inc,
+        dependencies: [
+            cpp_lib_dep,
+            cpp_struct_dep,
+            glib_dep,
+        ],
+    ),
+    include_directories: predictor_inc,
+    dependencies: [
+        cpp_lib_util_dep,
+        cpp_lib_dep,
+    ],
+)
+
 test_lru_ttl_cache_exe = executable(
     'test_lru_ttl_cache_exe',
     'test_lru_ttl_cache.cpp',
@@ -69,6 +87,7 @@ predictor_exe = executable(
         cache_statistics_dep,
         cpp_lib_dep,
         predictive_lru_ttl_cache_dep,
+        predictive_lfu_ttl_cache_dep,
         shards_dep,
     ],
 )

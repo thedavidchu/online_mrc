@@ -102,6 +102,15 @@ public:
     HashList &
     operator=(HashList const &) = delete;
 
+    // This is required to be able to have a HashList as a value within
+    // std::map. It is called a 'move constructor".
+    HashList(HashList const &&src)
+        : map_(src.map_),
+          head_(src.head_),
+          tail_(src.tail_)
+    {
+    }
+
     ListNodeIterator
     begin() const;
 

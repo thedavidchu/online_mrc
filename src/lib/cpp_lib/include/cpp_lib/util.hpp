@@ -100,7 +100,7 @@ map2str(M<K, V> const &map, bool const quote_value = false)
     std::stringstream ss;
     size_t i = 0;
     ss << "{";
-    for (auto [k, v] : map) {
+    for (auto const &[k, v] : map) {
         ss << "\"" << k << "\": ";
         if (quote_value) {
             ss << "\"";
@@ -124,7 +124,7 @@ map2str(M<K, V> const &map, std::function<std::string(V const &val)> val2str)
     std::stringstream ss;
     size_t i = 0;
     ss << "{";
-    for (auto [k, v] : map) {
+    for (auto const &[k, v] : map) {
         ss << "\"" << k << "\": ";
         ss << val2str(v);
         if (!is_last(i++, map.size())) {

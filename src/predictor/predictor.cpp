@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <future>
@@ -22,6 +23,7 @@
 #include "cpp_lib/parse_boolean.hpp"
 #include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
+#include "lib/predictive_lfu_ttl_cache.hpp"
 #include "logger/logger.h"
 
 #include "cpp_lib/cache_trace.hpp"
@@ -31,6 +33,7 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
+template <typename P>
 static bool
 run_single_cache(std::promise<std::string> ret,
                  int const id,
@@ -41,12 +44,12 @@ run_single_cache(std::promise<std::string> ret,
                  double const shards_ratio,
                  bool const show_progress)
 {
-    PredictiveCache p(capacity_bytes * shards_ratio,
-                      lower_ratio,
-                      upper_ratio,
-                      {{"shards_ratio", std::to_string(shards_ratio)}});
-    struct FixedRateShardsSampler frss = {};
-    if (!FixedRateShardsSampler__init(&frss, shards_ratio, true)) {
+    P p(capacity_bytes * shards_ratio,
+        lower_ratio,
+        upper_ratio,
+        {{"shards_ratio", std::to_string(shards_ratio)}});
+    struct FixedRateShardsSampler sampler = {};
+    if (!FixedRateShardsSampler__init(&sampler, shards_ratio, true)) {
         return false;
     }
     std::stringstream ss, shards_ss;
@@ -63,7 +66,7 @@ run_single_cache(std::promise<std::string> ret,
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
         auto const &access = trace.get_wait(i);
-        if (!FixedRateShardsSampler__sample(&frss, access.key)) {
+        if (!FixedRateShardsSampler__sample(&sampler, access.key)) {
             continue;
         }
         if (access.is_read()) {
@@ -79,7 +82,7 @@ run_single_cache(std::promise<std::string> ret,
                   upper_ratio,
                   shards_ratio);
 
-    FixedRateShardsSampler__json(shards_ss, frss, false);
+    FixedRateShardsSampler__json(shards_ss, sampler, false);
     p.print_json(ss,
                  {
                      {"SHARDS", shards_ss.str()},
@@ -89,11 +92,12 @@ run_single_cache(std::promise<std::string> ret,
                      },
                  });
     ret.set_value(ss.str());
-    FixedRateShardsSampler__destroy(&frss);
+    FixedRateShardsSampler__destroy(&sampler);
 
     return true;
 }
 
+template <typename P>
 static void
 run_caches(std::string const &path,
            CacheTraceFormat format,
@@ -111,7 +115,7 @@ run_caches(std::string const &path,
     for (auto c : capacity_bytes) {
         std::promise<std::string> promise;
         futs.push_back(promise.get_future());
-        workers.emplace_back(run_single_cache,
+        workers.emplace_back(run_single_cache<P>,
                              std::move(promise),
                              id++,
                              std::ref(trace),
@@ -136,36 +140,52 @@ run_caches(std::string const &path,
 int
 main(int argc, char *argv[])
 {
-    if (argc != 9 && argc != 10) {
+    if (argc != 10 && argc != 11) {
         std::cout
             << "Usage: predictor <trace> <format> <lower_ratio [0.0, 1.0]> "
                "<upper_ratio [0.0, 1.0]> <cache-capacities>+ "
                "<lifetime_cache_mode EvictionTime|LifeTime> "
                "<lifetime_lru_only_mode true|false> "
-               "<shards-ratio [0.0, 1.0]> [show_progress=false]"
+               "<shards-ratio [0.0, 1.0]> <policy lru|lfu> "
+               "[show_progress=false]"
             << std::endl;
         exit(1);
     }
 
-    std::string const path = argv[1];
-    CacheTraceFormat const format = CacheTraceFormat__parse(argv[2]);
-    double const lower_ratio = atof(argv[3]);
-    double const upper_ratio = atof(argv[4]);
+    std::string const path{argv[1]};
+    CacheTraceFormat const format{CacheTraceFormat__parse(argv[2])};
+    double const lower_ratio{atof(argv[3])};
+    double const upper_ratio{atof(argv[4])};
     // This will panic if it was unsuccessful.
-    std::vector<uint64_t> capacity_bytes = parse_capacities(argv[5]);
-    double const shards_ratio = atof(argv[8]);
-    bool const show_progress =
-        parse_bool_or(argc == 10 ? std::string(argv[9]) : "false", false);
-    LOGGER_INFO("Running: %s %s",
+    std::vector<uint64_t> capacity_bytes{parse_capacities(argv[5])};
+    double const shards_ratio{atof(argv[8])};
+    std::string const policy{argv[9]};
+    bool const show_progress{
+        parse_bool_or(argc == 11 ? std::string(argv[10]) : "false", false)};
+    LOGGER_INFO("Running: %s %s with %s",
                 path.c_str(),
-                CacheTraceFormat__string(format).c_str());
-    run_caches(path,
-               format,
-               capacity_bytes,
-               lower_ratio,
-               upper_ratio,
-               shards_ratio,
-               show_progress);
+                CacheTraceFormat__string(format).c_str(),
+                policy.c_str());
+    if (policy == "lru") {
+        run_caches<PredictiveCache>(path,
+                                    format,
+                                    capacity_bytes,
+                                    lower_ratio,
+                                    upper_ratio,
+                                    shards_ratio,
+                                    show_progress);
+    } else if (policy == "lfu") {
+        run_caches<PredictiveLFUCache>(path,
+                                       format,
+                                       capacity_bytes,
+                                       lower_ratio,
+                                       upper_ratio,
+                                       shards_ratio,
+                                       show_progress);
+    } else {
+        LOGGER_ERROR("Unrecognized policy: '%s'", policy.c_str());
+        return EXIT_FAILURE;
+    }
     std::cout << "OK!" << std::endl;
     return 0;
 }

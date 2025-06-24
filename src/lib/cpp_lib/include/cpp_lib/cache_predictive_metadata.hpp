@@ -112,10 +112,29 @@ struct CachePredictiveMetadata : public CacheMetadata {
     {
         return which.uses_ttl();
     }
+
     bool
     uses_lru() const
     {
         return which.uses_lru();
+    }
+
+    bool
+    uses_lru_only() const
+    {
+        return uses_lru() && !uses_ttl();
+    }
+
+    bool
+    uses_ttl_only() const
+    {
+        return !uses_lru() && uses_ttl();
+    }
+
+    bool
+    uses_lru_and_ttl() const
+    {
+        return uses_lru() && uses_ttl();
     }
 
 private:
