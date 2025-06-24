@@ -34,15 +34,19 @@ parser.add_argument(
     "--output-template",
     "-o",
     type=Template,
-    default=Template("./myresults/lru_ttl/result-cluster$cluster-v$version.out"),
-    help="output path template with '$cluster' and '$version'",
+    default=Template(
+        "./myresults/lru_ttl/result-cluster$cluster-v$version-s$shards.out"
+    ),
+    help="output path template with '$cluster', '$version', and '$shards'",
 )
 parser.add_argument(
     "--error-output-template",
     "-e",
     type=Template,
-    default=Template("./myresults/lru_ttl/result-cluster$cluster-v$version.err"),
-    help="error output path template with '$cluster' and '$version'",
+    default=Template(
+        "./myresults/lru_ttl/result-cluster$cluster-v$version-s$shards.err"
+    ),
+    help="error output path template with '$cluster', '$version', and '$shards'",
 )
 parser.add_argument("--clusters", "-c", nargs="+", type=int, help="cluster ID(s)")
 parser.add_argument("--version", "-v", type=int, required=True, help="version number")
@@ -53,12 +57,14 @@ parser.add_argument("--shards", "-s", type=float, default=1.0, help="shards rati
 parser.add_argument(
     "--overwrite", action="store_true", help="overwrite existing output (versus append)"
 )
+parser.add_argument("--policy", "-p", choices=["lru", "lfu"], help="eviction policy")
 parser.add_argument("--verbose", action="store_true", help="verbosely print outputs")
 args = parser.parse_args()
 
 INPUT_TEMPLATE = args.input_template
 OUTPUT_TEMPLATE = args.output_template
-ERROR_OUTPUT_TEMPLATE = args.error_output_template
+ERROR_TEMPLATE = args.error_output_template
+EVICTION_POLICY = args.policy
 cluster_ids = sorted(
     set(args.clusters),
     key=lambda nr: get_twitter_path(nr, "Sari", template=INPUT_TEMPLATE).stat().st_size,
@@ -100,15 +106,15 @@ capacities = [
 verbose = args.verbose
 
 
-def stdout_file(cluster_id: int, version: int):
+def stdout_file(cluster_id: int, version: int, shards: float):
     return Path(
-        OUTPUT_TEMPLATE.substitute(cluster=cluster_id, version=version)
+        OUTPUT_TEMPLATE.substitute(cluster=cluster_id, version=version, shards=shards)
     ).resolve()
 
 
-def stderr_file(cluster_id: int, version: int):
+def stderr_file(cluster_id: int, version: int, shards: float):
     return Path(
-        ERROR_OUTPUT_TEMPLATE.substitute(cluster=cluster_id, version=version)
+        ERROR_TEMPLATE.substitute(cluster=cluster_id, version=version, shards=shards)
     ).resolve()
 
 
@@ -138,22 +144,23 @@ def run_predictor(
         mode,
         str(lifetime_lru_mode).lower(),
         str(shards_ratio),
+        EVICTION_POLICY,
     ]
     print(cmd)
     r = run(cmd, capture_output=True, text=True)
     if verbose:
         print(r.stdout)
         print(r.stderr)
-    with open(stdout_file(cluster_id, version), "a") as f:
+    with open(stdout_file(cluster_id, version, shards_ratio), "a") as f:
         f.write(r.stdout)
-    with open(stderr_file(cluster_id, version), "a") as f:
+    with open(stderr_file(cluster_id, version, shards_ratio), "a") as f:
         f.write(r.stderr)
 
 
 def main():
     print(f"Input: {INPUT_TEMPLATE.safe_substitute()}")
     print(f"stdout: {OUTPUT_TEMPLATE.safe_substitute()}")
-    print(f"stderr: {ERROR_OUTPUT_TEMPLATE.safe_substitute()}")
+    print(f"stderr: {ERROR_TEMPLATE.safe_substitute()}")
     print(f"{version=}")
     print(f"{cluster_ids=}")
     print(f"{modes=}")
@@ -162,12 +169,13 @@ def main():
     print(f"{lifetime_lru_only_mode=}")
     print(f"{shards_ratio=}")
     print(f"{overwrite=}")
+    print(f"{EVICTION_POLICY=}")
     run("meson compile -C build".split())
 
     if overwrite:
         for c in cluster_ids:
-            stdout_file(c, version).unlink(missing_ok=True)
-            stderr_file(c, version).unlink(missing_ok=True)
+            stdout_file(c, version, shards_ratio).unlink(missing_ok=True)
+            stderr_file(c, version, shards_ratio).unlink(missing_ok=True)
 
     # Convert the 'product' to a list so that TQDM can see how many
     # elements there are.
