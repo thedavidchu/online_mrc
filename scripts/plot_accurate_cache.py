@@ -117,7 +117,6 @@ def main():
                 for f, hist in d["Lifetime Thresholds"].items()
             },
         )
-        print(lifetime_thresholds)
         fig, axes = plt.subplots(
             nrows=1,
             ncols=len(lifetime_thresholds),
@@ -137,8 +136,6 @@ def main():
             ax.plot(hist.values(), hist.keys(), "x-")
             ax.axhline(y=0, color="black", linestyle="--", label="y=0")
         fig.savefig(args.lifetime_threshold.resolve())
-        for d in data_list:
-            print(d["Lifetime Thresholds"].keys())
 
 
 if __name__ == "__main__":
