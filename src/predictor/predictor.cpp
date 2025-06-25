@@ -140,14 +140,11 @@ run_caches(std::string const &path,
 int
 main(int argc, char *argv[])
 {
-    if (argc != 10 && argc != 11) {
+    if (argc != 8) {
         std::cout
             << "Usage: predictor <trace> <format> <lower_ratio [0.0, 1.0]> "
                "<upper_ratio [0.0, 1.0]> <cache-capacities>+ "
-               "<lifetime_cache_mode EvictionTime|LifeTime> "
-               "<lifetime_lru_only_mode true|false> "
                "<shards-ratio [0.0, 1.0]> <policy lru|lfu> "
-               "[show_progress=false]"
             << std::endl;
         exit(1);
     }
@@ -158,10 +155,9 @@ main(int argc, char *argv[])
     double const upper_ratio{atof(argv[4])};
     // This will panic if it was unsuccessful.
     std::vector<uint64_t> capacity_bytes{parse_capacities(argv[5])};
-    double const shards_ratio{atof(argv[8])};
-    std::string const policy{argv[9]};
-    bool const show_progress{
-        parse_bool_or(argc == 11 ? std::string(argv[10]) : "false", false)};
+    double const shards_ratio{atof(argv[6])};
+    std::string const policy{argv[7]};
+    bool const show_progress{false};
     LOGGER_INFO("Running: %s %s with %s",
                 path.c_str(),
                 CacheTraceFormat__string(format).c_str(),

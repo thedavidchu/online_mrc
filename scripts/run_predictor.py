@@ -50,9 +50,6 @@ parser.add_argument(
 )
 parser.add_argument("--clusters", "-c", nargs="+", type=int, help="cluster ID(s)")
 parser.add_argument("--version", "-v", type=int, required=True, help="version number")
-parser.add_argument(
-    "--lifetime-lru-only-mode", action="store_true", help="use LRU-only lifetimes"
-)
 parser.add_argument("--shards", "-s", type=float, default=1.0, help="shards ratio")
 parser.add_argument(
     "--overwrite", action="store_true", help="overwrite existing output (versus append)"
@@ -73,11 +70,6 @@ cluster_ids = sorted(
 version = args.version
 shards_ratio = args.shards
 overwrite = args.overwrite
-lifetime_lru_only_mode = args.lifetime_lru_only_mode
-modes = [
-    "EvictionTime",
-    # "LifeTime",
-]
 thresholds = [
     (0.0, 1.0),  # Accurate LRU-TTL Simulation
     # (0.25, 0.75),  # Conservative classifier
@@ -123,8 +115,6 @@ def run_predictor(
     lower_threshold: float,
     upper_threshold: float,
     capacities: list[str],
-    mode: str,
-    lifetime_lru_mode: bool,
     shards_ratio: float,
     version: int,
     *,
@@ -141,8 +131,6 @@ def run_predictor(
         str(lower_threshold),
         str(upper_threshold),
         " ".join(capacities),
-        mode,
-        str(lifetime_lru_mode).lower(),
         str(shards_ratio),
         EVICTION_POLICY,
     ]
@@ -163,10 +151,8 @@ def main():
     print(f"stderr: {ERROR_TEMPLATE.safe_substitute()}")
     print(f"{version=}")
     print(f"{cluster_ids=}")
-    print(f"{modes=}")
     print(f"{thresholds=}")
     print(f"{capacities=}")
-    print(f"{lifetime_lru_only_mode=}")
     print(f"{shards_ratio=}")
     print(f"{overwrite=}")
     print(f"{EVICTION_POLICY=}")
@@ -179,14 +165,12 @@ def main():
 
     # Convert the 'product' to a list so that TQDM can see how many
     # elements there are.
-    for mode, cluster, (l, u) in tqdm(list(product(modes, cluster_ids, thresholds))):
+    for cluster, (l, u) in tqdm(list(product(cluster_ids, thresholds))):
         run_predictor(
             cluster,
             l,
             u,
             capacities,
-            mode,
-            lifetime_lru_only_mode,
             shards_ratio,
             version,
             verbose=verbose,
