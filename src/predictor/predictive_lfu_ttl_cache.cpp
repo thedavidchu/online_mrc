@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <glib.h>
 #include <iostream>
 #include <map>
@@ -47,7 +48,7 @@ PredictiveLFUCache::ok(bool const fatal) const
         LOGGER_ERROR("size exceeds capacity");
         ok = false;
     }
-    if (lfu_cache_.size() != 1) {
+    if (lfu_cache_.size() != nr_lfu_buckets_) {
         LOGGER_ERROR("wrong number of LFU buckets: %zu vs 1",
                      lfu_cache_.size());
         ok = false;
@@ -101,7 +102,8 @@ PredictiveLFUCache::insert(CacheAccess const &access)
     double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CachePredictiveMetadata{access});
     auto &metadata = map_.at(access.key);
-    auto r = lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
+    auto r =
+        lifetime_thresholds_.at(1).get_updated_thresholds(access.timestamp_ms);
     if (r.first != INFINITY && ttl_ms >= r.first) {
         pred_tracker.record_store_lru();
         lfu_cache_.at(1).access(access.key);
@@ -121,44 +123,88 @@ PredictiveLFUCache::insert(CacheAccess const &access)
     size_ += access.size_bytes();
 }
 
+void
+PredictiveLFUCache::update_remove_lfu(CacheAccess const &access,
+                                      CachePredictiveMetadata &metadata,
+                                      size_t const prev_frequency)
+{
+    assert(prev_frequency <= nr_lfu_buckets_);
+    lfu_cache_.at(prev_frequency).remove(access.key);
+    lfu_size_ -= metadata.size_;
+    lfu_nr_obj_ -= 1;
+    metadata.unset_lru();
+}
+void
+PredictiveLFUCache::update_add_lfu(CacheAccess const &access,
+                                   CachePredictiveMetadata &metadata,
+                                   size_t const next_frequency)
+{
+    pred_tracker.record_store_lru();
+    lfu_cache_.at(next_frequency).access(access.key);
+    lfu_size_ += access.size_bytes();
+    lfu_nr_obj_ += 1;
+    metadata.set_lru();
+}
+void
+PredictiveLFUCache::update_remove_ttl(CacheAccess const &access,
+                                      CachePredictiveMetadata &metadata)
+{
+    remove_multimap_kv(ttl_cache_, metadata.expiration_time_ms_, access.key);
+    ttl_size_ -= metadata.size_;
+    metadata.unset_ttl();
+}
+void
+PredictiveLFUCache::update_keep_ttl(CacheAccess const &access,
+                                    CachePredictiveMetadata &metadata)
+{
+    assert(metadata.uses_ttl());
+    pred_tracker.record_store_ttl();
+    ttl_size_ += access.size_bytes() - metadata.size_;
+}
+void
+PredictiveLFUCache::update_add_ttl(CacheAccess const &access,
+                                   CachePredictiveMetadata &metadata)
+{
+    pred_tracker.record_store_ttl();
+    ttl_size_ += access.size_bytes();
+    ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
+    metadata.set_ttl();
+}
+
 /// @brief  Process an access to an item in the cache.
 void
 PredictiveLFUCache::update(CacheAccess const &access,
                            CachePredictiveMetadata &metadata)
 {
+    size_t const prev_frequency = metadata.frequency_;
+    size_t const next_frequency = metadata.frequency_ + 1;
+    bool const maybe_lfu = next_frequency < lifetime_thresholds_.size();
     size_ += access.size_bytes() - metadata.size_;
     statistics_.update(metadata.size_, access.size_bytes());
-    // No matter what, place the  object in the TTL queue.
-    if (metadata.uses_lru_and_ttl()) {
-        assert(metadata.frequency_ == 1);
-        lfu_cache_.at(metadata.frequency_).remove(access.key);
-        lfu_size_ -= metadata.size_;
-        lfu_nr_obj_ -= 1;
-        metadata.unset_lru();
-
-        pred_tracker.record_store_ttl();
-        ttl_size_ += access.size_bytes() - metadata.size_;
-    } else if (metadata.uses_lru_only()) {
-        assert(metadata.frequency_ == 1);
-        lfu_cache_.at(metadata.frequency_).remove(access.key);
-        lfu_size_ -= metadata.size_;
-        lfu_nr_obj_ -= 1;
-        metadata.unset_lru();
-
-        pred_tracker.record_store_ttl();
-        ttl_cache_.emplace(metadata.expiration_time_ms_, access.key);
-        ttl_size_ += access.size_bytes();
-        metadata.set_ttl();
-    } else if (metadata.uses_ttl_only()) {
-        pred_tracker.record_store_ttl();
-        ttl_size_ += access.size_bytes() - metadata.size_;
-    } else {
-        // Umm, this isn't good!
-        assert(0 && "impossible -- object in neither eviction queue");
-    }
-    assert(metadata.uses_ttl_only());
-    // This goes at the end because it updates the frequency counter.
     metadata.visit_without_ttl_refresh(access);
+    double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
+    auto r = maybe_lfu ? lifetime_thresholds_.at(next_frequency)
+                             .get_updated_thresholds(access.timestamp_ms)
+                       : std::pair<double, double>{0.0, INFINITY};
+    if (maybe_lfu && r.first != INFINITY && ttl_ms >= r.first) {
+        if (metadata.uses_lru()) {
+            update_remove_lfu(access, metadata, prev_frequency);
+        }
+        update_add_lfu(access, metadata, next_frequency);
+    } else if (metadata.uses_lru()) {
+        update_remove_lfu(access, metadata, prev_frequency);
+    }
+    if (r.second != 0 && ttl_ms <= r.second) {
+        // Even if we don't re-insert into the TTL queue, we still
+        // want to mark it as stored.
+        if (metadata.uses_ttl()) {
+            update_keep_ttl(access, metadata);
+        } else {
+            update_add_ttl(access, metadata);
+        }
+    } else if (metadata.uses_ttl()) {
+        update_remove_ttl(access, metadata);
+    }
 }
 
 void
@@ -171,10 +217,11 @@ PredictiveLFUCache::remove_lfu(uint64_t const victim_key,
     lfu_size_ -= m.size_;
     lfu_nr_obj_ -= 1;
     if (cause == EvictionCause::MainCapacity) {
-        lifetime_thresholds_.register_cache_eviction(
-            current_access->timestamp_ms - m.last_access_time_ms_,
-            m.size_,
-            current_access->timestamp_ms);
+        lifetime_thresholds_.at(m.frequency_)
+            .register_cache_eviction(current_access->timestamp_ms -
+                                         m.last_access_time_ms_,
+                                     m.size_,
+                                     current_access->timestamp_ms);
     }
 }
 
@@ -248,11 +295,13 @@ PredictiveLFUCache::remove(uint64_t const victim_key,
         remove_lfu(victim_key, m, current_access, cause);
     }
     if (m.uses_ttl()) {
-        if (cause == EvictionCause::VolatileTTL) {
-            lifetime_thresholds_.register_cache_eviction(
-                current_access->timestamp_ms - m.last_access_time_ms_,
-                m.size_,
-                current_access->timestamp_ms);
+        if (cause == EvictionCause::VolatileTTL &&
+            m.frequency_ <= nr_lfu_buckets_) {
+            lifetime_thresholds_.at(m.frequency_)
+                .register_cache_eviction(current_access->timestamp_ms -
+                                             m.last_access_time_ms_,
+                                         m.size_,
+                                         current_access->timestamp_ms);
         }
         remove_multimap_kv(ttl_cache_, exp_tm, victim_key);
         ttl_size_ -= m.size_;
@@ -440,13 +489,24 @@ PredictiveLFUCache::PredictiveLFUCache(
     size_t const capacity,
     double const lower_ratio,
     double const upper_ratio,
-    std::map<std::string, std::string> kwargs)
+    std::map<std::string, std::string> kwargs,
+    size_t const nr_lfu_buckets)
     : capacity_(capacity),
-      lifetime_thresholds_(lower_ratio, upper_ratio),
       oracle_(capacity),
-      kwargs_(kwargs)
+      kwargs_(kwargs),
+      nr_lfu_buckets_(nr_lfu_buckets)
+
 {
-    lfu_cache_.emplace(1, HashList{});
+    for (size_t i = 0; i < nr_lfu_buckets; ++i) {
+        lfu_cache_.emplace(i + 1, HashList{});
+    }
+    for (size_t i = 0; i < nr_lfu_buckets + 1; ++i) {
+        // NOTE The 0th element is unused but is just for prettier
+        // indexing because LFU starts at 1. Is this a terrible idea?
+        // Yeah, probably.
+        lifetime_thresholds_.push_back(
+            LifeTimeThresholds{lower_ratio, upper_ratio});
+    }
 }
 
 void
@@ -553,21 +613,17 @@ std::string
 PredictiveLFUCache::json(std::map<std::string, std::string> extras) const
 {
     std::stringstream ss;
-    auto r = lifetime_thresholds_.thresholds();
+    std::function<std::string(LifeTimeThresholds const &)> lambda =
+        [](LifeTimeThresholds const &val) -> std::string { return val.json(); };
+    auto r = lifetime_thresholds_.at(1).thresholds();
     ss << "{\"Capacity [B]\": " << format_memory_size(capacity_)
-       << ", \"Lower Ratio\": " << lifetime_thresholds_.lower_ratio()
-       << ", \"Upper Ratio\": " << lifetime_thresholds_.upper_ratio()
+       << ", \"Lower Ratio\": " << lifetime_thresholds_.at(1).lower_ratio()
+       << ", \"Upper Ratio\": " << lifetime_thresholds_.at(1).upper_ratio()
        << ", \"CacheStatistics\": " << statistics_.json()
        << ", \"LRU-TTL Statistics\": " << lru_ttl_statistics_.json()
        << ", \"PredictionTracker\": " << pred_tracker.json()
        << ", \"Oracle\": " << oracle_.json()
-       << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
-       << ", \"Threshold Refreshes [#]\": "
-       << format_engineering(lifetime_thresholds_.refreshes())
-       << ", \"Samples Since Threshold Refresh [#]\": "
-       << format_engineering(lifetime_thresholds_.since_refresh())
-       << ", \"LRU Lifetime Evictions [#]\": "
-       << format_engineering(lifetime_thresholds_.evictions())
+       << ", \"Lifetime Thresholds\": " << vec2str(lifetime_thresholds_, lambda)
        << ", \"Lower Threshold [ms]\": " << format_time(r.first)
        << ", \"Upper Threshold [ms]\": " << format_time(r.second)
        << ", \"Kwargs\": " << map2str(kwargs_, true)

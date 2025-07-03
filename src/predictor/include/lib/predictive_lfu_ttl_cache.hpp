@@ -36,6 +36,24 @@ private:
     void
     insert(CacheAccess const &access);
 
+    void
+    update_add_lfu(CacheAccess const &access,
+                   CachePredictiveMetadata &metadata,
+                   size_t const next_frequency);
+    void
+    update_remove_lfu(CacheAccess const &access,
+                      CachePredictiveMetadata &metadata,
+                      size_t const prev_frequency);
+    void
+    update_remove_ttl(CacheAccess const &access,
+                      CachePredictiveMetadata &metadata);
+    void
+    update_keep_ttl(CacheAccess const &access,
+                    CachePredictiveMetadata &metadata);
+    void
+    update_add_ttl(CacheAccess const &access,
+                   CachePredictiveMetadata &metadata);
+
     /// @brief  Process an access to an item in the cache.
     void
     update(CacheAccess const &access, CachePredictiveMetadata &metadata);
@@ -115,7 +133,8 @@ public:
     PredictiveLFUCache(size_t const capacity,
                        double const lower_ratio,
                        double const upper_ratio,
-                       std::map<std::string, std::string> kwargs = {});
+                       std::map<std::string, std::string> kwargs = {},
+                       size_t const nr_lfu_buckets = 1);
 
     void
     start_simulation();
@@ -196,10 +215,11 @@ private:
     // Maps expiration time to keys.
     std::multimap<double, uint64_t> ttl_cache_;
 
-    LifeTimeThresholds lifetime_thresholds_;
+    std::vector<LifeTimeThresholds> lifetime_thresholds_;
 
     LFU_TTL_Cache oracle_;
 
     // Extra metadata
     std::map<std::string, std::string> const kwargs_;
+    size_t const nr_lfu_buckets_ = 1;
 };

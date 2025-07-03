@@ -202,6 +202,18 @@ public:
         return upper_ratio_;
     }
 
+    bool
+    has_real_data() const
+    {
+        return has_real_data_;
+    }
+
+    void
+    set_real_data()
+    {
+        has_real_data_ = true;
+    }
+
     std::string
     json() const
     {
@@ -211,6 +223,12 @@ public:
         ss << "\"Coarse Histogram\": [" << std::get<0>(coarse_histogram_)
            << ", " << std::get<1>(coarse_histogram_) << ", "
            << std::get<2>(coarse_histogram_) << "]";
+        ss << ", \"Threshold Refreshes [#]\": "
+           << format_engineering(refreshes());
+        ss << ", \"Samples Since Threshold Refresh [#]\": "
+           << format_engineering(since_refresh());
+        ss << ", \"LRU Lifetime Evictions [#]\": "
+           << format_engineering(evictions());
         ss << "}";
         return ss.str();
     }
@@ -222,6 +240,7 @@ private:
     double upper_threshold_ = INFINITY;
 
     bool training_period_ = true;
+    bool has_real_data_ = false;
 
     Histogram histogram_;
     // This tells us how far off our current estimate of the thresholds
