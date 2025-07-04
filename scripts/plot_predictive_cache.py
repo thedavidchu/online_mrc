@@ -165,14 +165,19 @@ def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
 
 
 def plot_this_configuration(
+    policy: str,
     lower_ratio: int | float,
     upper_ratio: int | float,
     eviction_mode: str,
 ) -> bool:
-    return get_label(lower_ratio, upper_ratio, eviction_mode, default=None) is not None
+    return (
+        get_label(policy, lower_ratio, upper_ratio, eviction_mode, default=None)
+        is not None
+    )
 
 
 def get_label(
+    policy: str,
     lower_ratio: int | float,
     upper_ratio: int | float,
     eviction_mode: str = "EvictionTime",
@@ -181,8 +186,8 @@ def get_label(
 ) -> str:
     l, u = float(lower_ratio), float(upper_ratio)
     return {
-        (0.0, 1.0, "EvictionTime"): "LRU/Proactive-TTL",
-        (0.0, 0.0, "EvictionTime"): "LRU/Lazy-TTL",
+        (0.0, 1.0, "EvictionTime"): f"{policy}/Proactive-TTL",
+        (0.0, 0.0, "EvictionTime"): f"{policy}/Lazy-TTL",
         (0.5, 0.5, "EvictionTime"): "Unbiased Binary Predictor",
         (1.0, 1.0, "EvictionTime"): "TTL-only",
     }.get(
@@ -197,8 +202,18 @@ def get_label(
     )
 
 
+def get_scaled_fixed_data(
+    get_func: list[str] | Callable[[dict[str, object]], float],
+    scale_func: Callable[[dict[str, object]], float],
+    fix_func: Callable[[float, dict[str, object]], float],
+):
+    """@return lambda"""
+    return lambda d: fix_func(scale_func(get_func(d)), d)
+
+
 def plot(
     ax: plt.Axes,
+    policy: str,
     all_data: dict[str, list[object]],
     # X-axis data
     x_label: str,
@@ -244,7 +259,9 @@ def plot(
         if colour is None or marker is None:
             continue
         # Prettify labels
-        label = get_label(l, u, tm)
+        label = get_label(policy, l, u, tm)
+        if not plot_this_configuration(policy, l, u, tm):
+            continue
         ax.plot(cache_sizes, y, marker + ":", color=colour, label=label)
     # Plot between [0.0, 1.0] for MRC curves.
     if set_ylim_to_one:
@@ -270,6 +287,7 @@ def plot_lines(
     fix_y_func: Callable[[float, dict[str, object]], float],
     *,
     plot_x_axis: bool = True,
+    colours: list[str] | None = None,
 ):
     """
     @brief  Plot data where each "point" is a line.
@@ -290,6 +308,24 @@ def plot_lines(
         if get_y_list_func(d) is not None
         else None
     )
+    colours = iter(
+        [
+            "red",
+            "orangered",
+            "orange",
+            "yellow",
+            "greenyellow",
+            "green",
+            "turquoise",
+            "blue",
+            "purple",
+            "violet",
+            "grey",
+            "black",
+        ]
+        if colours is None
+        else colours
+    )
 
     ax.set_title(f"{y_label} vs {x_label}")
     if plot_x_axis:
@@ -298,10 +334,10 @@ def plot_lines(
         x_list = [f_x(d) for d in d_list]
         y_list = [f_y(d) for d in d_list]
         labels = [label_func(d) for d in d_list]
-        for x, y, label in zip(x_list, y_list, labels):
+        for x, y, label, c in reversed(list(zip(x_list, y_list, labels, colours))):
             if x is None or y is None:
                 continue
-            ax.plot(x, y, label=label)
+            ax.plot(x, y, c=c, label=label)
     ax.legend()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -310,6 +346,9 @@ def plot_lines(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", "-i", type=Path, required=True, help="input file")
+    parser.add_argument(
+        "--policy", "-p", choices=["lru", "lfu"], required=True, help="eviction policy"
+    )
     parser.add_argument("--mrc", type=Path, help="MRC output path")
     parser.add_argument(
         "--removal-stats", "-r", type=Path, help="plot removed bytes output path"
@@ -332,12 +371,14 @@ def main():
 
     input_file = args.input.resolve()
     data = parse_data(input_file)
+    p = args.policy.upper()
     if args.mrc is not None:
         fig, axes = plt.subplots(1, 2, sharex=True, sharey=True)
         fig.set_size_inches(10, 5)
         fig.suptitle("Miss Ratio Curves")
         plot(
             axes[0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Miss Ratio",
@@ -367,6 +408,7 @@ def main():
         fig.set_size_inches(15, 15)
         plot(
             axes[0, 0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Evicted + Expired [GiB]",
@@ -378,6 +420,7 @@ def main():
         )
         plot(
             axes[0, 1],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Properly Evicted + Expired [GiB]",
@@ -389,6 +432,7 @@ def main():
         )
         plot(
             axes[0, 2],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Improperly Evicted + Expired [GiB]",
@@ -400,6 +444,7 @@ def main():
         )
         plot(
             axes[1, 0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Evicted [GiB]",
@@ -408,6 +453,7 @@ def main():
         )
         plot(
             axes[2, 0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Expired [GiB]",
@@ -416,14 +462,16 @@ def main():
         )
         plot(
             axes[1, 1],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
-            "LRU Evicted [GiB]",
+            f"{p} Evicted [GiB]",
             lambda d: get_stat(d, ["CacheStatistics", "lru_evict", "[B]"]),
             *GiB_SHARDS_ARGS,
         )
         plot(
             axes[1, 2],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "TTL Evicted [GiB]",
@@ -432,6 +480,7 @@ def main():
         )
         plot(
             axes[2, 1],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "TTL Proactice Expired [GiB]",
@@ -440,6 +489,7 @@ def main():
         )
         plot(
             axes[2, 2],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "TTL Lazy Expired [GiB]",
@@ -466,6 +516,7 @@ def main():
         y_denom_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "Pre-Expire Evicts [#]"]
         plot(
             axes[0, 0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Mean Remaining Lifespan until Expiration [h]",
@@ -503,6 +554,7 @@ def main():
         ]
         plot(
             axes[0, 1],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Mean Stay Past Expiration [h]",
@@ -528,6 +580,7 @@ def main():
         y_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "Pre-Expire Evicts [#]"]
         plot(
             axes[1, 0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Number evicted BEFORE expiration",
@@ -545,6 +598,7 @@ def main():
         y_keys_3 = ["CacheStatistics", "ttl_lazy_expire", "Post-Expire Evicts [#]"]
         plot(
             axes[1, 1],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Number evicted AFTER expiration",
@@ -561,6 +615,7 @@ def main():
         fig.suptitle("Cache Sizes")
         plot(
             axes[0],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Maximum Cache Size [GiB]",
@@ -569,6 +624,7 @@ def main():
         )
         plot(
             axes[1],
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             "Mean Cache Size [GiB]",
@@ -587,7 +643,7 @@ def main():
             axes[0, 0],
             data,
             label_func,
-            "(LRU-only) LRU Cache Position [GiB]",
+            f"({p}-only) {p} Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
                 if get_stat(d, ["Lower Ratio"]) == 0
@@ -604,7 +660,7 @@ def main():
             axes[0, 1],
             data,
             label_func,
-            "(LRU-TTL) LRU Cache Position [GiB]",
+            f"({p}-TTL) {p} Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
                 if get_stat(d, ["Lower Ratio"]) == 0
@@ -621,7 +677,7 @@ def main():
             axes[1, 0],
             data,
             label_func,
-            "(TTL-only) LRU Cache Position [GiB]",
+            f"(TTL-only) {p} Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
                 if get_stat(d, ["Upper Ratio"]) == 1
@@ -638,7 +694,7 @@ def main():
             axes[1, 1],
             data,
             label_func,
-            "(Predictive) LRU Cache Position [GiB]",
+            f"(Predictive) {p} Cache Position [GiB]",
             lambda d: (
                 d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
                 if get_stat(d, ["Upper Ratio"]) == 0.5
@@ -656,7 +712,7 @@ def main():
         used_data = {
             (l, u, mode): d_list
             for (l, u, mode), d_list in data.items()
-            if plot_this_configuration(l, u, mode)
+            if plot_this_configuration(p, l, u, mode)
         }
         fig, axes = plt.subplots(
             6, len(used_data), sharex=True, sharey="row", squeeze=False
@@ -700,7 +756,7 @@ def main():
                 lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
                 SCALE_MS_TO_HOUR,
                 IDENTITY_X_D,
-                "LRU Objects [#]",
+                "Objects [#]",
                 lambda d: d["CacheStatistics"]["Temporal Resident Objects [#]"],
                 *COUNT_SHARDS_ARGS,
             )
@@ -712,7 +768,7 @@ def main():
                 lambda d: d["LRU-TTL Statistics"]["Temporal Times [ms]"],
                 SCALE_MS_TO_HOUR,
                 IDENTITY_X_D,
-                "LRU Objects [#]",
+                f"{p} Objects [#]",
                 lambda d: d["LRU-TTL Statistics"]["Temporal LRU Sizes [#]"],
                 *COUNT_SHARDS_ARGS,
             )
@@ -736,36 +792,36 @@ def main():
                 lambda d: d["LRU-TTL Statistics"]["Temporal Times [ms]"],
                 SCALE_MS_TO_HOUR,
                 IDENTITY_X_D,
-                "TTL Objects [#]",
+                f"{p} + TTL Objects [#]",
                 lambda d: np.array(d["LRU-TTL Statistics"]["Temporal LRU Sizes [#]"])
                 + np.array(d["LRU-TTL Statistics"]["Temporal TTL Sizes [#]"]),
                 *COUNT_SHARDS_ARGS,
             )
             # Overwrite titles
-            axes[0, i].set_title(f"{get_label(l,u,mode)} Sizes vs. Time")
-            axes[1, i].set_title(f"{get_label(l,u,mode)} High Watermark vs. Time")
-            axes[2, i].set_title(f"{get_label(l,u,mode)} Objects vs. Time")
-            axes[3, i].set_title(f"{get_label(l,u,mode)} LRU Objects vs. Time")
-            axes[4, i].set_title(f"{get_label(l,u,mode)} TTL Objects vs. Time")
-            axes[5, i].set_title(f"{get_label(l,u,mode)} LRU + TTL Objects vs. Time")
+            axes[0, i].set_title(f"{get_label(p, l,u,mode)} Sizes vs. Time")
+            axes[1, i].set_title(f"{get_label(p, l,u,mode)} High Watermark vs. Time")
+            axes[2, i].set_title(f"{get_label(p, l,u,mode)} Objects vs. Time")
+            axes[3, i].set_title(f"{get_label(p, l,u,mode)} {p} Objects vs. Time")
+            axes[4, i].set_title(f"{get_label(p, l,u,mode)} TTL Objects vs. Time")
+            axes[5, i].set_title(f"{get_label(p, l,u,mode)} {p} + TTL Objects vs. Time")
         fig.savefig(args.temporal_statistics.resolve())
-    if args.eviction_histograms is not None:
+    if args.policy == "lru" and args.eviction_histograms is not None:
         used_data = {
             (l, u, mode): d_list
             for (l, u, mode), d_list in data.items()
-            if plot_this_configuration(l, u, mode)
+            if plot_this_configuration(p, l, u, mode)
         }
         fig, axes = plt.subplots(
             2, len(used_data), sharex=True, sharey=True, squeeze=False
         )
-        fig.suptitle("LRU Eviction Time Histograms")
+        fig.suptitle(f"{p} Eviction Time Histograms")
         fig.set_size_inches(5 * len(used_data), 2 * 5)
         for i, ((l, u, mode), d_list) in enumerate(used_data.items()):
             axes[0, i].set_title(
-                f"{get_label(0,1,mode)} Lifetime Histogram\nin LRU-TTL's LRU Queue"
+                f"{get_label(p, 0,1,mode)} Lifetime Histogram\nin {p}-TTL's {p} Queue"
             )
             axes[1, i].set_title(
-                f"{get_label(l,u,mode)} Lifetime Histogram\nin LRU-TTL's LRU Queue"
+                f"{get_label(p, l,u,mode)} Lifetime Histogram\nin {p}-TTL's {p} Queue"
             )
             for d in d_list:
                 # LRU/Proactive-TTLs
@@ -804,6 +860,7 @@ def main():
         fig, ax = plt.subplots()
         plot(
             ax,
+            p,
             data,
             *CAPACITY_GIB_ARGS,
             y_label,
