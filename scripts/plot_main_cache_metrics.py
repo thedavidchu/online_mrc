@@ -133,7 +133,9 @@ def main():
     # Overwrite titles
     axes[0, 0].set_title(f"Miss Ratio Curve")
     axes[0, 1].set_title(f"Cache Size over Time for {SCALE_B_TO_GiB(max_cap):.3} GiB")
-    axes[0, 2].set_title(f"Metadata Objects over Time")
+    axes[0, 2].set_title(
+        f"Metadata Objects over Time for {SCALE_B_TO_GiB(max_cap):.3} GiB"
+    )
     # Metadata Objects Over Time
     fig.savefig(args.output.resolve())
 
