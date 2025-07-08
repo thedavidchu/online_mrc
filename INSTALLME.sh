@@ -29,7 +29,8 @@ sudo apt -y update
 sudo apt -y upgrade
 sudo apt install -y python3 python3-pip python3-setuptools \
     python3-wheel ninja-build meson
-sudo apt install -y python3-numpy python3-matplotlib python3-tqdm python3-pandas
+sudo apt install -y python3-numpy python3-matplotlib python3-tqdm \
+    python3-pandas python3-shapely
 sudo apt install -y pkg-config libglib2.0-dev
 # Depending on your OS version, this may default to 1.74. In this case,
 # follow the instructions to install a backport. I found the package
