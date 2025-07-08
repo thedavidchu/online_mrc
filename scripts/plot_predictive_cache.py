@@ -204,10 +204,14 @@ def get_label(
 
 def get_scaled_fixed_data(
     get_func: list[str] | Callable[[dict[str, object]], float],
-    scale_func: Callable[[dict[str, object]], float],
-    fix_func: Callable[[float, dict[str, object]], float],
+    scale_func: Callable[[dict[str, object]], float] = IDENTITY_X,
+    fix_func: Callable[[float, dict[str, object]], float] = IDENTITY_X_D,
+    *,
+    vector: bool = False,
 ):
     """@return lambda"""
+    if vector:
+        return lambda d: [fix_func(scale_func(x), d) for x in get_func(d)]
     return lambda d: fix_func(scale_func(get_func(d)), d)
 
 
