@@ -14,16 +14,18 @@ import matplotlib.pyplot as plt
 from plot_predictive_cache import parse_data
 from plot_main_cache_metrics import plot_mrc
 
-N = 10
-fig, axes = plt.subplots(1, N)
+
+N = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+fig, axes = plt.subplots(1, len(N))
 fig.suptitle("Miss Ratio Curves for Cluster #52 (SHARDS: 0.001)")
-fig.set_size_inches(5 * N, 5)
-for i, ax in enumerate(axes):
+fig.set_size_inches(5 * len(N), 5)
+for i, ax in zip(N, axes):
     path = Path(
-        f"/home/david/projects/online_mrc/myresults/lru_ttl/result-lfu-cluster52-v{i+1}-s0.001.out"
+        f"/home/david/projects/online_mrc/myresults/lru_ttl/result-lfu-cluster52-v{i}-s0.001.out"
     )
     data = parse_data(path)
     plot_mrc(ax, data, "LFU")
-    ax.set_title(f"{i + 1} LFU Bucket{'s' if i else ''}")
+    # Use proper grammar (because English...).
+    ax.set_title(f"{i} LFU Bucket{'s' if i != 1 else ''}")
     # Metadata Objects Over Time
 fig.savefig("mrc_vs_lfu_approximation.pdf")
