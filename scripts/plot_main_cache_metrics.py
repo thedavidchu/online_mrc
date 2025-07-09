@@ -14,6 +14,7 @@ from plot_predictive_cache import (
     parse_data,
     plot,
     plot_lines,
+    shards_adj,
     CAPACITY_GIB_ARGS,
     IDENTITY_X,
     IDENTITY_X_D,
@@ -39,6 +40,7 @@ def filter_max_cache_capacity_only(data: dict[tuple[float, float, str], list[obj
 
 
 def plot_mrc(ax, data, p):
+    # Plot the "oracle" for LFU because our other method is an approximate LFU.
     if p == "LFU" and (0.0, 1.0, "EvictionTime") in data:
         oracle_data_list = data[(0.0, 1.0, "EvictionTime")]
         # Plot oracle MRC
@@ -50,8 +52,7 @@ def plot_mrc(ax, data, p):
         mrc_func = get_scaled_fixed_data(
             lambda d: get_stat(d, ["Oracle", "Miss Ratio"]),
             IDENTITY_X,
-            # TODO Adjust for shards
-            IDENTITY_X_D,
+            shards_adj,
         )
         mrc = [mrc_func(d) for d in oracle_data_list]
         ax.plot(cache_cap, mrc, "bx-", label="Oracle")
@@ -64,7 +65,7 @@ def plot_mrc(ax, data, p):
         lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
         scale_y_func=IDENTITY_X,
         # TODO Adjust for shards
-        fix_y_func=IDENTITY_X_D,
+        fix_y_func=shards_adj,
         set_ylim_to_one=True,
     )
 

@@ -136,6 +136,19 @@ def div_or(numerator: float, denominator: float, default: float = 0.0) -> float:
     return numerator / denominator
 
 
+def shards_adj(x: float, d) -> float:
+    ratio = get_stat(d, ["Extras", "SHARDS", ".sampling_ratio"])
+    total = get_stat(d, ["Extras", "SHARDS", ".num_entries_seen"])
+    sampled = get_stat(d, ["Extras", "SHARDS", ".num_entries_processed"])
+    expected_sampled = ratio * total
+    hist_adj = expected_sampled - sampled
+    # The expected_sampled is the new sum of the histogram after we
+    # added the hist_adj. This means that we divide all values in
+    # this histogram by this, hence the division here.
+    mrc_adj = hist_adj / expected_sampled
+    return x + mrc_adj
+
+
 def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
     """@return {(lower-ratio: float, upper-ratio: float, lifetime-mode: str): JSON}"""
     if not input_file.exists():
@@ -388,8 +401,7 @@ def main():
             "Miss Ratio",
             lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
             scale_y_func=IDENTITY_X,
-            # TODO Adjust for shards
-            fix_y_func=IDENTITY_X_D,
+            fix_y_func=shards_adj,
             set_ylim_to_one=True,
         )
         plot(
@@ -401,8 +413,7 @@ def main():
             "Miss Ratio",
             lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
             scale_y_func=IDENTITY_X,
-            # TODO Adjust for shards
-            fix_y_func=IDENTITY_X_D,
+            fix_y_func=shards_adj,
             set_ylim_to_one=True,
         )
         fig.savefig(args.mrc.resolve())
