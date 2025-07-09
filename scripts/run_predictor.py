@@ -73,6 +73,10 @@ def resolve_template_file(
     ).resolve()
 
 
+def ensure_parent_dirs_exist(path: Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
 def overwrite(args):
     for c in args.clusters:
         resolve_template_file(
@@ -112,6 +116,8 @@ def run_predictor(
     err = resolve_template_file(
         error_template, eviction_policy, cluster_id, version, shards_ratio
     )
+    ensure_parent_dirs_exist(out)
+    ensure_parent_dirs_exist(err)
     # NOTE  I use '/usr/bin/time' because 'time' alone seems
     #       grumpy with arguments.
     cmd = ["/usr/bin/time", "-v"]
@@ -227,6 +233,8 @@ def main():
     if args.dry_run:
         exit(0)
 
+    # TODO  Make the overwrite lazy and only occur before we write to a
+    #       file for the first time.
     if args.overwrite:
         overwrite(args)
 
