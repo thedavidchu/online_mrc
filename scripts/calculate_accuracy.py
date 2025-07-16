@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -5,7 +6,6 @@ from shapely import Point, LineString
 
 from plot_predictive_cache import (
     parse_data,
-    parse_number,
     get_stat,
     get_scaled_fixed_data,
     CAPACITY_GIB_ARGS,
@@ -19,32 +19,35 @@ from plot_predictive_cache import (
 ################################################################################
 
 
-def trapezoid_mean_absolute_error(a: Point, b: Point, c: Point, d: Point) -> float:
+def trapezoid_mean_absolute_error(a0: Point, a1: Point, b0: Point, b1: Point) -> float:
     """
     Find the mean absolute error within a trapezoid (with parallel vertical sides).
 
-    @params a, b: represent points of the oracle.
-    @params c, d: represent points of the output.
+    @params a0, a1: represent points of the oracle.
+    @params b0, b1: represent points of the output.
 
     ```
-    A----B
-    |****|
-    |****D
+    A1----A1
+    |*****|
+    |*****B1
+    |****/
     |***/
     |**/
     |*/
-    |/
-    C
+    B0
     ```
     """
     calculate_improvement = True
     # We assume it's a trapezoid to simplify the calculations.
-    assert a.x == c.x and b.x == d.x
-    oracle_ln = LineString([a, b])
-    output_ln = LineString([c, d])
-    # If the endpoints are equal, then we can solve with the regular
-    # formula and avoid infinite recursion.
-    if oracle_ln.intersects(output_ln) and not a.equals(c) and not b.equals(d):
+    assert a0.x == b0.x and a1.x == b1.x
+    assert a0.x < a1.x
+    oracle_ln = LineString([a0, a1])
+    output_ln = LineString([b0, b1])
+    # If the lines cross over each other, then we need to break the
+    # problem into that of two triangles. However, if only the endpoints
+    # are equal, then we can solve with the regular trapezoid formula
+    # and avoid infinite recursion.
+    if oracle_ln.intersects(output_ln) and not a0.equals(b0) and not a1.equals(b1):
         # If there is no intersection, then we get an empty 'LineString'.
         # We know from above that there should be an intersection.
         intersection = oracle_ln.intersection(output_ln)
@@ -53,14 +56,14 @@ def trapezoid_mean_absolute_error(a: Point, b: Point, c: Point, d: Point) -> flo
             return 0.0
         elif isinstance(intersection, Point):
             return trapezoid_mean_absolute_error(
-                a, intersection, c, intersection
-            ) + trapezoid_mean_absolute_error(intersection, b, intersection, d)
+                a0, intersection, b0, intersection
+            ) + trapezoid_mean_absolute_error(intersection, a1, intersection, b1)
         else:
             raise ValueError("unrecognized intersection type")
-    dx = abs(b.x - a.x)
+    dx = a1.x - a0.x
     if calculate_improvement:
-        return (dx * (a.y - c.y) + (b.y - d.y)) / 2
-    return abs(dx * (abs(a.y - c.y) + abs(b.y - d.y))) / 2
+        return (dx * (a0.y - b0.y) + (a1.y - b1.y)) / 2
+    return abs(dx * (abs(a0.y - b0.y) + abs(a1.y - b1.y))) / 2
 
 
 def mean_absolute_error(
@@ -145,7 +148,6 @@ def temporal_error(oracle_ys: list[float], output_ys: list[float]) -> dict[str, 
     Calculate the piecewise absolute error, the mean, the median, and the maximum.
 
     @note We assume that all times are equally spaced.
-    @note We only track when the output is larger than the oracle.
     """
     a, b = np.array(oracle_ys), np.array(output_ys)
     assert a.shape == b.shape
@@ -230,7 +232,12 @@ def get_mrc(data_list: list[dict[str, object]]) -> tuple[list[float], list[float
     return [get_c_func(d) for d in data_list], [get_mr_func(d) for d in data_list]
 
 
-def get_temporal_sizes(data_list: list[dict[str, object]]) -> list[list[float]]:
+def get_temporal_sizes(data_list: list[dict[str, object]]) -> dict[float, list[float]]:
+    """Get the temporal sizes of each different cache capacity."""
+    get_cap_func = get_scaled_fixed_data(
+        lambda d: get_stat(d, ["Capacity [B]"]),
+        *GiB_SHARDS_ARGS,
+    )
     # We assume that all times are equally spaced.
     _get_times_func = get_scaled_fixed_data(
         lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
@@ -243,10 +250,16 @@ def get_temporal_sizes(data_list: list[dict[str, object]]) -> list[list[float]]:
         *COUNT_SHARDS_ARGS,
         vector=True,
     )
-    return [get_sizes_func(d) for d in data_list]
+    return {get_cap_func(d): get_sizes_func(d) for d in data_list}
 
 
-def get_temporal_metadata(data_list: list[dict[str, object]]) -> list[list[float]]:
+def get_temporal_metadata(
+    data_list: list[dict[str, object]],
+) -> dict[float, list[float]]:
+    get_cap_func = get_scaled_fixed_data(
+        lambda d: get_stat(d, ["Capacity [B]"]),
+        *GiB_SHARDS_ARGS,
+    )
     # We assume that all times are equally spaced.
     _get_times_func = get_scaled_fixed_data(
         lambda d: d["CacheStatistics"]["Temporal Times [ms]"],
@@ -260,19 +273,40 @@ def get_temporal_metadata(data_list: list[dict[str, object]]) -> list[list[float
         *COUNT_SHARDS_ARGS,
         vector=True,
     )
-    return [get_metadata_usage_func(d) for d in data_list]
+    return {get_cap_func(d): get_metadata_usage_func(d) for d in data_list}
+
+
+################################################################################
+### Utility functions
+################################################################################
+
+
+def calculate_average_error(diff: dict[float, float]) -> float:
+    xs, ys = list(diff.keys()), list(diff.values())
+    r = 0.0
+    for x0, x1, y0, y1 in zip(xs, xs[1:], ys, ys[1:]):
+        a, b = Point(x0, y0), Point(x1, y1)
+        c, d = Point(x0, 0), Point(x1, 0)
+        r += trapezoid_mean_absolute_error(a, b, c, d)
+    return r
 
 
 def main():
-    ipath = Path(
-        "/home/david/projects/online_mrc/myresults/lru_ttl/result-lfu-cluster52-v1-s0.01.out"
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", "-i", type=Path, required=True, help="input path")
+    parser.add_argument("--verbose", "-v", action="store_true", help="verbosity flag")
+    args = parser.parse_args()
+    ipath = args.input
+    verbose = args.verbose
+
     data = parse_data(ipath)
 
     oracle_data_list = data[(0.0, 1.0, "EvictionTime")]
     predict_data_list = data[(0.5, 0.5, "EvictionTime")]
 
     # Calculate MAE of the MRC.
+    print(f"=== PATH: {ipath} ===")
+    print("--- MEAN ABSOLUTE ERROR OF MISS RATIO CURVE ---")
     oracle_c, oracle_mr = get_mrc(oracle_data_list)
     output_c, output_mr = get_mrc(predict_data_list)
     assert np.all(np.array(oracle_c) == np.array(output_c))
@@ -280,18 +314,34 @@ def main():
     print(f"{mae=} ({100 * mae:.2}%)")
 
     # Calculate the error of the temporal data.
-    oracle_sizes = get_temporal_sizes(oracle_data_list)
-    output_sizes = get_temporal_sizes(predict_data_list)
-    for oracle_sizes, output_sizes in zip(oracle_sizes, output_sizes):
+    print("--- TOTAL MEMORY USAGE ---")
+    diff = {}
+    oracle_cap_vs_temporal_sizes = get_temporal_sizes(oracle_data_list)
+    output_cap_vs_temporal_sizes = get_temporal_sizes(predict_data_list)
+    for (oracle_cap, oracle_sizes), (output_cap, output_sizes) in zip(
+        oracle_cap_vs_temporal_sizes.items(), output_cap_vs_temporal_sizes.items()
+    ):
+        assert oracle_cap == output_cap, f"{oracle_cap} vs {output_cap}"
         err = temporal_error(oracle_sizes, output_sizes)
-        print(f"{err['mean_excess_error']=} [B]")
+        if verbose:
+            print(f"{oracle_cap} [GiB]: {err['mean_fair_excess_error']=} [B]")
+        diff[oracle_cap] = err["mean_fair_excess_error"]
+    print(calculate_average_error(diff))
 
     # Calculate the total memory savings.
-    oracle_metadata = get_temporal_metadata(oracle_data_list)
-    output_metadata = get_temporal_metadata(predict_data_list)
-    for oracle_metadata, output_metadata in zip(oracle_metadata, output_metadata):
+    print("--- TOTAL METADATA MEMORY SAVINGS ---")
+    diff = {}
+    oracle_cap_vs_metadata = get_temporal_metadata(oracle_data_list)
+    output_cap_vs_metadata = get_temporal_metadata(predict_data_list)
+    for (oracle_cap, oracle_metadata), (output_cap, output_metadata) in zip(
+        oracle_cap_vs_metadata.items(), output_cap_vs_metadata.items()
+    ):
+        assert oracle_cap == output_cap, f"{oracle_cap} vs {output_cap}"
         err = temporal_error(oracle_metadata, output_metadata)
-        print(f"{err['mean_excess_error']=}")
+        if verbose:
+            print(f"{oracle_cap} [GiB]: {err['mean_fair_excess_error']=} [B]")
+        diff[oracle_cap] = err["mean_fair_excess_error"]
+    print(calculate_average_error(diff))
 
 
 if __name__ == "__main__":
