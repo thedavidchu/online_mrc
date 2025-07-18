@@ -221,7 +221,7 @@ def get_scaled_fixed_data(
     fix_func: Callable[[float, dict[str, object]], float] = IDENTITY_X_D,
     *,
     vector: bool = False,
-):
+) -> Callable[[dict[str, object]], list[float] | float]:
     """@return lambda"""
     if vector:
         return lambda d: [fix_func(scale_func(x), d) for x in get_func(d)]
