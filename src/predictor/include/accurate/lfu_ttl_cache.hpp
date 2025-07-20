@@ -1,5 +1,6 @@
 #pragma once
 
+#include "accurate/accurate.hpp"
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
@@ -24,7 +25,7 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
-class LFU_TTL_Cache {
+class LFU_TTL_Cache : public Accurate {
 private:
     bool
     ok(bool const fatal) const
@@ -103,7 +104,7 @@ private:
             assert(current_access != NULL);
             statistics_.lru_evict(m.size_, 0);
             break;
-        case EvictionCause::TTL:
+        case EvictionCause::ProactiveTTL:
             assert(current_access == NULL);
             statistics_.ttl_expire(m.size_);
             break;
@@ -142,7 +143,7 @@ private:
         }
         // One cannot erase elements from a multimap while also iterating!
         for (auto victim : victims) {
-            evict(victim, EvictionCause::TTL, nullptr);
+            evict(victim, EvictionCause::ProactiveTTL, nullptr);
         }
     }
 

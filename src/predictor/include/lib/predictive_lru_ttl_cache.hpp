@@ -1,5 +1,6 @@
 #pragma once
 
+#include "accurate/lru_ttl_cache.hpp"
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_predictive_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
@@ -7,7 +8,6 @@
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_thresholds.hpp"
-#include "lib/lru_ttl_cache.hpp"
 #include "lib/lru_ttl_cache_statistics.hpp"
 #include "lib/prediction_tracker.hpp"
 #include <cassert>

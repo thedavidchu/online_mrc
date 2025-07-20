@@ -108,7 +108,7 @@ private:
             assert(current_access != NULL);
             statistics_.lru_evict(m.size_, 0);
             break;
-        case EvictionCause::TTL:
+        case EvictionCause::ProactiveTTL:
             assert(current_access == NULL);
             statistics_.ttl_expire(m.size_);
             break;
@@ -144,7 +144,7 @@ private:
         }
         // One cannot erase elements from a multimap while also iterating!
         for (auto victim : victims) {
-            evict(victim, EvictionCause::TTL, nullptr);
+            evict(victim, EvictionCause::ProactiveTTL, nullptr);
         }
     }
 

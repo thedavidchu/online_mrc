@@ -1,4 +1,5 @@
 #include "lib/predictive_lru_ttl_cache.hpp"
+#include "accurate/lru_ttl_cache.hpp"
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_predictive_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
@@ -7,7 +8,6 @@
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_thresholds.hpp"
-#include "lib/lru_ttl_cache.hpp"
 #include "lib/prediction_tracker.hpp"
 #include "logger/logger.h"
 
@@ -201,7 +201,7 @@ PredictiveCache::remove(uint64_t const victim_key,
             pred_tracker.update_wrongly_evicted(sz_bytes);
         }
         break;
-    case EvictionCause::TTL:
+    case EvictionCause::ProactiveTTL:
         statistics_.ttl_expire(m.size_);
         if (oracle_.get(victim_key)) {
             pred_tracker.update_correctly_expired(sz_bytes);
@@ -271,7 +271,7 @@ PredictiveCache::evict_expired_objects(uint64_t const current_time_ms)
     }
     // One cannot erase elements from a multimap while also iterating!
     for (auto victim : victims) {
-        remove(victim, EvictionCause::TTL, nullptr);
+        remove(victim, EvictionCause::ProactiveTTL, nullptr);
     }
 }
 

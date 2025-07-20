@@ -249,7 +249,7 @@ PredictiveLFUCache::remove(uint64_t const victim_key,
             pred_tracker.update_wrongly_evicted(sz_bytes);
         }
         break;
-    case EvictionCause::TTL:
+    case EvictionCause::ProactiveTTL:
         statistics_.ttl_expire(m.size_);
         if (oracle_.get(victim_key)) {
             pred_tracker.update_correctly_expired(sz_bytes);
@@ -321,7 +321,7 @@ PredictiveLFUCache::evict_expired_objects(uint64_t const current_time_ms)
     }
     // One cannot erase elements from a multimap while also iterating!
     for (auto victim : victims) {
-        remove(victim, EvictionCause::TTL, nullptr);
+        remove(victim, EvictionCause::ProactiveTTL, nullptr);
     }
 }
 

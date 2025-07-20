@@ -48,11 +48,8 @@ run_single_cache(std::promise<std::string> ret,
         lower_ratio,
         upper_ratio,
         {{"shards_ratio", std::to_string(shards_ratio)}});
-    struct FixedRateShardsSampler sampler = {};
-    if (!FixedRateShardsSampler__init(&sampler, shards_ratio, true)) {
-        return false;
-    }
-    std::stringstream ss, shards_ss;
+    FixedRateShardsSampler sampler{shards_ratio, true};
+    std::stringstream ss;
     LOGGER_TIMING("starting test_trace(trace: %s, nominal cap: %zu, sampled "
                   "cap: %zu, lt: %f, ut: %f, shards: %f)",
                   trace.path().c_str(),
@@ -66,7 +63,7 @@ run_single_cache(std::promise<std::string> ret,
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
         auto const &access = trace.get_wait(i);
-        if (!FixedRateShardsSampler__sample(&sampler, access.key)) {
+        if (!sampler.sample(access.key)) {
             continue;
         }
         if (access.is_read()) {
@@ -81,11 +78,9 @@ run_single_cache(std::promise<std::string> ret,
                   lower_ratio,
                   upper_ratio,
                   shards_ratio);
-
-    FixedRateShardsSampler__json(shards_ss, sampler, false);
     p.print_json(ss,
                  {
-                     {"SHARDS", shards_ss.str()},
+                     {"SHARDS", sampler.json(false)},
                      {
                          "remaining_lifetime",
                          p.record_remaining_lifetime(trace.back()),

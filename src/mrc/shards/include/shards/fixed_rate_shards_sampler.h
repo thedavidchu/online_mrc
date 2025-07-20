@@ -9,16 +9,7 @@ extern "C" {
 
 #include "types/entry_type.h"
 
-struct FixedRateShardsSampler {
-    double sampling_ratio;
-    uint64_t threshold;
-    uint64_t scale;
-
-    // SHARDS Adjustment Parameters
-    bool adjustment;
-    uint64_t num_entries_seen;
-    uint64_t num_entries_processed;
-};
+struct FixedRateShardsSampler;
 
 bool
 FixedRateShardsSampler__init(struct FixedRateShardsSampler *me,
@@ -55,24 +46,54 @@ FixedRateShardsSampler__write_as_json(FILE *stream,
 
 // Here is some C++ only functionality.
 #ifdef __cplusplus
-#include <ostream>
+#include <cassert>
+#include <sstream>
+#include <string>
+#endif
 
-static inline void
-FixedRateShardsSampler__json(std::ostream &s,
-                             struct FixedRateShardsSampler const &me,
-                             bool const newline = true)
-{
-    s << "{";
-    s << "\"type\": \"FixedRateShardsSampler\", ";
-    s << "\".sampling_ratio\": " << me.sampling_ratio << ", ";
-    s << "\".threshold\": " << me.threshold << ", ";
-    s << "\".scale\": " << me.scale << ", ";
-    s << "\".adjustment\": " << (me.adjustment ? "true" : "false") << ", ";
-    s << "\".num_entries_seen\": " << me.num_entries_seen << ", ";
-    s << "\".num_entries_processed\": " << me.num_entries_processed;
-    s << "}";
-    if (newline) {
-        s << std::endl;
+// I place this after the C declarations because I need to use some of
+// the C functions in my C++ code.
+struct FixedRateShardsSampler {
+    double sampling_ratio;
+    uint64_t threshold;
+    uint64_t scale;
+
+    // SHARDS Adjustment Parameters
+    bool adjustment;
+    uint64_t num_entries_seen;
+    uint64_t num_entries_processed;
+#ifdef __cplusplus
+    FixedRateShardsSampler(double const sampling_ratio, bool const adjustment)
+    {
+        bool r = FixedRateShardsSampler__init(this, sampling_ratio, adjustment);
+        assert(r && "failed FixedRateShardsSampler initialization");
     }
-}
-#endif /* __cplusplus */
+    ~FixedRateShardsSampler() { FixedRateShardsSampler__destroy(this); }
+
+    bool
+    sample(EntryType entry)
+    {
+        return FixedRateShardsSampler__sample(this, entry);
+    }
+
+    std::string
+    json(bool const newline = true) const
+    {
+        std::stringstream s;
+        s << "{";
+        s << "\"type\": \"FixedRateShardsSampler\", ";
+        s << "\".sampling_ratio\": " << this->sampling_ratio << ", ";
+        s << "\".threshold\": " << this->threshold << ", ";
+        s << "\".scale\": " << this->scale << ", ";
+        s << "\".adjustment\": " << (this->adjustment ? "true" : "false")
+          << ", ";
+        s << "\".num_entries_seen\": " << this->num_entries_seen << ", ";
+        s << "\".num_entries_processed\": " << this->num_entries_processed;
+        s << "}";
+        if (newline) {
+            s << std::endl;
+        }
+        return s.str();
+    }
+#endif /* __cplusplus*/
+};
