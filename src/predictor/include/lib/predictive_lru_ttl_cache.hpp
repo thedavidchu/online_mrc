@@ -185,7 +185,7 @@ private:
     LifeTimeThresholds lifetime_thresholds_;
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
-    LRU_TTL_Cache oracle_;
+    CacheLibTTL oracle_;
 
     // Extra metadata
     std::map<std::string, std::string> const kwargs_;

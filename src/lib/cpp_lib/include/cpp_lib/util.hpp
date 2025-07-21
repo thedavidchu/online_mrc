@@ -67,6 +67,17 @@ calculate_error(double const x, double const y)
     return std::abs(x - y) / std::max(x, y);
 }
 
+/// @note   C++ doesn't provide an easy way to convert a double to a
+///         string, so here is my implementation.
+template <typename T>
+static inline std::string
+val2str(T const val)
+{
+    std::stringstream ss;
+    ss << val;
+    return ss.str();
+}
+
 template <typename T, typename S = T>
 static inline std::string
 vec2str(std::vector<T> const &vec,
@@ -111,9 +122,17 @@ vec2str(std::vector<T> const &vec,
     return ss.str();
 }
 
-template <typename K, typename V, template <typename, typename> typename M>
+/// @note   The 'std::map' has more than 2 template parameters, so the
+///         variadic template argument Ts solves this. My IDE was
+///         complaining. Source:
+///         https://stackoverflow.com/questions/55083010/substitution-failure-for-template-template-argument
+template <typename K,
+          typename V,
+          template <typename...>
+          typename M,
+          typename... Ts>
 static inline std::string
-map2str(M<K, V> const &map, bool const quote_value = false)
+map2str(M<K, V, Ts...> const &map, bool const quote_value = false)
 {
     std::stringstream ss;
     size_t i = 0;
@@ -135,9 +154,14 @@ map2str(M<K, V> const &map, bool const quote_value = false)
     return ss.str();
 }
 
-template <typename K, typename V, template <typename, typename> typename M>
+template <typename K,
+          typename V,
+          template <typename...>
+          typename M,
+          typename... Ts>
 static inline std::string
-map2str(M<K, V> const &map, std::function<std::string(V const &val)> val2str)
+map2str(M<K, V, Ts...> const &map,
+        std::function<std::string(V const &val)> val2str)
 {
     std::stringstream ss;
     size_t i = 0;

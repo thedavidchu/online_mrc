@@ -1,5 +1,7 @@
+#include "accurate/cachelib_ttl.hpp"
 #include "accurate/lfu_ttl_cache.hpp"
 #include "accurate/redis_ttl.hpp"
+#include "accurate/ttl_cache.hpp"
 #include "cpp_lib/cache_trace.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
 #include "cpp_lib/progress_bar.hpp"
@@ -15,7 +17,7 @@
 #include <thread>
 #include <vector>
 
-enum class Policy { LRU, LFU, Redis, Memcached, CacheLib };
+enum class Policy { TTL, LRU, LFU, Redis, Memcached, CacheLib };
 
 /// @param message: error message (without newline).
 static inline void
@@ -34,7 +36,7 @@ private:
     {
         std::cout << "> Usage: " << exe
                   << " <input-path> <format Sari|Kia> <policy "
-                     "LRU|LFU|Redis|Memcached|CacheLib> "
+                     "TTL|LRU|LFU|Redis|Memcached|CacheLib> "
                      "<capacities \"1KiB 2KiB\"> <shards_ratio (0.0,1.0]>"
                   << std::endl;
     }
@@ -55,6 +57,7 @@ public:
             exit(EXIT_FAILURE);
         }
         std::unordered_map<std::string, Policy> policies{
+            {"TTL", Policy::TTL},
             {"LRU", Policy::LRU},
             {"LFU", Policy::LFU},
             {"Redis", Policy::Redis},
@@ -137,6 +140,15 @@ run_cache(CommandLineArguments const &args)
         std::promise<std::string> promise;
         futs.push_back(promise.get_future());
         switch (args.policy) {
+        case Policy::TTL:
+            workers.emplace_back(run_single_accurate_cache<TTL_Cache>,
+                                 std::move(promise),
+                                 id++,
+                                 std::ref(trace),
+                                 c,
+                                 args.shards_ratio,
+                                 false);
+            break;
         case Policy::LRU:
             hard_assert(false, "unimplemented");
             break;
@@ -162,7 +174,13 @@ run_cache(CommandLineArguments const &args)
             hard_assert(false, "unimplemented");
             break;
         case Policy::CacheLib:
-            hard_assert(false, "unimplemented");
+            workers.emplace_back(run_single_accurate_cache<CacheLibTTL>,
+                                 std::move(promise),
+                                 id++,
+                                 std::ref(trace),
+                                 c,
+                                 args.shards_ratio,
+                                 false);
             break;
         default:
             hard_assert(false, "unrecognized policy");

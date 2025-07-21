@@ -129,7 +129,8 @@ class RedisSampler {
     }
 
 public:
-    RedisSampler(uint64_t const initial_capacity, unsigned const rseed = 0)
+    RedisSampler(uint64_t const initial_capacity = 1024,
+                 unsigned const rseed = 0)
         : table_{initial_capacity},
           prng_{rseed}
     {
@@ -148,18 +149,15 @@ public:
     bool
     insert(uint64_t const key)
     {
-        check(__FILE__, __LINE__);
         if (size() >= (double)2 / 3 * capacity()) {
             grow(2 * capacity());
         }
-        check(__FILE__, __LINE__);
         return p_insert(table_, size_, key);
     }
     /// @brief  Remove a key.
     bool
     remove(uint64_t const key)
     {
-        check(__FILE__, __LINE__);
         uint64_t home = home_position(table_, key);
         for (uint64_t i = 0; i < capacity(); ++i) {
             uint64_t p = (home + i) % capacity();
@@ -240,6 +238,7 @@ private:
     void
     ok() const
     {
+        assert(0);
         auto keys = redis_sampler_.keys();
         for (auto k : keys) {
             assert(map_.contains(k));
@@ -248,7 +247,7 @@ private:
     void
     remove(uint64_t const victim_key,
            EvictionCause const cause,
-           CacheAccess const &access)
+           CacheAccess const &access) override final
     {
         assert(map_.contains(victim_key));
         CacheMetadata &m = map_.at(victim_key);
@@ -274,7 +273,7 @@ private:
     }
 
     void
-    insert(CacheAccess const &access)
+    insert(CacheAccess const &access) override final
     {
         statistics_.insert(access.size_bytes());
         map_.emplace(access.key, CacheMetadata{access});
@@ -283,25 +282,16 @@ private:
     }
 
     void
-    update(CacheAccess const &access, CacheMetadata &metadata)
+    update(CacheAccess const &access, CacheMetadata &metadata) override final
     {
         size_bytes_ += access.size_bytes() - metadata.size_;
         statistics_.update(metadata.size_, access.size_bytes());
         metadata.visit_without_ttl_refresh(access);
     }
 
-    void
-    remove_expired_accessed_object(CacheAccess const &access)
-    {
-        if (map_.contains(access.key) &&
-            map_.at(access.key).ttl_ms(access.timestamp_ms) < 0.0) {
-            remove(access.key, EvictionCause::AccessExpired, access);
-        }
-    }
-
     /// @brief  Soon-to-expire objects are stored in a tree from which we evict.
     void
-    evict_expired_from_tree(CacheAccess const &access)
+    remove_expired_from_tree(CacheAccess const &access)
     {
         std::vector<uint64_t> victims;
         for (auto [exp_tm, key] : ttl_queue_) {
@@ -316,114 +306,57 @@ private:
         }
     }
 
-    void
-    evict_expired_objects(CacheAccess const &access)
+    /// @return Whether another round of sampling should occur.
+    bool
+    remove_expired_via_sampling(CacheAccess const &access)
     {
-        // We want this to be such that the search is triggered on the
-        // first time.
-        double ratio_expired = 1.0;
-
-        evict_expired_from_tree(access);
-        while (ratio_expired > 0.25) {
-            // We will escape from the search unless we explicitly find
-            // enough expired objects.
-            ratio_expired = 0.0;
-            for (uint64_t i = 0; i < NUMBER_SAMPLES; ++i) {
-                // Mark expired
-                std::optional<uint64_t> key = redis_sampler_.sample();
-                // Check that there are enough objects to sample.
-                if (!key) {
-                    break;
-                }
-                assert(map_.contains(key.value()));
-                auto m = map_.at(key.value());
-                if (m.ttl_ms(access.timestamp_ms) < 0.0) {
-                    ratio_expired += (double)1 / NUMBER_SAMPLES;
-                    remove(key.value(), EvictionCause::ProactiveTTL, access);
-                } else if (m.ttl_ms(access.timestamp_ms) <
-                               SOON_EXPIRING_THRESHOLD_MS &&
-                           find_multimap_kv(ttl_queue_,
-                                            m.expiration_time_ms_,
-                                            key.value()) != ttl_queue_.end()) {
-                    ttl_queue_.emplace(m.expiration_time_ms_, key.value());
-                }
+        // We will escape from the search unless we explicitly find
+        // enough expired objects.
+        double ratio_expired = 0.0;
+        for (uint64_t i = 0; i < NUMBER_SAMPLES; ++i) {
+            // Mark expired
+            std::optional<uint64_t> key = redis_sampler_.sample();
+            // Check that there are enough objects to sample.
+            if (!key) {
+                break;
+            }
+            assert(map_.contains(key.value()));
+            auto m = map_.at(key.value());
+            if (m.ttl_ms(access.timestamp_ms) < 0.0) {
+                ratio_expired += (double)1 / NUMBER_SAMPLES;
+                remove(key.value(), EvictionCause::ProactiveTTL, access);
+            } else if (m.ttl_ms(access.timestamp_ms) <
+                           SOON_EXPIRING_THRESHOLD_MS &&
+                       find_multimap_kv(ttl_queue_,
+                                        m.expiration_time_ms_,
+                                        key.value()) != ttl_queue_.end()) {
+                ttl_queue_.emplace(m.expiration_time_ms_, key.value());
             }
         }
+        return ratio_expired > 0.25;
+    }
+
+    void
+    remove_expired(CacheAccess const &access) override final
+    {
+        remove_expired_from_tree(access);
+        while (remove_expired_via_sampling(access))
+            ;
     }
 
 public:
     RedisTTL(uint64_t capacity_bytes)
-        : capacity_bytes_(capacity_bytes),
+        : Accurate{capacity_bytes},
           redis_sampler_(1024)
     {
-    }
-
-    void
-    start_simulation()
-    {
-        statistics_.start_simulation();
-    }
-
-    void
-    end_simulation()
-    {
-        statistics_.end_simulation();
-    }
-
-    void
-    access(CacheAccess const &access)
-    {
-        ok();
-        current_time_ms_ = access.timestamp_ms;
-        assert(size_bytes_ == statistics_.size_);
-        statistics_.time(access.timestamp_ms);
-        remove_expired_accessed_object(access);
-        // Redis tries to run its expiry cycle multiple times per second,
-        // so I think it's fair to run it once per second since we have
-        // second granularity.
-        evict_expired_objects(access);
-        if (map_.contains(access.key)) {
-            update(access, map_.at(access.key));
-        } else {
-            insert(access);
-        }
-        ok();
-    }
-
-    std::string
-    json(std::unordered_map<std::string, std::string> extras = {}) const
-    {
-        std::stringstream ss;
-        ss << "{\"Capacity [B]\": " << format_memory_size(capacity_bytes_)
-           << ", \"Max Size [B]\": "
-           << format_memory_size(statistics_.max_size_)
-           << ", \"Max Resident Objects\": "
-           << format_engineering(statistics_.max_resident_objs_)
-           << ", \"Uptime [ms]\": " << format_time(statistics_.uptime_ms())
-           << ", \"Number of Insertions\": "
-           << format_engineering(statistics_.insert_ops_)
-           << ", \"Number of Updates\": "
-           << format_engineering(statistics_.update_ops_)
-           << ", \"Miss Ratio\": " << statistics_.miss_ratio()
-           << ", \"Statistics\": " << statistics_.json()
-           << ", \"Extras\": " << map2str(extras) << "}";
-        return ss.str();
     }
 
 private:
     constexpr static uint64_t NUMBER_SAMPLES = 10;
     constexpr static uint64_t SOON_EXPIRING_THRESHOLD_MS = 1000;
 
-    uint64_t current_time_ms_ = 0;
-
-    // We do not provide a capacity-eviction policy.
-    uint64_t capacity_bytes_;
-    uint64_t size_bytes_ = 0;
     RedisSampler redis_sampler_;
     // This tree only contains soon expiring objects for memory
     // efficiency (rather than containing all of the objects).
     std::multimap<double, uint64_t> ttl_queue_;
-    std::unordered_map<uint64_t, CacheMetadata> map_;
-    // Statistics related to cache performance.
-    CacheStatistics statistics_;
 };
