@@ -1,5 +1,6 @@
 #include "accurate/cachelib_ttl.hpp"
 #include "accurate/lfu_ttl_cache.hpp"
+#include "accurate/memcached_ttl.hpp"
 #include "accurate/redis_ttl.hpp"
 #include "accurate/ttl_cache.hpp"
 #include "cpp_lib/cache_trace.hpp"
@@ -171,7 +172,13 @@ run_cache(CommandLineArguments const &args)
                                  false);
             break;
         case Policy::Memcached:
-            hard_assert(false, "unimplemented");
+            workers.emplace_back(run_single_accurate_cache<MemcachedTTL>,
+                                 std::move(promise),
+                                 id++,
+                                 std::ref(trace),
+                                 c,
+                                 args.shards_ratio,
+                                 false);
             break;
         case Policy::CacheLib:
             workers.emplace_back(run_single_accurate_cache<CacheLibTTL>,
