@@ -333,13 +333,19 @@ private:
                 ttl_queue_.emplace(m.expiration_time_ms_, key.value());
             }
         }
-        return ratio_expired > 0.25;
+        return ratio_expired > ACCEPTABLE_STALE_RATIO;
     }
 
     void
     remove_expired(CacheAccess const &access) override final
     {
         remove_expired_from_tree(access);
+        // TODO This function is actually called 10 times (or at least multiple
+        //      times) per second according to some sources. This would
+        //      naturally decrease the number of stale objects in the cache. I'm
+        //      not sure how this would affect Minisim. Source:
+        //      https://pankajtanwar.in/blog/how-redis-expires-keys-a-deep-dive-into-how-ttl-works-internally-in-redis,
+        //      https://blog.x.com/engineering/en_us/topics/infrastructure/2019/improving-key-expiration-in-redis
         while (remove_expired_via_sampling(access))
             ;
     }
@@ -347,13 +353,29 @@ private:
 public:
     RedisTTL(uint64_t capacity_bytes)
         : Accurate{capacity_bytes},
-          redis_sampler_(1024)
+          redis_sampler_{}
     {
     }
 
 private:
-    constexpr static uint64_t NUMBER_SAMPLES = 10;
+    /* Keys for each DB loop. */
+    constexpr static uint64_t ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP = 20;
+    /* % of stale keys after which we do extra efforts. */
+    constexpr static uint64_t ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE = 10;
+    // The threshold at which we decide an object is expiring 'soon' and
+    // therefore should go into the tree.
     constexpr static uint64_t SOON_EXPIRING_THRESHOLD_MS = 1000;
+    // As per [here](https://github.com/redis/redis/blob/unstable/src/expire.c),
+    // the effort is in the range [0, 9] with a default value of 0. Note that it
+    // is scaled from the user input, which is on the range [1, 10].
+    constexpr static uint64_t EFFORT = 0;
+
+    // These constants are as defined by Redis from the above parameters.
+    constexpr static uint64_t NUMBER_SAMPLES =
+        ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP +
+        ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP / 4 * EFFORT;
+    constexpr static double ACCEPTABLE_STALE_RATIO =
+        (double)(ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE - EFFORT) / 100;
 
     RedisSampler redis_sampler_;
     // This tree only contains soon expiring objects for memory
