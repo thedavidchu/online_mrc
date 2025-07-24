@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <optional>
 #include <unordered_map>
 
 using size_t = std::size_t;
@@ -63,6 +64,8 @@ private:
 };
 
 /// @brief  A hash table indexed doubly linked list.
+/// @note   By convention, we typically extract from the head and insert
+//          after the tail.
 /// @example    Here is an example of a linked list.
 ///         |--------|    |--------|    |--------|
 ///         | node_0 |    | node_1 |    | node_2 |
@@ -116,6 +119,14 @@ public:
 
     ListNodeIterator
     end() const;
+
+    /// @brief  Return the head (i.e. default eviction end) of the queue.
+    std::optional<uint64_t>
+    front() const;
+
+    /// @brief  Return the tail  of the queue.
+    std::optional<uint64_t>
+    back() const;
 
     /// @brief  Extract and free a node.
     bool

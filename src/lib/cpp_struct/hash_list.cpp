@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -144,6 +145,18 @@ ListNodeIterator
 HashList::end() const
 {
     return ListNodeIterator{nullptr};
+}
+
+std::optional<uint64_t>
+HashList::front() const
+{
+    return head_ ? std::optional{head_->key} : std::nullopt;
+}
+
+std::optional<uint64_t>
+HashList::back() const
+{
+    return tail_ ? std::optional{tail_->key} : std::nullopt;
 }
 
 size_t
