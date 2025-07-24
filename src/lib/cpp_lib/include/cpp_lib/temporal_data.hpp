@@ -10,10 +10,15 @@
 #include <vector>
 
 using size_t = std::size_t;
+using uint64_t = std::uint64_t;
 
 /// @brief  A sliding window to aggregate temporal statistics.
 class TemporalData {
 public:
+    TemporalData(uint64_t const max_size = 1 << 20)
+        : max_size_(max_size)
+    {
+    }
     void
     update(double const x)
     {
@@ -65,6 +70,6 @@ public:
     }
 
 private:
-    size_t const max_size_ = 1 << 20;
+    uint64_t const max_size_;
     std::deque<double> data_;
 };
