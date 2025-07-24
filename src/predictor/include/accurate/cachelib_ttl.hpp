@@ -4,7 +4,7 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
-#include "cpp_lib/format_measurement.hpp"
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
-#include <sstream>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unordered_map>
@@ -75,6 +74,9 @@ private:
         if (!sampler_.should_sample(access.timestamp_ms)) {
             return;
         }
+        // CacheLib performs a scan of the entire cache. We must do this before
+        // removing the keys
+        expiration_work_ += map_.size();
         std::vector<uint64_t> victims;
         for (auto [exp_tm, key] : ttl_queue_) {
             if (exp_tm >= access.timestamp_ms) {
@@ -86,15 +88,13 @@ private:
         for (auto victim : victims) {
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
-        // CacheLib performs a scan of the entire cache.
-        expiration_work_ += map_.size();
     }
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
     CacheLibTTL(size_t const capacity_bytes)
         : Accurate{capacity_bytes},
-          sampler_{3600 * 1000, false, false}
+          sampler_{10 * Duration::SECOND, false, false}
     {
     }
 

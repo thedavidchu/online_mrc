@@ -2,7 +2,6 @@
 
 #include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
-#include "invariants/implies.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -52,8 +51,8 @@ private:
         assert(!is_first() && !since_last_sample_);
         // Round down the previous sampled time to the sampling period
         // it belongs to.
-        uint64_t const prev_tm = ((first_recorded_time_ms_.value() -
-                                   last_recorded_time_ms_.value()) /
+        uint64_t const prev_tm = ((last_recorded_time_ms_.value() -
+                                   first_recorded_time_ms_.value()) /
                                   sampling_period_ms_) *
                                      sampling_period_ms_ +
                                  first_recorded_time_ms_.value();
