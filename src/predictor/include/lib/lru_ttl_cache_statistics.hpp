@@ -72,7 +72,7 @@ private:
     uint64_t ttl_size_ = 0;
     uint64_t ttl_size_bytes_ = 0;
 
-    TemporalSampler temporal_sampler_{TemporalSampler::HOUR_IN_MS, false};
+    TemporalSampler temporal_sampler_{Duration::HOUR, false};
 
     TemporalData temporal_times_;
     TemporalData temporal_lru_sizes_;

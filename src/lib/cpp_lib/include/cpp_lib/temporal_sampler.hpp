@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
 #include <cassert>
@@ -65,8 +66,6 @@ private:
     }
 
 public:
-    static constexpr uint64_t HOUR_IN_MS = 3600 * 1000;
-
     /// @brief  Sample no more than once every time interval.
     /// @note   If we have time intervals separated by 2 hours, it
     ///         samples once.
@@ -82,7 +81,7 @@ public:
     ///     -------
     ///     Period: 0   1   2   3
     ///     Samples:X    X (X)      (X) is sampled when this is false.
-    TemporalSampler(uint64_t const sampling_period_ms = HOUR_IN_MS,
+    TemporalSampler(uint64_t const sampling_period_ms = Duration::HOUR,
                     bool const sample_first = false,
                     bool const since_last_sample = true)
         : sampling_period_ms_(sampling_period_ms),
