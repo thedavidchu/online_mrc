@@ -1,5 +1,6 @@
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/format_measurement.hpp"
+#include "cpp_lib/util.hpp"
 #include "logger/logger.h"
 
 #include <algorithm>
@@ -43,6 +44,8 @@ CacheStatistics::sample()
     temporal_times_ms_.update(current_time_ms_.value_or(NAN));
     temporal_sizes_.update(size_);
     temporal_max_sizes_.update(max_size_);
+    temporal_interval_max_sizes_.update(interval_max_size_);
+    interval_max_size_ = 0;
     temporal_resident_objects_.update(resident_objs_);
     temporal_miss_bytes_.update(miss_bytes_ -
                                 temporal_miss_bytes_.back().value_or(0));
@@ -130,6 +133,7 @@ CacheStatistics::insert(uint64_t const size_bytes)
 
     size_ += size_bytes;
     max_size_ = std::max(max_size_, size_);
+    interval_max_size_ = std::max(interval_max_size_, size_);
 
     resident_objs_ += 1;
     max_resident_objs_ = std::max(max_resident_objs_, resident_objs_);
@@ -152,6 +156,7 @@ CacheStatistics::update(uint64_t const old_size_bytes,
     size_ -= old_size_bytes;
     size_ += new_size_bytes;
     max_size_ = std::max(max_size_, size_);
+    interval_max_size_ = std::max(interval_max_size_, size_);
 
     upperbound_wss_ += new_size_bytes;
     upperbound_ttl_wss_ += new_size_bytes;
@@ -319,78 +324,67 @@ CacheStatistics::sim_uptime_ms() const
 std::string
 CacheStatistics::json() const
 {
-    std::stringstream ss;
     // NOTE Times end in '[ms]' simply to denote that it's a time value
     //      for downstream processing. The actual unit is included.
-    ss << "{"
-       << "\"Start Time [ms]\": " << format_time(start_time_ms_.value_or(0))
-       << ", \"Current Time [ms]\": "
-       << format_time(current_time_ms_.value_or(0))
-       << ", \"Uptime [ms]\": " << format_time(uptime_ms())
-       << ", \"Skips [#]\": " << format_engineering(skip_ops_)
-       << ", \"Skips [B]\": " << format_memory_size(skip_bytes_)
-       << ", \"Inserts [#]\": " << format_engineering(insert_ops_)
-       << ", \"Inserts [B]\": " << format_memory_size(insert_bytes_)
-       << ", \"Updates [#]\": " << format_engineering(update_ops_)
-       << ", \"Updates [B]\": "
-       << format_memory_size(update_bytes_)
-       // Eviction and expiration statistics.
-       << ", \"lru_evict\": " << lru_evict_.json()
-       << ", \"no_room_evict\": " << no_room_evict_.json()
-       << ", \"ttl_evict\": " << ttl_evict_.json()
-       << ", \"ttl_expire\": " << ttl_expire_.json()
-       << ", \"ttl_lazy_expire\": "
-       << ttl_lazy_expire_.json()
-       // Total statistics
-       << ", \"Total Evicts [#]\": "
-       << format_engineering(lru_evict_.ops() + no_room_evict_.ops() +
-                             ttl_evict_.ops())
-       << ", \"Total Evicts [B]\": "
-       << format_memory_size(lru_evict_.bytes() + no_room_evict_.bytes() +
-                             ttl_evict_.bytes())
-       << ", \"Total Expires [#]\": "
-       << format_engineering(ttl_expire_.ops() + ttl_lazy_expire_.ops())
-       << ", \"Total Expires [B]\": "
-       << format_memory_size(ttl_expire_.bytes() + ttl_lazy_expire_.bytes())
-       // Other reasons for removal.
-       << ", \"Sampling Removes [#]\": "
-       << format_engineering(sampling_remove_ops_)
-       << ", \"Sampling Removes [B]\": "
-       << format_memory_size(sampling_remove_bytes_)
-       // General cache performance statistics.
-       << ", \"Hits [#]\": " << format_engineering(hit_ops_)
-       << ", \"Hits [B]\": " << format_memory_size(hit_bytes_)
-       << ", \"Misses [#]\": " << format_engineering(miss_ops_)
-       << ", \"Misses [B]\": " << format_memory_size(miss_bytes_)
-       << ", \"Current Size [B]\": " << format_memory_size(size_)
-       << ", \"Max Size [B]\": " << format_memory_size(max_size_)
-       << ", \"Current Resident Objects [#]\": "
-       << format_engineering(resident_objs_)
-       << ", \"Max Resident Objects [#]\": "
-       << format_engineering(max_resident_objs_)
-       << ", \"Upperbound Unique Objects [#]\": "
-       << format_engineering(upperbound_unique_objs_)
-       << ", \"Upperbound WSS [B]\": " << format_memory_size(upperbound_wss_)
-       << ", \"Upperbound TTL WSS [B]\": "
-       << format_memory_size(upperbound_ttl_wss_)
-       // Aggregate measurements
-       << ", \"Simulation Start Time [ms]\": "
-       << format_time(sim_start_time_ms_.value_or(0))
-       << ", \"Simulation End Time [ms]\": "
-       << format_time(sim_end_time_ms_.value_or(0))
-       << ", \"Simulation Uptime [ms]\": " << format_time(sim_uptime_ms())
-       << ", \"Miss Ratio\": " << miss_ratio()
-       << ", \"Temporal Sampler\": " << temporal_sampler_.json()
-       << ", \"Mean Size [B]\": " << temporal_sizes_.finite_mean_or(0.0)
-       << ", \"Temporal Times [ms]\": " << temporal_times_ms_.str()
-       << ", \"Temporal Sizes [B]\": " << temporal_sizes_.str()
-       << ", \"Temporal Max Sizes [B]\": " << temporal_max_sizes_.str()
-       << ", \"Temporal Resident Objects [#]\": "
-       << temporal_resident_objects_.str()
-       << ", \"Temporal Hits [B]\": " << temporal_hit_bytes_.str()
-       << ", \"Temporal Misses [B]\": " << temporal_max_sizes_.str();
-    ss << "}";
-    return ss.str();
+    return map2str(std::vector<std::pair<std::string, std::string>>{{
+        {"Start Time [ms]", format_time(start_time_ms_.value_or(0))},
+        {"Current Time [ms]", format_time(current_time_ms_.value_or(0))},
+        {"Uptime [ms]", format_time(uptime_ms())},
+        {"Skips [#]", format_engineering(skip_ops_)},
+        {"Skips [B]", format_memory_size(skip_bytes_)},
+        {"Inserts [#]", format_engineering(insert_ops_)},
+        {"Inserts [B]", format_memory_size(insert_bytes_)},
+        {"Updates [#]", format_engineering(update_ops_)},
+        {"Updates [B]", format_memory_size(update_bytes_)},
+        // Eviction and expiration statistics.
+        {"lru_evict", lru_evict_.json()},
+        {"no_room_evict", no_room_evict_.json()},
+        {"ttl_evict", ttl_evict_.json()},
+        {"ttl_expire", ttl_expire_.json()},
+        {"ttl_lazy_expire", ttl_lazy_expire_.json()},
+        // Total statistics
+        {"Total Evicts [#]",
+         format_engineering(lru_evict_.ops() + no_room_evict_.ops() +
+                            ttl_evict_.ops())},
+        {"Total Evicts [B]",
+         format_memory_size(lru_evict_.bytes() + no_room_evict_.bytes() +
+                            ttl_evict_.bytes())},
+        {"Total Expires [#]",
+         format_engineering(ttl_expire_.ops() + ttl_lazy_expire_.ops())},
+        {"Total Expires [B]",
+         format_memory_size(ttl_expire_.bytes() + ttl_lazy_expire_.bytes())},
+        // Other reasons for removal.
+        {"Sampling Removes [#]", format_engineering(sampling_remove_ops_)},
+        {"Sampling Removes [B]", format_memory_size(sampling_remove_bytes_)},
+        // General cache performance statistics.
+        {"Hits [#]", format_engineering(hit_ops_)},
+        {"Hits [B]", format_memory_size(hit_bytes_)},
+        {"Misses [#]", format_engineering(miss_ops_)},
+        {"Misses [B]", format_memory_size(miss_bytes_)},
+        {"Current Size [B]", format_memory_size(size_)},
+        {"Max Size [B]", format_memory_size(max_size_)},
+        {"Current Resident Objects [#]", format_engineering(resident_objs_)},
+        {"Max Resident Objects [#]", format_engineering(max_resident_objs_)},
+        {"Upperbound Unique Objects [#]",
+         format_engineering(upperbound_unique_objs_)},
+        {"Upperbound WSS [B]", format_memory_size(upperbound_wss_)},
+        {"Upperbound TTL WSS [B]", format_memory_size(upperbound_ttl_wss_)},
+        // Aggregate measurements
+        {"Simulation Start Time [ms]",
+         format_time(sim_start_time_ms_.value_or(0))},
+        {"Simulation End Time [ms]", format_time(sim_end_time_ms_.value_or(0))},
+        {"Simulation Uptime [ms]", format_time(sim_uptime_ms())},
+        {"Miss Ratio", val2str(miss_ratio())},
+        {"Temporal Sampler", temporal_sampler_.json()},
+        {"Mean Size [B]", val2str(temporal_sizes_.finite_mean_or(0.0))},
+        {"Temporal Times [ms]", temporal_times_ms_.str()},
+        {"Temporal Sizes [B]", temporal_sizes_.str()},
+        {"Temporal Max Sizes [B]", temporal_max_sizes_.str()},
+        {"Temporal Interval Max Sizes [B]", temporal_interval_max_sizes_.str()},
+        {"Temporal Resident Objects [#]", temporal_resident_objects_.str()},
+        {"Temporal Hits [B]", temporal_hit_bytes_.str()},
+        {"Temporal Misses [B]", temporal_miss_bytes_.str()},
+    }});
 }
 
 void

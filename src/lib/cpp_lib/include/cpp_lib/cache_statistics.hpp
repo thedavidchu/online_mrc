@@ -157,9 +157,14 @@ public:
     uint64_t upperbound_ttl_wss_ = 0;
 
     // --- Averaged Statistics ---
-    TemporalSampler temporal_sampler_{};
+    TemporalSampler temporal_sampler_{Duration::HOUR, false, true};
     TemporalData temporal_times_ms_;
     TemporalData temporal_max_sizes_;
+    // This is the maximum cache size within the current interval. It is
+    // probably unimportant to print the interval_max_size_ at the end, because
+    // this only represents the maximum size for the final interval.
+    uint64_t interval_max_size_ = 0;
+    TemporalData temporal_interval_max_sizes_;
     TemporalData temporal_sizes_;
     TemporalData temporal_resident_objects_;
     TemporalData temporal_miss_bytes_;
