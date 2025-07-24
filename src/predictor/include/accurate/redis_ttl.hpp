@@ -304,6 +304,7 @@ private:
         for (auto victim : victims) {
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
+        expiration_work_ += victims.size();
     }
 
     /// @return Whether another round of sampling should occur.
@@ -320,6 +321,7 @@ private:
             if (!key) {
                 break;
             }
+            expiration_work_ += 1;
             assert(map_.contains(key.value()));
             auto m = map_.at(key.value());
             if (m.ttl_ms(access.timestamp_ms) < 0.0) {

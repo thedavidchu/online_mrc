@@ -140,6 +140,11 @@ public:
     {
         return {min_size_bytes_, max_size_bytes_};
     }
+    uint64_t
+    count_keys() const
+    {
+        return keys_.size();
+    }
 
     uint64_t min_size_bytes_;
     uint64_t max_size_bytes_;
@@ -269,6 +274,8 @@ private:
                 auto &cls = slab_classes_[x];
                 cls.remove_expired(access);
                 cls.next_expiry_scan(access);
+                // Memcached scans the entire slab class for expired objects.
+                expiration_work_ += cls.count_keys();
             }
         }
     }

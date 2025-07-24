@@ -86,6 +86,8 @@ private:
         for (auto victim : victims) {
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
+        // CacheLib performs a scan of the entire cache.
+        expiration_work_ += map_.size();
     }
 
 public:

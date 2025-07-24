@@ -107,6 +107,7 @@ public:
             {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
             {"Statistics", statistics_.json()},
             {"Extras", map2str(extras)},
+            {"Expiration Work [#]", std::to_string(expiration_work_)},
         });
     }
 
@@ -119,4 +120,6 @@ protected:
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Statistics related to cache performance.
     CacheStatistics statistics_;
+    // HACK This is a hacky way to make it easier to print this.
+    uint64_t expiration_work_ = 0;
 };

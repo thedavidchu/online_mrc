@@ -76,6 +76,7 @@ private:
         for (auto victim : victims) {
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
+        expiration_work_ += victims.size();
     }
 
 public:
