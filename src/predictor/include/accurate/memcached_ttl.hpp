@@ -4,6 +4,8 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/duration.hpp"
+#include "cpp_lib/memory_size.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
 #include <cassert>
@@ -28,11 +30,19 @@ public:
     /// @param min_size_bytes, max_size_bytes
     ///     Minimum and maximum size of this slab class, inclusive (i.e.
     ///     these ends are valid sizes in this cache).
-    MemcachedSlabClass(uint64_t const min_size_bytes,
+    MemcachedSlabClass(uint64_t const id,
+                       uint64_t const min_size_bytes,
                        uint64_t const max_size_bytes)
-        : min_size_bytes_(min_size_bytes),
+        : id_(id),
+          min_size_bytes_(min_size_bytes),
           max_size_bytes_(max_size_bytes)
     {
+    }
+
+    uint64_t
+    id() const
+    {
+        return id_;
     }
 
     /// @brief  Get the next time [ms] when the expiry scan should be run
@@ -89,29 +99,28 @@ public:
         if (next_crawl_wait_s_ > MAX_MAINTCRAWL_WAIT_S) {
             next_crawl_wait_s_ = MAX_MAINTCRAWL_WAIT_S;
         }
-        return access.timestamp_ms + next_crawl_wait_s_ * 1000;
+        return access.timestamp_ms + next_crawl_wait_s_ * Duration::SECOND;
     }
 
     /// @brief  Remove stale keys and return a list of them.
     std::vector<uint64_t>
-    remove_expired(CacheAccess const &access)
+    get_expired(CacheAccess const &access)
     {
         std::vector<uint64_t> victims;
         for (auto [exp_tm, key] : ttl_queue_) {
             if (exp_tm >= access.timestamp_ms) {
                 break;
             }
+            assert(keys_.contains(key));
             victims.push_back(key);
         }
-        // One cannot erase elements from a multimap while also iterating!
-        ttl_queue_.erase(ttl_queue_.begin(),
-                         ttl_queue_.lower_bound(access.timestamp_ms));
         return victims;
     }
 
     void
     insert(CacheAccess const &access)
     {
+        assert(!keys_.contains(access.key));
         g_assert_cmpuint(min_size_bytes_, <=, access.size_bytes());
         g_assert_cmpuint(access.size_bytes(), <=, max_size_bytes_);
         keys_.insert(access.key);
@@ -133,6 +142,8 @@ public:
                                         metadata.expiration_time_ms_,
                                         key);
             assert(r);
+        } else {
+            assert(0 && "key DNE");
         }
     }
     std::pair<uint64_t, uint64_t>
@@ -146,6 +157,7 @@ public:
         return keys_.size();
     }
 
+    uint64_t const id_;
     uint64_t min_size_bytes_;
     uint64_t max_size_bytes_;
     // This is in seconds for now, because that's what Memcached uses.
@@ -160,7 +172,7 @@ private:
     MemcachedSlabClass *
     get_slab_class(uint64_t const size_bytes)
     {
-        static constexpr uint64_t KiB = 1024, MiB = 1024 * 1024;
+        using namespace MemorySize;
         switch (size_bytes) {
         case 0 ... 1 * KiB - 1:
             return &slab_classes_[0];
@@ -213,6 +225,7 @@ private:
     void
     insert(CacheAccess const &access) override final
     {
+        assert(!map_.contains(access.key));
         statistics_.insert(access.size_bytes());
         CacheMetadata const m{access};
         map_.emplace(access.key, m);
@@ -223,6 +236,7 @@ private:
     void
     update(CacheAccess const &access, CacheMetadata &metadata) override final
     {
+        assert(map_.contains(access.key));
         auto pre_cls = get_slab_class(metadata.size_);
         size_bytes_ += access.size_bytes() - metadata.size_;
         statistics_.update(metadata.size_, access.size_bytes());
@@ -261,22 +275,36 @@ private:
         }
 
         size_bytes_ -= sz_bytes;
+        auto cls = get_slab_class(sz_bytes);
+        cls->remove(victim_key, m);
         map_.erase(victim_key);
     }
 
     void
     remove_expired(CacheAccess const &access) override final
     {
-        if (schedule_.contains(access.timestamp_ms)) {
-            for (auto const [begin, end] =
-                     schedule_.equal_range(access.timestamp_ms);
-                 auto &[time_ms, x] : std::ranges::subrange{begin, end}) {
-                auto &cls = slab_classes_[x];
-                cls.remove_expired(access);
-                cls.next_expiry_scan(access);
-                // Memcached scans the entire slab class for expired objects.
-                expiration_work_ += cls.count_keys();
+        std::vector<std::pair<uint64_t, uint64_t>> new_work;
+        for (auto const end = schedule_.upper_bound(access.timestamp_ms);
+             auto &[time_ms, id] :
+             std::ranges::subrange{schedule_.begin(), end}) {
+            auto &cls = slab_classes_[id];
+            // Memcached scans the entire slab class for expired objects.
+            // We must do this before removing the keys.
+            expiration_work_ += cls.count_keys();
+            auto victims = cls.get_expired(access);
+            for (auto v : victims) {
+                remove(v, EvictionCause::ProactiveTTL, access);
             }
+            auto next_scan_ms = cls.next_expiry_scan(access);
+            new_work.emplace_back(next_scan_ms, id);
+        }
+        schedule_.erase(schedule_.begin(),
+                        schedule_.upper_bound(access.timestamp_ms));
+        // Add the new work after we have finished erasing from the schedule to
+        // make absolute sure we don't erase any new work.
+        // In C++23, this would be insert_range().
+        for (auto &[next_time, id] : new_work) {
+            schedule_.emplace(next_time, id);
         }
     }
 
@@ -285,14 +313,16 @@ public:
     MemcachedTTL(uint64_t const capacity_bytes)
         : Accurate{capacity_bytes}
     {
-        static constexpr uint64_t KiB = 1024;
+        using namespace MemorySize;
         // TODO Modern Memcached doesn't use power-of-2 slab classes.
         //      You'll have to figure out how to fix this.
         // Memcached slab sizes range from 1 KiB to 1 GiB. Source:
         // https://cloud.google.com/memorystore/docs/memcached/best-practices
         for (uint64_t i = 0; i < 20; ++i) {
+            // The first slab-class handles objects between 0 B to 2 KiB.
             slab_classes_.push_back(
-                MemcachedSlabClass{i == 0 ? 0 : (1 << i) * KiB,
+                MemcachedSlabClass{i,
+                                   i == 0 ? 0 : (1 << i) * KiB,
                                    (1 << (i + 1)) * KiB - 1});
             schedule_.emplace(0, i);
         }
