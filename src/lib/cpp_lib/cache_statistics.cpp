@@ -178,8 +178,6 @@ CacheStatistics::lru_evict(uint64_t const size_bytes, double const ttl_ms)
 
     resident_objs_ -= 1;
     // Cannot set a new maximum number of resident objects.
-
-    register_cache_action();
 }
 
 void
@@ -192,8 +190,6 @@ CacheStatistics::no_room_evict(uint64_t const size_bytes, double const ttl_ms)
 
     resident_objs_ -= 1;
     // Cannot set a new maximum number of resident objects.
-
-    register_cache_action();
 }
 
 void
@@ -206,8 +202,6 @@ CacheStatistics::ttl_evict(uint64_t const size_bytes, double const ttl_ms)
 
     resident_objs_ -= 1;
     // Cannot set a new maximum number of resident objects.
-
-    register_cache_action();
 }
 
 void
@@ -222,8 +216,6 @@ CacheStatistics::ttl_expire(uint64_t const size_bytes)
     // Cannot set a new maximum number of resident objects.
 
     upperbound_ttl_wss_ -= size_bytes;
-
-    register_cache_action();
 }
 
 void
@@ -238,8 +230,6 @@ CacheStatistics::lazy_expire(uint64_t const size_bytes, double const ttl_ms)
     // Cannot set a new maximum number of resident objects.
 
     upperbound_ttl_wss_ -= size_bytes;
-
-    register_cache_action();
 }
 
 void
@@ -255,8 +245,6 @@ CacheStatistics::sampling_remove(uint64_t const size_bytes)
     // Cannot set a new maximum number of resident objects.
 
     upperbound_ttl_wss_ -= size_bytes;
-
-    register_cache_action();
 }
 
 void
