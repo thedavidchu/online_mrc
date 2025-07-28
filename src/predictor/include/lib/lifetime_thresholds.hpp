@@ -13,6 +13,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "cpp_lib/histogram.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
@@ -150,6 +151,7 @@ public:
     refresh_thresholds()
     {
         auto x = recalculate_thresholds();
+        histogram_.decay_histogram(/*alpha=*/0.1);
         lower_threshold_ = x.first;
         upper_threshold_ = x.second;
         coarse_histogram_ = {0, 0, 0};

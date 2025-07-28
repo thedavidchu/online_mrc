@@ -76,6 +76,28 @@ class Histogram {
     }
 
 public:
+    /// @brief  Decay the values of the histogram.
+    /// @param  alpha: double = 0.5
+    ///         The ratio of the old value to keep.
+    void
+    decay_histogram(double const alpha = 0.5)
+    {
+        std::vector<uint64_t> victims;
+        uint64_t new_total_ = 0;
+        for (auto &[tm, frq] : histogram_) {
+            frq *= alpha;
+            if (frq == 0) {
+                victims.push_back(tm);
+            }
+            new_total_ += frq;
+        }
+        // We cannot modify the histogram structure as we iterate through it.
+        for (auto v : victims) {
+            histogram_.erase(v);
+        }
+        total_ = new_total_;
+    }
+
     /// @note   I just let it overflow...
     void
     update(double const bucket, uint64_t const frq = 1)
