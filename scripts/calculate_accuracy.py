@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+"""Calculate the accuracy of the prediction mechanism."""
 import argparse
 from pathlib import Path
 
@@ -8,7 +10,6 @@ from plot_predictive_cache import (
     parse_data,
     get_stat,
     get_scaled_fixed_data,
-    CAPACITY_GIB_ARGS,
     COUNT_SHARDS_ARGS,
     HOURS_NO_SHARDS_ARGS,
     GiB_SHARDS_ARGS,
@@ -19,7 +20,9 @@ from plot_predictive_cache import (
 ################################################################################
 
 
-def trapezoid_mean_absolute_error(a0: Point, a1: Point, b0: Point, b1: Point) -> float:
+def trapezoid_mean_absolute_error(
+    a0: Point, a1: Point, b0: Point, b1: Point, absolute: bool
+) -> float:
     """
     Find the mean absolute error within a trapezoid (with parallel vertical sides).
 
@@ -37,10 +40,9 @@ def trapezoid_mean_absolute_error(a0: Point, a1: Point, b0: Point, b1: Point) ->
     B0
     ```
     """
-    calculate_improvement = True
     # We assume it's a trapezoid to simplify the calculations.
     assert a0.x == b0.x and a1.x == b1.x
-    assert a0.x < a1.x
+    assert a0.x <= a1.x
     oracle_ln = LineString([a0, a1])
     output_ln = LineString([b0, b1])
     # If the lines cross over each other, then we need to break the
@@ -56,18 +58,20 @@ def trapezoid_mean_absolute_error(a0: Point, a1: Point, b0: Point, b1: Point) ->
             return 0.0
         elif isinstance(intersection, Point):
             return trapezoid_mean_absolute_error(
-                a0, intersection, b0, intersection
-            ) + trapezoid_mean_absolute_error(intersection, a1, intersection, b1)
+                a0, intersection, b0, intersection, absolute
+            ) + trapezoid_mean_absolute_error(
+                intersection, a1, intersection, b1, absolute
+            )
         else:
             raise ValueError("unrecognized intersection type")
     dx = a1.x - a0.x
-    if calculate_improvement:
-        return (dx * (a0.y - b0.y) + (a1.y - b1.y)) / 2
+    if not absolute:
+        return dx * ((a0.y - b0.y) + (a1.y - b1.y)) / 2
     return abs(dx * (abs(a0.y - b0.y) + abs(a1.y - b1.y))) / 2
 
 
 def mean_absolute_error(
-    xs: list[float], oracle_ys: list[float], output_ys: list[float]
+    xs: list[float], oracle_ys: list[float], output_ys: list[float], absolute: bool
 ) -> float:
     mae = 0.0
     for x0, x1, oracle_y0, oracle_y1, out_y0, out_y1 in zip(
@@ -75,32 +79,37 @@ def mean_absolute_error(
     ):
         a, b = Point(x0, oracle_y0), Point(x1, oracle_y1)
         c, d = Point(x0, out_y0), Point(x1, out_y1)
-        mae += trapezoid_mean_absolute_error(a, b, c, d)
+        mae += trapezoid_mean_absolute_error(a, b, c, d, absolute)
     return mae
 
 
 def trapezoid_mae_test():
     # Test normal case.
     a, b, c, d = Point(0, 0), Point(1, 0), Point(0, 1), Point(1, 1)
-    mae = trapezoid_mean_absolute_error(a, b, c, d)
+    mae = trapezoid_mean_absolute_error(a, b, c, d, absolute=True)
     print(f"{mae=}")
     assert mae == 1.0
 
     # Test intersection case.
     a, b, c, d = Point(0, 0), Point(1, 1), Point(0, 1), Point(1, 0)
-    mae = trapezoid_mean_absolute_error(a, b, c, d)
+    mae = trapezoid_mean_absolute_error(a, b, c, d, absolute=True)
     print(f"{mae=}")
     assert mae == 0.5
 
+    # Test symmetrical intersection case without absolute.
+    mae = trapezoid_mean_absolute_error(a, b, c, d, absolute=False)
+    print(f"{mae=}")
+    assert mae == 0.0
+
     # Test identical lines case.
     a, b, c, d = Point(0, 0), Point(1, 0), Point(0, 0), Point(1, 0)
-    mae = trapezoid_mean_absolute_error(a, b, c, d)
+    mae = trapezoid_mean_absolute_error(a, b, c, d, absolute=False)
     print(f"{mae=}")
     assert mae == 0.0
 
     # Test identical points case.
     a = Point(0, 0)
-    mae = trapezoid_mean_absolute_error(*4 * [a])
+    mae = trapezoid_mean_absolute_error(*4 * [a], absolute=False)
     print(f"{mae=}")
     assert mae == 0.0
 
@@ -110,7 +119,7 @@ def full_mae_test():
     xs = [0.0, 1.0, 2.0, 3.0]
     orc_ys = [1.0, 1.0, 1.0, 1.0]
     out_ys = [0.0, 0.0, 0.0, 0.0]
-    mae = mean_absolute_error(xs, orc_ys, out_ys)
+    mae = mean_absolute_error(xs, orc_ys, out_ys, absolute=False)
     print(f"{mae=}")
     assert mae == 3.0
 
@@ -118,7 +127,7 @@ def full_mae_test():
     xs = [0.0, 1.0, 2.0, 3.0]
     orc_ys = [1.0, 0.0, 1.0, 0.0]
     out_ys = [0.0, 1.0, 0.0, 1.0]
-    mae = mean_absolute_error(xs, orc_ys, out_ys)
+    mae = mean_absolute_error(xs, orc_ys, out_ys, absolute=True)
     print(f"{mae=}")
     assert mae == 1.5
 
@@ -287,7 +296,7 @@ def calculate_average_error(diff: dict[float, float]) -> float:
     for x0, x1, y0, y1 in zip(xs, xs[1:], ys, ys[1:]):
         a, b = Point(x0, y0), Point(x1, y1)
         c, d = Point(x0, 0), Point(x1, 0)
-        r += trapezoid_mean_absolute_error(a, b, c, d)
+        r += trapezoid_mean_absolute_error(a, b, c, d, absolute=False)
     return r
 
 
@@ -306,15 +315,15 @@ def main():
 
     # Calculate MAE of the MRC.
     print(f"=== PATH: {ipath} ===")
-    print("--- MEAN ABSOLUTE ERROR OF MISS RATIO CURVE ---")
+    print("--- IMPROVEMENT OF MISS RATIO CURVE (GREATER IS BETTER) ---")
     oracle_c, oracle_mr = get_mrc(oracle_data_list)
     output_c, output_mr = get_mrc(predict_data_list)
     assert np.all(np.array(oracle_c) == np.array(output_c))
-    mae = mean_absolute_error(oracle_c, oracle_mr, output_mr)
+    mae = mean_absolute_error(oracle_c, oracle_mr, output_mr, absolute=False)
     print(f"{mae=} ({100 * mae:.2}%)")
 
     # Calculate the error of the temporal data.
-    print("--- TOTAL MEMORY USAGE ---")
+    print("--- TOTAL MEMORY USAGE (LESSER IS BETTER) ---")
     diff = {}
     oracle_cap_vs_temporal_sizes = get_temporal_sizes(oracle_data_list)
     output_cap_vs_temporal_sizes = get_temporal_sizes(predict_data_list)
@@ -326,10 +335,11 @@ def main():
         if verbose:
             print(f"{oracle_cap} [GiB]: {err['mean_fair_excess_error']=} [B]")
         diff[oracle_cap] = err["mean_fair_excess_error"]
-    print(calculate_average_error(diff))
+    caps = oracle_cap_vs_temporal_sizes.keys()
+    print(calculate_average_error(diff) / (max(caps) - min(caps)))
 
     # Calculate the total memory savings.
-    print("--- TOTAL METADATA MEMORY SAVINGS ---")
+    print("--- TOTAL METADATA MEMORY SAVINGS (GREATER IS BETTER) ---")
     diff = {}
     oracle_cap_vs_metadata = get_temporal_metadata(oracle_data_list)
     output_cap_vs_metadata = get_temporal_metadata(predict_data_list)
@@ -341,12 +351,15 @@ def main():
         if verbose:
             print(f"{oracle_cap} [GiB]: {err['mean_fair_excess_error']=} [B]")
         diff[oracle_cap] = err["mean_fair_excess_error"]
-    print(calculate_average_error(diff))
+    caps = oracle_cap_vs_metadata.keys()
+    print(calculate_average_error(diff) / (max(caps) - min(caps)))
 
 
 if __name__ == "__main__":
-    if False:
+    test = False
+    if test:
         trapezoid_mae_test()
         full_mae_test()
         test_temporal_error()
+        exit()
     main()
