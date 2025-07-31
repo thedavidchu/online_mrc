@@ -20,7 +20,8 @@ import argparse
 import json
 from pathlib import Path
 from string import Template
-from typing import Callable
+from typing import Callable, Hashable, Iterable
+from warnings import warn
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,10 +35,20 @@ ADDITIVE_SMOOTHING = lambda x: 1.0 if x == 0.0 else x
 
 SCALE_B_TO_GiB = lambda x: x / (1 << 30)
 SCALE_MS_TO_HOUR = lambda x: x / 1000 / 3600
-# NOTE  Not all results have the SHARDS ratio, so if they don't, I assume the
-#       ratio they use is 1.0.
-shards_ratio_keys = ["Kwargs", "shards_ratio"]
-SCALE_SHARDS_FUNC = lambda x, d: x / get_stat_or(d, shards_ratio_keys, 1)
+
+
+def SCALE_SHARDS_FUNC(x, d):
+    if "Kwargs" in d:
+        return x / get_stat(d, ["Kwargs", "shards_ratio"])
+    elif "Extras" in d:
+        return x / get_stat(d, ["Extras", "SHARDS", ".sampling_ratio"])
+    else:
+        warn("SHARDS ratio not found")
+        # NOTE  Not all results have the SHARDS ratio, so if they don't,
+        #       I assume the ratio they use is 1.0.
+        return x
+
+
 # Convert ms to hours without SHARDS.
 HOURS_NO_SHARDS_ARGS = [
     SCALE_MS_TO_HOUR,
@@ -58,6 +69,11 @@ CAPACITY_GIB_ARGS = [
     "Capacity [GiB]",
     lambda d: get_stat(d, ["Capacity [B]"]),
     SCALE_B_TO_GiB,
+    SCALE_SHARDS_FUNC,
+]
+# No adjustment required.
+NO_ADJUSTMENT_ARGS = [
+    IDENTITY_X,
     SCALE_SHARDS_FUNC,
 ]
 
@@ -112,7 +128,7 @@ def get_stat(data: dict[str, object], keys: list[str]) -> float:
     ans = data
     for key in keys:
         if not isinstance(ans, dict):
-            raise TypeError(f"expected dict, got {ans}")
+            raise TypeError(f"expected dict, got {repr(ans)}")
         r = ans.get(key, None)
         if r is None:
             raise KeyError(f"missing '{key}' in {ans}")
@@ -149,8 +165,16 @@ def shards_adj(x: float, d) -> float:
     return x + mrc_adj
 
 
-def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
-    """@return {(lower-ratio: float, upper-ratio: float, lifetime-mode: str): JSON}"""
+def parse_data(
+    input_file: Path,
+    key_funcs: Iterable[Callable[[dict[str, object]], Hashable]] | None = None,
+) -> dict[tuple[float, float, str], list[dict]]:
+    """
+    @return {(lower-ratio: float, upper-ratio: float, lifetime-mode: str): JSON}
+        [by default].
+
+        Using the key_funcs parameter allows one to choose other keys for hashing.
+    """
     if not input_file.exists():
         raise FileNotFoundError(f"'{str(input_file)}' not found")
     file_data = input_file.read_text().splitlines()
@@ -167,12 +191,14 @@ def parse_data(input_file: Path) -> dict[tuple[float, float, str], list[dict]]:
             accum.append(data)
     # Group data by (lower-ratio, upper-ratio, lifetime-mode).
     data: dict[tuple[float, float, str], list[dict]] = {}
-    for d in accum:
-        key = (
-            float(d["Lower Ratio"]),
-            float(d["Upper Ratio"]),
-            "EvictionTime",
+    if key_funcs is None:
+        key_funcs = (
+            lambda d: float(d["Lower Ratio"]),
+            lambda d: float(d["Upper Ratio"]),
+            lambda _d: "EvictionTime",
         )
+    for d in accum:
+        key = tuple(k(d) for k in key_funcs)
         data.setdefault(key, []).append(d)
     return data
 
@@ -294,7 +320,7 @@ def plot_lines(
     label_func: Callable[[dict[str, object]], str | None],
     # X-axis data
     x_label: str,
-    get_x_list_func: list[str] | Callable[[dict[str, object]], list[float] | None],
+    get_x_list_func: Callable[[dict[str, object]], list[float] | None],
     scale_x_func: Callable[[dict[str, object]], float],
     fix_x_func: Callable[[float, dict[str, object]], float],
     # Y-axis data
@@ -305,12 +331,14 @@ def plot_lines(
     *,
     plot_x_axis: bool = True,
     colours: list[str] | None = None,
+    opacity: float = 1.0,
 ):
     """
     @brief  Plot data where each "point" is a line.
     @note   It is a bit involved to correct the X-axis data with
             configurable parameters, so we just hard code the correction.
-    @param get_{x,y}_func: fn (JSON) -> float. Get data.
+    @param get_{x,y}_func: fn (JSON) -> (float | None). Get data or filter out
+            unused data.
     @param scale_{x,y}_func: fn (float) -> float. Scale data to different unit.
     @param fix_{x,y}_func: fn (float, JSON) -> float. Correct data (e.g. SHARDS).
     """
@@ -354,7 +382,7 @@ def plot_lines(
         for x, y, label, c in reversed(list(zip(x_list, y_list, labels, colours))):
             if x is None or y is None:
                 continue
-            ax.plot(x, y, c=c, label=label)
+            ax.plot(x, y, c=c, label=label, alpha=opacity)
     ax.legend()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
