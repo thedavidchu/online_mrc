@@ -76,6 +76,11 @@ class Histogram {
     }
 
 public:
+    Histogram(uint64_t const bucket_size = 0)
+        : bucket_size_{bucket_size}
+    {
+    }
+
     /// @brief  Decay the values of the histogram.
     /// @param  alpha: double = 0.5
     ///         The ratio of the old value to keep.
@@ -93,6 +98,7 @@ public:
         }
         // We cannot modify the histogram structure as we iterate through it.
         for (auto v : victims) {
+            assert(histogram_.contains(v));
             histogram_.erase(v);
         }
         total_ = new_total_;
@@ -104,7 +110,17 @@ public:
     {
         assert(bucket != NAN);
         total_ += frq;
-        histogram_[bucket] += frq;
+        double b = bucket;
+        if (bucket_size_ == 0 || !finite(bucket)) {
+            // Pass
+        } else if (bucket >= 0) {
+            b = static_cast<uint64_t>(b / bucket_size_) * bucket_size_;
+        } else {
+            // I don't want the int64_t to be 'promoted' to a uint64_t,
+            // which would lose the negativity.
+            b = static_cast<int64_t>(b / bucket_size_) * (double)bucket_size_;
+        }
+        histogram_[b] += frq;
     }
 
     double
@@ -228,5 +244,6 @@ public:
 
 private:
     uint64_t total_ = 0;
+    uint64_t const bucket_size_ = 0;
     std::unordered_map<double, uint64_t> histogram_;
 };

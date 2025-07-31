@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/histogram.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
 #include "math/doubles_are_equal.h"
@@ -49,14 +50,14 @@ class LifeTimeThresholds {
         }
 
         if (std::isnan(lower) || std::isnan(upper)) {
-            // TODO: Figure out something smarter to do!
             if (lower_ratio_ == upper_ratio_) {
+                // TODO Maybe change this to the current age of the cache.
                 return {INFINITY, INFINITY};
+            } else {
+                // This would extend the 'training' period until we see
+                // an eviction.
+                return {0, INFINITY};
             }
-            // NOTE DEAD CODE BELOW!
-            // This would extend the 'training' period until we see an
-            // eviction.
-            return {0, INFINITY};
         }
         // If the ratios are the same, then we simply return the mean.
         if (lower_ratio_ == upper_ratio_) {
@@ -105,7 +106,10 @@ public:
     LifeTimeThresholds(double const lower_ratio, double const upper_ratio)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
-          coarse_histogram_({0, 0, 0})
+          coarse_histogram_({0, 0, 0}),
+          refresher_{15 * Duration::MINUTE, false},
+          // Decaying by 60% every 15 minutes == decay to 10% every hour.
+          decay_{0.1}
     {
         assert(lower_ratio >= 0.0 && lower_ratio <= 1.0);
         assert(upper_ratio >= 0.0 && upper_ratio <= 1.0);
@@ -151,7 +155,7 @@ public:
     refresh_thresholds()
     {
         auto x = recalculate_thresholds();
-        histogram_.decay_histogram(/*alpha=*/0.1);
+        histogram_.decay_histogram(/*alpha=*/decay_);
         lower_threshold_ = x.first;
         upper_threshold_ = x.second;
         coarse_histogram_ = {0, 0, 0};
@@ -249,7 +253,8 @@ private:
     // may possibly be.
     std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
     // The previous timestamp at which we refreshed.
-    TemporalSampler refresher_{MIN_TIME_DELTA, false};
+    TemporalSampler refresher_;
+    double const decay_;
     uint64_t coarse_counter_ = 0;
 
 public:
