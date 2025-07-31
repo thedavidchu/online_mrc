@@ -77,6 +77,10 @@ NO_ADJUSTMENT_ARGS = [
     SCALE_SHARDS_FUNC,
 ]
 
+GiB: int = 1 << 30
+MiB: int = 1 << 20
+KiB: int = 1 << 10
+
 
 def parse_number(num: str | float | int) -> float | int:
     """Parse a quantity to canonical units (bytes, milliseconds)."""
@@ -242,16 +246,27 @@ def get_label(
 
 
 def get_scaled_fixed_data(
-    get_func: list[str] | Callable[[dict[str, object]], float],
+    get_func: Callable[[dict[str, object]], float | None | list[float | None]],
     scale_func: Callable[[dict[str, object]], float] = IDENTITY_X,
     fix_func: Callable[[float, dict[str, object]], float] = IDENTITY_X_D,
-    *,
-    vector: bool = False,
 ) -> Callable[[dict[str, object]], list[float] | float]:
-    """@return lambda"""
-    if vector:
-        return lambda d: [fix_func(scale_func(x), d) for x in get_func(d)]
-    return lambda d: fix_func(scale_func(get_func(d)), d)
+    """
+    @param  get_func: (json) -> float | (json) -> list[float]
+        Set vector=True if it returns a list of floats.
+    @return lambda
+    """
+    # I put this outside the function so that the Black formatter
+    # doesn't wrap the line.
+    scale_fix_func = lambda x, d: fix_func(scale_func(x), d) if x is not None else None
+
+    def func(d: dict[str, object]) -> list[float | None] | float | None:
+        x = get_func(d)
+        if isinstance(x, (list, tuple)):
+            return [scale_fix_func(xx, d) for xx in x]
+        else:
+            return scale_fix_func(x, d)
+
+    return func
 
 
 def plot(
@@ -343,16 +358,8 @@ def plot_lines(
     @param fix_{x,y}_func: fn (float, JSON) -> float. Correct data (e.g. SHARDS).
     """
     # Get corrected y value from a JSON
-    f_x = lambda d: (
-        [fix_x_func(scale_x_func(x), d) for x in get_x_list_func(d)]
-        if get_x_list_func(d) is not None
-        else None
-    )
-    f_y = lambda d: (
-        [fix_y_func(scale_y_func(x), d) for x in get_y_list_func(d)]
-        if get_y_list_func(d) is not None
-        else None
-    )
+    f_x = get_scaled_fixed_data(get_x_list_func, scale_x_func, fix_x_func)
+    f_y = get_scaled_fixed_data(get_y_list_func, scale_y_func, fix_y_func)
     colours = iter(
         [
             "red",

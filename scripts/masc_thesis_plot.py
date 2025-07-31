@@ -35,7 +35,7 @@ def plot_remaining_lifetime_vs_lru_position():
             lambda d: None,
             f"LRU Cache Position [GiB]",
             lambda d: (
-                d["Extras"]["remaining_lifetime"]["Cache Sizes [B]"]
+                get_stat(d, ["Extras", "remaining_lifetime", "Cache Sizes [B]"])
                 if get_stat(d, ["Lower Ratio"]) == 0.0
                 and get_stat(d, ["Upper Ratio"]) == 0.0
                 and get_stat(d, ["Extras", "Nominal Capacity [B]"]) == c
