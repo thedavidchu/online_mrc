@@ -136,7 +136,7 @@ public:
     std::string
     record_remaining_lifetime(CacheAccess const &access) const
     {
-        RemainingLifetime rl{lru_cache_, map_, access.timestamp_ms, 100};
+        RemainingLifetime rl{lru_cache_, map_, access.timestamp_ms, 1000};
         return rl.json();
     }
 

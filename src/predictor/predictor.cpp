@@ -20,6 +20,7 @@
 
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/parse_boolean.hpp"
 #include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
@@ -78,14 +79,16 @@ run_single_cache(std::promise<std::string> ret,
                   lower_ratio,
                   upper_ratio,
                   shards_ratio);
-    p.print_json(ss,
-                 {
-                     {"SHARDS", sampler.json(false)},
-                     {
-                         "remaining_lifetime",
-                         p.record_remaining_lifetime(trace.back()),
-                     },
-                 });
+    p.print_json(
+        ss,
+        {
+            {"SHARDS", sampler.json(false)},
+            {
+                "remaining_lifetime",
+                p.record_remaining_lifetime(trace.back()),
+            },
+            {"Nominal Capacity [B]", format_memory_size(capacity_bytes)},
+        });
     ret.set_value(ss.str());
     FixedRateShardsSampler__destroy(&sampler);
 

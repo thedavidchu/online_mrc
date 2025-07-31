@@ -544,27 +544,27 @@ PredictiveCache::statistics() const
 std::string
 PredictiveCache::json(std::map<std::string, std::string> extras) const
 {
-    std::stringstream ss;
     auto r = lifetime_thresholds_.thresholds();
-    ss << "{\"Capacity [B]\": " << format_memory_size(capacity_)
-       << ", \"Lower Ratio\": " << lifetime_thresholds_.lower_ratio()
-       << ", \"Upper Ratio\": " << lifetime_thresholds_.upper_ratio()
-       << ", \"CacheStatistics\": " << statistics_.json()
-       << ", \"LRU-TTL Statistics\": " << lru_ttl_statistics_.json()
-       << ", \"PredictionTracker\": " << pred_tracker.json()
-       << ", \"Oracle\": " << oracle_.json()
-       << ", \"Lifetime Thresholds\": " << lifetime_thresholds_.json()
-       << ", \"Threshold Refreshes [#]\": "
-       << format_engineering(lifetime_thresholds_.refreshes())
-       << ", \"Samples Since Threshold Refresh [#]\": "
-       << format_engineering(lifetime_thresholds_.since_refresh())
-       << ", \"LRU Lifetime Evictions [#]\": "
-       << format_engineering(lifetime_thresholds_.evictions())
-       << ", \"Lower Threshold [ms]\": " << format_time(r.first)
-       << ", \"Upper Threshold [ms]\": " << format_time(r.second)
-       << ", \"Kwargs\": " << map2str(kwargs_, true)
-       << ", \"Extras\": " << map2str(extras, false) << "}";
-    return ss.str();
+    return map2str(std::vector<std::pair<std::string, std::string>>{
+        {"Capacity [B]", format_memory_size(capacity_)},
+        {"Lower Ratio", val2str(lifetime_thresholds_.lower_ratio())},
+        {"Upper Ratio", val2str(lifetime_thresholds_.upper_ratio())},
+        {"Statistics", statistics_.json()},
+        {"LRU-TTL Statistics", lru_ttl_statistics_.json()},
+        {"PredictionTracker", pred_tracker.json()},
+        {"Oracle", oracle_.json()},
+        {"Lifetime Thresholds", lifetime_thresholds_.json()},
+        {"Threshold Refreshes [#]",
+         format_engineering(lifetime_thresholds_.refreshes())},
+        {"Samples Since Threshold Refresh [#]",
+         format_engineering(lifetime_thresholds_.since_refresh())},
+        {"LRU Lifetime Evictions [#]",
+         format_engineering(lifetime_thresholds_.evictions())},
+        {"Lower Threshold [ms]", val2str(format_time(r.first))},
+        {"Upper Threshold [ms]", val2str(format_time(r.second))},
+        {"Kwargs", map2str(kwargs_, true)},
+        {"Extras", map2str(extras, false)},
+    });
 }
 
 void
