@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
 import argparse
-from pathlib import Path
 from functools import reduce
+from itertools import repeat
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -144,6 +145,9 @@ def plot_triple_metrics(args):
 
 
 def plot_sizes(args):
+    hide_metadata: bool = True
+    nr_rows = 1 if hide_metadata else 2
+
     input_file = args.input.resolve()
     data = parse_data(input_file)
     p = args.policy.upper()
@@ -152,11 +156,13 @@ def plot_sizes(args):
     assert len(data[oracle_key]) == len(data[predict_key])
     nr_sizes = len(data[oracle_key])
 
-    fig, axes = plt.subplots(2, nr_sizes, sharey="row", sharex=True, squeeze=False)
-    fig.set_size_inches(5 * nr_sizes, 10)
+    fig, axes = plt.subplots(
+        nr_rows, nr_sizes, sharey="row", sharex=True, squeeze=False
+    )
+    fig.set_size_inches(5 * nr_sizes, 5 * nr_rows)
     # TODO Ideally we get this from the data, but that's more work.
     shards_info = "" if args.shards_ratio == 1.0 else f" (SHARDS: {args.shards_ratio})"
-    fig.suptitle(f"Sizes for {args.name}{shards_info}")
+    fig.suptitle(f"Cache Sizes for {args.name}{shards_info}")
 
     # Plot cache sizes over time.
     get_cap_func = get_scaled_fixed_data(
@@ -168,8 +174,12 @@ def plot_sizes(args):
     label_func = (
         lambda d: f'{get_label(p, d["Lower Ratio"], d["Upper Ratio"])} ({SCALE_SHARDS_FUNC(SCALE_B_TO_GiB(get_stat(d, ["Capacity [B]"])), d):.3} GiB)'
     )
+    # HACK When hiding the metadata, I utilize a hacky solution to avoid it.
     for ax0, ax1, (oracle_cap, oracle_d), (predict_cap, predict_d) in zip(
-        axes[0], axes[1], oracle_data_by_cap.items(), predict_data_by_cap.items()
+        axes[0],
+        repeat(None) if hide_metadata else axes[1],
+        oracle_data_by_cap.items(),
+        predict_data_by_cap.items(),
     ):
         used_data = {oracle_key: [oracle_d], predict_key: [predict_d]}
         plot_lines(
@@ -186,6 +196,8 @@ def plot_sizes(args):
             colours=["purple", "black"],
         )
         ax0.set_title(f"{oracle_cap:.3} [GiB]")
+        if hide_metadata:
+            continue
         # Plot cache metadata usage.
         plot_lines(
             ax1,
@@ -219,8 +231,10 @@ def main():
     parser.add_argument("--sizes-output", type=Path, help="sizes plot")
     args = parser.parse_args()
 
-    plot_triple_metrics(args)
-    plot_sizes(args)
+    if args.output is not None:
+        plot_triple_metrics(args)
+    if args.sizes_output is not None:
+        plot_sizes(args)
 
 
 if __name__ == "__main__":
