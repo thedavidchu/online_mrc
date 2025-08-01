@@ -15,7 +15,7 @@ from plot_predictive_cache import (
     parse_number,
     GiB_SHARDS_ARGS,
     COUNT_SHARDS_ARGS,
-    NO_ADJUSTMENT_ARGS,
+    NO_ADJUSTMENT_PERCENTAGE_ARGS,
     HOURS_NO_SHARDS_ARGS,
 )
 
@@ -98,7 +98,7 @@ def plot_relative_memory_usage(
         if absolute:
             return get_max_interval_size(d) - get_max_interval_size(optimal_d)
         else:
-            return lambda d: get_max_interval_size(d) / get_max_interval_size(optimal_d)
+            return get_max_interval_size(d) / get_max_interval_size(optimal_d)
 
     for cache_name, data in named_data.items():
         plot_lines(
@@ -108,9 +108,13 @@ def plot_relative_memory_usage(
             "Time [h]",
             lambda d: [parse_number(x) for x in d["Statistics"]["Temporal Times [ms]"]],
             *HOURS_NO_SHARDS_ARGS,
-            f"Relative Memory Usage Normalized to Time [{'GiB' if absolute else '%'}]",
+            (
+                "Difference in Memory Usage [GiB]"
+                if absolute
+                else "Relative Memory Usage [%]"
+            ),
             func,
-            *(GiB_SHARDS_ARGS if absolute else NO_ADJUSTMENT_ARGS),
+            *(GiB_SHARDS_ARGS if absolute else NO_ADJUSTMENT_PERCENTAGE_ARGS),
             colours=[colours.get(cache_name, "dimgrey")],
             plot_x_axis=False,
         )
@@ -189,7 +193,7 @@ def main():
             COLOURS,
             args.cache_names,
             args.relative_memory_usage.resolve(),
-            absolute=True,
+            absolute=False,
         )
     if args.cpu_usage is not None:
         plot_cpu_usage(

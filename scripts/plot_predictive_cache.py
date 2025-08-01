@@ -18,6 +18,7 @@ python3 scripts/plot_predictive_cache.py -i data.txt [...]
 
 import argparse
 import json
+from itertools import cycle
 from pathlib import Path
 from string import Template
 from typing import Callable, Hashable, Iterable
@@ -35,6 +36,18 @@ ADDITIVE_SMOOTHING = lambda x: 1.0 if x == 0.0 else x
 
 SCALE_B_TO_GiB = lambda x: x / (1 << 30)
 SCALE_MS_TO_HOUR = lambda x: x / 1000 / 3600
+
+# Map cache configurations to Matplotlib colours.
+COLOUR_MAP: dict[tuple[float, float], str] = {
+    # LRU-only
+    (0.0, 0.0): "blue",
+    # TTL-only
+    (1.0, 1.0): "grey",
+    # Accurate
+    (0.0, 1.0): "black",
+    # Unbiased Predictor
+    (0.5, 0.5): "red",
+}
 
 
 def SCALE_SHARDS_FUNC(x, d):
@@ -72,9 +85,9 @@ CAPACITY_GIB_ARGS = [
     SCALE_SHARDS_FUNC,
 ]
 # No adjustment required.
-NO_ADJUSTMENT_ARGS = [
+NO_ADJUSTMENT_PERCENTAGE_ARGS = [
     IDENTITY_X,
-    SCALE_SHARDS_FUNC,
+    lambda x, d: 100 * x,
 ]
 
 GiB: int = 1 << 30
@@ -83,7 +96,7 @@ KiB: int = 1 << 10
 
 
 def parse_number(num: str | float | int) -> float | int:
-    """Parse a quantity to canonical units (bytes, milliseconds)."""
+    """Parse a quantity or list of quantities to canonical units (bytes, milliseconds)."""
     memsizes = {
         "TB": 1e12,
         "GB": 1e9,
@@ -120,6 +133,8 @@ def parse_number(num: str | float | int) -> float | int:
     }
     if isinstance(num, (float, int)):
         return num
+    if isinstance(num, (list, tuple)):
+        return [parse_number(n) for n in num]
     if not num[-1].isalpha():
         return float(num)
     val, unit = num.split()
@@ -229,7 +244,7 @@ def get_label(
 ) -> str:
     l, u = float(lower_ratio), float(upper_ratio)
     return {
-        (0.0, 1.0, "EvictionTime"): f"{policy}/Proactive-TTL",
+        (0.0, 1.0, "EvictionTime"): f"{policy}/TTL (Proactive TTL)",
         (0.0, 0.0, "EvictionTime"): f"{policy}/Lazy-TTL",
         (0.5, 0.5, "EvictionTime"): "Unbiased Binary Predictor",
         (1.0, 1.0, "EvictionTime"): "TTL-only",
@@ -285,6 +300,7 @@ def plot(
     fix_y_func: Callable[[float, dict[str, object]], float],
     *,
     set_ylim_to_one: bool = False,
+    label_func: Callable[[str, float, float, str], str] | None = None,
 ):
     """
     @note   It is a bit involved to correct the X-axis data with
@@ -305,19 +321,15 @@ def plot(
             "EvictionTime": "o",
             # "LifeTime": "x",
         }.get(tm, None)
-        colour = {
-            (0.0, 0.0): "black",
-            # (0.25, 0.25): "pink",
-            # (0.25, 0.75): "gold",
-            # (0.75, 0.75): "teal",
-            (1.0, 1.0): "slategrey",
-            (0.5, 0.5): "red",
-            (0.0, 1.0): "purple",
-        }.get((l, u), None)
+        colour = COLOUR_MAP.get((l, u), None)
         if colour is None or marker is None:
             continue
         # Prettify labels
-        label = get_label(policy, l, u, tm)
+        if label_func is None:
+            label = get_label(policy, l, u, tm)
+        else:
+            # Arbitrarily use the first cache size for the label.
+            label = label_func(policy, l, u, tm)
         if not plot_this_configuration(policy, l, u, tm):
             continue
         ax.plot(cache_sizes, y, marker + ":", color=colour, label=label)
@@ -345,6 +357,7 @@ def plot_lines(
     fix_y_func: Callable[[float, dict[str, object]], float],
     *,
     plot_x_axis: bool = True,
+    fmt: str = "-",
     colours: list[str] | None = None,
     opacity: float = 1.0,
 ):
@@ -360,7 +373,7 @@ def plot_lines(
     # Get corrected y value from a JSON
     f_x = get_scaled_fixed_data(get_x_list_func, scale_x_func, fix_x_func)
     f_y = get_scaled_fixed_data(get_y_list_func, scale_y_func, fix_y_func)
-    colours = iter(
+    colours = cycle(
         [
             "red",
             "orangered",
@@ -386,10 +399,10 @@ def plot_lines(
         x_list = [f_x(d) for d in d_list]
         y_list = [f_y(d) for d in d_list]
         labels = [label_func(d) for d in d_list]
-        for x, y, label, c in reversed(list(zip(x_list, y_list, labels, colours))):
+        for x, y, label in zip(x_list, y_list, labels, strict=True):
             if x is None or y is None:
                 continue
-            ax.plot(x, y, c=c, label=label, alpha=opacity)
+            ax.plot(x, y, fmt, c=next(colours), label=label, alpha=opacity)
     ax.legend()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
