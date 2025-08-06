@@ -9,6 +9,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <pthread.h>
 #include <string>
 #include <sys/mman.h>
@@ -84,7 +85,15 @@ CacheAccessTrace::size() const
 CacheAccess const
 CacheAccessTrace::get(size_t const i) const
 {
-    return CacheAccess{&((uint8_t *)mm_.buffer)[i * bytes_per_obj_], format_};
+    return CacheAccess{get_ptr<std::uint8_t>(i), format_};
+}
+
+std::vector<std::byte> const
+CacheAccessTrace::get_raw(size_t const i) const
+{
+    std::vector<std::byte> v;
+    v.insert(v.end(), get_ptr<std::byte>(i), get_ptr<std::byte>(i + 1));
+    return v;
 }
 
 CacheAccess const
@@ -93,7 +102,7 @@ CacheAccessTrace::get_wait(size_t const i)
     if (is_nth_iter(i, 1024)) {
         pthread_barrier_wait(&barrier_);
     }
-    return CacheAccess{&((uint8_t *)mm_.buffer)[i * bytes_per_obj_], format_};
+    return CacheAccess{get_ptr<std::uint8_t>(i), format_};
 }
 
 CacheAccess const

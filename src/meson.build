@@ -12,3 +12,6 @@ subdir('analysis')
 
 # NOTE  This depends on 'lib' and 'mrc'.
 subdir('run')
+
+# Depends on 'lib'.
+subdir('scripts')

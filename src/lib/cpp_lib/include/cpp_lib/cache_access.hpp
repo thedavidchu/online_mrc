@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "cpp_lib/cache_command.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
@@ -48,4 +49,7 @@ struct CacheAccess {
     /// @note   These is NO trailing comma.
     std::string
     twitter_csv(bool const newline = false) const;
+
+    std::vector<std::byte>
+    binary(CacheTraceFormat const format) const;
 };

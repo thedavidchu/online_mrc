@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <endian.h>
@@ -289,4 +290,35 @@ CacheAccess::twitter_csv(bool const newline) const
         ss << std::endl;
     }
     return ss.str();
+}
+
+/// @brief  Append a little endian numeric value to a byte vector.
+/// @param  T is a little endian numeric value.
+template <typename T>
+static inline void
+append_le(std::vector<std::byte> &v, T r)
+{
+    for (uint64_t i = 0; i < sizeof(T); ++i) {
+        // Order of operations: * first, >> second, & third.
+        v.push_back(static_cast<std::byte>(r >> 8 * i & 0xFF));
+    }
+}
+
+std::vector<std::byte>
+CacheAccess::binary(CacheTraceFormat const format) const
+{
+    std::vector<std::byte> v;
+    switch (format) {
+    case CacheTraceFormat::Sari: {
+        auto ttl_s = std::isinf(ttl_ms) ? 0 : ttl_ms / 1000;
+        v.reserve(20);
+        append_le(v, static_cast<uint32_t>(timestamp_ms / 1000));
+        append_le(v, static_cast<uint64_t>(key));
+        append_le(v, static_cast<uint32_t>(size_bytes()));
+        append_le(v, static_cast<uint32_t>(ttl_s));
+        return v;
+    }
+    default:
+        assert(0 && "unimplemented");
+    }
 }

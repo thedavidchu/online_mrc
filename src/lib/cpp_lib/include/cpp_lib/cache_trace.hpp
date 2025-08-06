@@ -8,8 +8,17 @@
 #include <cstddef>
 #include <pthread.h>
 #include <string>
+#include <vector>
 
 class CacheAccessTrace {
+private:
+    template <typename T>
+    T const *
+    get_ptr(size_t const i) const
+    {
+        return &((T *)mm_.buffer)[i * bytes_per_obj_];
+    }
+
 public:
     CacheAccessTrace(std::string const &fname,
                      CacheTraceFormat const format,
@@ -31,6 +40,9 @@ public:
 
     CacheAccess const
     get(size_t const i) const;
+
+    std::vector<std::byte> const
+    get_raw(size_t const i) const;
 
     /// @brief  Get the thing and potentially wait for a barrier.
     CacheAccess const

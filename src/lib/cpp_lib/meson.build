@@ -22,7 +22,7 @@ cache_command_dep = declare_dependency(
     include_directories: cpp_lib_inc,
 )
 
-cache_trace_format = declare_dependency(
+cache_trace_format_dep = declare_dependency(
     link_with: library(
         'cache_trace_format_lib',
         'cache_trace_format.cpp',
@@ -39,14 +39,14 @@ cache_access_dep = declare_dependency(
         dependencies: [
             common_dep,
             trace_dep,
-            cache_trace_format,
+            cache_trace_format_dep,
         ],
     ),
     include_directories: cpp_lib_inc,
     dependencies: [
         common_dep,
         trace_dep,
-        cache_trace_format,
+        cache_trace_format_dep,
     ],
 )
 
@@ -86,13 +86,13 @@ cache_trace_dep = declare_dependency(
             io_dep,
             trace_dep,
             cache_access_dep,
-            cache_trace_format,
+            cache_trace_format_dep,
         ],
     ),
     dependencies: [
         common_dep,
         io_dep,
-        cache_trace_format,
+        cache_trace_format_dep,
     ],
 )
 
@@ -120,7 +120,7 @@ cpp_lib_dep = declare_dependency(
         cache_metadata_dep,
         cache_statistics_dep,
         cache_trace_dep,
-        cache_trace_format,
+        cache_trace_format_dep,
         cache_command_dep,
         remaining_lifetime_dep,
     ],
