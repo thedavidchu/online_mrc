@@ -13,7 +13,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 #include "cpp_lib/duration.hpp"
 #include "cpp_lib/histogram.hpp"
@@ -68,12 +67,12 @@ class LifeTimeThresholds {
     }
 
     /// @brief  Return if the thresholds should be refreshed.
-    /// @note   I allow them to be 1% out of alignment. How did I choose 1%? I
-    /// just did, that's how.
+    /// @note   I allow them to be some \delta out of alignment.
+    ///         By default, \delta = 1% (arbitrarily).
     bool
     should_refresh(uint64_t const current_time_ms)
     {
-        double const error = 0.01 * coarse_counter_;
+        double const error = refresh_error_threshold_ * coarse_counter_;
 
         // NOTE An update may occur any time after a hour past the last
         //      sample once the coarse histogram is off by the error
@@ -103,13 +102,17 @@ public:
     ///         This isn't strictly necessary because we refresh the
     ///         thresholds before we have any data, we just set it to
     ///         the defaults (0, INFINITY).
-    LifeTimeThresholds(double const lower_ratio, double const upper_ratio)
+    LifeTimeThresholds(double const lower_ratio,
+                       double const upper_ratio,
+                       uint64_t const refresh_period_ms = 15 * Duration::MINUTE,
+                       double const decay = 0.1,
+                       double const refresh_error_threshold = 0.01)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
-          coarse_histogram_({0, 0, 0}),
-          refresher_{15 * Duration::MINUTE, false},
+          refresher_{refresh_period_ms, false},
           // Decaying by 60% every 15 minutes == decay to 10% every hour.
-          decay_{0.1}
+          decay_{decay},
+          refresh_error_threshold_{refresh_error_threshold}
     {
         assert(lower_ratio >= 0.0 && lower_ratio <= 1.0);
         assert(upper_ratio >= 0.0 && upper_ratio <= 1.0);
@@ -251,13 +254,11 @@ private:
     Histogram histogram_;
     // This tells us how far off our current estimate of the thresholds
     // may possibly be.
-    std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_;
-    // The previous timestamp at which we refreshed.
-    TemporalSampler refresher_;
-    double const decay_;
+    std::tuple<uint64_t, uint64_t, uint64_t> coarse_histogram_{0, 0, 0};
     uint64_t coarse_counter_ = 0;
 
-public:
-    // TODO Make this configurable?
-    static constexpr uint64_t MIN_TIME_DELTA = 1000 * 3600;
+    // Data structures for refreshing the threshold estimates.
+    TemporalSampler refresher_;
+    double const decay_;
+    double const refresh_error_threshold_;
 };

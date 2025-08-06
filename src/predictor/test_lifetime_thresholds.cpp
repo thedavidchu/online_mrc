@@ -1,3 +1,4 @@
+#include "cpp_lib/duration.hpp"
 #include "lib/lifetime_thresholds.hpp"
 
 #include <cmath>
@@ -7,9 +8,6 @@
 #include <cstdint>
 #include <iostream>
 #include <utility>
-
-// An hour represented in milliseconds.
-static constexpr uint64_t HOUR = 1000 * 3600;
 
 template <typename A, typename B>
 static void
@@ -60,7 +58,10 @@ test_thresholds(bool const debug = false)
 static bool
 test_refresh(bool const debug = false)
 {
-    LifeTimeThresholds t(0.25, 0.75);
+    LifeTimeThresholds t{0.25,
+                         0.75,
+                         /*refresh_period_ms=*/Duration::HOUR,
+                         /*decay=*/1.0};
     std::pair<double, double> r;
 
     // Sample from 1..=100 and make sure the thresholds change at the
@@ -72,7 +73,7 @@ test_refresh(bool const debug = false)
         g_assert_cmpfloat(r.second, ==, INFINITY);
     }
     // We may only change the threshold once per hour.
-    t.register_cache_eviction(100, 1, HOUR);
+    t.register_cache_eviction(100, 1, Duration::HOUR);
     r = t.thresholds();
     if (debug) {
         print_pair(r);
@@ -83,14 +84,14 @@ test_refresh(bool const debug = false)
     // Sample from a different population; the thresholds won't change
     // until expected.
     for (size_t i = 0; i < 1000 - 1; ++i) {
-        t.register_cache_eviction(i % 100 + 101, 1, HOUR);
+        t.register_cache_eviction(i % 100 + 101, 1, Duration::HOUR);
         r = t.thresholds();
         g_assert_cmpfloat(r.first, ==, 25);
         g_assert_cmpfloat(r.second, ==, 75);
     }
 
     // It is only now that the thresholds change.
-    t.register_cache_eviction(200, 1, 2 * HOUR);
+    t.register_cache_eviction(200, 1, 2 * Duration::HOUR);
     r = t.thresholds();
     if (debug) {
         print_pair(r);
