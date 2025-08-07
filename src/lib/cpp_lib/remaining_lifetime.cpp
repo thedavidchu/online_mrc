@@ -1,13 +1,12 @@
 #include "cpp_lib/remaining_lifetime.hpp"
 
-#include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/util.hpp"
 #include "cpp_struct/hash_list.hpp"
 #include "math/is_nth_iter.h"
 #include <algorithm>
 #include <cstdint>
-#include <sstream>
 #include <unordered_map>
+#include <vector>
 
 RemainingLifetime::RemainingLifetime(
     HashList const &list,
@@ -40,12 +39,10 @@ RemainingLifetime::RemainingLifetime(
 std::string
 RemainingLifetime::json() const
 {
-    std::stringstream ss;
-    ss << "{";
-    ss << "\".type\": " << "\"RemainingLifetime\", ";
-    ss << "\"Samples [#]\": " << nr_samples_ << ", ";
-    ss << "\"Cache Sizes [B]\": " << vec2str(sizes_) << ", ";
-    ss << "\"Remaining Lifetimes [ms]\": " << vec2str(remaining_lifetimes_);
-    ss << "}";
-    return ss.str();
+    return map2str(std::vector<std::pair<std::string, std::string>>{
+        {".type", "\"RemainingLifetime\""},
+        {"Samples [#]", val2str(nr_samples_)},
+        {"Cache Sizes [B]", vec2str(sizes_)},
+        {"Remaining Lifetimes [ms]", vec2str(remaining_lifetimes_)},
+    });
 }
