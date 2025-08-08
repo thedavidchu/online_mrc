@@ -21,10 +21,10 @@
 #include <iostream>
 #include <map>
 #include <ostream>
-#include <sstream>
 #include <stdlib.h>
 #include <string>
 #include <sys/types.h>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -102,9 +102,9 @@ PredictiveLFUCache::insert(CacheAccess const &access)
     double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CachePredictiveMetadata{access});
     auto &metadata = map_.at(access.key);
-    auto r =
+    auto [lo_t, hi_t, updated] =
         lifetime_thresholds_.at(1).get_updated_thresholds(access.timestamp_ms);
-    if (r.first != INFINITY && ttl_ms >= r.first) {
+    if (!std::isinf(lo_t) && ttl_ms >= lo_t) {
         pred_tracker.record_store_lru();
         lfu_cache_.at(1).access(access.key);
         lfu_size_ += access.size_bytes();
@@ -112,7 +112,7 @@ PredictiveLFUCache::insert(CacheAccess const &access)
         metadata.set_lru();
         nr_queues += 1;
     }
-    if (r.second != 0 && ttl_ms <= r.second) {
+    if (hi_t != 0.0 && ttl_ms <= hi_t) {
         pred_tracker.record_store_ttl();
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
         ttl_size_ += access.size_bytes();
@@ -183,10 +183,11 @@ PredictiveLFUCache::update(CacheAccess const &access,
     statistics_.update(metadata.size_, access.size_bytes());
     metadata.visit_without_ttl_refresh(access);
     double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
-    auto r = maybe_lfu ? lifetime_thresholds_.at(next_frequency)
-                             .get_updated_thresholds(access.timestamp_ms)
-                       : std::pair<double, double>{0.0, INFINITY};
-    if (maybe_lfu && r.first != INFINITY && ttl_ms >= r.first) {
+    auto [lo_t, hi_t, updated] =
+        maybe_lfu ? lifetime_thresholds_.at(next_frequency)
+                        .get_updated_thresholds(access.timestamp_ms)
+                  : std::tuple<double, double, bool>{0.0, INFINITY, false};
+    if (maybe_lfu && !std::isinf(lo_t) && ttl_ms >= lo_t) {
         if (metadata.uses_lru()) {
             update_remove_lfu(access, metadata, prev_frequency);
         }
@@ -194,7 +195,7 @@ PredictiveLFUCache::update(CacheAccess const &access,
     } else if (metadata.uses_lru()) {
         update_remove_lfu(access, metadata, prev_frequency);
     }
-    if (r.second != 0 && ttl_ms <= r.second) {
+    if (hi_t != 0.0 && ttl_ms <= hi_t) {
         // Even if we don't re-insert into the TTL queue, we still
         // want to mark it as stored.
         if (metadata.uses_ttl()) {
@@ -614,18 +615,19 @@ PredictiveLFUCache::json(std::map<std::string, std::string> extras) const
 {
     std::function<std::string(LifeTimeThresholds const &)> lambda =
         [](LifeTimeThresholds const &val) -> std::string { return val.json(); };
-    auto r = lifetime_thresholds_.at(1).thresholds();
+    auto [lo_t, hi_t] = lifetime_thresholds_.at(1).thresholds();
+    auto [lo_r, hi_r] = lifetime_thresholds_.at(1).ratios();
     return map2str(std::vector<std::pair<std::string, std::string>>{
         {"Capacity [B]", format_memory_size(capacity_)},
-        {"Lower Ratio", val2str(lifetime_thresholds_.at(1).lower_ratio())},
-        {"Upper Ratio", val2str(lifetime_thresholds_.at(1).upper_ratio())},
+        {"Lower Ratio", val2str(lo_r)},
+        {"Upper Ratio", val2str(hi_r)},
         {"Statistics", statistics_.json()},
         {"LRU-TTL Statistics", lru_ttl_statistics_.json()},
         {"PredictionTracker", pred_tracker.json()},
         {"Oracle", oracle_.json()},
         {"Lifetime Thresholds", vec2str(lifetime_thresholds_, lambda)},
-        {"Lower Threshold [ms]", format_time(r.first)},
-        {"Upper Threshold [ms]", format_time(r.second)},
+        {"Lower Threshold [ms]", val2str(format_time(lo_t))},
+        {"Upper Threshold [ms]", val2str(format_time(hi_t))},
         {"Kwargs", map2str(kwargs_, true)},
         {"Extras", map2str(extras, false)},
     });

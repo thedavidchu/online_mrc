@@ -9,11 +9,12 @@
 #include <iostream>
 #include <utility>
 
-template <typename A, typename B>
+template <typename A, typename B, typename C>
 static void
-print_pair(std::pair<A, B> const &p)
+print_triple(std::tuple<A, B, C> const &p)
 {
-    std::cout << "{" << p.first << "," << p.second << "}" << std::endl;
+    std::cout << "{" << std::get<0>(p) << "," << std::get<1>(p) << ","
+              << std::get<2>(p) << "}" << std::endl;
 }
 
 static bool
@@ -62,42 +63,42 @@ test_refresh(bool const debug = false)
                          0.75,
                          /*refresh_period_ms=*/Duration::HOUR,
                          /*decay=*/1.0};
-    std::pair<double, double> r;
+    std::tuple<double, double, bool> r;
 
     // Sample from 1..=100 and make sure the thresholds change at the
     // expected times.
     for (size_t i = 0; i < 1000 - 1; ++i) {
         t.register_cache_eviction(i % 100 + 1, 1, 0);
-        r = t.thresholds();
-        g_assert_cmpfloat(r.first, ==, 0);
-        g_assert_cmpfloat(r.second, ==, INFINITY);
+        auto [lo_t, hi_t, updated] = t.get_updated_thresholds(0);
+        g_assert_cmpfloat(lo_t, ==, 0);
+        g_assert_cmpfloat(hi_t, ==, INFINITY);
     }
     // We may only change the threshold once per hour.
     t.register_cache_eviction(100, 1, Duration::HOUR);
-    r = t.thresholds();
+    r = t.get_updated_thresholds(Duration::HOUR);
     if (debug) {
-        print_pair(r);
+        print_triple(r);
     }
-    g_assert_cmpfloat(r.first, ==, 25);
-    g_assert_cmpfloat(r.second, ==, 75);
+    g_assert_cmpfloat(std::get<0>(r), ==, 25);
+    g_assert_cmpfloat(std::get<1>(r), ==, 75);
 
     // Sample from a different population; the thresholds won't change
     // until expected.
     for (size_t i = 0; i < 1000 - 1; ++i) {
         t.register_cache_eviction(i % 100 + 101, 1, Duration::HOUR);
-        r = t.thresholds();
-        g_assert_cmpfloat(r.first, ==, 25);
-        g_assert_cmpfloat(r.second, ==, 75);
+        auto [lo_t, hi_t, updated] = t.get_updated_thresholds(Duration::HOUR);
+        g_assert_cmpfloat(lo_t, ==, 25);
+        g_assert_cmpfloat(hi_t, ==, 75);
     }
 
     // It is only now that the thresholds change.
     t.register_cache_eviction(200, 1, 2 * Duration::HOUR);
-    r = t.thresholds();
+    r = t.get_updated_thresholds(2 * Duration::HOUR);
     if (debug) {
-        print_pair(r);
+        print_triple(r);
     }
-    g_assert_cmpfloat(r.first, ==, 50);
-    g_assert_cmpfloat(r.second, ==, 150);
+    g_assert_cmpfloat(std::get<0>(r), ==, 50);
+    g_assert_cmpfloat(std::get<1>(r), ==, 150);
 
     return true;
 }

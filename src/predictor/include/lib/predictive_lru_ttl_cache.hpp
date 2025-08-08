@@ -5,6 +5,7 @@
 #include "cpp_lib/cache_predictive_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/remaining_lifetime.hpp"
+#include "cpp_lib/save_queue.hpp"
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_thresholds.hpp"

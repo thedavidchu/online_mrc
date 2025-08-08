@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <endian.h>
+#include <iostream>
 #include <sstream>
 
 #include "cpp_lib/cache_access.hpp"
@@ -157,7 +158,9 @@ parse_ttl_ms(uint8_t const *const record, CacheTraceFormat const format)
         // filter out all other accesses. This means that a TTL of 0
         // corresponds to an item who should live in the cache
         // indefinitely.
-        return (ttl == 0) ? INFINITY : 1000 * ttl;
+        // NOTE 'INFINITY' is a single-precision float, whereas I need
+        //      a double-precision float (15 significant digits).
+        return (ttl == 0) ? static_cast<double>(INFINITY) : 1000 * ttl;
     }
     case CacheTraceFormat::YangTwitterX: {
         uint32_t op_ttl = read_le_u32(&record[16]);
@@ -311,6 +314,10 @@ CacheAccess::binary(CacheTraceFormat const format) const
     switch (format) {
     case CacheTraceFormat::Sari: {
         auto ttl_s = std::isinf(ttl_ms) ? 0 : ttl_ms / 1000;
+        if (false) {
+            std::cout << static_cast<uint32_t>(ttl_ms) << std::endl;
+            std::cout << static_cast<uint32_t>(ttl_s) << std::endl;
+        }
         v.reserve(20);
         append_le(v, static_cast<uint32_t>(timestamp_ms / 1000));
         append_le(v, static_cast<uint64_t>(key));

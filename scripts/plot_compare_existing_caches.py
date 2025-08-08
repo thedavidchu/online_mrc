@@ -3,9 +3,12 @@
 @brief  Plot the comparison between existing caches, specifically memory and CPU usages.
 """
 import argparse
+import json
 from pathlib import Path
+from typing import Callable
 
 import matplotlib.pyplot as plt
+from matplotlib.cbook import boxplot_stats
 import numpy as np
 from plot_predictive_cache import (
     parse_data,
@@ -34,6 +37,32 @@ def prettify_number(x: float | int) -> str:
         return f"{mantissa:.4g}{factors.get(exp10)}"
     else:
         return f"{mantissa:.3g}{factors.get(exp10)}"
+
+
+def get_line_statistics(
+    data: dict,
+    get_func: Callable,
+    scale_func: Callable,
+    fix_func: Callable,
+    workload: str,
+    cache_name: str,
+) -> dict[str, float]:
+    dict_intersect = lambda a, b: {k: v for k, v in a.items() if k in b}
+    func = get_scaled_fixed_data(get_func, scale_func, fix_func)
+    lines = [func(d) for k, dlist in data.items() for d in dlist]
+    stats = boxplot_stats(lines)
+    return [
+        {**stat, "fliers": stat["fliers"].tolist(), "label": f"{workload}:{cache_name}"}
+        for stat in stats
+    ]
+    return [
+        {
+            **dict_intersect(stat, {"mean", "q1", "med", "q3"}),
+            "min": np.min(line),
+            "max": np.max(line),
+        }
+        for stat, line in zip(stats, lines)
+    ]
 
 
 def plot_memory_usage(
@@ -89,17 +118,17 @@ def plot_relative_memory_usage(
         # We use the maximum interval size because the methods' expiry cycle
         # is shorter than our sampling cycle.
         get_max_interval_size = lambda d: np.array(
-            [
-                parse_number(x)
-                for x in d["Statistics"]["Temporal Interval Max Sizes [B]"]
-            ]
+            get_stat(d, ["Statistics", "Temporal Interval Max Sizes [B]"])
         )
         optimal_d = named_data["Optimal"][(0.0, 1.0, "EvictionTime")][0]
         if absolute:
-            return get_max_interval_size(d) - get_max_interval_size(optimal_d)
+            r = get_max_interval_size(d) - get_max_interval_size(optimal_d)
+            return r
         else:
-            return get_max_interval_size(d) / get_max_interval_size(optimal_d)
+            r = get_max_interval_size(d) / get_max_interval_size(optimal_d)
+            return r
 
+    a = []
     for cache_name, data in named_data.items():
         plot_lines(
             ax,
@@ -118,7 +147,21 @@ def plot_relative_memory_usage(
             colours=[colours.get(cache_name, "dimgrey")],
             plot_x_axis=False,
         )
+        if False:
+            value = get_line_statistics(
+                data,
+                func,
+                *(GiB_SHARDS_ARGS if absolute else NO_ADJUSTMENT_PERCENTAGE_ARGS),
+                trace_name,
+                cache_name,
+            )
+            a.extend(value)
     fig.savefig(opath)
+    if False:
+        fig, ax = plt.subplots()
+        print(a)
+        ax.bxp(a)
+        fig.savefig(opath.parent / (opath.stem + "-boxplot" + opath.suffix))
 
 
 def plot_cpu_usage(
@@ -130,7 +173,7 @@ def plot_cpu_usage(
     opath: Path,
 ):
     fig, ax = plt.subplots()
-    fig.suptitle(f"CPU Usage for {trace_name} (SHARDS: {shards})")
+    # fig.suptitle(f"# Objects Searched for {trace_name} (SHARDS: {shards})")
     f = get_scaled_fixed_data(
         lambda d: get_stat(d, ["Expiration Work [#]"]), *COUNT_SHARDS_ARGS
     )

@@ -3,7 +3,9 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_predictive_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/format_measurement.hpp"
+#include "cpp_lib/save_queue.hpp"
 #include "cpp_lib/util.hpp"
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
@@ -21,7 +23,6 @@
 #include <iostream>
 #include <map>
 #include <ostream>
-#include <sstream>
 #include <stdlib.h>
 #include <string>
 #include <sys/types.h>
@@ -98,14 +99,15 @@ PredictiveCache::insert(CacheAccess const &access)
     double const ttl_ms = access.ttl_ms;
     map_.emplace(access.key, CachePredictiveMetadata{access});
     auto &metadata = map_.at(access.key);
-    auto r = lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
-    if (r.first != INFINITY && ttl_ms >= r.first) {
+    auto [lo_t, hi_t, updated] =
+        lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
+    if (!std::isinf(lo_t) && ttl_ms >= lo_t) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
         lru_size_ += access.key_size_b + access.value_size_b;
         metadata.set_lru();
     }
-    if (r.second != 0 && ttl_ms <= r.second) {
+    if (hi_t != 0.0 && ttl_ms <= hi_t) {
         pred_tracker.record_store_ttl();
         ttl_cache_.emplace(access.expiration_time_ms(), access.key);
         ttl_size_ += access.key_size_b + access.value_size_b;
@@ -123,8 +125,9 @@ PredictiveCache::update(CacheAccess const &access,
     statistics_.update(metadata.size_, access.value_size_b);
     metadata.visit_without_ttl_refresh(access);
     double const ttl_ms = metadata.ttl_ms(access.timestamp_ms);
-    auto r = lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
-    if (r.first != INFINITY && ttl_ms >= r.first) {
+    auto [lo_t, hi_t, updated] =
+        lifetime_thresholds_.get_updated_thresholds(access.timestamp_ms);
+    if (!std::isinf(lo_t) && ttl_ms >= lo_t) {
         pred_tracker.record_store_lru();
         lru_cache_.access(access.key);
         // Update sizes.
@@ -138,7 +141,7 @@ PredictiveCache::update(CacheAccess const &access,
         lru_size_ -= metadata.size_;
         metadata.unset_lru();
     }
-    if (r.second != 0 && ttl_ms <= r.second) {
+    if (hi_t != 0.0 && ttl_ms <= hi_t) {
         // Even if we don't re-insert into the TTL queue, we still
         // want to mark it as stored.
         pred_tracker.record_store_ttl();
@@ -544,11 +547,12 @@ PredictiveCache::statistics() const
 std::string
 PredictiveCache::json(std::map<std::string, std::string> extras) const
 {
-    auto r = lifetime_thresholds_.thresholds();
+    auto [lo_t, hi_t] = lifetime_thresholds_.thresholds();
+    auto [lo_r, hi_r] = lifetime_thresholds_.ratios();
     return map2str(std::vector<std::pair<std::string, std::string>>{
         {"Capacity [B]", format_memory_size(capacity_)},
-        {"Lower Ratio", val2str(lifetime_thresholds_.lower_ratio())},
-        {"Upper Ratio", val2str(lifetime_thresholds_.upper_ratio())},
+        {"Lower Ratio", val2str(lo_r)},
+        {"Upper Ratio", val2str(hi_r)},
         {"Statistics", statistics_.json()},
         {"LRU-TTL Statistics", lru_ttl_statistics_.json()},
         {"PredictionTracker", pred_tracker.json()},
@@ -560,8 +564,8 @@ PredictiveCache::json(std::map<std::string, std::string> extras) const
          format_engineering(lifetime_thresholds_.since_refresh())},
         {"LRU Lifetime Evictions [#]",
          format_engineering(lifetime_thresholds_.evictions())},
-        {"Lower Threshold [ms]", val2str(format_time(r.first))},
-        {"Upper Threshold [ms]", val2str(format_time(r.second))},
+        {"Lower Threshold [ms]", val2str(format_time(lo_t))},
+        {"Upper Threshold [ms]", val2str(format_time(hi_t))},
         {"Kwargs", map2str(kwargs_, true)},
         {"Extras", map2str(extras, false)},
     });

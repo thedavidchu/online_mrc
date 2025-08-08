@@ -112,6 +112,26 @@ remaining_lifetime_dep = declare_dependency(
     ],
 )
 
+save_queue_dep = declare_dependency(
+    link_with: library(
+        'save_queue_lib',
+        'save_queue.cpp',
+        include_directories: cpp_lib_inc,
+        dependencies: [
+            common_dep,
+            cache_access_dep,
+            cache_metadata_dep,
+            remaining_lifetime_dep,
+            cpp_struct_dep,
+        ],
+    ),
+    dependencies: [
+        cache_access_dep,
+        cache_metadata_dep,
+        cpp_struct_dep,
+    ],
+)
+
 # Bundled dependencies
 cpp_lib_dep = declare_dependency(
     dependencies: [
@@ -123,6 +143,7 @@ cpp_lib_dep = declare_dependency(
         cache_trace_format_dep,
         cache_command_dep,
         remaining_lifetime_dep,
+        save_queue_dep,
     ],
     include_directories: cpp_lib_inc,
 )

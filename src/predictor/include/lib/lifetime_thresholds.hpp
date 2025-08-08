@@ -5,6 +5,11 @@
  *  @todo   Change thresholds to double precision floats.
  **/
 
+#include "cpp_lib/duration.hpp"
+#include "cpp_lib/histogram.hpp"
+#include "cpp_lib/temporal_sampler.hpp"
+#include "math/doubles_are_equal.h"
+#include "unused/mark_unused.h"
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -13,11 +18,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-
-#include "cpp_lib/duration.hpp"
-#include "cpp_lib/histogram.hpp"
-#include "cpp_lib/temporal_sampler.hpp"
-#include "math/doubles_are_equal.h"
 
 using uint64_t = std::uint64_t;
 
@@ -133,6 +133,10 @@ public:
                             uint64_t const size,
                             uint64_t const current_time_ms)
     {
+        // The current_time_ms was formerly used to check if we should
+        // update the thresholds; however, this is redundant with the
+        // check that supplies the thresholds.
+        UNUSED(current_time_ms);
         // We are counting objects for now.
         // TODO Count bytes in the future, maybe?
         (void)size;
@@ -148,10 +152,6 @@ public:
             ++std::get<2>(coarse_histogram_);
             ++coarse_counter_;
         }
-
-        if (should_refresh(current_time_ms)) {
-            refresh_thresholds();
-        }
     }
 
     void
@@ -165,7 +165,7 @@ public:
         coarse_counter_ = 0;
     }
 
-    /// @note   Automatically refresh the thresholds when there's a mismatch.
+    /// @note   Get the current thresholds without refreshing.
     std::pair<double, double>
     thresholds() const
     {
@@ -173,12 +173,21 @@ public:
     }
 
     std::pair<double, double>
+    ratios() const
+    {
+        return {lower_ratio_, upper_ratio_};
+    }
+
+    /// @note   Automatically refresh the thresholds when there's a mismatch.
+    std::tuple<double, double, bool>
     get_updated_thresholds(uint64_t const current_time_ms)
     {
+        bool r = false;
         if (should_refresh(current_time_ms)) {
             refresh_thresholds();
+            r = true;
         }
-        return {lower_threshold_, upper_threshold_};
+        return {lower_threshold_, upper_threshold_, r};
     }
 
     uint64_t
@@ -197,18 +206,6 @@ public:
     since_refresh() const
     {
         return coarse_counter_;
-    }
-
-    double
-    lower_ratio() const
-    {
-        return lower_ratio_;
-    }
-
-    double
-    upper_ratio() const
-    {
-        return upper_ratio_;
     }
 
     bool

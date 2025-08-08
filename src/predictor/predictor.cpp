@@ -21,7 +21,6 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
 #include "cpp_lib/format_measurement.hpp"
-#include "cpp_lib/parse_boolean.hpp"
 #include "cpp_lib/progress_bar.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/predictive_lfu_ttl_cache.hpp"
