@@ -45,10 +45,8 @@ def plot_remaining_lifetime_vs_lru_position():
     OUTPUT = Path("cluster19-remaining-lifetime-vs-lru-position.pdf")
 
     data = parse_data(INPUT)
-    capacities = [256 * MiB, 1.0 * GiB, 4.0 * GiB]
-    fig, axes = plt.subplots(
-        1, len(capacities), squeeze=False, sharex=True, sharey=True
-    )
+    capacities = [1.0 * GiB, 4.0 * GiB]
+    fig, axes = plt.subplots(1, len(capacities), squeeze=False, sharey=True)
     fig.set_size_inches(len(capacities) * 5, 5)
     for i, c in enumerate(capacities):
         axes[0, i].axvline(
@@ -61,7 +59,7 @@ def plot_remaining_lifetime_vs_lru_position():
             axes[0, i],
             data,
             lambda d: None,
-            f"LRU Cache Position [GiB]",
+            "LRU Cache Position [GiB]",
             lambda d: (
                 get_stat(d, ["Extras", "remaining_lifetime", "Cache Sizes [B]"])
                 if get_stat(d, ["Lower Ratio"]) == 0.0
@@ -70,15 +68,50 @@ def plot_remaining_lifetime_vs_lru_position():
                 else None
             ),
             *GiB_SHARDS_ARGS,
-            "Remaining Lifetime [h]",
+            "TTL [h]",
             lambda d: d["Extras"]["remaining_lifetime"]["Remaining Lifetimes [ms]"],
             SCALE_MS_TO_HOUR,
             IDENTITY_X_D,
             fmt=".",
             colours=["red", "green", "blue"],
         )
-        axes[0, i].legend(loc="upper right")
-        axes[0, i].set_title(f"{SCALE_B_TO_GiB(c):.3} GiB LRU Cache")
+        axes[0, i].legend().remove()
+        axes[0, i].set_title("")
+    # Drawings on the left plot
+    axes[0, 0].plot([1.0, 1.0], [8.0, 5.0], "_-k", label="Predicted Eviction Time")
+    fig.text(
+        0.455,
+        0.83,
+        "Predicted\nEviction\nTime",
+        ha="right",
+        va="top",
+    )
+    if False:
+        axes[0, 0].plot([0.0, 0.0], [8.15, 0.0], "_-k", label="Original TTL")
+        fig.text(
+            0.135,
+            0.68,
+            "Original TTL",
+            ha="center",
+            va="center",
+            rotation="vertical",
+        )
+    # Zig-zag line
+    axes[0, 0].plot([0.0, 0.67, 0.0, 1.0], [8.0, 6.0, 6.0, 3.0], "b-.")
+    axes[0, 0].plot([0.67], [6.0], "b>")
+    axes[0, 0].plot([0.01], [6.0], "b<")
+    axes[0, 0].plot([0.99], [3.0], "b>")
+
+    # Drawings on the right plot
+    axes[0, 1].plot([4.0, 4.0], [8.0, -1.0], "_-k", label="Predicted Eviction Time")
+    fig.text(
+        0.88,
+        0.73,
+        "Predicted\nEviction\nTime",
+        ha="right",
+        va="top",
+    )
+
     fig.savefig(OUTPUT)
 
 
@@ -140,11 +173,14 @@ def plot_accurate_vs_lazy_ttl_mrc():
         "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
     )
     OUTPUT = Path("cluster19-accurate-vs-lazy-ttl-miss-ratio-curve.pdf")
-    ratios = [(0.0, 0.0)]  # [(0.0, 0.0), (1.0, 1.0)]
+    ratios = [(1.0, 1.0)]
+    if False:
+        ratios = [(0.0, 0.0)]
+        ratios = [(0.0, 0.0), (1.0, 1.0)]
     expiration_policy = {
-        (0.0, 0.0): "No expiration policy",
-        (0.0, 1.0): "Proactive expiration policy",
-        (1.0, 1.0): "No eviction policy",
+        (0.0, 0.0): "Lazy-TTL",
+        (0.0, 1.0): "LRU/Proactive-TTL",
+        (1.0, 1.0): "TTL-only",
     }
     data = parse_data(INPUT)
     fig, axes = plt.subplots(1, len(ratios), squeeze=False, sharex=True, sharey=True)
@@ -168,6 +204,7 @@ def plot_accurate_vs_lazy_ttl_mrc():
             label_func=lambda p, l, u, e: expiration_policy[(l, u)],
         )
         axes[0, i].set_title(f"{get_label("LRU", l, u)} MRC")
+        axes[0, i].set_title("")
         axes[0, i].legend(loc="upper right")
     fig.savefig(OUTPUT)
 
@@ -242,6 +279,84 @@ def plot_remaining_ttl_vs_lru_position_for_times():
     fig.savefig(OUTPUT)
 
 
+################################################################################
+### MRC
+################################################################################
+
+
+def plot_all_mrc():
+    """Plot MRC for Proactive-TTL, Lazy-TTL, and Psyche"""
+    INPUT = lambda policy, c: (
+        f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v0-s0.001/result-cluster{c}.out"
+    )
+    LRU_OUTPUT = Path("all-lru-mrc.pdf")
+    LFU_OUTPUT = Path("all-lfu-mrc.pdf")
+
+    expiration_policy = lambda policy: {
+        (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
+        (0.0, 1.0): f"{policy.upper()}/Proactive-TTL",
+        (0.5, 0.5): "Psyche",
+        (1.0, 1.0): "TTL-only",
+    }
+    # Plot LRU MRCs
+    rows, cols = 6, 3
+    fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
+    fig.set_size_inches(6 * cols, 6 * rows)
+    clusters = iter(
+        [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
+    )
+    for r in range(rows):
+        for c in range(cols):
+            ax = axes[r, c]
+            cluster = next(clusters)
+            data = parse_data(Path(INPUT("lru", cluster)))
+            plot(
+                ax,
+                "lru",
+                data,
+                *CAPACITY_GIB_ARGS,
+                "Miss Ratio",
+                lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
+                scale_y_func=IDENTITY_X,
+                fix_y_func=shards_adj,
+                set_ylim_to_one=True,
+                label_func=lambda p, l, u, e: expiration_policy(p)[(l, u)],
+            )
+            ax.set_title(f"Cluster #{cluster}")
+    fig.savefig(LRU_OUTPUT)
+    # Plot LFU MRCs
+    rows, cols = 6, 3
+    fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
+    fig.set_size_inches(6 * cols, 6 * rows)
+    clusters = iter(
+        [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
+    )
+    for r in range(rows):
+        for c in range(cols):
+            ax = axes[r, c]
+            cluster = next(clusters)
+            data = parse_data(Path(INPUT("lfu", cluster)))
+            plot(
+                ax,
+                "lfu",
+                data,
+                *CAPACITY_GIB_ARGS,
+                "Miss Ratio",
+                lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
+                scale_y_func=IDENTITY_X,
+                fix_y_func=shards_adj,
+                set_ylim_to_one=True,
+                label_func=lambda p, l, u, e: expiration_policy(p)[(l, u)],
+            )
+            ax.set_title(f"Cluster #{cluster}")
+    fig.savefig(LFU_OUTPUT)
+
+
+################################################################################
+### Compute Usage
+################################################################################
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input")
@@ -251,6 +366,8 @@ def main():
     plot_accurate_vs_lazy_ttl_memory_usage()
     plot_accurate_vs_lazy_ttl_mrc()
     plot_remaining_ttl_vs_lru_position_for_times()
+
+    plot_all_mrc()
 
 
 if __name__ == "__main__":
