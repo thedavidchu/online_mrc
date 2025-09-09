@@ -15,7 +15,7 @@ using uint64_t = std::uint64_t;
 bool
 test_lru()
 {
-    PredictiveCache p(2, 0.0, 1.0);
+    PredictiveCache p(2, 0.0, 1.0, /*shards_sampling_ratio=*/1.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 10},
                               CacheAccess{1, 1, 1, 10},
                               CacheAccess{2, 2, 1, 10}};
@@ -51,7 +51,7 @@ test_lru()
 bool
 test_ttl()
 {
-    PredictiveCache p(2, 0.0, 1.0);
+    PredictiveCache p(2, 0.0, 1.0, /*shards_sampling_ratio=*/1.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 1},
                               CacheAccess{1001, 1, 1, 10}};
     // Test initial state.

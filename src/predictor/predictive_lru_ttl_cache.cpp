@@ -439,10 +439,11 @@ PredictiveCache::miss(CacheAccess const &access)
 PredictiveCache::PredictiveCache(size_t const capacity,
                                  double const lower_ratio,
                                  double const upper_ratio,
+                                 double const shards_sampling_ratio,
                                  std::map<std::string, std::string> kwargs)
     : capacity_(capacity),
       lifetime_thresholds_(lower_ratio, upper_ratio),
-      oracle_(capacity),
+      oracle_(capacity, shards_sampling_ratio),
       kwargs_(kwargs)
 {
 }

@@ -4,6 +4,7 @@
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
+#include "shards/fixed_rate_shards_sampler.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -68,8 +69,9 @@ protected:
     }
 
 public:
-    Accurate(uint64_t const capacity_bytes)
-        : capacity_bytes_{capacity_bytes}
+    Accurate(uint64_t const capacity_bytes, double const shards_sampling_ratio)
+        : capacity_bytes_{capacity_bytes},
+          shards_{shards_sampling_ratio, true}
     {
     }
 
@@ -108,12 +110,14 @@ public:
             {"Statistics", statistics_.json()},
             {"Extras", map2str(extras)},
             {"Expiration Work [#]", std::to_string(expiration_work_)},
+            {"Expirations [#]", std::to_string(expiration_work_)},
         });
     }
 
 protected:
     // Maximum number of bytes in the cache.
     size_t const capacity_bytes_;
+    FixedRateShardsSampler shards_;
     // Number of bytes in the current cache.
     size_t size_bytes_ = 0;
     // Maps key to [last access time, expiration time]
@@ -122,4 +126,5 @@ protected:
     CacheStatistics statistics_;
     // HACK This is a hacky way to make it easier to print this.
     uint64_t expiration_work_ = 0;
+    uint64_t nr_expirations_ = 0;
 };

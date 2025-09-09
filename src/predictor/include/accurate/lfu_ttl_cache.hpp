@@ -254,8 +254,9 @@ private:
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    LFU_TTL_Cache(size_t const capacity_bytes)
-        : Accurate{capacity_bytes}
+    LFU_TTL_Cache(size_t const capacity_bytes,
+                  double const shards_sampling_ratio)
+        : Accurate{capacity_bytes, shards_sampling_ratio}
     {
     }
 

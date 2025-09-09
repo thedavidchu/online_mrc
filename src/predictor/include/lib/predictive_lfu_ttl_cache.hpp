@@ -133,6 +133,7 @@ public:
     PredictiveLFUCache(size_t const capacity,
                        double const lower_ratio,
                        double const upper_ratio,
+                       double const shards_sampling_ratio,
                        std::map<std::string, std::string> kwargs = {},
                        size_t const nr_lfu_buckets = 1);
 

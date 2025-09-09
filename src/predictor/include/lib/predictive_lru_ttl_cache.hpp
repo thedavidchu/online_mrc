@@ -114,6 +114,7 @@ public:
     PredictiveCache(size_t const capacity,
                     double const lower_ratio,
                     double const upper_ratio,
+                    double const shards_sampling_ratio,
                     std::map<std::string, std::string> kwargs = {});
 
     void
@@ -186,7 +187,7 @@ private:
     LifeTimeThresholds lifetime_thresholds_;
     // This wouldn't exist in the real cache, for obvious reasons.
     // This is just to enable collecting accuracy statistics.
-    CacheLibTTL oracle_;
+    LRU_TTL_Cache oracle_;
 
     // Extra metadata
     std::map<std::string, std::string> const kwargs_;

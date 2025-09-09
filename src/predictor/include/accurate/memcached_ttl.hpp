@@ -295,6 +295,7 @@ private:
             for (auto v : victims) {
                 remove(v, EvictionCause::ProactiveTTL, access);
             }
+            nr_expirations_ += victims.size();
             auto next_scan_ms = cls.next_expiry_scan(access);
             new_work.emplace_back(next_scan_ms, id);
         }
@@ -310,8 +311,9 @@ private:
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    MemcachedTTL(uint64_t const capacity_bytes)
-        : Accurate{capacity_bytes}
+    MemcachedTTL(uint64_t const capacity_bytes,
+                 double const shards_sampling_ratio)
+        : Accurate{capacity_bytes, shards_sampling_ratio}
     {
         using namespace MemorySize;
         // TODO Modern Memcached doesn't use power-of-2 slab classes.

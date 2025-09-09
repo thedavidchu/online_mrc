@@ -88,12 +88,13 @@ private:
         for (auto victim : victims) {
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
+        nr_expirations_ += victims.size();
     }
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    CacheLibTTL(size_t const capacity_bytes)
-        : Accurate{capacity_bytes},
+    CacheLibTTL(size_t const capacity_bytes, double const shards_sampling_ratio)
+        : Accurate{capacity_bytes, shards_sampling_ratio},
           sampler_{10 * Duration::SECOND, false, false}
     {
     }

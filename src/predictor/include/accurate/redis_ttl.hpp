@@ -9,8 +9,10 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
+#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -305,8 +307,10 @@ private:
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
         expiration_work_ += victims.size();
+        nr_expirations_ += victims.size();
     }
 
+    /// @param  start: bool - whether
     /// @return Whether another round of sampling should occur.
     bool
     remove_expired_via_sampling(CacheAccess const &access)
@@ -327,6 +331,7 @@ private:
             if (m.ttl_ms(access.timestamp_ms) < 0.0) {
                 ratio_expired += (double)1 / NUMBER_SAMPLES;
                 remove(key.value(), EvictionCause::ProactiveTTL, access);
+                nr_expirations_ += 1;
             } else if (m.ttl_ms(access.timestamp_ms) <
                            SOON_EXPIRING_THRESHOLD_MS &&
                        find_multimap_kv(ttl_queue_,
@@ -342,19 +347,25 @@ private:
     remove_expired(CacheAccess const &access) override final
     {
         remove_expired_from_tree(access);
-        // TODO This function is actually called 10 times (or at least multiple
-        //      times) per second according to some sources. This would
-        //      naturally decrease the number of stale objects in the cache. I'm
-        //      not sure how this would affect Minisim. Source:
-        //      https://pankajtanwar.in/blog/how-redis-expires-keys-a-deep-dive-into-how-ttl-works-internally-in-redis,
-        //      https://blog.x.com/engineering/en_us/topics/infrastructure/2019/improving-key-expiration-in-redis
-        while (remove_expired_via_sampling(access))
-            ;
+        // TODO This function is actually called 10 times per second.
+        //      However, SHARDS reduces the number of objects by 1000x,
+        //      so we should adjust the number of samples accordingly.
+        while (last_removal_time_ms_ < access.timestamp_ms) {
+            while (remove_expired_via_sampling(access))
+                ;
+            // Add another 100 ms so that we sample 10x per second.  But also
+            // adjust the rate of starting expiry cycles based on the SHARDS
+            // sampling. Starting expiry cycles lowers the number of expired
+            // objects below the original 10% threshold because they are run
+            // regardless. Maybe our implementation could do this instead (e.g.
+            // conditionally evict if more than 10% are expired).
+            last_removal_time_ms_ += 100 * shards_.scale;
+        }
     }
 
 public:
-    RedisTTL(uint64_t capacity_bytes)
-        : Accurate{capacity_bytes},
+    RedisTTL(uint64_t const capacity_bytes, double const shards_sampling_ratio)
+        : Accurate{capacity_bytes, shards_sampling_ratio},
           redis_sampler_{}
     {
     }
@@ -366,7 +377,7 @@ private:
     constexpr static uint64_t ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE = 10;
     // The threshold at which we decide an object is expiring 'soon' and
     // therefore should go into the tree.
-    constexpr static uint64_t SOON_EXPIRING_THRESHOLD_MS = 1000;
+    constexpr static uint64_t SOON_EXPIRING_THRESHOLD_MS = 1 * Duration::SECOND;
     // As per [here](https://github.com/redis/redis/blob/unstable/src/expire.c),
     // the effort is in the range [0, 9] with a default value of 0. Note that it
     // is scaled from the user input, which is on the range [1, 10].
@@ -383,4 +394,6 @@ private:
     // This tree only contains soon expiring objects for memory
     // efficiency (rather than containing all of the objects).
     std::multimap<double, uint64_t> ttl_queue_;
+
+    uint64_t last_removal_time_ms_ = 0;
 };

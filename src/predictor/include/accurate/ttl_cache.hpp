@@ -72,17 +72,25 @@ private:
             }
             victims.push_back(key);
         }
+        // The cost of bulk removal is O(R + log2(M)), where R := number
+        // removed and M := number of objects in the cache before the
+        // removal. We do this before removing the objects to respect
+        // the definition of M.
+        if (victims.size()) {
+            expiration_work_ +=
+                std::log2(shards_.scale * map_.size()) + victims.size();
+        }
         // One cannot erase elements from a multimap while also iterating!
         for (auto victim : victims) {
             remove(victim, EvictionCause::ProactiveTTL, access);
         }
-        expiration_work_ += victims.size();
+        nr_expirations_ += victims.size();
     }
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    TTL_Cache(uint64_t const capacity_bytes)
-        : Accurate{capacity_bytes}
+    TTL_Cache(uint64_t const capacity_bytes, double const shards_sampling_ratio)
+        : Accurate{capacity_bytes, shards_sampling_ratio}
     {
     }
 

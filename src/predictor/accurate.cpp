@@ -96,7 +96,7 @@ run_single_accurate_cache(std::promise<std::string> promise,
                           double const shards_ratio,
                           bool const show_progress)
 {
-    T cache{(uint64_t)(capacity_bytes * shards_ratio)};
+    T cache{(uint64_t)(capacity_bytes * shards_ratio), shards_ratio};
     FixedRateShardsSampler sampler{shards_ratio, true};
     std::stringstream ss;
     LOGGER_TIMING("starting test_trace(trace: %s, nominal cap: %zu, sampled "

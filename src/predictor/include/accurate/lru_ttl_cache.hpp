@@ -9,6 +9,7 @@
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_thresholds.hpp"
 #include "logger/logger.h"
+#include "shards/fixed_rate_shards_sampler.h"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -24,7 +25,7 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
-class CacheLibTTL {
+class LRU_TTL_Cache {
 private:
     bool
     ok(bool const fatal) const
@@ -251,8 +252,9 @@ private:
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
-    CacheLibTTL(size_t const capacity)
+    LRU_TTL_Cache(size_t const capacity, double const shards_sampling_ratio)
         : capacity_bytes_(capacity),
+          shards_{shards_sampling_ratio, true},
           lifetime_thresholds_(0.0, 1.0)
     {
     }
@@ -359,6 +361,7 @@ private:
 
     // Maximum number of bytes in the cache.
     size_t const capacity_bytes_;
+    FixedRateShardsSampler shards_;
 
     // Number of bytes in the current cache.
     size_t size_bytes_ = 0;

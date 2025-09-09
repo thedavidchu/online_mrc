@@ -47,6 +47,7 @@ run_single_cache(std::promise<std::string> ret,
     P p(capacity_bytes * shards_ratio,
         lower_ratio,
         upper_ratio,
+        shards_ratio,
         {{"shards_ratio", std::to_string(shards_ratio)}});
     FixedRateShardsSampler sampler{shards_ratio, true};
     std::stringstream ss;

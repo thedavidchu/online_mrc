@@ -490,10 +490,11 @@ PredictiveLFUCache::PredictiveLFUCache(
     size_t const capacity,
     double const lower_ratio,
     double const upper_ratio,
+    double const shards_sampling_ratio,
     std::map<std::string, std::string> kwargs,
     size_t const nr_lfu_buckets)
     : capacity_(capacity),
-      oracle_(capacity),
+      oracle_(capacity, shards_sampling_ratio),
       kwargs_(kwargs),
       nr_lfu_buckets_(nr_lfu_buckets)
 

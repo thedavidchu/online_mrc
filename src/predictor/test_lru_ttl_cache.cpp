@@ -4,7 +4,7 @@
 bool
 test_lru()
 {
-    CacheLibTTL p(2);
+    LRU_TTL_Cache p(2, /*shards_sampling_ratio=*/1.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 10},
                               CacheAccess{1, 1, 1, 10},
                               CacheAccess{2, 2, 1, 10}};
@@ -40,7 +40,7 @@ test_lru()
 bool
 test_ttl()
 {
-    CacheLibTTL p(2);
+    LRU_TTL_Cache p(2, /*shards_sampling_ratio=*/1.0);
     CacheAccess accesses[] = {CacheAccess{0, 0, 1, 1},
                               CacheAccess{1001, 1, 1, 10}};
     // Test initial state.
