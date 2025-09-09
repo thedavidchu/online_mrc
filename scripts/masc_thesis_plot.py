@@ -301,7 +301,7 @@ def plot_all_mrc():
     # Plot LRU MRCs
     rows, cols = 6, 3
     fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
-    fig.set_size_inches(6 * cols, 6 * rows)
+    fig.set_size_inches(6 * cols, 5 * rows)
     clusters = iter(
         [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
     )
@@ -323,11 +323,11 @@ def plot_all_mrc():
                 label_func=lambda p, l, u, e: expiration_policy(p)[(l, u)],
             )
             ax.set_title(f"Cluster #{cluster}")
-    fig.savefig(LRU_OUTPUT)
+    fig.savefig(LRU_OUTPUT, bbox_inches="tight")
     # Plot LFU MRCs
     rows, cols = 6, 3
     fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
-    fig.set_size_inches(6 * cols, 6 * rows)
+    fig.set_size_inches(6 * cols, 5 * rows)
     clusters = iter(
         [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
     )
@@ -349,7 +349,7 @@ def plot_all_mrc():
                 label_func=lambda p, l, u, e: expiration_policy(p)[(l, u)],
             )
             ax.set_title(f"Cluster #{cluster}")
-    fig.savefig(LFU_OUTPUT)
+    fig.savefig(LFU_OUTPUT, bbox_inches="tight")
 
 
 ################################################################################
@@ -357,17 +357,115 @@ def plot_all_mrc():
 ################################################################################
 
 
+def plot_cpu_usage(
+    ax,
+    all_data: list,
+    colours: dict[str, str],
+    cache_names: list[str],
+):
+    from plot_predictive_cache import get_scaled_fixed_data, COUNT_SHARDS_ARGS
+
+    def prettify_number(x: float | int) -> str:
+        """Prettify a number with slide-rule accuracy, according to Michael Collins."""
+        mantissa = x
+        exp10 = 0
+        while mantissa > 1000:
+            mantissa /= 1000
+            exp10 += 3
+        factors = {0: "", 3: "K", 6: "M", 9: "B", 12: "T", 15: "Quad.", 18: "Quin."}
+        # Slide-rule accuracy says a number starting with '1' should be
+        # accurate to 0.1%; otherwise, it should be accurate to 1%.
+        if str(mantissa).startswith("1"):
+            return f"{mantissa:.4g}{factors.get(exp10)}"
+        else:
+            return f"{mantissa:.3g}{factors.get(exp10)}"
+
+    # fig.suptitle(f"# Objects Searched for {trace_name} (SHARDS: {shards})")
+    f = get_scaled_fixed_data(
+        lambda d: get_stat(d, ["Expiration Work [#]"]), *COUNT_SHARDS_ARGS
+    )
+    xs, ys, cs = [], [], []
+    for i, (data, cache_name) in enumerate(zip(all_data, cache_names)):
+        for d_list in data.values():
+            for d in d_list:
+                xs.append(cache_name)
+                ys.append(f(d))
+                cs.append(colours.get(cache_name, "dimgrey"))
+    bar = ax.bar(xs, ys, color=cs, log=True)
+    ax.bar_label(bar, labels=[prettify_number(y) for y in ys])
+    ax.set_xlabel("Expiration Policy")
+    ax.set_ylabel("Searched Objects")
+
+
+def plot_all_compute_usage():
+    """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
+    INPUTS = lambda c: [
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-Memcached-cluster{c}-v0-s0.001.out"
+        ),
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-Redis-cluster{c}-v0-s0.001.out"
+        ),
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-CacheLib-cluster{c}-v0-s0.001.out"
+        ),
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-TTL-cluster{c}-v0-s0.001.out"
+        ),
+    ]
+    NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
+    OUTPUT = Path("all-compute-usage.pdf")
+
+    expiration_policy = lambda policy: {
+        (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
+        (0.0, 1.0): f"{policy.upper()}/Proactive-TTL",
+        (0.5, 0.5): "Psyche",
+        (1.0, 1.0): "TTL-only",
+    }
+    # Plot LRU MRCs
+    rows, cols = 6, 3
+    fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
+    fig.set_size_inches(6 * cols, 5 * rows)
+    clusters = iter(
+        [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
+    )
+    COLOURS = dict(
+        Optimal="black", CacheLib="#f47629", Memcached="#288d82", Redis="#ff4438"
+    )
+    for r in range(rows):
+        for c in range(cols):
+            cluster = next(clusters)
+            # We group by capacity simply to create a key. We don't actually need a key.
+            all_data = [
+                parse_data(
+                    x,
+                    key_funcs=(
+                        lambda _d: 0.0,
+                        lambda _d: 1.0,
+                        lambda _d: "EvictionTime",
+                    ),
+                )
+                for x in INPUTS(cluster)
+            ]
+            ax = axes[r, c]
+            plot_cpu_usage(ax, all_data, COLOURS, NAMES)
+            ax.set_title(f"Cluster #{cluster}")
+            ax.set_ylim(bottom=250e3, top=20e12)
+    fig.savefig(OUTPUT, bbox_inches="tight")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input")
     args = parser.parse_args()
 
-    plot_remaining_lifetime_vs_lru_position()
-    plot_accurate_vs_lazy_ttl_memory_usage()
-    plot_accurate_vs_lazy_ttl_mrc()
-    plot_remaining_ttl_vs_lru_position_for_times()
+    # plot_remaining_lifetime_vs_lru_position()
+    # plot_accurate_vs_lazy_ttl_memory_usage()
+    # plot_accurate_vs_lazy_ttl_mrc()
+    # plot_remaining_ttl_vs_lru_position_for_times()
 
     plot_all_mrc()
+    plot_all_compute_usage()
 
 
 if __name__ == "__main__":
