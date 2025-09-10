@@ -2,13 +2,17 @@
 
 #include "cpp_lib/format_measurement.hpp"
 #include "cpp_lib/util.hpp"
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 using uint64_t = std::uint64_t;
 
@@ -17,6 +21,20 @@ class Histogram {
         Lower,
         UpperOrEqual,
     };
+
+    /// @brief  Find the floor of $b rounded down to the nearest
+    //          multiple of $by.
+    static double
+    floor(double const b, uint64_t const by)
+    {
+        if (!std::isfinite(b)) {
+            return b;
+        }
+        if (by == 0) {
+            return b;
+        }
+        return std::trunc(b / by) * by;
+    }
 
     static std::string
     stringify_double(double const x)
@@ -76,6 +94,9 @@ class Histogram {
     }
 
 public:
+    /// @brief  A histogram with buckets anywhere from -INF to INF.
+    ///         Buckets cannot be NAN.
+    /// @param  $bucket_size: uint64 - bucket size, where 0 => no bucketing.
     Histogram(uint64_t const bucket_size = 0)
         : bucket_size_{bucket_size}
     {
@@ -104,25 +125,53 @@ public:
         total_ = new_total_;
     }
 
+    /// @brief  Reset the histogram to new.
+    void
+    reset()
+    {
+        histogram_.clear();
+        total_ = 0;
+    }
+
     /// @note   I just let it overflow...
     void
     update(double const bucket, uint64_t const frq = 1)
     {
         assert(bucket != NAN);
         total_ += frq;
-        double b = bucket;
-        if (bucket_size_ == 0 || !finite(bucket)) {
-            // Pass
-        } else if (bucket >= 0) {
-            b = static_cast<uint64_t>(b / bucket_size_) * bucket_size_;
-        } else {
-            // I don't want the int64_t to be 'promoted' to a uint64_t,
-            // which would lose the negativity.
-            b = static_cast<int64_t>(b / bucket_size_) * (double)bucket_size_;
-        }
+        double b = floor(bucket, bucket_size_);
         histogram_[b] += frq;
     }
 
+    /// @brief  Get minimum bucket.
+    double
+    min() const
+    {
+        auto it = std::min_element(
+            histogram_.begin(),
+            histogram_.end(),
+            [](const auto &p1, const auto &p2) { return p1.first < p2.first; });
+        if (it == histogram_.end()) {
+            return NAN;
+        }
+        return it->first;
+    }
+
+    /// @brief  Get maximum bucket.
+    double
+    max() const
+    {
+        auto it = std::max_element(
+            histogram_.begin(),
+            histogram_.end(),
+            [](const auto &p1, const auto &p2) { return p1.first < p2.first; });
+        if (it == histogram_.end()) {
+            return NAN;
+        }
+        return it->first;
+    }
+
+    /// @brief  Get the mean bucket, weighted by frequency.
     double
     mean() const
     {
@@ -233,16 +282,22 @@ public:
     std::string
     json() const
     {
-        std::stringstream ss;
-        ss << "{";
-        ss << "\".type\": \"Histogram\", ";
-        ss << "\"total\": " << total_ << ", ";
-        ss << "\"histogram\": " << map2str(histogram_);
-        ss << "}";
-        return ss.str();
+        return map2str(std::vector<std::pair<std::string, std::string>>{
+            {".type", "Histogram"},
+            {"total", std::to_string(total_)},
+            {"histogram", map2str(histogram_)},
+        });
+    }
+
+    /// @brief  Count the number of histogram buckets.
+    std::size_t
+    size() const
+    {
+        return histogram_.size();
     }
 
 private:
+    // The sum of the histogram.
     uint64_t total_ = 0;
     uint64_t const bucket_size_ = 0;
     std::unordered_map<double, uint64_t> histogram_;
