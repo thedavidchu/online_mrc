@@ -79,8 +79,8 @@ public:
     ///     hour after this later time.
     ///     Example
     ///     -------
-    ///     Period: 0   1   2   3
-    ///     Samples:X    X (X)      (X) is sampled when this is false.
+    ///     Period: 0     1     2     3
+    ///     Samples:X      X   (X)        (X) is sampled when this is false.
     TemporalSampler(uint64_t const sampling_period_ms = Duration::HOUR,
                     bool const sample_first = false,
                     bool const since_last_sample = true)
