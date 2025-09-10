@@ -125,12 +125,12 @@ def plot_triple_metrics(args):
         used_data,
         label_func,
         "Time [h]",
-        lambda d: d["LRU-TTL Statistics"]["Temporal Times [ms]"],
+        lambda d: d["Removal Policy Statistics"]["Temporal Times [ms]"],
         SCALE_MS_TO_HOUR,
         IDENTITY_X_D,
         f"Metadata ({p} + TTL Queue) Objects [#]",
-        lambda d: np.array(d["LRU-TTL Statistics"]["Temporal LRU Sizes [#]"])
-        + np.array(d["LRU-TTL Statistics"]["Temporal TTL Sizes [#]"]),
+        lambda d: np.array(d["Removal Policy Statistics"]["Temporal LRU Sizes [#]"])
+        + np.array(d["Removal Policy Statistics"]["Temporal TTL Sizes [#]"]),
         *COUNT_SHARDS_ARGS,
         colours=["purple", "black"],
     )
@@ -204,12 +204,12 @@ def plot_sizes(args):
             used_data,
             label_func,
             "Time [h]",
-            lambda d: d["LRU-TTL Statistics"]["Temporal Times [ms]"],
+            lambda d: d["Removal Policy Statistics"]["Temporal Times [ms]"],
             SCALE_MS_TO_HOUR,
             IDENTITY_X_D,
             f"Metadata ({p} + TTL Queue) Objects [#]",
-            lambda d: np.array(d["LRU-TTL Statistics"]["Temporal LRU Sizes [#]"])
-            + np.array(d["LRU-TTL Statistics"]["Temporal TTL Sizes [#]"]),
+            lambda d: np.array(d["Removal Policy Statistics"]["Temporal LRU Sizes [#]"])
+            + np.array(d["Removal Policy Statistics"]["Temporal TTL Sizes [#]"]),
             *COUNT_SHARDS_ARGS,
             colours=["purple", "black"],
         )

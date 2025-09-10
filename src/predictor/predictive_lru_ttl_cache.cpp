@@ -470,11 +470,11 @@ PredictiveCache::access(CacheAccess const &access)
     statistics_.time(access.timestamp_ms);
     evict_expired_objects(access.timestamp_ms);
     oracle_.access(access);
-    lru_ttl_statistics_.access(access,
-                               lru_cache_.size(),
-                               lru_size_,
-                               ttl_cache_.size(),
-                               ttl_size_);
+    rm_policy_statistics_.access(access,
+                                 lru_cache_.size(),
+                                 lru_size_,
+                                 ttl_cache_.size(),
+                                 ttl_size_);
     if (map_.count(access.key)) {
         auto &metadata = map_.at(access.key);
         if (!is_expired(access, metadata)) {
@@ -555,7 +555,7 @@ PredictiveCache::json(std::map<std::string, std::string> extras) const
         {"Lower Ratio", val2str(lo_r)},
         {"Upper Ratio", val2str(hi_r)},
         {"Statistics", statistics_.json()},
-        {"LRU-TTL Statistics", lru_ttl_statistics_.json()},
+        {"Removal Policy Statistics", rm_policy_statistics_.json()},
         {"PredictionTracker", pred_tracker.json()},
         {"Oracle", oracle_.json()},
         {"Lifetime Thresholds", lifetime_thresholds_.json()},

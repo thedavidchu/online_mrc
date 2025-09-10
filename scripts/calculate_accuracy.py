@@ -274,8 +274,8 @@ def get_temporal_metadata(
     )
     assert _get_times_func
     get_metadata_usage_func = get_scaled_fixed_data(
-        lambda d: np.array(d["LRU-TTL Statistics"]["Temporal LRU Sizes [#]"])
-        + np.array(d["LRU-TTL Statistics"]["Temporal TTL Sizes [#]"]),
+        lambda d: np.array(d["Removal Policy Statistics"]["Temporal LRU Sizes [#]"])
+        + np.array(d["Removal Policy Statistics"]["Temporal TTL Sizes [#]"]),
         *COUNT_SHARDS_ARGS,
     )
     return {get_cap_func(d): get_metadata_usage_func(d) for d in data_list}

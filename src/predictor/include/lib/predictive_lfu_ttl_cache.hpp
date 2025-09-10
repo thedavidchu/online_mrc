@@ -9,8 +9,8 @@
 #include "cpp_struct/hash_list.hpp"
 #include "lib/eviction_cause.hpp"
 #include "lib/lifetime_thresholds.hpp"
-#include "lib/lru_ttl_cache_statistics.hpp"
 #include "lib/prediction_tracker.hpp"
+#include "lib/removal_policy_statistics.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -206,7 +206,7 @@ private:
     PredictionTracker pred_tracker;
     // Statistics related to cache performance.
     CacheStatistics statistics_;
-    LRUTTLStatistics lru_ttl_statistics_;
+    RemovalPolicyStatistics rm_policy_statistics_;
 
     // Maps key to [last access time, expiration time]
     std::unordered_map<uint64_t, CachePredictiveMetadata> map_;

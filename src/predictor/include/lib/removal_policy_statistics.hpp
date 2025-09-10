@@ -2,13 +2,14 @@
 #pragma once
 
 #include "cpp_lib/cache_access.hpp"
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/temporal_data.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
 #include <cstdint>
 #include <optional>
 #include <string>
 
-class LRUTTLStatistics {
+class RemovalPolicyStatistics {
     bool
     should_sample()
     {
@@ -72,7 +73,7 @@ private:
     uint64_t ttl_size_ = 0;
     uint64_t ttl_size_bytes_ = 0;
 
-    TemporalSampler temporal_sampler_{Duration::HOUR, false};
+    TemporalSampler temporal_sampler_{Duration::MINUTE, false, false};
 
     TemporalData temporal_times_;
     TemporalData temporal_lru_sizes_;
