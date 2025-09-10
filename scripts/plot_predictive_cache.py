@@ -45,7 +45,7 @@ COLOUR_MAP: dict[tuple[float, float], str] = {
     (1.0, 1.0): "grey",
     # Accurate
     (0.0, 1.0): "black",
-    # Unbiased Predictor
+    # Psyche
     (0.5, 0.5): "red",
 }
 
@@ -63,32 +63,32 @@ def SCALE_SHARDS_FUNC(x, d):
 
 
 # Convert ms to hours without SHARDS.
-HOURS_NO_SHARDS_ARGS = [
+HOURS_NO_SHARDS_ARGS = (
     SCALE_MS_TO_HOUR,
     IDENTITY_X_D,
-]
+)
 # Factor SHARDS into a counter.
-COUNT_SHARDS_ARGS = [
+COUNT_SHARDS_ARGS = (
     IDENTITY_X,
     SCALE_SHARDS_FUNC,
-]
+)
 # Convert B to GiB with SHARDS factored in.
-GiB_SHARDS_ARGS = [
+GiB_SHARDS_ARGS = (
     SCALE_B_TO_GiB,
     SCALE_SHARDS_FUNC,
-]
+)
 # Describe an axis using the SHARDS-adjusted maximum cache capacity.
-CAPACITY_GIB_ARGS = [
+CAPACITY_GIB_ARGS = (
     "Capacity [GiB]",
     lambda d: get_stat(d, ["Capacity [B]"]),
     SCALE_B_TO_GiB,
     SCALE_SHARDS_FUNC,
-]
+)
 # No adjustment required.
-NO_ADJUSTMENT_PERCENTAGE_ARGS = [
+NO_ADJUSTMENT_PERCENTAGE_ARGS = (
     IDENTITY_X,
     lambda x, d: 100 * x,
-]
+)
 
 GiB: int = 1 << 30
 MiB: int = 1 << 20
@@ -246,8 +246,8 @@ def get_label(
     return {
         (0.0, 1.0, "EvictionTime"): f"{policy}/Proactive-TTL",
         (0.0, 0.0, "EvictionTime"): f"{policy}/Lazy-TTL",
-        (0.5, 0.5, "EvictionTime"): "Psyche",
         (1.0, 1.0, "EvictionTime"): "TTL-only",
+        (0.5, 0.5, "EvictionTime"): "Psyche",
     }.get(
         (l, u, eviction_mode),
         (
@@ -312,6 +312,18 @@ def plot(
     # Get corrected y value from a JSON
     f_x = lambda d: fix_x_func(scale_x_func(get_x_func(d)), d)
     f_y = lambda d: fix_y_func(scale_y_func(get_y_func(d)), d)
+
+    # HACK I want Psyche on top, so I will intentionally rearrange all_data.
+    def order_data(all_data, key):
+        if key in all_data:
+            value = all_data[key]
+            del all_data[key]
+            all_data[key] = value
+
+    order_data(all_data, (1.0, 1.0, "EvictionTime"))
+    order_data(all_data, (0.0, 0.0, "EvictionTime"))
+    order_data(all_data, (0.0, 1.0, "EvictionTime"))
+    order_data(all_data, (0.5, 0.5, "EvictionTime"))
 
     ax.set_title(f"{y_label} vs {x_label}")
     for (l, u, tm), d_list in all_data.items():
