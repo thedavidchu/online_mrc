@@ -35,6 +35,15 @@ from plot_predictive_cache import (
     COLOUR_MAP,
 )
 
+# Clusters with lots of objects and some expirations.
+OK_CLUSTERS = sorted(
+    {6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52}
+    - {12, 15, 31, 37, 44, 50}
+)
+ALL_CLUSTERS = sorted(
+    [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
+)
+
 
 ################################################################################
 ### HELPERS
@@ -62,11 +71,11 @@ def prettify_number(x: float | int) -> str:
 ################################################################################
 
 
-def plot_remaining_lifetime_vs_lru_position():
+def plot_ttl_vs_lru():
     INPUT = Path(
         "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
     )
-    OUTPUT = Path("cluster19-remaining-lifetime-vs-lru-position.pdf")
+    OUTPUT = Path("cluster19-ttl-vs-lru.pdf")
 
     data = parse_data(INPUT)
     capacities = [1.0 * GiB, 4.0 * GiB]
@@ -148,8 +157,8 @@ def plot_accurate_vs_lazy_ttl_memory_usage():
     data = parse_data(INPUT)
     capacities = [1.0 * GiB, 4.0 * GiB, 8.0 * GiB]
     expiration_policy = {
-        (0.0, 0.0): "No expiration policy",
-        (0.0, 1.0): "Proactive expiration policy",
+        (0.0, 0.0): "LRU/Lazy-TTL",
+        (0.0, 1.0): "TTL-only",
     }
     # We use the maximum interval size because the methods' expiry cycle
     # is shorter than our sampling cycle.
@@ -238,10 +247,11 @@ def plot_accurate_vs_lazy_ttl_mrc():
 ################################################################################
 
 
-def plot_remaining_ttl_vs_lru_position_for_times():
+def plot_ttl_vs_lru_changes():
     times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     times = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     times = [75, 76, 77, 78, 79, 80]
+    times = [76, 78, 80]
     INPUTS = [
         Path(
             f"/home/david/projects/online_mrc/myresults/remaining-ttl-vs-lru/cluster19-4gib-{t}h-s0.001.json"
@@ -249,7 +259,7 @@ def plot_remaining_ttl_vs_lru_position_for_times():
         for t in times
     ]
     TITLES = [f"{t} hours" for t in times]
-    OUTPUT = Path("cluster19-remaining-lifetime-vs-lru-position-for-times.pdf")
+    OUTPUT = Path("cluster19-ttl-vs-lru-changes.pdf")
 
     fig, axes = plt.subplots(1, len(INPUTS), sharex=True, sharey=True, squeeze=False)
     fig.set_size_inches(len(INPUTS) * 5, 5)
@@ -338,9 +348,7 @@ def plot_all_mrc():
         rows, cols = 6, 3
         fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(
-            [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
-        )
+        clusters = iter(ALL_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -433,7 +441,7 @@ def plot_memory_usage(
     ax.legend()
 
 
-def plot_all_memory_usage():
+def plot_all_periodic_ttl_memory_usage():
     """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
     version = 2
     INPUTS = lambda c: [
@@ -451,7 +459,7 @@ def plot_all_memory_usage():
         ),
     ]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
-    OUTPUT = Path("all-memory-usage.pdf")
+    OUTPUT = Path("all-periodic-ttl-memory-usage.pdf")
 
     expiration_policy = lambda policy: {
         (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
@@ -460,12 +468,10 @@ def plot_all_memory_usage():
         (1.0, 1.0): "TTL-only",
     }
     # Plot LRU MRCs
-    rows, cols = 6, 3
+    rows, cols = 4, 3
     fig, axes = plt.subplots(rows, cols, squeeze=False)
     fig.set_size_inches(6 * cols, 5 * rows)
-    clusters = iter(
-        [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
-    )
+    clusters = iter(OK_CLUSTERS)
     COLOURS = dict(
         Optimal="black",
         CacheLib="#f47629",
@@ -506,9 +512,7 @@ def plot_compare_memory_usage(plot_absolute: bool = True):
         rows, cols = 6, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(
-            [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
-        )
+        clusters = iter(ALL_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -540,14 +544,14 @@ def plot_compare_memory_usage(plot_absolute: bool = True):
                             times,
                             shards_scale * acc_cnt / (1 << 30),
                             color=colour,
-                            label=csize,
+                            label=f"{policy.upper() if policy == 'lru' else '1st-order LFU'}/Proactive-TTL: {csize}",
                         )
                         ax.plot(
                             times,
                             shards_scale * psyche_cnt / (1 << 30),
                             "--",
                             color=colour,
-                            label=csize,
+                            label=f"Psyche: {csize}",
                         )
                         ax.axhline(sz, color=colour, linestyle="dotted")
                     else:
@@ -576,9 +580,7 @@ def plot_all_total_memory_usage_comparison():
         rows, cols = 6, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(
-            [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
-        )
+        clusters = iter(ALL_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -608,17 +610,17 @@ def plot_all_total_memory_usage_comparison():
                         acc_d["CacheStatistics"]["Temporal Resident Objects [#]"]
                     )
                     psyche_size = np.array(
-                        psyche_d["CacheStatistics"]["Temporal Size [B]"]
+                        psyche_d["CacheStatistics"]["Temporal Sizes [B]"]
                     )
-                    acc_size = np.array(acc_d["CacheStatistics"]["Temporal Size [B]"])
+                    acc_size = np.array(acc_d["CacheStatistics"]["Temporal Sizes [B]"])
                     metadata_diff = (acc_cnt * 32 - psyche_cnt * 16) * shards_scale
                     size_diff = (acc_size - psyche_size) * shards_scale
                     diff = metadata_diff + size_diff
-                    ax.plot(times, diff / (1 << 30), color=colour, label=csize)
+                    ax.plot(times, diff / (1 << 20), color=colour, label=csize)
                     ax.axhline(0, color="black", linestyle="dashed")
                 ax.legend()
                 ax.set_xlabel("Time [h]")
-                ax.set_ylabel("Total Memory Savings [GiB]")
+                ax.set_ylabel("Total Memory Savings [MiB]")
                 ax.set_title(f"Cluster #{cluster}")
         fig.savefig(output_path, bbox_inches="tight")
 
@@ -643,9 +645,7 @@ def plot_all_metadata_usage():
         rows, cols = 6, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(
-            [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
-        )
+        clusters = iter(ALL_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -675,11 +675,11 @@ def plot_all_metadata_usage():
                     else:
                         continue
                     diff = (acc_cnt * 32 - psyche_cnt * 16) * shards_scale
-                    ax.plot(times, diff / (1 << 30), color=colour, label=csize)
+                    ax.plot(times, diff / (1 << 20), color=colour, label=csize)
                     ax.axhline(0, color="black", linestyle="dashed")
                 ax.legend()
                 ax.set_xlabel("Time [h]")
-                ax.set_ylabel("Metadata Savings [GiB]")
+                ax.set_ylabel("Metadata Savings [MiB]")
                 ax.set_title(f"Cluster #{cluster}")
         fig.savefig(output_path, bbox_inches="tight")
 
@@ -697,6 +697,7 @@ def plot_cpu_usage(
     all_data: list,
     colours: dict[str, str],
     cache_names: list[str],
+    cluster: int,
 ):
     f = get_scaled_fixed_data(
         lambda d: get_stat(d, ["Expiration Work [#]"]), *COUNT_SHARDS_ARGS
@@ -714,9 +715,21 @@ def plot_cpu_usage(
                 searched_array.append(nr_searched)
                 cs.append(c)
     botbar = ax.bar(xs, exp_array, color=cs, log=True)
-    ax.bar_label(
-        botbar, labels=[prettify_number(y) for y in exp_array], label_type="center"
-    )
+    if cluster != 44:
+        ax.bar_label(
+            botbar,
+            labels=[prettify_number(y) for y in exp_array],
+            label_type="center",
+            padding=-10,
+        )
+    else:
+        # Cluster 44 has zero expirations.
+        ax.bar_label(
+            botbar,
+            labels=[prettify_number(y) for y in exp_array],
+            label_type="edge",
+            padding=200,
+        )
     topbar = ax.bar(
         xs,
         # The height is the difference between the height we want and
@@ -727,12 +740,17 @@ def plot_cpu_usage(
         log=True,
         bottom=exp_array,
     )
-    ax.bar_label(topbar, labels=[prettify_number(y) for y in searched_array])
+    ax.bar_label(
+        topbar,
+        labels=[prettify_number(y) for y in searched_array],
+        label_type="center",
+        padding=-5,
+    )
     ax.set_xlabel("Expiration Policy")
     ax.set_ylabel("Searched Objects")
 
 
-def plot_all_compute_usage():
+def plot_all_periodic_ttl_compute_usage():
     """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
     version = 2
     INPUTS = lambda c: [
@@ -750,7 +768,7 @@ def plot_all_compute_usage():
         ),
     ]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
-    OUTPUT = Path("all-compute-usage.pdf")
+    OUTPUT = Path("all-periodic-ttl-compute-usage.pdf")
 
     expiration_policy = lambda policy: {
         (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
@@ -759,12 +777,10 @@ def plot_all_compute_usage():
         (1.0, 1.0): "TTL-only",
     }
     # Plot LRU MRCs
-    rows, cols = 6, 3
+    rows, cols = 4, 3
     fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
     fig.set_size_inches(6 * cols, 5 * rows)
-    clusters = iter(
-        [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
-    )
+    clusters = iter(OK_CLUSTERS)
     COLOURS = dict(
         Optimal="black",
         CacheLib="#f47629",
@@ -788,7 +804,7 @@ def plot_all_compute_usage():
                 for x in INPUTS(cluster)
             ]
             ax = axes[r, c]
-            plot_cpu_usage(ax, all_data, COLOURS, NAMES)
+            plot_cpu_usage(ax, all_data, COLOURS, NAMES, cluster)
             ax.set_title(f"Cluster #{cluster}")
             ax.set_ylim(bottom=1e6, top=20e12)
             ax.set_yticks([1e3, 1e6, 1e9, 1e12])
@@ -800,17 +816,16 @@ def main():
     parser.add_argument("--input")
     args = parser.parse_args()
 
-    if False:
-        plot_remaining_lifetime_vs_lru_position()
-        plot_accurate_vs_lazy_ttl_memory_usage()
-        plot_accurate_vs_lazy_ttl_mrc()
-        plot_remaining_ttl_vs_lru_position_for_times()
+    plot_ttl_vs_lru()
+    plot_accurate_vs_lazy_ttl_memory_usage()
+    plot_accurate_vs_lazy_ttl_mrc()
+    plot_ttl_vs_lru_changes()
 
-        plot_all_compute_usage()
-        plot_all_memory_usage()
-    # plot_all_mrc()
-    # plot_all_metadata_usage()
-    # plot_compare_memory_usage()
+    plot_all_mrc()
+    plot_all_periodic_ttl_compute_usage()
+    plot_all_periodic_ttl_memory_usage()
+    plot_all_metadata_usage()
+    plot_compare_memory_usage()
     plot_all_total_memory_usage_comparison()
 
 
