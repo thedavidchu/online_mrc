@@ -8,6 +8,7 @@
 #include "cpp_lib/duration.hpp"
 #include "cpp_lib/histogram.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
+#include "cpp_lib/util.hpp"
 #include "math/doubles_are_equal.h"
 #include "unused/mark_unused.h"
 #include <cassert>
@@ -223,20 +224,18 @@ public:
     std::string
     json() const
     {
-        std::stringstream ss;
-        ss << "{";
-        ss << "\"Histogram\": " << histogram_.json() << ", ";
-        ss << "\"Coarse Histogram\": [" << std::get<0>(coarse_histogram_)
-           << ", " << std::get<1>(coarse_histogram_) << ", "
-           << std::get<2>(coarse_histogram_) << "]";
-        ss << ", \"Threshold Refreshes [#]\": "
-           << format_engineering(refreshes());
-        ss << ", \"Samples Since Threshold Refresh [#]\": "
-           << format_engineering(since_refresh());
-        ss << ", \"LRU Lifetime Evictions [#]\": "
-           << format_engineering(evictions());
-        ss << "}";
-        return ss.str();
+        std::string coarse_hist_str{
+            "[" + std::to_string(std::get<0>(coarse_histogram_)) + ", " +
+            std::to_string(std::get<1>(coarse_histogram_)) + ", " +
+            std::to_string(std::get<2>(coarse_histogram_)) + "]"};
+        return map2str(std::vector<std::pair<std::string, std::string>>{
+            {"Histogram", histogram_.json()},
+            {"Coarse Histogram", coarse_hist_str},
+            {"Threshold Refreshes [#]", format_engineering(refreshes())},
+            {"Samples Since Threshold Refresh [#]",
+             format_engineering(since_refresh())},
+            {"LRU Lifetime Evictions [#]", format_engineering(evictions())},
+        });
     }
 
 private:
