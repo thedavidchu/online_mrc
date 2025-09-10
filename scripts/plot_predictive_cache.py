@@ -241,7 +241,7 @@ def get_label(
     eviction_mode: str = "EvictionTime",
     *,
     default: Template | None = Template("$lower_ratio:$upper_ratio $eviction_mode"),
-) -> str:
+) -> str | None:
     l, u = float(lower_ratio), float(upper_ratio)
     return {
         (0.0, 1.0, "EvictionTime"): f"{policy}/Proactive-TTL",

@@ -22,6 +22,8 @@ from plot_predictive_cache import (
     GiB,
     parse_data,
     get_label,
+    get_scaled_fixed_data,
+    COUNT_SHARDS_ARGS,
     GiB_SHARDS_ARGS,
     SCALE_MS_TO_HOUR,
     CAPACITY_GIB_ARGS,
@@ -32,6 +34,28 @@ from plot_predictive_cache import (
     shards_adj,
     COLOUR_MAP,
 )
+
+
+################################################################################
+### HELPERS
+################################################################################
+
+
+def prettify_number(x: float | int) -> str:
+    """Prettify a number with slide-rule accuracy, according to Michael Collins."""
+    mantissa = x
+    exp10 = 0
+    while mantissa > 1000:
+        mantissa /= 1000
+        exp10 += 3
+    factors = {0: "", 3: "K", 6: "M", 9: "B", 12: "T", 15: "Quad.", 18: "Quin."}
+    # Slide-rule accuracy says a number starting with '1' should be
+    # accurate to 0.1%; otherwise, it should be accurate to 1%.
+    if str(mantissa).startswith("1"):
+        return f"{mantissa:.4g}{factors.get(exp10)}"
+    else:
+        return f"{mantissa:.3g}{factors.get(exp10)}"
+
 
 ################################################################################
 ### INTRODUCTION
@@ -353,6 +377,119 @@ def plot_all_mrc():
 
 
 ################################################################################
+### Memory Usage
+################################################################################
+
+
+def plot_memory_usage(
+    ax,
+    all_data: list,
+    colours: dict[str, str],
+    cache_names: list[str],
+    *,
+    use_relative_size: bool = True,
+):
+    f = get_scaled_fixed_data(
+        lambda d: d["Statistics"]["Temporal Interval Max Sizes [B]"],
+        *GiB_SHARDS_ARGS,
+    )
+    t = get_scaled_fixed_data(
+        lambda d: d["Statistics"]["Temporal Times [ms]"],
+        *GiB_SHARDS_ARGS,
+    )
+    all_data_dict = {
+        cache_name: data for (data, cache_name) in zip(all_data, cache_names)
+    }
+    for cache_name, data in all_data_dict.items():
+        for d_list, oracle_dlist in zip(
+            data.values(), all_data_dict["Psyche"].values()
+        ):
+            for d, oracle_d in zip(d_list, oracle_dlist):
+                if cache_name == "Psyche":
+                    continue
+                c = colours[cache_name]
+                oracle_sizes = np.array(f(oracle_d))
+                oracle_times = np.array(t(oracle_d))
+                output_sizes = np.array(f(d))
+                output_times = np.array(t(d))
+                assert np.all(oracle_times == output_times)
+                times = oracle_times
+                ratio_sizes = output_sizes / oracle_sizes
+                ax.plot(
+                    times,
+                    (100 * ratio_sizes) if use_relative_size else output_sizes,
+                    c=c,
+                    label=cache_name,
+                )
+    ax.set_xlabel("Time [h]")
+    ax.set_ylabel(
+        "Memory Usage [% Psyche]" if use_relative_size else "Memory Usage [GiB]"
+    )
+    ax.legend()
+
+
+def plot_all_memory_usage():
+    """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
+    version = 2
+    INPUTS = lambda c: [
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-Memcached-cluster{c}-v{version}-s0.001.out"
+        ),
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-Redis-cluster{c}-v{version}-s0.001.out"
+        ),
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-CacheLib-cluster{c}-v{version}-s0.001.out"
+        ),
+        Path(
+            f"/home/david/projects/online_mrc/myresults/accurate/result-TTL-cluster{c}-v{version}-s0.001.out"
+        ),
+    ]
+    NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
+    OUTPUT = Path("all-memory-usage.pdf")
+
+    expiration_policy = lambda policy: {
+        (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
+        (0.0, 1.0): f"{policy.upper()}/Proactive-TTL",
+        (0.5, 0.5): "Psyche",
+        (1.0, 1.0): "TTL-only",
+    }
+    # Plot LRU MRCs
+    rows, cols = 6, 3
+    fig, axes = plt.subplots(rows, cols, squeeze=False)
+    fig.set_size_inches(6 * cols, 5 * rows)
+    clusters = iter(
+        [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
+    )
+    COLOURS = dict(
+        Optimal="black",
+        CacheLib="#f47629",
+        Memcached="#288d82",
+        Redis="#ff4438",
+        Psyche="#808080",
+    )
+    for r in range(rows):
+        for c in range(cols):
+            cluster = next(clusters)
+            # We group by capacity simply to create a key. We don't actually need a key.
+            all_data = [
+                parse_data(
+                    x,
+                    key_funcs=(
+                        lambda _d: 0.0,
+                        lambda _d: 1.0,
+                        lambda _d: "EvictionTime",
+                    ),
+                )
+                for x in INPUTS(cluster)
+            ]
+            ax = axes[r, c]
+            plot_memory_usage(ax, all_data, COLOURS, NAMES)
+            ax.set_title(f"Cluster #{cluster}")
+    fig.savefig(OUTPUT, bbox_inches="tight")
+
+
+################################################################################
 ### Compute Usage
 ################################################################################
 
@@ -363,54 +500,55 @@ def plot_cpu_usage(
     colours: dict[str, str],
     cache_names: list[str],
 ):
-    from plot_predictive_cache import get_scaled_fixed_data, COUNT_SHARDS_ARGS
-
-    def prettify_number(x: float | int) -> str:
-        """Prettify a number with slide-rule accuracy, according to Michael Collins."""
-        mantissa = x
-        exp10 = 0
-        while mantissa > 1000:
-            mantissa /= 1000
-            exp10 += 3
-        factors = {0: "", 3: "K", 6: "M", 9: "B", 12: "T", 15: "Quad.", 18: "Quin."}
-        # Slide-rule accuracy says a number starting with '1' should be
-        # accurate to 0.1%; otherwise, it should be accurate to 1%.
-        if str(mantissa).startswith("1"):
-            return f"{mantissa:.4g}{factors.get(exp10)}"
-        else:
-            return f"{mantissa:.3g}{factors.get(exp10)}"
-
-    # fig.suptitle(f"# Objects Searched for {trace_name} (SHARDS: {shards})")
     f = get_scaled_fixed_data(
         lambda d: get_stat(d, ["Expiration Work [#]"]), *COUNT_SHARDS_ARGS
     )
-    xs, ys, cs = [], [], []
+    g = get_scaled_fixed_data(
+        lambda d: get_stat(d, ["Expirations [#]"]), *COUNT_SHARDS_ARGS
+    )
+    xs, exp_array, searched_array, cs = [], [], [], []
     for i, (data, cache_name) in enumerate(zip(all_data, cache_names)):
         for d_list in data.values():
             for d in d_list:
+                c, nr_searched, nr_exp = colours[cache_name], f(d), g(d)
                 xs.append(cache_name)
-                ys.append(f(d))
-                cs.append(colours.get(cache_name, "dimgrey"))
-    bar = ax.bar(xs, ys, color=cs, log=True)
-    ax.bar_label(bar, labels=[prettify_number(y) for y in ys])
+                exp_array.append(nr_exp)
+                searched_array.append(nr_searched)
+                cs.append(c)
+    botbar = ax.bar(xs, exp_array, color=cs, log=True)
+    ax.bar_label(
+        botbar, labels=[prettify_number(y) for y in exp_array], label_type="center"
+    )
+    topbar = ax.bar(
+        xs,
+        # The height is the difference between the height we want and
+        # the bottom.
+        np.array(searched_array) - np.array(exp_array),
+        # We make these 50% transparent.
+        color=[f"{c}80" for c in cs],
+        log=True,
+        bottom=exp_array,
+    )
+    ax.bar_label(topbar, labels=[prettify_number(y) for y in searched_array])
     ax.set_xlabel("Expiration Policy")
     ax.set_ylabel("Searched Objects")
 
 
 def plot_all_compute_usage():
     """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
+    version = 2
     INPUTS = lambda c: [
         Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-Memcached-cluster{c}-v0-s0.001.out"
+            f"/home/david/projects/online_mrc/myresults/accurate/result-Memcached-cluster{c}-v{version}-s0.001.out"
         ),
         Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-Redis-cluster{c}-v0-s0.001.out"
+            f"/home/david/projects/online_mrc/myresults/accurate/result-Redis-cluster{c}-v{version}-s0.001.out"
         ),
         Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-CacheLib-cluster{c}-v0-s0.001.out"
+            f"/home/david/projects/online_mrc/myresults/accurate/result-CacheLib-cluster{c}-v{version}-s0.001.out"
         ),
         Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-TTL-cluster{c}-v0-s0.001.out"
+            f"/home/david/projects/online_mrc/myresults/accurate/result-TTL-cluster{c}-v{version}-s0.001.out"
         ),
     ]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
@@ -430,7 +568,11 @@ def plot_all_compute_usage():
         [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
     )
     COLOURS = dict(
-        Optimal="black", CacheLib="#f47629", Memcached="#288d82", Redis="#ff4438"
+        Optimal="black",
+        CacheLib="#f47629",
+        Memcached="#288d82",
+        Redis="#ff4438",
+        Psyche="#808080",
     )
     for r in range(rows):
         for c in range(cols):
@@ -450,7 +592,8 @@ def plot_all_compute_usage():
             ax = axes[r, c]
             plot_cpu_usage(ax, all_data, COLOURS, NAMES)
             ax.set_title(f"Cluster #{cluster}")
-            ax.set_ylim(bottom=250e3, top=20e12)
+            ax.set_ylim(bottom=1e6, top=20e12)
+            ax.set_yticks([1e3, 1e6, 1e9, 1e12])
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
@@ -459,13 +602,14 @@ def main():
     parser.add_argument("--input")
     args = parser.parse_args()
 
-    # plot_remaining_lifetime_vs_lru_position()
-    # plot_accurate_vs_lazy_ttl_memory_usage()
-    # plot_accurate_vs_lazy_ttl_mrc()
-    # plot_remaining_ttl_vs_lru_position_for_times()
+    plot_remaining_lifetime_vs_lru_position()
+    plot_accurate_vs_lazy_ttl_memory_usage()
+    plot_accurate_vs_lazy_ttl_mrc()
+    plot_remaining_ttl_vs_lru_position_for_times()
 
     plot_all_mrc()
     plot_all_compute_usage()
+    plot_all_memory_usage()
 
 
 if __name__ == "__main__":
