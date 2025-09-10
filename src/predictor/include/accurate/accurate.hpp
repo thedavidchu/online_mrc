@@ -110,7 +110,7 @@ public:
             {"Statistics", statistics_.json()},
             {"Extras", map2str(extras)},
             {"Expiration Work [#]", std::to_string(expiration_work_)},
-            {"Expirations [#]", std::to_string(expiration_work_)},
+            {"Expirations [#]", std::to_string(nr_expirations_)},
         });
     }
 
