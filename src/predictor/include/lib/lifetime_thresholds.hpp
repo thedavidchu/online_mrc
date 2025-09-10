@@ -7,6 +7,7 @@
 
 #include "cpp_lib/duration.hpp"
 #include "cpp_lib/histogram.hpp"
+#include "cpp_lib/temporal_data.hpp"
 #include "cpp_lib/temporal_sampler.hpp"
 #include "cpp_lib/util.hpp"
 #include "math/doubles_are_equal.h"
@@ -97,6 +98,36 @@ class LifeTimeThresholds {
             doubles_are_close(up_cnt, std::get<2>(coarse_histogram_), error));
     }
 
+    void
+    measure_statistics(uint64_t const current_time_ms)
+    {
+        temporal_times_ms_.update(current_time_ms);
+        // Global histogram statistics.
+        temporal_histogram_size_.update(histogram_.size());
+        temporal_mean_eviction_time_ms_.update(histogram_.mean());
+        temporal_median_eviction_time_ms_.update(histogram_.percentile(0.5));
+        temporal_75p_eviction_time_ms_.update(histogram_.percentile(0.75));
+        temporal_25p_eviction_time_ms_.update(histogram_.percentile(0.25));
+        temporal_min_eviction_time_ms_.update(histogram_.min());
+        temporal_max_eviction_time_ms_.update(histogram_.max());
+        // Current histogram statistics.
+        temporal_ch_histogram_size_.update(histogram_.size());
+        temporal_ch_mean_eviction_time_ms_.update(histogram_.mean());
+        temporal_ch_median_eviction_time_ms_.update(histogram_.percentile(0.5));
+        temporal_ch_75p_eviction_time_ms_.update(histogram_.percentile(0.75));
+        temporal_ch_25p_eviction_time_ms_.update(histogram_.percentile(0.25));
+        temporal_ch_min_eviction_time_ms_.update(histogram_.min());
+        temporal_ch_max_eviction_time_ms_.update(histogram_.max());
+    }
+
+    void
+    measure_threshold_statistics(uint64_t const current_time_ms)
+    {
+        temporal_refresh_times_ms_.update(current_time_ms);
+        temporal_refresh_low_threshold_ms_.update(lower_threshold_);
+        temporal_refresh_high_threshold_ms_.update(upper_threshold_);
+    }
+
 public:
     /// @todo   Allow setting the starting time. This is more for
     ///         redundancy to make sure everything is safe.
@@ -134,6 +165,13 @@ public:
                             uint64_t const size,
                             uint64_t const current_time_ms)
     {
+        // Before we do anything, we want to measure some statistics!
+        if (temporal_sampler_.should_sample(current_time_ms)) {
+            measure_statistics(current_time_ms);
+            current_histogram_.reset();
+        }
+        current_histogram_.update(lifetime);
+
         // The current_time_ms was formerly used to check if we should
         // update the thresholds; however, this is redundant with the
         // check that supplies the thresholds.
@@ -186,6 +224,7 @@ public:
         bool r = false;
         if (should_refresh(current_time_ms)) {
             refresh_thresholds();
+            measure_threshold_statistics(current_time_ms);
             r = true;
         }
         return {lower_threshold_, upper_threshold_, r};
@@ -235,6 +274,42 @@ public:
             {"Samples Since Threshold Refresh [#]",
              format_engineering(since_refresh())},
             {"LRU Lifetime Evictions [#]", format_engineering(evictions())},
+            // Temporal Threshold Statistics.
+            {"Temporal Refresh Times [ms]", temporal_refresh_times_ms_.str()},
+            {"Temporal Refresh Low Threshold [ms]",
+             temporal_refresh_low_threshold_ms_.str()},
+            {"Temporal Refresh High Threshold [ms]",
+             temporal_refresh_high_threshold_ms_.str()},
+            // Other temporal statistics.
+            {"Temporal Times [ms]", temporal_times_ms_.str()},
+            {"Temporal Histogram Sizes [#]", temporal_histogram_size_.str()},
+            {"Temporal Mean Eviction Times [ms]",
+             temporal_mean_eviction_time_ms_.str()},
+            {"Temporal Median Eviction Times [ms]",
+             temporal_median_eviction_time_ms_.str()},
+            {"Temporal 75th-percentile Eviction Times [ms]",
+             temporal_75p_eviction_time_ms_.str()},
+            {"Temporal 25th-percentile Eviction Times [ms]",
+             temporal_25p_eviction_time_ms_.str()},
+            {"Temporal Min Eviction Times [ms]",
+             temporal_min_eviction_time_ms_.str()},
+            {"Temporal Max Eviction Times [ms]",
+             temporal_max_eviction_time_ms_.str()},
+            // Current histogram (C.H.) statistics.
+            {"Temporal Current Histogram Histogram Size [#]",
+             temporal_ch_histogram_size_.str()},
+            {"Temporal Current Histogram Mean Eviction Times [ms]",
+             temporal_ch_mean_eviction_time_ms_.str()},
+            {"Temporal Current Histogram Median Eviction Times [ms]",
+             temporal_ch_median_eviction_time_ms_.str()},
+            {"Temporal Current Histogram 75th-percentile Eviction Times [ms]",
+             temporal_ch_75p_eviction_time_ms_.str()},
+            {"Temporal Current Histogram 25th-percentile Eviction Times [ms]",
+             temporal_ch_25p_eviction_time_ms_.str()},
+            {"Temporal Current Histogram Min Eviction Times [ms]",
+             temporal_ch_min_eviction_time_ms_.str()},
+            {"Temporal Current Histogram Max Eviction Times [ms]",
+             temporal_ch_max_eviction_time_ms_.str()},
         });
     }
 
@@ -257,4 +332,34 @@ private:
     TemporalSampler refresher_;
     double const decay_;
     double const refresh_error_threshold_;
+
+    // Statistics on thresholds.
+    TemporalData temporal_refresh_times_ms_;
+    TemporalData temporal_refresh_low_threshold_ms_;
+    TemporalData temporal_refresh_high_threshold_ms_;
+
+    // Temporal sampler.
+    TemporalSampler temporal_sampler_{Duration::HOUR, false, false};
+
+    // Global histogram statistics.
+    TemporalData temporal_times_ms_;
+    TemporalData temporal_histogram_size_;
+    TemporalData temporal_mean_eviction_time_ms_;
+    TemporalData temporal_median_eviction_time_ms_;
+    TemporalData temporal_75p_eviction_time_ms_;
+    TemporalData temporal_25p_eviction_time_ms_;
+    TemporalData temporal_min_eviction_time_ms_;
+    TemporalData temporal_max_eviction_time_ms_;
+
+    // Current histogram for most recent values within temporal sample.
+    // Reset after every sample.
+    Histogram current_histogram_;
+    // Current histogram (C.H.) statistics.
+    TemporalData temporal_ch_histogram_size_;
+    TemporalData temporal_ch_mean_eviction_time_ms_;
+    TemporalData temporal_ch_median_eviction_time_ms_;
+    TemporalData temporal_ch_75p_eviction_time_ms_;
+    TemporalData temporal_ch_25p_eviction_time_ms_;
+    TemporalData temporal_ch_min_eviction_time_ms_;
+    TemporalData temporal_ch_max_eviction_time_ms_;
 };
