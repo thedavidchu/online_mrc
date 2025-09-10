@@ -347,19 +347,32 @@ private:
     remove_expired(CacheAccess const &access) override final
     {
         remove_expired_from_tree(access);
-        // TODO This function is actually called 10 times per second.
-        //      However, SHARDS reduces the number of objects by 1000x,
-        //      so we should adjust the number of samples accordingly.
-        while (last_removal_time_ms_ < access.timestamp_ms) {
+        if (true) {
+            // Simply dividing the number of expiry cycles we start by
+            // the SHARDS ratio lets our memory usage drift too high.
+            // Since the expiry cycle is mostly self-sustaining, we
+            // just run it once per second. See below for a possibly
+            // clever improvement, but I'm too lazy.
             while (remove_expired_via_sampling(access))
                 ;
-            // Add another 100 ms so that we sample 10x per second.  But also
-            // adjust the rate of starting expiry cycles based on the SHARDS
-            // sampling. Starting expiry cycles lowers the number of expired
-            // objects below the original 10% threshold because they are run
-            // regardless. Maybe our implementation could do this instead (e.g.
-            // conditionally evict if more than 10% are expired).
-            last_removal_time_ms_ += 100 * shards_.scale;
+            last_removal_time_ms_ = access.timestamp_ms;
+        }
+        if (false) {
+            // SHARDS reduces the number of objects by 1000x,
+            // so we should adjust the expiry cycles accordingly.
+            while (last_removal_time_ms_ < access.timestamp_ms) {
+                while (remove_expired_via_sampling(access))
+                    ;
+                // Add another 100 ms so that we sample 10x per second.  But
+                // also adjust the rate of starting expiry cycles based on the
+                // SHARDS sampling. Starting expiry cycles lowers the number of
+                // expired objects below the original 10% threshold because they
+                // are run regardless. However, the expiry cycle is also self-
+                // sustaining. Maybe our implementation could conditionally
+                // evict if more than 10% are expired; otherwise, do no action.
+                // This negates the effect of too many expiry cycle starts.
+                last_removal_time_ms_ += 100 * shards_.scale;
+            }
         }
     }
 
