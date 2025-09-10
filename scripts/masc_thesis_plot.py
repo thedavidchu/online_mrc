@@ -494,6 +494,76 @@ def plot_all_memory_usage():
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
+def plot_compare_memory_usage(plot_absolute: bool = True):
+    """Plot comparison of memory for Proactive-TTL and Psyche."""
+    INPUT = lambda policy, c: (
+        f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v0-s0.001/result-cluster{c}.out"
+    )
+    LRU_OUTPUT = Path("all-lru-compare-memory.pdf")
+    LFU_OUTPUT = Path("all-lfu-compare-memory.pdf")
+
+    def plot_me(policy, input_path, output_path):
+        rows, cols = 6, 3
+        fig, axes = plt.subplots(rows, cols, squeeze=False)
+        fig.set_size_inches(6 * cols, 5 * rows)
+        clusters = iter(
+            [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
+        )
+        for r in range(rows):
+            for c in range(cols):
+                ax = axes[r, c]
+                cluster = next(clusters)
+                data = parse_data(Path(input_path(policy, cluster)))
+                psyche_dlist = data[(0.5, 0.5, "EvictionTime")]
+                accurate_dlist = data[(0.0, 1.0, "EvictionTime")]
+                # Only plot these cache sizes.
+                colours = {
+                    "1.0 GiB": "red",
+                    "4.0 GiB": "orange",
+                    "8.0 GiB": "green",
+                }
+                for psyche_d, acc_d in zip(psyche_dlist, accurate_dlist):
+                    times = psyche_d["CacheStatistics"]["Temporal Times [ms]"]
+                    psyche_cnt = np.array(
+                        psyche_d["CacheStatistics"]["Temporal Sizes [B]"]
+                    )
+                    acc_cnt = np.array(acc_d["CacheStatistics"]["Temporal Sizes [B]"])
+                    shards_scale = acc_d["Extras"]["SHARDS"][".scale"]
+                    sz = get_stat(acc_d, ["Capacity [B]"]) * shards_scale / (1 << 30)
+                    csize = f"{sz:.3} GiB"
+                    if csize in colours:
+                        colour = colours[csize]
+                    else:
+                        continue
+                    if plot_absolute:
+                        ax.plot(
+                            times,
+                            shards_scale * acc_cnt / (1 << 30),
+                            color=colour,
+                            label=csize,
+                        )
+                        ax.plot(
+                            times,
+                            shards_scale * psyche_cnt / (1 << 30),
+                            "--",
+                            color=colour,
+                            label=csize,
+                        )
+                        ax.axhline(sz, color=colour, linestyle="dotted")
+                    else:
+                        diff = (psyche_cnt - acc_cnt) * shards_scale
+                        ax.plot(times, diff / (1 << 30), color=colour, label=csize)
+                ax.axhline(0, color="black", linestyle="dashed")
+                ax.legend()
+                ax.set_xlabel("Time [h]")
+                ax.set_ylabel("Extra Memory [GiB]")
+                ax.set_title(f"Cluster #{cluster}")
+        fig.savefig(output_path, bbox_inches="tight")
+
+    plot_me("lru", INPUT, LRU_OUTPUT)
+    plot_me("lfu", INPUT, LFU_OUTPUT)
+
+
 ################################################################################
 ### Metadata Usage
 ################################################################################
@@ -524,7 +594,7 @@ def plot_all_metadata_usage():
                 # Only plot these cache sizes.
                 colours = {
                     "1.0 GiB": "red",
-                    "4.0 GiB": "yellow",
+                    "4.0 GiB": "orange",
                     "8.0 GiB": "green",
                 }
                 for psyche_d, acc_d in zip(psyche_dlist, accurate_dlist):
@@ -676,8 +746,9 @@ def main():
 
         plot_all_compute_usage()
         plot_all_memory_usage()
-    plot_all_mrc()
+    # plot_all_mrc()
     # plot_all_metadata_usage()
+    plot_compare_memory_usage()
 
 
 if __name__ == "__main__":
