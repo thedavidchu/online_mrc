@@ -345,10 +345,10 @@ def plot_all_mrc():
 
     # Plot LRU MRCs
     def plot_me(policy, output_path):
-        rows, cols = 6, 3
+        rows, cols = 4, 3
         fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(ALL_CLUSTERS)
+        clusters = iter(OK_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -509,10 +509,10 @@ def plot_compare_memory_usage(plot_absolute: bool = True):
     LFU_OUTPUT = Path("all-lfu-compare-memory.pdf")
 
     def plot_me(policy, input_path, output_path):
-        rows, cols = 6, 3
+        rows, cols = 4, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(ALL_CLUSTERS)
+        clusters = iter(OK_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -577,10 +577,10 @@ def plot_all_total_memory_usage_comparison():
     LFU_OUTPUT = Path("all-lfu-total-memory-savings.pdf")
 
     def plot_me(policy, input_path, output_path):
-        rows, cols = 6, 3
+        rows, cols = 4, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(ALL_CLUSTERS)
+        clusters = iter(OK_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -642,10 +642,10 @@ def plot_all_metadata_usage():
     LFU_OUTPUT = Path("all-lfu-metadata.pdf")
 
     def plot_me(policy, input_path, output_path):
-        rows, cols = 6, 3
+        rows, cols = 4, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.set_size_inches(6 * cols, 5 * rows)
-        clusters = iter(ALL_CLUSTERS)
+        clusters = iter(OK_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
                 ax = axes[r, c]
@@ -811,6 +811,87 @@ def plot_all_periodic_ttl_compute_usage():
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
+################################################################################
+### LFU/TTL Frequency Analysis
+################################################################################
+
+
+def plot_lfu_ttl_frequency_analysis():
+    INPUT = lambda f: Path(
+        f"/home/david/projects/online_mrc/myresults/lfu_ttl_frequency_study/result-lfu-cluster52-v{f}-s0.001.out"
+    )
+    OUTPUT = Path("cluster52_frequency_study.pdf")
+    FREQ = [1, 8, 64, 512]
+    fig, axes = plt.subplots(1, len(FREQ), sharex=True, sharey=True, squeeze=False)
+    for i, f in enumerate(FREQ):
+        ipath = INPUT(f)
+        all_data = parse_data(ipath)
+        axes[0, i].plot()
+
+    def nth(x: int):
+        if str(x).endswith("1"):
+            return f"{x}st"
+        if str(x).endswith("1"):
+            return f"{x}nd"
+        if str(x).endswith("1"):
+            return f"{x}rd"
+        return f"{x}th"
+
+    expiration_policy = lambda f: {
+        (0.0, 0.0): f"{nth(f)}-order LFU/Lazy-TTL",
+        (0.0, 1.0): f"{nth(f)}-order LFU/Proactive-TTL",
+        (1.0, 1.0): "TTL-only",
+        (0.5, 0.5): f"Psyche ({nth(f)}-order LFU/Proactive-TTL)",
+    }
+
+    rows, cols = 1, 4
+    fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
+    fig.set_size_inches(6 * cols, 5 * rows)
+    freq = iter(FREQ)
+    for r in range(rows):
+        for c in range(cols):
+            ax = axes[r, c]
+            f = next(freq)
+            data = parse_data(Path(INPUT(f)))
+            # Plot oracle.
+            oracle_dlist = data[(0.0, 1.0, "EvictionTime")]
+            mrc = {}
+            get_mr = get_scaled_fixed_data(
+                lambda d: get_stat(d, ["Oracle", "Miss Ratio"]),
+                IDENTITY_X,
+                shards_adj,
+            )
+            get_c = get_scaled_fixed_data(
+                lambda d: get_stat(d, ["Oracle", "Capacity [B]"]),
+                *GiB_SHARDS_ARGS,
+            )
+            for d in oracle_dlist:
+                mrc[get_c(d)] = get_mr(d)
+            ax.plot(mrc.keys(), mrc.values(), "g-x", label="LFU/Proactive-TTL")
+            plot(
+                ax,
+                "lfu",
+                data,
+                *CAPACITY_GIB_ARGS,
+                "Miss Ratio",
+                lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
+                scale_y_func=IDENTITY_X,
+                fix_y_func=shards_adj,
+                set_ylim_to_one=True,
+                label_func=lambda p, l, u, e: expiration_policy(f)[(l, u)],
+            )
+            ax.set_title(f"Frequency {f}")
+    fig.savefig(OUTPUT, bbox_inches="tight")
+
+
+################################################################################
+### ABLATION STUDY
+################################################################################
+
+# TODO:
+# - Show decay works
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input")
@@ -827,6 +908,8 @@ def main():
     plot_all_metadata_usage()
     plot_compare_memory_usage()
     plot_all_total_memory_usage_comparison()
+
+    plot_lfu_ttl_frequency_analysis()
 
 
 if __name__ == "__main__":
