@@ -205,6 +205,8 @@ def parse_data(
                 data = json.loads(line[2:])
             except json.decoder.JSONDecodeError as e:
                 print(f"bad JSON: '{line[2:]}'")
+                print(f"'{line[e.colno - 50 : e.colno + 50]}'")
+                print(" " + ">" * 50 + "<" * 50 + " ")
                 raise e
 
             accum.append(data)
