@@ -136,13 +136,12 @@ public:
     ///         the defaults (0, INFINITY).
     LifeTimeThresholds(double const lower_ratio,
                        double const upper_ratio,
-                       uint64_t const refresh_period_ms = 15 * Duration::MINUTE,
-                       double const decay = 0.1,
+                       uint64_t const refresh_period_ms = 60 * Duration::MINUTE,
+                       double const decay = 0.5,
                        double const refresh_error_threshold = 0.01)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
           refresher_{refresh_period_ms, false},
-          // Decaying by 60% every 15 minutes == decay to 10% every hour.
           decay_{decay},
           refresh_error_threshold_{refresh_error_threshold}
     {
@@ -153,8 +152,10 @@ public:
         if (lower_ratio == 0 && upper_ratio == 0) {
             lower_threshold_ = 0;
             upper_threshold_ = 0;
-        }
-        if (lower_ratio == 1.0 && upper_ratio == 1.0) {
+        } else if (lower_ratio == 1.0 && upper_ratio == 1.0) {
+            lower_threshold_ = INFINITY;
+            upper_threshold_ = INFINITY;
+        } else if (lower_ratio == upper_ratio) {
             lower_threshold_ = INFINITY;
             upper_threshold_ = INFINITY;
         }
@@ -197,7 +198,7 @@ public:
     refresh_thresholds()
     {
         auto x = recalculate_thresholds();
-        histogram_.decay_histogram(/*alpha=*/decay_);
+        histogram_.decay_histogram(/*alpha=*/1 - decay_);
         lower_threshold_ = x.first;
         upper_threshold_ = x.second;
         coarse_histogram_ = {0, 0, 0};
@@ -264,9 +265,9 @@ public:
     json() const
     {
         std::string coarse_hist_str{
-            "[" + std::to_string(std::get<0>(coarse_histogram_)) + ", " +
-            std::to_string(std::get<1>(coarse_histogram_)) + ", " +
-            std::to_string(std::get<2>(coarse_histogram_)) + "]"};
+            "[" + val2str(std::get<0>(coarse_histogram_)) + ", " +
+            val2str(std::get<1>(coarse_histogram_)) + ", " +
+            val2str(std::get<2>(coarse_histogram_)) + "]"};
         return map2str(std::vector<std::pair<std::string, std::string>>{
             {"Histogram", histogram_.json()},
             {"Coarse Histogram", coarse_hist_str},
