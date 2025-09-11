@@ -35,6 +35,8 @@ from plot_predictive_cache import (
     COLOUR_MAP,
 )
 
+MASC_DIR = Path("masc_thesis/")
+
 # Clusters with lots of objects and some expirations.
 OK_CLUSTERS = sorted(
     {6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52}
@@ -75,7 +77,7 @@ def plot_ttl_vs_lru():
     INPUT = Path(
         "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
     )
-    OUTPUT = Path("cluster19-ttl-vs-lru.pdf")
+    OUTPUT = MASC_DIR / Path("cluster19-ttl-vs-lru.pdf")
 
     data = parse_data(INPUT)
     capacities = [1.0 * GiB, 4.0 * GiB]
@@ -152,7 +154,7 @@ def plot_accurate_vs_lazy_ttl_memory_usage():
     INPUT = Path(
         "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
     )
-    OUTPUT = Path("cluster19-accurate-vs-lazy-ttl-memory-usage.pdf")
+    OUTPUT = MASC_DIR / Path("cluster19-accurate-vs-lazy-ttl-memory-usage.pdf")
 
     data = parse_data(INPUT)
     capacities = [1.0 * GiB, 4.0 * GiB, 8.0 * GiB]
@@ -205,7 +207,7 @@ def plot_accurate_vs_lazy_ttl_mrc():
     INPUT = Path(
         "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
     )
-    OUTPUT = Path("cluster19-accurate-vs-lazy-ttl-miss-ratio-curve.pdf")
+    OUTPUT = MASC_DIR / Path("cluster19-accurate-vs-lazy-ttl-miss-ratio-curve.pdf")
     ratios = [(1.0, 1.0)]
     if False:
         ratios = [(0.0, 0.0)]
@@ -259,7 +261,7 @@ def plot_ttl_vs_lru_changes():
         for t in times
     ]
     TITLES = [f"{t} hours" for t in times]
-    OUTPUT = Path("cluster19-ttl-vs-lru-changes.pdf")
+    OUTPUT = MASC_DIR / Path("cluster19-ttl-vs-lru-changes.pdf")
 
     fig, axes = plt.subplots(1, len(INPUTS), sharex=True, sharey=True, squeeze=False)
     fig.set_size_inches(len(INPUTS) * 5, 5)
@@ -323,8 +325,8 @@ def plot_all_mrc():
     INPUT = lambda policy, c: (
         f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v0-s0.001/result-cluster{c}.out"
     )
-    LRU_OUTPUT = Path("all-lru-mrc.pdf")
-    LFU_OUTPUT = Path("all-lfu-mrc.pdf")
+    LRU_OUTPUT = MASC_DIR / Path("all-lru-mrc.pdf")
+    LFU_OUTPUT = MASC_DIR / Path("all-lfu-mrc.pdf")
 
     expiration_policy = lambda policy: {
         (0.0, 0.0): (
@@ -459,7 +461,7 @@ def plot_all_periodic_ttl_memory_usage():
         ),
     ]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
-    OUTPUT = Path("all-periodic-ttl-memory-usage.pdf")
+    OUTPUT = MASC_DIR / Path("all-periodic-ttl-memory-usage.pdf")
 
     expiration_policy = lambda policy: {
         (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
@@ -505,8 +507,8 @@ def plot_compare_memory_usage(plot_absolute: bool = True):
     INPUT = lambda policy, c: (
         f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v0-s0.001/result-cluster{c}.out"
     )
-    LRU_OUTPUT = Path("all-lru-compare-memory.pdf")
-    LFU_OUTPUT = Path("all-lfu-compare-memory.pdf")
+    LRU_OUTPUT = MASC_DIR / Path("all-lru-compare-memory.pdf")
+    LFU_OUTPUT = MASC_DIR / Path("all-lfu-compare-memory.pdf")
 
     def plot_me(policy, input_path, output_path):
         rows, cols = 4, 3
@@ -573,8 +575,8 @@ def plot_all_total_memory_usage_comparison():
     INPUT = lambda policy, c: (
         f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v0-s0.001/result-cluster{c}.out"
     )
-    LRU_OUTPUT = Path("all-lru-total-memory-savings.pdf")
-    LFU_OUTPUT = Path("all-lfu-total-memory-savings.pdf")
+    LRU_OUTPUT = MASC_DIR / Path("all-lru-total-memory-savings.pdf")
+    LFU_OUTPUT = MASC_DIR / Path("all-lfu-total-memory-savings.pdf")
 
     def plot_me(policy, input_path, output_path):
         rows, cols = 4, 3
@@ -638,8 +640,8 @@ def plot_all_metadata_usage():
     INPUT = lambda policy, c: (
         f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v0-s0.001/result-cluster{c}.out"
     )
-    LRU_OUTPUT = Path("all-lru-metadata.pdf")
-    LFU_OUTPUT = Path("all-lfu-metadata.pdf")
+    LRU_OUTPUT = MASC_DIR / Path("all-lru-metadata.pdf")
+    LFU_OUTPUT = MASC_DIR / Path("all-lfu-metadata.pdf")
 
     def plot_me(policy, input_path, output_path):
         rows, cols = 4, 3
@@ -768,7 +770,7 @@ def plot_all_periodic_ttl_compute_usage():
         ),
     ]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
-    OUTPUT = Path("all-periodic-ttl-compute-usage.pdf")
+    OUTPUT = MASC_DIR / Path("all-periodic-ttl-compute-usage.pdf")
 
     expiration_policy = lambda policy: {
         (0.0, 0.0): f"{policy.upper()}/Lazy-TTL",
@@ -820,7 +822,7 @@ def plot_lfu_ttl_frequency_analysis():
     INPUT = lambda f: Path(
         f"/home/david/projects/online_mrc/myresults/lfu_ttl_frequency_study/result-lfu-cluster52-v{f}-s0.001.out"
     )
-    OUTPUT = Path("cluster52_frequency_study.pdf")
+    OUTPUT = MASC_DIR / Path("cluster52_frequency_study.pdf")
     FREQ = [1, 8, 64, 512]
     fig, axes = plt.subplots(1, len(FREQ), sharex=True, sharey=True, squeeze=False)
     for i, f in enumerate(FREQ):
@@ -884,6 +886,67 @@ def plot_lfu_ttl_frequency_analysis():
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
+def plot_lfu_ttl_frequency_vs_shards(use_cdf: bool = False):
+    INPUT_1000 = Path(
+        f"/home/david/projects/online_mrc/myresults/lfu_ttl_frequency_study/result-lfu-cluster52-v1-s0.001.out"
+    )
+    INPUT_100 = Path(
+        f"/home/david/projects/online_mrc/myresults/lfu_ttl_frequency_study/result-lfu-cluster52-v1-s0.01.out"
+    )
+    OUTPUT = MASC_DIR / Path("cluster52_frequency_vs_shards.pdf")
+    object = parse_data(INPUT_1000)[(0.0, 1.0, "EvictionTime")][0]
+    oracle_thresholds = object["Oracle"]["Lifetime Thresholds"]
+    shards = object["Extras"]["SHARDS"][".scale"]
+    cap_1000 = get_stat(object, ["Capacity [B]"]) * shards / (1 << 30)
+    hist_1000 = {
+        int(k): v["Histogram"]["total"] * shards for k, v in oracle_thresholds.items()
+    }
+    object = parse_data(INPUT_100)[(0.0, 1.0, "EvictionTime")][0]
+    oracle_thresholds = object["Oracle"]["Lifetime Thresholds"]
+    shards = object["Extras"]["SHARDS"][".scale"]
+    cap_100 = get_stat(object, ["Capacity [B]"]) * shards / (1 << 30)
+    hist_100 = {
+        int(k): v["Histogram"]["total"] * shards for k, v in oracle_thresholds.items()
+    }
+
+    def cdf_percent(hist):
+        mycdf = {}
+        total = 0
+        for f, nr_evict in hist.items():
+            total += nr_evict
+            mycdf[f] = total
+        return {k: 100 * (1 - v / total) for k, v in mycdf.items()}
+
+    fig, ax = plt.subplots()
+    if use_cdf:
+        cdf_1000 = cdf_percent(hist_1000)
+        cdf_100 = cdf_percent(hist_100)
+        ax.semilogy(
+            cdf_1000.keys(), cdf_1000.values(), color="lightgrey", label="SHARDS: 0.001"
+        )
+        ax.semilogy(
+            cdf_100.keys(), cdf_100.values(), color="darkgrey", label="SHARDS: 0.01"
+        )
+        ax.set_ylabel("Percent of Evictions with Larger Frequencies [%]")
+    else:
+        ax.semilogy(
+            hist_1000.keys(),
+            hist_1000.values(),
+            color="lightgrey",
+            label="SHARDS: 0.001",
+        )
+        ax.semilogy(
+            hist_100.keys(), hist_100.values(), color="darkgrey", label="SHARDS: 0.01"
+        )
+        ax.set_ylabel("Eviction [#]")
+    sz_1000, sz_100 = f"{cap_1000:.3} GiB", f"{cap_100:.3} GiB"
+    assert sz_1000 == sz_100, f"{sz_1000} vs {sz_100}"
+    fig.suptitle(f"Frequency Evictions for {sz_1000}")
+    ax.set_xlabel("Frequency")
+    ax.legend()
+    fig.savefig(OUTPUT, bbox_inches="tight")
+
+
 ################################################################################
 ### ABLATION STUDY
 ################################################################################
@@ -897,19 +960,22 @@ def main():
     parser.add_argument("--input")
     args = parser.parse_args()
 
-    plot_ttl_vs_lru()
-    plot_accurate_vs_lazy_ttl_memory_usage()
-    plot_accurate_vs_lazy_ttl_mrc()
-    plot_ttl_vs_lru_changes()
+    MASC_DIR.mkdir(exist_ok=True)
 
-    plot_all_mrc()
-    plot_all_periodic_ttl_compute_usage()
-    plot_all_periodic_ttl_memory_usage()
-    plot_all_metadata_usage()
-    plot_compare_memory_usage()
-    plot_all_total_memory_usage_comparison()
+    # plot_ttl_vs_lru()
+    # plot_accurate_vs_lazy_ttl_memory_usage()
+    # plot_accurate_vs_lazy_ttl_mrc()
+    # plot_ttl_vs_lru_changes()
 
-    plot_lfu_ttl_frequency_analysis()
+    # plot_all_mrc()
+    # plot_all_periodic_ttl_compute_usage()
+    # plot_all_periodic_ttl_memory_usage()
+    # plot_all_metadata_usage()
+    # plot_compare_memory_usage()
+    # plot_all_total_memory_usage_comparison()
+
+    # plot_lfu_ttl_frequency_analysis()
+    plot_lfu_ttl_frequency_vs_shards()
 
 
 if __name__ == "__main__":
