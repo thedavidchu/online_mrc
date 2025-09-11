@@ -283,8 +283,8 @@ public:
     json() const
     {
         return map2str(std::vector<std::pair<std::string, std::string>>{
-            {".type", "Histogram"},
-            {"total", std::to_string(total_)},
+            {".type", "\"Histogram\""},
+            {"total", val2str(total_)},
             {"histogram", map2str(histogram_)},
         });
     }

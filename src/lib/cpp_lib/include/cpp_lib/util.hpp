@@ -6,6 +6,8 @@
 #pragma once
 
 #include "arrays/is_last.h"
+#include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -78,6 +80,24 @@ val2str(T const val)
     return ss.str();
 }
 
+/// @brief  Format doubles for Python's JSON parser.
+template <>
+inline std::string
+val2str(double const val)
+{
+    if (std::isinf(val)) {
+        if (val > 0) {
+            return "Infinity";
+        } else {
+            return "-Infinity";
+        }
+    } else if (std::isnan(val)) {
+        return "NaN";
+    } else {
+        return std::to_string(val);
+    }
+}
+
 template <typename T, typename S = T>
 static inline std::string
 vec2str(std::vector<T> const &vec,
@@ -93,6 +113,33 @@ vec2str(std::vector<T> const &vec,
             ss << "\"";
         }
         ss << static_cast<S>(vec[i]);
+        if (quote_value) {
+            ss << "\"";
+        }
+        if (!is_last(i, vec.size())) {
+            ss << sep;
+        }
+    }
+    ss << close;
+    return ss.str();
+}
+
+/// @brief  Print vec<double> with Python's JSON values for inf, -inf, and nan.
+template <>
+inline std::string
+vec2str(std::vector<double> const &vec,
+        std::string const open,
+        std::string const close,
+        std::string const sep,
+        bool const quote_value)
+{
+    std::stringstream ss;
+    ss << open;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (quote_value) {
+            ss << "\"";
+        }
+        ss << val2str(static_cast<double>(vec[i]));
         if (quote_value) {
             ss << "\"";
         }
