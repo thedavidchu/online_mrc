@@ -108,6 +108,7 @@ private:
             statistics_.no_room_evict(m.size_, 0);
             break;
         default:
+            LOGGER_FATAL("unexpected eviction cause: %d", cause);
             assert(0 && "impossible");
         }
 
