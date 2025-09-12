@@ -79,7 +79,7 @@ GiB_SHARDS_ARGS = (
 )
 # Describe an axis using the SHARDS-adjusted maximum cache capacity.
 CAPACITY_GIB_ARGS = (
-    "Capacity [GiB]",
+    "Cache Size [GiB]",
     lambda d: get_stat(d, ["Capacity [B]"]),
     SCALE_B_TO_GiB,
     SCALE_SHARDS_FUNC,
@@ -181,7 +181,15 @@ def shards_adj(x: float, d) -> float:
     # added the hist_adj. This means that we divide all values in
     # this histogram by this, hence the division here.
     mrc_adj = hist_adj / expected_sampled
-    return x + mrc_adj
+    if mrc_adj >= 0.99:
+        warn("SHARDS adjustment too high, skipping...")
+        return x
+    r = x + mrc_adj
+    if r > 1.0:
+        return 1.0
+    if r < 0.0:
+        return 0.0
+    return r
 
 
 def parse_data(
