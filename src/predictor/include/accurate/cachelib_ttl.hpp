@@ -71,36 +71,38 @@ private:
     void
     remove_expired(CacheAccess const &access) override final
     {
-        if (!sampler_.should_sample(access.timestamp_ms)) {
-            return;
-        }
-        // CacheLib performs a scan of the entire cache. We must do this before
-        // removing the keys
-        expiration_work_ += map_.size();
-        std::vector<uint64_t> victims;
-        for (auto [exp_tm, key] : ttl_queue_) {
-            if (exp_tm >= access.timestamp_ms) {
-                break;
+        for (; last_scan_time_ms_ <= access.timestamp_ms;
+             last_scan_time_ms_ += 10 * Duration::SECOND) {
+            std::vector<uint64_t> victims;
+            // CacheLib performs a scan of the entire cache. We must do this
+            // before removing the keys
+            expiration_work_ += map_.size();
+            for (auto [exp_tm, key] : ttl_queue_) {
+                if (exp_tm >= last_scan_time_ms_) {
+                    break;
+                }
+                victims.push_back(key);
             }
-            victims.push_back(key);
+            // One cannot erase elements from a multimap while also iterating!
+            for (auto victim : victims) {
+                CacheAccess pseudo{access};
+                pseudo.timestamp_ms = last_scan_time_ms_;
+                remove(victim, EvictionCause::ProactiveTTL, pseudo);
+            }
+            nr_expirations_ += victims.size();
         }
-        // One cannot erase elements from a multimap while also iterating!
-        for (auto victim : victims) {
-            remove(victim, EvictionCause::ProactiveTTL, access);
-        }
-        nr_expirations_ += victims.size();
     }
 
 public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
     CacheLibTTL(size_t const capacity_bytes, double const shards_sampling_ratio)
-        : Accurate{capacity_bytes, shards_sampling_ratio},
-          sampler_{10 * Duration::SECOND, false, false}
+        : Accurate{capacity_bytes, shards_sampling_ratio}
+
     {
     }
 
 private:
     // Maps expiration time to keys.
     std::multimap<double, uint64_t> ttl_queue_;
-    TemporalSampler sampler_;
+    uint64_t last_scan_time_ms_ = 0;
 };

@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <glib.h>
 #include <map>
 #include <stdlib.h>
@@ -161,10 +162,31 @@ public:
     uint64_t min_size_bytes_;
     uint64_t max_size_bytes_;
     // This is in seconds for now, because that's what Memcached uses.
-    uint64_t next_crawl_wait_s_;
+    // The initial value is 60 seconds.
+    uint64_t next_crawl_wait_s_ = 60;
     std::unordered_set<uint64_t> keys_;
     // Maps expiration time to keys.
     std::multimap<double, uint64_t> ttl_queue_;
+};
+
+struct MemcachedExpiryStatistics {
+    std::string
+    json() const
+    {
+        return map2str(std::vector<std::pair<std::string, std::string>>{{
+            {"id", val2str(id)},
+            {"time [ms]", val2str(time_ms)},
+            {"objects [#]", val2str(nr_objects)},
+            {"expired [#]", val2str(nr_expired)},
+            {"next time [ms]", val2str(next_time_ms)},
+        }});
+    }
+
+    uint64_t id;
+    uint64_t time_ms;
+    uint64_t nr_objects;
+    uint64_t nr_expired;
+    uint64_t next_time_ms;
 };
 
 class MemcachedTTL : public Accurate {
@@ -283,29 +305,40 @@ private:
     void
     remove_expired(CacheAccess const &access) override final
     {
-        std::vector<std::pair<uint64_t, uint64_t>> new_work;
-        for (auto const end = schedule_.upper_bound(access.timestamp_ms);
-             auto &[time_ms, id] :
-             std::ranges::subrange{schedule_.begin(), end}) {
-            auto &cls = slab_classes_[id];
-            // Memcached scans the entire slab class for expired objects.
-            // We must do this before removing the keys.
-            expiration_work_ += cls.count_keys();
-            auto victims = cls.get_expired(access);
-            for (auto v : victims) {
-                remove(v, EvictionCause::ProactiveTTL, access);
+        CacheAccess pseudo{access};
+        for (; current_time_ms_ <= access.timestamp_ms;
+             current_time_ms_ += 1 * Duration::SECOND) {
+            pseudo.timestamp_ms = current_time_ms_;
+            std::vector<std::pair<uint64_t, uint64_t>> new_work;
+            auto range = schedule_.equal_range(current_time_ms_);
+            for (auto it = range.first; it != range.second; ++it) {
+                auto id = it->second;
+                auto &cls = slab_classes_[id];
+                // Memcached scans the entire slab class for expired objects.
+                // We must do this before removing the keys.
+                expiration_work_ += cls.count_keys();
+                auto nr_keys = cls.count_keys();
+                auto victims = cls.get_expired(pseudo);
+                for (auto v : victims) {
+                    remove(v, EvictionCause::ProactiveTTL, pseudo);
+                }
+                nr_expirations_ += victims.size();
+                auto next_scan_ms = cls.next_expiry_scan(pseudo);
+                stats_.emplace_back(id,
+                                    current_time_ms_,
+                                    nr_keys,
+                                    victims.size(),
+                                    next_scan_ms);
+                new_work.emplace_back(next_scan_ms, id);
             }
-            nr_expirations_ += victims.size();
-            auto next_scan_ms = cls.next_expiry_scan(access);
-            new_work.emplace_back(next_scan_ms, id);
-        }
-        schedule_.erase(schedule_.begin(),
-                        schedule_.upper_bound(access.timestamp_ms));
-        // Add the new work after we have finished erasing from the schedule to
-        // make absolute sure we don't erase any new work.
-        // In C++23, this would be insert_range().
-        for (auto &[next_time, id] : new_work) {
-            schedule_.emplace(next_time, id);
+            schedule_.erase(schedule_.begin(),
+                            schedule_.upper_bound(current_time_ms_));
+            // Add the new work after we have finished erasing from the schedule
+            // to make absolute sure we don't erase any new work. In C++23, this
+            // would be insert_range().
+            for (auto &[next_time, id] : new_work) {
+                schedule_.emplace(next_time, id);
+            }
         }
     }
 
@@ -345,8 +378,28 @@ public:
         }
     }
 
+    std::string
+    json(std::unordered_map<std::string, std::string> extras = {})
+    {
+        std::function<std::string(MemcachedExpiryStatistics const &)> x =
+            [](MemcachedExpiryStatistics const &val) -> std::string {
+            return val.json();
+        };
+        return map2str(std::vector<std::pair<std::string, std::string>>{
+            {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
+            {"Statistics", statistics_.json()},
+            {"Extras", map2str(extras)},
+            {"Expiration Work [#]", std::to_string(expiration_work_)},
+            {"Expirations [#]", std::to_string(nr_expirations_)},
+            {"Memcached Expiry Statistics", vec2str(stats_, x)},
+        });
+    }
+
 private:
     // The schedule to check for expired slab classes.
     std::multimap<uint64_t, uint64_t> schedule_;
     std::vector<MemcachedSlabClass> slab_classes_;
+    std::vector<MemcachedExpiryStatistics> stats_;
+
+    uint64_t current_time_ms_ = 0;
 };

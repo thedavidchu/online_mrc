@@ -348,14 +348,17 @@ private:
     {
         remove_expired_from_tree(access);
         if (true) {
-            // Simply dividing the number of expiry cycles we start by
-            // the SHARDS ratio lets our memory usage drift too high.
-            // Since the expiry cycle is mostly self-sustaining, we
-            // just run it once per second. See below for a possibly
-            // clever improvement, but I'm too lazy.
-            while (remove_expired_via_sampling(access))
-                ;
-            last_removal_time_ms_ = access.timestamp_ms;
+            // We want to trick the rest of the functions into thinking the time
+            // is sometime in the past. Basically, we want to run all of the
+            // samples at the correct time.
+            CacheAccess pseudo{access};
+            for (; last_removal_time_ms_ <= access.timestamp_ms;
+                 last_removal_time_ms_ += 1 * Duration::SECOND) {
+                pseudo.timestamp_ms = last_removal_time_ms_;
+                while (remove_expired_via_sampling(pseudo))
+                    ;
+                // This runs it once per second.
+            }
         }
         if (false) {
             // SHARDS reduces the number of objects by 1000x,

@@ -14,13 +14,13 @@ using uint32_t = std::uint32_t;
 using uint8_t = std::uint8_t;
 
 struct CacheAccess {
-    uint64_t const timestamp_ms = 0;
-    CacheCommand const command = CacheCommand::Invalid;
-    uint64_t const key = 0;
-    uint64_t const key_size_b = 0;
-    uint64_t const value_size_b = 0;
-    double const ttl_ms = NAN;
-    uint64_t const client_id = 0;
+    uint64_t timestamp_ms = 0;
+    CacheCommand command = CacheCommand::Invalid;
+    uint64_t key = 0;
+    uint64_t key_size_b = 0;
+    uint64_t value_size_b = 0;
+    double ttl_ms = NAN;
+    uint64_t client_id = 0;
 
     CacheAccess(uint64_t const timestamp_ms,
                 uint64_t const key,
