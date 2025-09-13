@@ -5,7 +5,6 @@
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/duration.hpp"
-#include "cpp_lib/temporal_sampler.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
 #include <cassert>
@@ -71,9 +70,11 @@ private:
     void
     remove_expired(CacheAccess const &access) override final
     {
+        CacheAccess pseudo{access};
         for (; last_scan_time_ms_ <= access.timestamp_ms;
              last_scan_time_ms_ += 10 * Duration::SECOND) {
             std::vector<uint64_t> victims;
+            pseudo.timestamp_ms = last_scan_time_ms_;
             // CacheLib performs a scan of the entire cache. We must do this
             // before removing the keys
             expiration_work_ += map_.size();
@@ -85,8 +86,6 @@ private:
             }
             // One cannot erase elements from a multimap while also iterating!
             for (auto victim : victims) {
-                CacheAccess pseudo{access};
-                pseudo.timestamp_ms = last_scan_time_ms_;
                 remove(victim, EvictionCause::ProactiveTTL, pseudo);
             }
             nr_expirations_ += victims.size();
@@ -97,7 +96,6 @@ public:
     /// @param  capacity: size_t - The capacity of the cache in bytes.
     CacheLibTTL(size_t const capacity_bytes, double const shards_sampling_ratio)
         : Accurate{capacity_bytes, shards_sampling_ratio}
-
     {
     }
 
