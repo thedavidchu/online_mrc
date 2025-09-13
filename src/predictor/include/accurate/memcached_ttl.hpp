@@ -170,16 +170,17 @@ public:
 };
 
 struct MemcachedExpiryStatistics {
+    /// @brief  Stringify the expiry statistics.
+    /// @note   We compress it into an array because it has a large
+    //          overhead otherwise.
     std::string
     json() const
     {
-        return map2str(std::vector<std::pair<std::string, std::string>>{{
-            {"id", val2str(id)},
-            {"time [ms]", val2str(time_ms)},
-            {"objects [#]", val2str(nr_objects)},
-            {"expired [#]", val2str(nr_expired)},
-            {"next time [ms]", val2str(next_time_ms)},
-        }});
+        return vec2str(std::vector<uint64_t>{id,
+                                             time_ms,
+                                             nr_objects,
+                                             nr_expired,
+                                             next_time_ms});
     }
 
     uint64_t id;
@@ -391,7 +392,7 @@ public:
             {"Extras", map2str(extras)},
             {"Expiration Work [#]", std::to_string(expiration_work_)},
             {"Expirations [#]", std::to_string(nr_expirations_)},
-            {"Memcached Expiry Statistics", vec2str(stats_, x)},
+            // {"Memcached Expiry Statistics", vec2str(stats_, x)},
         });
     }
 
