@@ -192,6 +192,18 @@ struct MemcachedExpiryStatistics {
 
 class MemcachedTTL : public Accurate {
 private:
+    void
+    validate()
+    {
+        uint64_t nr_obj = 0, nr_ttl_obj = 0;
+        for (auto &cls : slab_classes_) {
+            nr_obj += cls.keys_.size();
+            nr_ttl_obj += cls.ttl_queue_.size();
+        }
+        g_assert_cmpuint(nr_obj, ==, map_.size());
+        g_assert_cmpuint(nr_ttl_obj, ==, map_.size());
+    }
+
     MemcachedSlabClass *
     get_slab_class(uint64_t const size_bytes)
     {
@@ -367,6 +379,7 @@ public:
     void
     access(CacheAccess const &access)
     {
+        validate();
         assert(size_bytes_ == statistics_.size_);
         statistics_.time(access.timestamp_ms);
         assert(size_bytes_ == statistics_.size_);
@@ -392,6 +405,7 @@ public:
             {"Extras", map2str(extras)},
             {"Expiration Work [#]", std::to_string(expiration_work_)},
             {"Expirations [#]", std::to_string(nr_expirations_)},
+            {"Lazy Expirations [#]", std::to_string(nr_lazy_expirations_)},
             // {"Memcached Expiry Statistics", vec2str(stats_, x)},
         });
     }

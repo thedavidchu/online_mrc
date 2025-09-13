@@ -64,6 +64,7 @@ protected:
     remove_accessed_if_expired(CacheAccess const &access)
     {
         if (accessed_is_expired(access)) {
+            ++nr_lazy_expirations_;
             remove(access.key, EvictionCause::AccessExpired, access);
         }
     }
@@ -111,6 +112,7 @@ public:
             {"Extras", map2str(extras)},
             {"Expiration Work [#]", std::to_string(expiration_work_)},
             {"Expirations [#]", std::to_string(nr_expirations_)},
+            {"Lazy Expirations [#]", std::to_string(nr_lazy_expirations_)},
         });
     }
 
@@ -127,4 +129,5 @@ protected:
     // HACK This is a hacky way to make it easier to print this.
     uint64_t expiration_work_ = 0;
     uint64_t nr_expirations_ = 0;
+    uint64_t nr_lazy_expirations_ = 0;
 };
