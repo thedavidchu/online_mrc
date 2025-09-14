@@ -347,36 +347,22 @@ private:
     remove_expired(CacheAccess const &access) override final
     {
         remove_expired_from_tree(access);
-        if (true) {
-            // We want to trick the rest of the functions into thinking the time
-            // is sometime in the past. Basically, we want to run all of the
-            // samples at the correct time.
-            CacheAccess pseudo{access};
-            for (; last_removal_time_ms_ <= access.timestamp_ms;
-                 last_removal_time_ms_ += 1 * Duration::SECOND) {
-                pseudo.timestamp_ms = last_removal_time_ms_;
-                while (remove_expired_via_sampling(pseudo))
-                    ;
-                // This runs it once per second.
-            }
+        for (int i = 0; i < 10; ++i) {
+            // This runs it once per second.
+            while (remove_expired_via_sampling(access))
+                ;
         }
-        if (false) {
-            // SHARDS reduces the number of objects by 1000x,
-            // so we should adjust the expiry cycles accordingly.
-            while (last_removal_time_ms_ < access.timestamp_ms) {
-                while (remove_expired_via_sampling(access))
-                    ;
-                // Add another 100 ms so that we sample 10x per second.  But
-                // also adjust the rate of starting expiry cycles based on the
-                // SHARDS sampling. Starting expiry cycles lowers the number of
-                // expired objects below the original 10% threshold because they
-                // are run regardless. However, the expiry cycle is also self-
-                // sustaining. Maybe our implementation could conditionally
-                // evict if more than 10% are expired; otherwise, do no action.
-                // This negates the effect of too many expiry cycle starts.
-                last_removal_time_ms_ += 100 * shards_.scale;
-            }
-        }
+        // NOTE
+        // SHARDS reduces the number of objects by 1000x,
+        // so we should adjust the expiry cycles accordingly.
+        // Add another 100 ms so that we sample 10x per second.  But
+        // also adjust the rate of starting expiry cycles based on the
+        // SHARDS sampling. Starting expiry cycles lowers the number of
+        // expired objects below the original 10% threshold because they
+        // are run regardless. However, the expiry cycle is also self-
+        // sustaining. Maybe our implementation could conditionally
+        // evict if more than 10% are expired; otherwise, do no action.
+        // This negates the effect of too many expiry cycle starts.
     }
 
 public:
@@ -410,6 +396,4 @@ private:
     // This tree only contains soon expiring objects for memory
     // efficiency (rather than containing all of the objects).
     std::multimap<double, uint64_t> ttl_queue_;
-
-    uint64_t last_removal_time_ms_ = 0;
 };

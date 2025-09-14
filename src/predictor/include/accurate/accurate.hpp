@@ -2,6 +2,7 @@
 #include "cpp_lib/cache_access.hpp"
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
 #include "shards/fixed_rate_shards_sampler.h"
@@ -44,7 +45,7 @@ protected:
     }
 
     /// @brief  Remove expired objects from the cache by calling remove().
-    /// @note   Run on every access. If you want this to be sampled (e.g.
+    /// @note   Run on every second. If you want this to be sampled (e.g.
     ///         run once every 10 seconds), then the sampling logic
     ///         should be within this function.
     virtual void
@@ -94,8 +95,14 @@ public:
     {
         assert(size_bytes_ == statistics_.size_);
         statistics_.time(access.timestamp_ms);
+        // NOTE This assumes that the smallest time step in the traces is 1 sec.
+        for (; current_time_ms_ <= access.timestamp_ms;
+             current_time_ms_ += 1 * Duration::SECOND) {
+            CacheAccess pseudo_access{access};
+            pseudo_access.timestamp_ms = current_time_ms_;
+            remove_expired(pseudo_access);
+        }
         remove_accessed_if_expired(access);
-        remove_expired(access);
         if (map_.contains(access.key)) {
             update(access, map_.at(access.key));
         } else {
@@ -126,7 +133,9 @@ protected:
     std::unordered_map<uint64_t, CacheMetadata> map_;
     // Statistics related to cache performance.
     CacheStatistics statistics_;
-    // HACK This is a hacky way to make it easier to print this.
+
+    // This counter is incremented (by default) 1 second at a time.
+    uint64_t current_time_ms_ = 0;
     uint64_t expiration_work_ = 0;
     uint64_t nr_expirations_ = 0;
     uint64_t nr_lazy_expirations_ = 0;

@@ -70,26 +70,24 @@ private:
     void
     remove_expired(CacheAccess const &access) override final
     {
-        CacheAccess pseudo{access};
-        for (; last_scan_time_ms_ <= access.timestamp_ms;
-             last_scan_time_ms_ += 10 * Duration::SECOND) {
-            std::vector<uint64_t> victims;
-            pseudo.timestamp_ms = last_scan_time_ms_;
-            // CacheLib performs a scan of the entire cache. We must do this
-            // before removing the keys
-            expiration_work_ += map_.size();
-            for (auto [exp_tm, key] : ttl_queue_) {
-                if (exp_tm >= last_scan_time_ms_) {
-                    break;
-                }
-                victims.push_back(key);
-            }
-            // One cannot erase elements from a multimap while also iterating!
-            for (auto victim : victims) {
-                remove(victim, EvictionCause::ProactiveTTL, pseudo);
-            }
-            nr_expirations_ += victims.size();
+        if (current_time_ms_ % (10 * Duration::SECOND) != 0) {
+            return;
         }
+        std::vector<uint64_t> victims;
+        // CacheLib performs a scan of the entire cache. We must do this
+        // before removing the keys
+        expiration_work_ += map_.size();
+        for (auto [exp_tm, key] : ttl_queue_) {
+            if (exp_tm >= access.timestamp_ms) {
+                break;
+            }
+            victims.push_back(key);
+        }
+        // One cannot erase elements from a multimap while also iterating!
+        for (auto victim : victims) {
+            remove(victim, EvictionCause::ProactiveTTL, access);
+        }
+        nr_expirations_ += victims.size();
     }
 
 public:
@@ -102,5 +100,4 @@ public:
 private:
     // Maps expiration time to keys.
     std::multimap<double, uint64_t> ttl_queue_;
-    uint64_t last_scan_time_ms_ = 0;
 };
