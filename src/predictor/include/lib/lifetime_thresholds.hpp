@@ -15,13 +15,15 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
 
 using uint64_t = std::uint64_t;
+
+// HACK Use the mean if the ratios are 0.42 (get it, 42?).
+//      This is my answer to desperation.
+static constexpr bool USE_MEAN = true;
 
 class LifeTimeThresholds {
     /// @note   This is a relatively expensive function that I removed
@@ -31,6 +33,13 @@ class LifeTimeThresholds {
     recalculate_thresholds() const
     {
         double lower = NAN, upper = NAN;
+        if (USE_MEAN && lower_ratio_ == 0.42 && upper_ratio_ == 0.42) {
+            double r = histogram_.mean();
+            if (std::isnan(r)) {
+                r = INFINITY;
+            }
+            return {r, r};
+        }
 
         // We handle the case of 1.0 explicitly, we would simply set the
         // upper_threshold_ to the largest lifespan we have seen yet,
