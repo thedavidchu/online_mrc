@@ -149,8 +149,13 @@ def get_stat(data: dict[str, object], keys: list[str]) -> float:
         if not isinstance(ans, dict):
             raise TypeError(f"expected dict, got {repr(ans)}")
         r = ans.get(key, None)
+        # HACK I refactored half-heartedly and now support both.
         if r is None:
-            raise KeyError(f"missing '{key}' in {ans}")
+            stats_keys = {"CacheStatistics", "Statistics"}
+            alt_key, *_ = stats_keys - {key}
+            r = ans.get(alt_key, None)
+        if r is None:
+            raise KeyError(f"missing '{key}' in {ans.keys()}")
         ans = r
     return parse_number(ans)
 
@@ -311,6 +316,7 @@ def plot(
     *,
     set_ylim_to_one: bool = False,
     label_func: Callable[[str, float, float, str], str] | None = None,
+    kwfmt: dict = {},
 ):
     """
     @note   It is a bit involved to correct the X-axis data with
@@ -354,7 +360,7 @@ def plot(
             label = label_func(policy, l, u, tm)
         if not plot_this_configuration(policy, l, u, tm):
             continue
-        ax.plot(cache_sizes, y, marker + ":", color=colour, label=label)
+        ax.plot(cache_sizes, y, marker + ":", color=colour, label=label, **kwfmt)
     # Plot between [0.0, 1.0] for MRC curves.
     if set_ylim_to_one:
         ax.set_ylim(0.0, 1.0)
@@ -380,6 +386,7 @@ def plot_lines(
     *,
     plot_x_axis: bool = True,
     fmt: str = "-",
+    kwfmt: dict = {},
     colours: list[str] | None = None,
     opacity: float = 1.0,
 ):
@@ -424,7 +431,7 @@ def plot_lines(
         for x, y, label in zip(x_list, y_list, labels, strict=True):
             if x is None or y is None:
                 continue
-            ax.plot(x, y, fmt, c=next(colours), label=label, alpha=opacity)
+            ax.plot(x, y, fmt, **kwfmt, c=next(colours), label=label, alpha=opacity)
     ax.legend()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
