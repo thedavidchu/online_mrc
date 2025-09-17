@@ -90,6 +90,12 @@ public:
     std::string
     json() const;
 
+    void
+    update_custom_metric(std::function<double(double, double)> f, double new_)
+    {
+        custom_metric_ = f(custom_metric_, new_);
+    }
+
     // Deprecated
     void
     print(std::string const &name, uint64_t const capacity) const;
@@ -165,8 +171,15 @@ public:
     // this only represents the maximum size for the final interval.
     uint64_t interval_max_size_ = 0;
     TemporalData temporal_interval_max_sizes_;
+    uint64_t interval_min_size_ = UINT64_MAX;
+    TemporalData temporal_interval_min_sizes_;
     TemporalData temporal_sizes_;
     TemporalData temporal_resident_objects_;
     TemporalData temporal_miss_bytes_;
     TemporalData temporal_hit_bytes_;
+
+    // Record some bespoke metric. This is really dumb and overcomplicated, but
+    // you know what? #storyofmylife.
+    double custom_metric_ = NAN;
+    TemporalData temporal_custom_metric_;
 };

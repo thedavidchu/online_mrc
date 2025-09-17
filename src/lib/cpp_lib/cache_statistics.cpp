@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -45,11 +46,15 @@ CacheStatistics::sample()
     temporal_max_sizes_.update(max_size_);
     temporal_interval_max_sizes_.update(interval_max_size_);
     interval_max_size_ = 0;
+    temporal_interval_min_sizes_.update(interval_min_size_);
+    interval_min_size_ = UINT64_MAX;
     temporal_resident_objects_.update(resident_objs_);
     temporal_miss_bytes_.update(miss_bytes_ -
                                 temporal_miss_bytes_.back().value_or(0));
     temporal_hit_bytes_.update(hit_bytes_ -
                                temporal_hit_bytes_.back().value_or(0));
+    temporal_custom_metric_.update(custom_metric_);
+    custom_metric_ = NAN;
 }
 
 void
@@ -133,6 +138,7 @@ CacheStatistics::insert(uint64_t const size_bytes)
     size_ += size_bytes;
     max_size_ = std::max(max_size_, size_);
     interval_max_size_ = std::max(interval_max_size_, size_);
+    interval_min_size_ = std::min(interval_min_size_, size_);
 
     resident_objs_ += 1;
     max_resident_objs_ = std::max(max_resident_objs_, resident_objs_);
@@ -156,6 +162,7 @@ CacheStatistics::update(uint64_t const old_size_bytes,
     size_ += new_size_bytes;
     max_size_ = std::max(max_size_, size_);
     interval_max_size_ = std::max(interval_max_size_, size_);
+    interval_min_size_ = std::min(interval_min_size_, size_);
 
     upperbound_wss_ += new_size_bytes;
     upperbound_ttl_wss_ += new_size_bytes;
@@ -368,9 +375,11 @@ CacheStatistics::json() const
         {"Temporal Sizes [B]", temporal_sizes_.str()},
         {"Temporal Max Sizes [B]", temporal_max_sizes_.str()},
         {"Temporal Interval Max Sizes [B]", temporal_interval_max_sizes_.str()},
+        {"Temporal Interval Min Sizes [B]", temporal_interval_min_sizes_.str()},
         {"Temporal Resident Objects [#]", temporal_resident_objects_.str()},
         {"Temporal Hits [B]", temporal_hit_bytes_.str()},
         {"Temporal Misses [B]", temporal_miss_bytes_.str()},
+        {"Temporal Custom Metric [?]", temporal_miss_bytes_.str()},
     }});
 }
 
