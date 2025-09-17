@@ -137,7 +137,7 @@ public:
     LifeTimeThresholds(double const lower_ratio,
                        double const upper_ratio,
                        uint64_t const refresh_period_ms = 60 * Duration::MINUTE,
-                       double const decay = 0.5,
+                       double const decay = 0.0,
                        double const refresh_error_threshold = 0.01)
         : lower_ratio_(lower_ratio),
           upper_ratio_(upper_ratio),
