@@ -43,13 +43,26 @@ def main():
     print(f"Decreasing timestamps: {cnt_decr_tm}")
     if args.verbose and cnt_decr_tm:
         cnt = 0
+        max_diff = 0
+        sum_diff = 0
+        arg_max = (0, 0)
         print("Decreasing Timestamps:")
         for pos, y in enumerate(ok_tm):
             if not y:
+                diff = x[pos][tmstr] - x[pos + 1][tmstr]
+                sum_diff += diff
+                if diff > max_diff:
+                    max_diff = diff
+                    arg_max = (pos, pos + 1)
                 cnt += 1
-                print(
-                    f"[{cnt}/{cnt_decr_tm}] At positions {pos}, {pos+1}: {x[pos][tmstr]} > {x[pos+1][tmstr]}"
-                )
+                # print(
+                #     f"[{cnt}/{cnt_decr_tm}] At positions {pos}, {pos+1}: {x[pos][tmstr]} > {x[pos+1][tmstr]}"
+                # )
+        print(
+            f"Max Diff: {max_diff} from {x[arg_max[0]][tmstr]} and {x[arg_max[1]][tmstr]} (at {arg_max})"
+        )
+        print(f"Mean Diff: {sum_diff/cnt_decr_tm}")
+        print(f"Ratio decreasing: {cnt_decr_tm/len(x)}")
 
 
 if __name__ == "__main__":
