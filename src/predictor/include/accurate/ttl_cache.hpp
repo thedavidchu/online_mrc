@@ -77,6 +77,7 @@ private:
         // removal. We do this before removing the objects to respect
         // the definition of M.
         if (victims.size()) {
+            expiry_cycles_ += 1;
             expiration_work_ +=
                 std::log2(shards_.scale * map_.size()) + victims.size();
         }

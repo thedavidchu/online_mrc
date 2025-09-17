@@ -73,6 +73,7 @@ private:
         if (current_time_ms_ % (10 * Duration::SECOND) != 0) {
             return;
         }
+        expiry_cycles_ += 1;
         std::vector<uint64_t> victims;
         // CacheLib performs a scan of the entire cache. We must do this
         // before removing the keys

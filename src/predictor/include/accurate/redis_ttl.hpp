@@ -12,6 +12,7 @@
 #include "cpp_lib/duration.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
+#include "logger/logger.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -88,17 +89,22 @@ class RedisSampler {
         return table.size();
     }
     /// @brief  Return next valid position or SIZE upon failure.
-    static uint64_t
-    next_valid(std::vector<std::pair<uint64_t, Validity>> const &table,
-               uint64_t const position)
+    uint64_t
+    next_valid(uint64_t const position, uint64_t const step = 1) const
     {
-        for (uint64_t i = 0; i < table.size(); ++i) {
-            uint64_t p = (position + i) % table.size();
-            if (is_valid(table, p)) {
+        // Without this first check, we would scan the whole cache looking
+        // for an object that simply is not there.
+        if (size_ == 0) {
+            return table_.size();
+        }
+        for (uint64_t i = 0; i < table_.size(); ++i) {
+            uint64_t p = (position + step * i) % table_.size();
+            if (is_valid(table_, p)) {
                 return p;
             }
         }
-        return table.size();
+        assert(0 && "impossible!");
+        return table_.size();
     }
     /// @brief  Insert a key into a non-growing table.
     static bool
@@ -183,7 +189,14 @@ public:
             return std::nullopt;
         }
         uint64_t random = prng_();
-        uint64_t pos = next_valid(table_, random % capacity());
+        // I choose to step by 999983 because it is coprime with the table size
+        // (power-of-2). This means that I will visit all the objects at least
+        // once before visiting any of them a second time. I take a giant step
+        // size (rather than just 1) because then the next object I sample has
+        // no relationship to the fact I resolve collisions through linear
+        // probing. A number smaller than the table size may be affected, in
+        // theory. Too big of a number risks overflow.
+        uint64_t pos = next_valid(random % capacity(), /*step=*/999983);
         if (pos >= capacity()) {
             return std::nullopt;
         }
@@ -318,6 +331,7 @@ private:
         // We will escape from the search unless we explicitly find
         // enough expired objects.
         double ratio_expired = 0.0;
+        expiry_cycles_ += 1;
         for (uint64_t i = 0; i < NUMBER_SAMPLES; ++i) {
             // Mark expired
             std::optional<uint64_t> key = redis_sampler_.sample();
@@ -346,23 +360,46 @@ private:
     void
     remove_expired(CacheAccess const &access) override final
     {
+        static bool run_once = false;
         remove_expired_from_tree(access);
-        for (int i = 0; i < 10; ++i) {
-            // This runs it once per second.
+        // This is for SHARDS sampling that is some multiple of 10.
+        // e.g. {10, 20, 30, 100, 1000, ...}.
+        if (shards_.scale >= 10) {
+            if (!run_once && shards_.scale % 10 != 0) {
+                LOGGER_WARN("scale %zu does not divide nicely by 10",
+                            shards_.scale);
+                run_once = true;
+            }
+            // SHARDS reduces the number of objects in the cache, so we
+            // should adjust our unconditional sampling accordingly.
+            // Normally, we scan 10x per second, but we can simply lower
+            // this to every few seconds, based on the SHARDS value.
+            uint64_t time_between_probes_ms =
+                shards_.scale / 10 * Duration::SECOND;
+            if (access.timestamp_ms % time_between_probes_ms != 0) {
+                return;
+            }
             while (remove_expired_via_sampling(access))
                 ;
+        } else {
+            if (!run_once && 10 % shards_.scale != 0) {
+                LOGGER_WARN("10 does not divide nicely by scale %zu ",
+                            shards_.scale);
+                run_once = true;
+            }
+            uint64_t times_per_second = 10 / shards_.scale;
+            // For unsampled SHARDS.
+            for (uint64_t i = 0; i < times_per_second; ++i) {
+                while (remove_expired_via_sampling(access))
+                    ;
+            }
         }
-        // NOTE
-        // SHARDS reduces the number of objects by 1000x,
-        // so we should adjust the expiry cycles accordingly.
-        // Add another 100 ms so that we sample 10x per second.  But
-        // also adjust the rate of starting expiry cycles based on the
-        // SHARDS sampling. Starting expiry cycles lowers the number of
-        // expired objects below the original 10% threshold because they
-        // are run regardless. However, the expiry cycle is also self-
-        // sustaining. Maybe our implementation could conditionally
-        // evict if more than 10% are expired; otherwise, do no action.
-        // This negates the effect of too many expiry cycle starts.
+        // We mark the low-water mark here.
+        std::function<double(double, double)> f = [](double old,
+                                                     double new_) -> double {
+            return std::isnan(old) ? new_ : std::max(old, new_);
+        };
+        statistics_.update_custom_metric(f, size_bytes_);
     }
 
 public:
@@ -380,9 +417,10 @@ private:
     // The threshold at which we decide an object is expiring 'soon' and
     // therefore should go into the tree.
     constexpr static uint64_t SOON_EXPIRING_THRESHOLD_MS = 1 * Duration::SECOND;
-    // As per [here](https://github.com/redis/redis/blob/unstable/src/expire.c),
-    // the effort is in the range [0, 9] with a default value of 0. Note that it
-    // is scaled from the user input, which is on the range [1, 10].
+    // As per
+    // [here](https://github.com/redis/redis/blob/unstable/src/expire.c),
+    // the effort is in the range [0, 9] with a default value of 0. Note
+    // that it is scaled from the user input, which is on the range [1, 10].
     constexpr static uint64_t EFFORT = 0;
 
     // These constants are as defined by Redis from the above parameters.

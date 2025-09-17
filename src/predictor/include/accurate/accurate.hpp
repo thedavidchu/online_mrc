@@ -117,9 +117,10 @@ public:
             {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
             {"Statistics", statistics_.json()},
             {"Extras", map2str(extras)},
-            {"Expiration Work [#]", std::to_string(expiration_work_)},
-            {"Expirations [#]", std::to_string(nr_expirations_)},
-            {"Lazy Expirations [#]", std::to_string(nr_lazy_expirations_)},
+            {"Expiration Work [#]", val2str(expiration_work_)},
+            {"Expiry Cycles [#]", val2str(expiry_cycles_)},
+            {"Expirations [#]", val2str(nr_expirations_)},
+            {"Lazy Expirations [#]", val2str(nr_lazy_expirations_)},
         });
     }
 
@@ -136,6 +137,7 @@ protected:
 
     // This counter is incremented (by default) 1 second at a time.
     uint64_t current_time_ms_ = 0;
+    uint64_t expiry_cycles_ = 0;
     uint64_t expiration_work_ = 0;
     uint64_t nr_expirations_ = 0;
     uint64_t nr_lazy_expirations_ = 0;

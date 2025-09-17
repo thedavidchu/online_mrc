@@ -5,9 +5,11 @@
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/duration.hpp"
+#include "cpp_lib/enumerate.hpp"
 #include "cpp_lib/memory_size.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -17,6 +19,7 @@
 #include <glib.h>
 #include <map>
 #include <stdlib.h>
+#include <string>
 #include <sys/types.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -26,7 +29,7 @@
 using size_t = std::size_t;
 using uint64_t = std::uint64_t;
 
-constexpr static bool DEBUG = true;
+constexpr static bool DEBUG = false;
 
 class MemcachedSlabClass {
 public:
@@ -75,6 +78,7 @@ public:
         static constexpr uint64_t MAX_MAINTCRAWL_WAIT_S = 60 * 60;
         std::vector<uint64_t> histo(60);
         uint64_t no_exp = 0;
+        assert(access.timestamp_ms == next_crawl_time_ms_);
 
         // Taken from
         // https://github.com/memcached/memcached/blob/master/crawler.c.
@@ -109,19 +113,31 @@ public:
             if (available_reclaims > low_watermark) {
                 if (next_crawl_wait_s_ < (x * 60)) {
                     next_crawl_wait_s_ += 60;
+                    nr_scan_increases_ += 1;
                 } else if (next_crawl_wait_s_ >= 60) {
                     next_crawl_wait_s_ -= 60;
+                    nr_scan_decreases_ += 1;
                 }
                 break;
             }
         }
         if (available_reclaims == 0) {
             next_crawl_wait_s_ += 60;
+            nr_scan_increases_ += 1;
         }
         if (next_crawl_wait_s_ > MAX_MAINTCRAWL_WAIT_S) {
             next_crawl_wait_s_ = MAX_MAINTCRAWL_WAIT_S;
+        } else if (next_crawl_wait_s_ == 0) {
+            next_crawl_wait_s_ = 60;
         }
-        return access.timestamp_ms + next_crawl_wait_s_ * Duration::SECOND;
+        nr_scans_ += 1;
+        scan_time_intervals_ms_ += next_crawl_wait_s_ * Duration::SECOND;
+        last_crawl_time_ms_ = access.timestamp_ms;
+        next_crawl_time_ms_ =
+            access.timestamp_ms + next_crawl_wait_s_ * Duration::SECOND;
+        max_crawl_wait_ms_ =
+            std::max(max_crawl_wait_ms_, next_crawl_wait_s_ * Duration::SECOND);
+        return next_crawl_time_ms_;
     }
 
     /// @brief  Remove stale keys and return a list of them.
@@ -137,6 +153,8 @@ public:
             assert(keys_.contains(key));
             victims.push_back(key);
         }
+        nr_discards_ += victims.size();
+        nr_searches_ += ttl_queue_.size();
         return victims;
     }
 
@@ -157,8 +175,19 @@ public:
         assert(keys_.contains(access.key));
     }
     void
-    remove(uint64_t const key, CacheMetadata const &metadata)
+    remove(uint64_t const key,
+           EvictionCause const cause,
+           CacheMetadata const &metadata,
+           CacheAccess const &access)
     {
+        if (cause == EvictionCause::AccessExpired) {
+            g_assert_cmpfloat(metadata.expiration_time_ms_,
+                              >=,
+                              last_crawl_time_ms_);
+            nr_lazy_discards_ += 1;
+            total_lazy_expiry_ms_ +=
+                access.timestamp_ms - metadata.expiration_time_ms_;
+        }
         if (keys_.contains(key)) {
             keys_.erase(key);
             bool r = remove_multimap_kv(ttl_queue_,
@@ -180,15 +209,51 @@ public:
         return keys_.size();
     }
 
+    std::string
+    stats() const
+    {
+        return map2str(std::vector<std::pair<std::string, std::string>>{
+            {"Scan Increases [#]", val2str(nr_scan_increases_)},
+            {"Scan Decreases [#]", val2str(nr_scan_decreases_)},
+            {"Searched Objects [#]", val2str(nr_searches_)},
+            {"Discarded Objects [#]", val2str(nr_discards_)},
+            {"Scans [#]", val2str(nr_scans_)},
+            {"Total Scan Time Intervals [min]",
+             val2str(scan_time_intervals_ms_ / 60000)},
+            {"Mean Scan Interval [min]",
+             val2str((double)scan_time_intervals_ms_ / 60000 / nr_scans_)},
+            // TODO ADD STATS
+            {"Lazy Discarded Objects [#]", val2str(nr_lazy_discards_)},
+            {"Mean Lazy Discard Overstay [min]",
+             val2str((double)total_lazy_expiry_ms_ / 60000 /
+                     nr_lazy_discards_)},
+            {"Last Scan Interval [min]", val2str(next_crawl_wait_s_ / 60)},
+            {"Max Scan Interval [min]", val2str(max_crawl_wait_ms_ / 60000)},
+        });
+    }
+
     uint64_t const id_;
     uint64_t min_size_bytes_;
     uint64_t max_size_bytes_;
     // This is in seconds for now, because that's what Memcached uses.
     // The initial value is 60 seconds.
     uint64_t next_crawl_wait_s_ = 60;
+    uint64_t last_crawl_time_ms_ = 0;
+    uint64_t next_crawl_time_ms_ = 0;
     std::unordered_set<uint64_t> keys_;
     // Maps expiration time to keys.
     std::multimap<double, uint64_t> ttl_queue_;
+
+    // Statistics
+    uint64_t max_crawl_wait_ms_ = 0;
+    uint64_t nr_scan_increases_ = 0;
+    uint64_t nr_scan_decreases_ = 0;
+    uint64_t nr_discards_ = 0;
+    uint64_t nr_searches_ = 0;
+    uint64_t nr_scans_ = 0;
+    uint64_t scan_time_intervals_ms_ = 0;
+    uint64_t nr_lazy_discards_ = 0;
+    uint64_t total_lazy_expiry_ms_ = 0;
 };
 
 struct MemcachedExpiryStatistics {
@@ -303,7 +368,7 @@ private:
             pre_cls->update(access);
         } else {
             // Move the object to a different slab class.
-            pre_cls->remove(access.key, metadata);
+            pre_cls->remove(access.key, EvictionCause::Other, metadata, access);
             post_cls->insert(access);
         }
     }
@@ -333,7 +398,7 @@ private:
 
         size_bytes_ -= sz_bytes;
         auto cls = get_slab_class(sz_bytes);
-        cls->remove(victim_key, m);
+        cls->remove(victim_key, cause, m, access);
         map_.erase(victim_key);
     }
 
@@ -343,12 +408,12 @@ private:
         std::vector<std::pair<uint64_t, uint64_t>> new_work;
         auto range = schedule_.equal_range(access.timestamp_ms);
         for (auto it = range.first; it != range.second; ++it) {
+            expiry_cycles_ += 1;
             auto id = it->second;
             auto &cls = slab_classes_[id];
             // Memcached scans the entire slab class for expired objects.
             // We must do this before removing the keys.
             expiration_work_ += cls.count_keys();
-            auto nr_keys = cls.count_keys();
             auto victims = cls.get_expired(access);
             for (auto v : victims) {
                 remove(v, EvictionCause::ProactiveTTL, access);
@@ -358,14 +423,7 @@ private:
             cls.validate_no_expired(access.timestamp_ms, map_);
             nr_expirations_ += victims.size();
             auto next_scan_ms = cls.next_expiry_scan(access);
-            stats_.emplace_back(id,
-                                access.timestamp_ms,
-                                nr_keys,
-                                victims.size(),
-                                next_scan_ms);
             new_work.emplace_back(next_scan_ms, id);
-            // new_work.emplace_back(access.timestamp_ms + Duration::SECOND,
-            // id);
         }
         schedule_.erase(access.timestamp_ms);
         // Add the new work after we have finished erasing from the schedule
@@ -404,6 +462,10 @@ public:
             [](MemcachedExpiryStatistics const &val) -> std::string {
             return val.json();
         };
+        std::vector<std::pair<std::string, std::string>> cls_stats;
+        for (auto [id, x] : enumerate(slab_classes_)) {
+            cls_stats.emplace_back(val2str(id), x.stats());
+        }
         return map2str(std::vector<std::pair<std::string, std::string>>{
             {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
             {"Statistics", statistics_.json()},
@@ -412,6 +474,7 @@ public:
             {"Expirations [#]", std::to_string(nr_expirations_)},
             {"Lazy Expirations [#]", std::to_string(nr_lazy_expirations_)},
             // {"Memcached Expiry Statistics", vec2str(stats_, x)},
+            {"Memcached Class Statistics", map2str(cls_stats)},
         });
     }
 
