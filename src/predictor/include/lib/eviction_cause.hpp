@@ -19,6 +19,8 @@ enum class EvictionCause {
     NoRoom,
     // Evicted due to sampling algorithm (e.g. Fixed-Size SHARDS)
     Sampling,
+    // Other reasons (e.g. moving to different cache, etc.)
+    Other,
 };
 
 static inline std::string
