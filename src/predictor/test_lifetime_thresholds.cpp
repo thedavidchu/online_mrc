@@ -62,7 +62,7 @@ test_refresh(bool const debug = false)
     LifeTimeThresholds t{0.25,
                          0.75,
                          /*refresh_period_ms=*/Duration::HOUR,
-                         /*decay=*/1.0};
+                         /*decay=*/0.0};
     std::tuple<double, double, bool> r;
 
     // Sample from 1..=100 and make sure the thresholds change at the
