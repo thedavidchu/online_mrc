@@ -9,6 +9,13 @@
 /// @note   In theory, this class could save up accesses made in the future and
 ///         replay them at the appropriate time.
 class TraceCleaner {
+public:
+    TraceCleaner(uint64_t const max_jump = Duration::SECOND,
+                 uint64_t const starting_time_ms = 0)
+        : max_jump_{max_jump},
+          previous_time_ms_{starting_time_ms}
+    {
+    }
     /// @brief  Whether to use a certain trace entry. Use this before the SHARDS
     ///         sampler, otherwise the jump sizes are going to be much larger.
     bool
@@ -38,6 +45,6 @@ class TraceCleaner {
     }
 
 private:
-    uint64_t previous_time_ms_ = 0;
     uint64_t const max_jump_ = Duration::HOUR;
+    uint64_t previous_time_ms_ = 0;
 };
