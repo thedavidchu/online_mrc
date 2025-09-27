@@ -70,6 +70,20 @@ protected:
         }
     }
 
+    std::vector<std::pair<std::string, std::string>>
+    p_json_vector(std::unordered_map<std::string, std::string> extras) const
+    {
+        return std::vector<std::pair<std::string, std::string>>{
+            {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
+            {"Statistics", statistics_.json()},
+            {"Extras", map2str(extras)},
+            {"Expiration Work [#]", val2str(expiration_work_)},
+            {"Expiry Cycles [#]", val2str(expiry_cycles_)},
+            {"Expirations [#]", val2str(nr_expirations_)},
+            {"Lazy Expirations [#]", val2str(nr_lazy_expirations_)},
+        };
+    }
+
 public:
     Accurate(uint64_t const capacity_bytes, double const shards_sampling_ratio)
         : capacity_bytes_{capacity_bytes},
@@ -113,15 +127,7 @@ public:
     std::string
     json(std::unordered_map<std::string, std::string> extras = {}) const
     {
-        return map2str(std::vector<std::pair<std::string, std::string>>{
-            {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
-            {"Statistics", statistics_.json()},
-            {"Extras", map2str(extras)},
-            {"Expiration Work [#]", val2str(expiration_work_)},
-            {"Expiry Cycles [#]", val2str(expiry_cycles_)},
-            {"Expirations [#]", val2str(nr_expirations_)},
-            {"Lazy Expirations [#]", val2str(nr_lazy_expirations_)},
-        });
+        return map2str(p_json_vector(extras));
     }
 
 protected:

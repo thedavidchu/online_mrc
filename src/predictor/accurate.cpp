@@ -5,7 +5,9 @@
 #include "accurate/ttl_cache.hpp"
 #include "cpp_lib/cache_trace.hpp"
 #include "cpp_lib/cache_trace_format.hpp"
+#include "cpp_lib/duration.hpp"
 #include "cpp_lib/progress_bar.hpp"
+#include "cpp_lib/trace_cleaner.hpp"
 #include "cpp_lib/util.hpp"
 #include "shards/fixed_rate_shards_sampler.h"
 #include <cassert>
@@ -96,6 +98,7 @@ run_single_accurate_cache(std::promise<std::string> promise,
                           double const shards_ratio,
                           bool const show_progress)
 {
+    TraceCleaner cleaner{Duration::SECOND, 0};
     T cache{(uint64_t)(capacity_bytes * shards_ratio), shards_ratio};
     FixedRateShardsSampler sampler{shards_ratio, true};
     std::stringstream ss;
@@ -110,6 +113,9 @@ run_single_accurate_cache(std::promise<std::string> promise,
     for (size_t i = 0; i < trace.size(); ++i) {
         pbar.tick();
         auto const &access = trace.get_wait(i);
+        if (!cleaner.sample(access)) {
+            continue;
+        }
         if (!sampler.sample(access.key)) {
             continue;
         }
