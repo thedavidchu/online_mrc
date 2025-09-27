@@ -10,6 +10,7 @@
 #include "cpp_lib/cache_metadata.hpp"
 #include "cpp_lib/cache_statistics.hpp"
 #include "cpp_lib/duration.hpp"
+#include "cpp_lib/histogram.hpp"
 #include "cpp_lib/util.hpp"
 #include "lib/eviction_cause.hpp"
 #include "logger/logger.h"
@@ -90,21 +91,26 @@ class RedisSampler {
     }
     /// @brief  Return next valid position or SIZE upon failure.
     uint64_t
-    next_valid(uint64_t const position, uint64_t const step = 1) const
+    next_valid(uint64_t const position,
+               uint64_t const step = 1,
+               bool const random_walk = false)
     {
         // Without this first check, we would scan the whole cache looking
         // for an object that simply is not there.
         if (size_ == 0) {
-            return table_.size();
+            return p_invalid_index();
         }
         for (uint64_t i = 0; i < table_.size(); ++i) {
             uint64_t p = (position + step * i) % table_.size();
+            if (random_walk) {
+                rand_frq_.update(p);
+            }
             if (is_valid(table_, p)) {
                 return p;
             }
         }
         assert(0 && "impossible!");
-        return table_.size();
+        return p_invalid_index();
     }
     /// @brief  Insert a key into a non-growing table.
     static bool
@@ -124,7 +130,7 @@ class RedisSampler {
     void
     grow(uint64_t new_capacity)
     {
-        assert(new_capacity > capacity());
+        assert(new_capacity > p_capacity());
         std::vector<std::pair<uint64_t, Validity>> new_table(new_capacity);
         uint64_t new_size = 0;
         for (auto [key, state] : table_) {
@@ -134,6 +140,30 @@ class RedisSampler {
         }
         table_ = std::move(new_table);
         size_ = new_size;
+    }
+    uint64_t
+    p_capacity() const
+    {
+        return table_.size();
+    }
+    uint64_t
+    p_invalid_index() const
+    {
+        return p_capacity();
+    }
+    uint64_t
+    p_get_random_valid()
+    {
+        if (size_ == 0) {
+            return p_invalid_index();
+        }
+        uint64_t rnd;
+        for (rnd = prng_(); !is_valid(table_, rnd % capacity());
+             rnd = prng_()) {
+            rand_frq_.update(rnd % capacity());
+        }
+        rand_frq_.update(rnd % capacity());
+        return rnd % capacity();
     }
 
 public:
@@ -151,14 +181,14 @@ public:
     uint64_t
     capacity() const
     {
-        return table_.size();
+        return p_capacity();
     }
     /// @brief  Insert a key.
     bool
     insert(uint64_t const key)
     {
-        if (size() >= (double)2 / 3 * capacity()) {
-            grow(2 * capacity());
+        if (size() >= (double)2 / 3 * p_capacity()) {
+            grow(2 * p_capacity());
         }
         return p_insert(table_, size_, key);
     }
@@ -167,8 +197,8 @@ public:
     remove(uint64_t const key)
     {
         uint64_t home = home_position(table_, key);
-        for (uint64_t i = 0; i < capacity(); ++i) {
-            uint64_t p = (home + i) % capacity();
+        for (uint64_t i = 0; i < p_capacity(); ++i) {
+            uint64_t p = (home + i) % p_capacity();
             auto [candidate_key, validity] = table_[p];
             if (validity == INVALID) {
                 return false;
@@ -185,19 +215,29 @@ public:
     std::optional<uint64_t>
     sample(bool const remove_key = false)
     {
-        if (capacity() == 0 || size_ == 0) {
+        static constexpr bool random_probe = true;
+        uint64_t pos;
+        if (p_capacity() == 0 || size_ == 0) {
             return std::nullopt;
         }
-        uint64_t random = prng_();
-        // I choose to step by 999983 because it is coprime with the table size
-        // (power-of-2). This means that I will visit all the objects at least
-        // once before visiting any of them a second time. I take a giant step
-        // size (rather than just 1) because then the next object I sample has
-        // no relationship to the fact I resolve collisions through linear
-        // probing. A number smaller than the table size may be affected, in
-        // theory. Too big of a number risks overflow.
-        uint64_t pos = next_valid(random % capacity(), /*step=*/999983);
-        if (pos >= capacity()) {
+        if (random_probe) {
+            pos = p_get_random_valid();
+        } else {
+            uint64_t random = prng_();
+            // I choose to step by 999983 because it is coprime with the
+            // table size (power-of-2). This means that I will visit all
+            // the objects at least once before visiting any of them a
+            // second time. I take a giant step size (rather than just
+            // 1) because then the next object I sample has no
+            // relationship to the fact I resolve collisions through
+            // linear probing. A number smaller than the table size may
+            // be affected, in theory. Too big of a number risks
+            // overflow.
+            pos = next_valid(random % p_capacity(),
+                             /*step=*/999983,
+                             /*random_walk=*/true);
+        }
+        if (pos == p_invalid_index()) {
             return std::nullopt;
         }
         auto [key, validity] = table_[pos];
@@ -212,7 +252,7 @@ public:
     {
         std::vector<uint64_t> r;
         r.reserve(size_);
-        for (uint64_t i = 0; i < capacity(); ++i) {
+        for (uint64_t i = 0; i < p_capacity(); ++i) {
             if (is_valid(table_, i)) {
                 r.push_back(table_[i].first);
             }
@@ -234,14 +274,21 @@ public:
                    validity2str.at(val.second) + "}";
         };
         return "{\".size\": " + std::to_string(size()) +
-               ", \".capacity\": " + std::to_string(capacity()) +
+               ", \".capacity\": " + std::to_string(p_capacity()) +
                ", \".table\": " + vec2str(table_, f) + "}";
+    }
+
+    std::string
+    random_frequency_json() const
+    {
+        return rand_frq_.json();
     }
 
 private:
     uint64_t size_ = 0;
     std::vector<std::pair<uint64_t, Validity>> table_;
     std::mt19937_64 prng_;
+    Histogram rand_frq_;
 };
 
 /// @todo   Look at
@@ -330,7 +377,7 @@ private:
     {
         // We will escape from the search unless we explicitly find
         // enough expired objects.
-        double ratio_expired = 0.0;
+        uint64_t nr_exp = 0;
         expiry_cycles_ += 1;
         for (uint64_t i = 0; i < NUMBER_SAMPLES; ++i) {
             // Mark expired
@@ -343,7 +390,7 @@ private:
             assert(map_.contains(key.value()));
             auto m = map_.at(key.value());
             if (m.ttl_ms(access.timestamp_ms) < 0.0) {
-                ratio_expired += (double)1 / NUMBER_SAMPLES;
+                nr_exp += 1;
                 remove(key.value(), EvictionCause::ProactiveTTL, access);
                 nr_expirations_ += 1;
             } else if (m.ttl_ms(access.timestamp_ms) <
@@ -354,7 +401,11 @@ private:
                 ttl_queue_.emplace(m.expiration_time_ms_, key.value());
             }
         }
-        return ratio_expired > ACCEPTABLE_STALE_RATIO;
+        bool r = ((double)nr_exp / NUMBER_SAMPLES) > ACCEPTABLE_STALE_RATIO;
+        if (r) {
+            nr_repeat_expiry_cycles_ += 1;
+        }
+        return r;
     }
 
     void
@@ -368,6 +419,9 @@ private:
             if (!run_once && shards_.scale % 10 != 0) {
                 LOGGER_WARN("scale %zu does not divide nicely by 10",
                             shards_.scale);
+                run_once = true;
+            } else if (!run_once) {
+                LOGGER_INFO("scale %zu OK", shards_.scale);
                 run_once = true;
             }
             // SHARDS reduces the number of objects in the cache, so we
@@ -385,6 +439,9 @@ private:
             if (!run_once && 10 % shards_.scale != 0) {
                 LOGGER_WARN("10 does not divide nicely by scale %zu ",
                             shards_.scale);
+                run_once = true;
+            } else if (!run_once) {
+                LOGGER_INFO("scale %zu OK", shards_.scale);
                 run_once = true;
             }
             uint64_t times_per_second = 10 / shards_.scale;
@@ -407,6 +464,17 @@ public:
         : Accurate{capacity_bytes, shards_sampling_ratio},
           redis_sampler_{}
     {
+    }
+
+    std::string
+    json(std::unordered_map<std::string, std::string> extras = {}) const
+    {
+        auto r = p_json_vector(extras);
+        r.emplace_back("Repeat Expiry Cycles [#]",
+                       val2str(nr_repeat_expiry_cycles_));
+        r.emplace_back("Redis Sampler Histogram",
+                       redis_sampler_.random_frequency_json());
+        return map2str(r);
     }
 
 private:
@@ -434,4 +502,6 @@ private:
     // This tree only contains soon expiring objects for memory
     // efficiency (rather than containing all of the objects).
     std::multimap<double, uint64_t> ttl_queue_;
+
+    uint64_t nr_repeat_expiry_cycles_ = 0;
 };
