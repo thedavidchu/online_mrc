@@ -22,11 +22,17 @@ from src.analysis.common.trace import get_twitter_path
 
 DEFAULT_THRESHOLDS = [
     (0.0, 1.0),  # Accurate LRU-TTL Simulation
-    (0.0, 0.0),  # TTLs-Only (with Volatile-TTLs)
-    # (0.25, 0.25),  # Biased-to-TTL binary classifier
+    (0.0, 0.0),  # Lazy-TTLs (with passive TTLs)
+    (0.25, 0.25),  # Biased-to-LRU binary classifier
+    (0.42, 0.42),  # Hard-coded to represent the Mean
     (0.5, 0.5),  # Unbiased binary classifier
-    # (0.75, 0.75),  # Biased-to-LRU binary classifier
-    (1.0, 1.0),  # LRU-Only (with passive TTLs)
+    (0.75, 0.75),  # Biased-to-TTL binary classifier
+    (0.80, 0.80),  # Biased-to-TTL binary classifier
+    (0.85, 0.85),  # Biased-to-TTL binary classifier
+    (0.90, 0.90),  # Biased-to-TTL binary classifier
+    (0.95, 0.95),  # Biased-to-TTL binary classifier
+    (0.99, 0.99),  # Biased-to-TTL binary classifier
+    (1.0, 1.0),  # TTL-Only (with TTL evictions)
 ]
 # AWS's serverless offers as little as 128MB of cache.
 DEFAULT_CAPACITIES = [
@@ -41,7 +47,7 @@ DEFAULT_CAPACITIES = [
     "6GiB",
     "7GiB",
     "8GiB",
-    "32GiB",
+    # "32GiB",
 ]
 DEFAULT_INPUT_TEMPLATE = Template(
     "/mnt/disk1-20tb/Sari-Traces/FilteredTwitter_Binary/cluster$cluster.bin"

@@ -10,6 +10,7 @@
 import argparse
 import json
 from pathlib import Path
+from statistics import geometric_mean, median
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,6 +42,11 @@ MASC_DIR = Path("masc_thesis/")
 OK_CLUSTERS = sorted(
     {6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52}
     - {12, 15, 31, 37, 44, 50}
+)
+BETTER_CLUSTERS = sorted(
+    {6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52}
+    - {12, 15, 31, 37, 44, 50}
+    - {6, 7, 24, 29}
 )
 ALL_CLUSTERS = sorted(
     [6, 7, 11, 12, 15, 17, 18, 19, 22, 24, 25, 29, 31, 37, 44, 45, 50, 52]
@@ -77,16 +83,37 @@ def prettify_number(x: float | int) -> str:
 ################################################################################
 
 
-def plot_ttl_vs_lru():
+def plot_cluster19_ttl_vs_lru(
+    large: bool = True, png: bool = True, lines_type: int = 1
+):
+    """
+    @lines_type: int
+        0 - none
+        1 - single line
+        2 - zig-zag
+    """
+    if large:
+        arrow_size = dict(markersize=5)
+        x_size = dict(markersize=20, markeredgewidth=3)
+        tick_size = dict(markersize=10)
+        text_fmt = dict(fontsize="small")
+        size = 3
+    else:
+        arrow_size = dict()
+        x_size = dict()
+        tick_size = dict()
+        text_fmt = dict()
+        size = 5
     INPUT = Path(
         "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
     )
     OUTPUT = MASC_DIR / Path("cluster19-ttl-vs-lru.pdf")
+    OUTPUT_PNG = MASC_DIR / Path("cluster19-ttl-vs-lru.png")
 
     data = parse_data(INPUT)
     capacities = [1.0 * GiB, 4.0 * GiB]
     fig, axes = plt.subplots(1, len(capacities), squeeze=False, sharey=True)
-    fig.set_size_inches(len(capacities) * 5, 5)
+    fig.set_size_inches(len(capacities) * size, size)
     for i, c in enumerate(capacities):
         axes[0, i].axvline(
             SCALE_B_TO_GiB(c),
@@ -112,66 +139,121 @@ def plot_ttl_vs_lru():
             SCALE_MS_TO_HOUR,
             IDENTITY_X_D,
             fmt=".",
+            kwfmt=dict(markersize=2),
             colours=["red", "green", "blue"],
         )
         axes[0, i].legend().remove()
         axes[0, i].set_title("")
-    # Drawings on the left plot
-    axes[0, 0].plot([1.0, 1.0], [8.0, 5.0], "_-k", label="Predicted Eviction Time")
-    fig.text(
-        0.455,
-        0.83,
-        "Predicted\nEviction\nTime",
-        ha="right",
-        va="top",
-    )
-    if False:
-        axes[0, 0].plot([0.0, 0.0], [8.15, 0.0], "_-k", label="Original TTL")
-        fig.text(
-            0.135,
-            0.68,
-            "Original TTL",
-            ha="center",
-            va="center",
-            rotation="vertical",
+    axes[0, 0].set_xticks([0, 1])
+    axes[0, 0].set_yticks([-8, -6, -4, -2, 0, 2, 4, 6, 8])
+    if lines_type == 0:
+        axes[0, 0].set_title("Cache Size: 1 GiB")
+        axes[0, 1].set_title("Cache Size: 4 GiB")
+    if lines_type == 1:
+        # Drawings on the left plot
+        axes[0, 0].plot([0.0, 1.0], [8.0, 5.0], "b-.")
+        axes[0, 0].plot([1.0 - 0.02], [5.0 - 0.0], "b>", **arrow_size)
+        axes[0, 0].plot(
+            [1.0, 1.0], [8.0, 5.0], "_-k", **tick_size, label="Predicted Eviction Time"
         )
-    # Zig-zag line
-    axes[0, 0].plot([0.0, 0.67, 0.0, 1.0], [8.0, 6.0, 6.0, 3.0], "b-.")
-    axes[0, 0].plot([0.67], [6.0], "b>")
-    axes[0, 0].plot([0.01], [6.0], "b<")
-    axes[0, 0].plot([0.99], [3.0], "b>")
+        fig.text(
+            0.455 if not large else 0.45,
+            0.83 if not large else 0.85 + 0.015,
+            "Predicted\nEviction\nTime",
+            ha="right",
+            va="top",
+            **text_fmt,
+        )
+        # Drawings on right plot
+        axes[0, 1].plot(
+            [4.0, 4.0], [8.0, -1.0], "_-k", **tick_size, label="Predicted Eviction Time"
+        )
+        fig.text(
+            0.88,
+            0.73,
+            "Predicted\nEviction\nTime",
+            ha="right",
+            va="top",
+            **text_fmt,
+        )
+        axes[0, 1].plot([0.0, 4.0], [8.0, -1.0], "g-.")
+        axes[0, 1].plot([4.0 - 0.1], [-1.0 + 0.2], "g^", **arrow_size)
+        axes[0, 1].plot([3.55], [0.0], "gx", markersize=10, linewidth=3)
+    elif lines_type == 2:
+        # Drawings on the left plot
+        axes[0, 0].plot(
+            [1.0, 1.0], [8.0, 5.0], "_-k", **tick_size, label="Predicted Eviction Time"
+        )
+        fig.text(
+            0.455 if not large else 0.45,
+            0.83 if not large else 0.85,
+            "Predicted\nEviction\nTime",
+            ha="right",
+            va="top",
+            **text_fmt,
+        )
+        if False:
+            axes[0, 0].plot([0.0, 0.0], [8.15, 0.0], "_-k", label="Original TTL")
+            fig.text(
+                0.135,
+                0.68,
+                "Original TTL",
+                ha="center",
+                va="center",
+                rotation="vertical",
+            )
+        # Zig-zag line
+        axes[0, 0].plot([0.0, 0.67, 0.0, 1.0], [8.0, 6.0, 6.0, 3.0], "b-.")
+        axes[0, 0].plot([0.67], [6.0], "b>", **arrow_size)
+        axes[0, 0].plot([0.01], [6.0], "b<", **arrow_size)
+        axes[0, 0].plot([0.99], [3.0], "b>", **arrow_size)
 
-    ## Drawings on the right plot
-    ## Zig-zag green line.
-    axes[0, 1].plot([0.0, 2.0, 0.0, 3.26], [8.0, 2.4, 2.4, -7.0], "g-.")
-    axes[0, 1].plot([2.0], [2.4], "g^")
-    axes[0, 1].plot([0.01], [2.4], "g<")
-    axes[0, 1].plot([3.26], [-7.0], "g^")
-    axes[0, 1].plot([3.33], [-7.2], "gx")
-    ## Predicted Eviction Time.
-    axes[0, 1].plot([4.0, 4.0], [8.0, -1.0], "_-k", label="Predicted Eviction Time")
-    fig.text(
-        0.88,
-        0.73,
-        "Predicted\nEviction\nTime",
-        ha="right",
-        va="top",
-    )
+        ## Drawings on the right plot
+        ## Zig-zag green line.
+        axes[0, 1].plot([0.0, 2.0, 0.0, 3.26], [8.0, 2.4, 2.4, -7.0], "g-.")
+        axes[0, 1].plot([2.0], [2.4], "g^", **arrow_size)
+        axes[0, 1].plot([0.01], [2.4], "g<", **arrow_size)
+        axes[0, 1].plot([3.26], [-7.0], "g^", **arrow_size)
+        axes[0, 1].plot([3.33], [-7.2], "gx", **x_size)
+        # Predicted Eviction Time.
+        axes[0, 1].plot(
+            [4.0, 4.0], [8.0, -1.0], "_-k", **tick_size, label="Predicted Eviction Time"
+        )
+        fig.text(
+            0.88,
+            0.73,
+            "Predicted\nEviction\nTime",
+            ha="right",
+            va="top",
+            **text_fmt,
+        )
 
     fig.savefig(OUTPUT, bbox_inches="tight")
+    if png:
+        fig.savefig(OUTPUT_PNG, bbox_inches="tight")
 
 
 def plot_accurate_vs_lazy_ttl_memory_usage():
+    v = 2
     INPUT = Path(
-        "/home/david/projects/online_mrc/myresults/lru-ttl-v2-s0.001/result-cluster19.out"
+        f"/home/david/projects/online_mrc/myresults/lru-ttl-v{v}-s0.001/result-cluster19.out"
     )
     OUTPUT = MASC_DIR / Path("cluster19-accurate-vs-lazy-ttl-memory-usage.pdf")
+
+    def correct_size(d, target_size: str) -> bool:
+        size = get_scaled_fixed_data(
+            lambda dd: get_stat(dd, ["Capacity [B]"]),
+            *GiB_SHARDS_ARGS,
+        )(d)
+        size_txt = f"{size:.3} GiB"
+        return target_size == size_txt
 
     data = parse_data(INPUT)
     capacities = [1.0 * GiB, 4.0 * GiB, 8.0 * GiB]
     expiration_policy = {
         (0.0, 0.0): "LRU/Lazy-TTL",
-        (0.0, 1.0): "TTL-only",
+        (0.5, 0.5): "LRU/Psyche",
+        (0.0, 1.0): "LRU/Proactive-TTL",
     }
     # We use the maximum interval size because the methods' expiry cycle
     # is shorter than our sampling cycle.
@@ -181,7 +263,7 @@ def plot_accurate_vs_lazy_ttl_memory_usage():
     fig, axes = plt.subplots(
         1, len(capacities), squeeze=False, sharex=True, sharey=True
     )
-    fig.set_size_inches(len(capacities) * 5, 5)
+    fig.set_size_inches(len(capacities) * 3.5, 3.5)
     for i, c in enumerate(capacities):
         axes[0, i].axhline(
             SCALE_B_TO_GiB(c),
@@ -189,7 +271,7 @@ def plot_accurate_vs_lazy_ttl_memory_usage():
             linestyle=":",
             label=f"Cache Capacity ({SCALE_B_TO_GiB(c):.3} GiB)",
         )
-        for l, u in [(0.0, 1.0), (0.0, 0.0)]:
+        for l, u in [(0.0, 1.0), (0.5, 0.5)]:
             plot_lines(
                 axes[0, i],
                 data,
@@ -199,7 +281,7 @@ def plot_accurate_vs_lazy_ttl_memory_usage():
                     get_stat(d, ["Statistics", "Temporal Times [ms]"])
                     if get_stat(d, ["Lower Ratio"]) == l
                     and get_stat(d, ["Upper Ratio"]) == u
-                    and get_stat(d, ["Extras", "Nominal Capacity [B]"]) == c
+                    and correct_size(d, f"{c/GiB:.3} GiB")
                     else None
                 ),
                 *HOURS_NO_SHARDS_ARGS,
@@ -209,8 +291,16 @@ def plot_accurate_vs_lazy_ttl_memory_usage():
                 colours=[COLOUR_MAP[(l, u)]],
                 plot_x_axis=False,
             )
-        axes[0, i].legend(loc="upper right")
-        axes[0, i].set_title(f"Cache Size: {SCALE_B_TO_GiB(c):.3} GiB")
+        # Fiddle with exact graph location
+        axes[0, i].legend()
+        axes[0, i].set_title(
+            f"Cache Size: {SCALE_B_TO_GiB(c):.3} GiB", fontsize="large"
+        )
+        axes[0, i].set_xlabel("")
+        axes[0, i].set_ylabel("")
+    axes[0, 2].legend(loc="center", bbox_to_anchor=(0.5, 0.8))
+    axes[0, 0].set_ylabel("Memory Usage [GiB]", fontsize="x-large")
+    axes[0, 1].set_xlabel("Time [h]", fontsize="x-large")
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
@@ -251,7 +341,7 @@ def plot_accurate_vs_lazy_ttl_mrc():
         )
         axes[0, i].set_title(f"{get_label("LRU", l, u)} MRC")
         axes[0, i].set_title("")
-        axes[0, i].legend(loc="upper right")
+        axes[0, i].legend(loc="lower right")
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
@@ -331,8 +421,16 @@ def plot_ttl_vs_lru_changes():
 ################################################################################
 
 
-def plot_all_mrc():
+def plot_all_mrc(large: bool = True):
     """Plot MRC for Proactive-TTL, Lazy-TTL, and Psyche"""
+    if large:
+        size = 3
+        marker_size = dict(markersize=3)
+        fontsize = dict(fontsize="xx-large")
+    else:
+        size = 5
+        marker_size = {}
+        fontsize = {}
     v = 0
     INPUT = lambda policy, c: (
         f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v{v}-s0.001/result-cluster{c}.out"
@@ -357,7 +455,7 @@ def plot_all_mrc():
     def plot_me(policy, output_path):
         rows, cols = 4, 3
         fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
-        fig.set_size_inches(5 * cols, 5 * rows)
+        fig.set_size_inches(size * cols, size * rows)
         fig.subplots_adjust(wspace=0.3, hspace=0.3)
         clusters = iter(OK_CLUSTERS)
         for r in range(rows):
@@ -365,7 +463,11 @@ def plot_all_mrc():
                 ax = axes[r, c]
                 cluster = next(clusters)
                 data = parse_data(Path(INPUT(policy, cluster)))
+                # Remove lazy-TTL policy.
+                del data[(0.0, 0.0, "EvictionTime")]
                 if policy == "lfu":
+                    # Remove ttl-only policies.
+                    del data[(1.0, 1.0, "EvictionTime")]
                     # Plot oracle.
                     oracle_dlist = data[(0.0, 1.0, "EvictionTime")]
                     mrc = {}
@@ -385,15 +487,29 @@ def plot_all_mrc():
                     ax,
                     policy,
                     data,
-                    *CAPACITY_GIB_ARGS,
-                    "Miss Ratio",
+                    "Cache Size [GiB]" if not large else "",
+                    *CAPACITY_GIB_ARGS[1:],
+                    "Miss Ratio" if not large else "",
                     lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
                     scale_y_func=IDENTITY_X,
                     fix_y_func=shards_adj,
                     set_ylim_to_one=True,
                     label_func=lambda p, l, u, e: expiration_policy(p)[(l, u)],
+                    kwfmt=marker_size,
                 )
+                if policy == "lru":
+                    handles, labels = ax.get_legend_handles_labels()
+                    ordered_handles = [handles[x] for x in (1, 2, 0)]
+                    ordered_labels = [labels[x] for x in (1, 2, 0)]
+                    ax.legend(ordered_handles, ordered_labels)
                 ax.set_title(f"Cluster #{cluster}")
+                if large:
+                    ax.set_xticks([0.0, 2.0, 4.0, 6.0, 8.0])
+        # Add x- and y-labels
+        if large:
+            # Yes, this is a complete hack to shift it over...
+            axes[rows // 2, 0].set_ylabel(" " * 40 + "Miss Ratio", **fontsize)
+            axes[-1, cols // 2].set_xlabel("Cache Size [GiB]", **fontsize)
         fig.savefig(output_path, bbox_inches="tight")
 
     plot_me("lru", LRU_OUTPUT)
@@ -414,7 +530,13 @@ def plot_memory_usage(
     use_relative_size: bool = True,
 ):
     f = get_scaled_fixed_data(
-        lambda d: d["Statistics"]["Temporal Interval Max Sizes [B]"],
+        lambda d: (
+            d["Statistics"]["Temporal Interval Max Sizes [B]"]
+            # if "Temporal Custom Metric [?]" not in d["Statistics"]
+            # else d["Statistics"]["Temporal Custom Metric [?]"]
+            if "Temporal Interval Min Sizes [B]" not in d["Statistics"]
+            else d["Statistics"]["Temporal Interval Min Sizes [B]"]
+        ),
         *GiB_SHARDS_ARGS,
     )
     t = get_scaled_fixed_data(
@@ -432,56 +554,61 @@ def plot_memory_usage(
                 if cache_name == "Psyche":
                     continue
                 c = colours[cache_name]
-                oracle_sizes = np.array(f(oracle_d))
-                oracle_times = np.array(t(oracle_d))
-                output_sizes = np.array(f(d))
-                output_times = np.array(t(d))
-                assert np.all(
-                    oracle_times == output_times
-                ), f"{oracle_times - output_times} for {cache_name}"
-                times = oracle_times
-                ratio_sizes = output_sizes / oracle_sizes
-                ax.plot(
-                    times,
-                    (100 * ratio_sizes) if use_relative_size else output_sizes,
-                    c=c,
-                    label=cache_name,
-                )
-    ax.set_xlabel("Time [h]")
-    ax.set_ylabel(
-        "Memory Usage [% Psyche]" if use_relative_size else "Memory Usage [GiB]"
-    )
+                if use_relative_size:
+                    oracle_sizes = np.array(f(oracle_d))
+                    oracle_times = np.array(t(oracle_d))
+                    output_sizes = np.array(f(d))
+                    output_times = np.array(t(d))
+                    assert np.all(
+                        oracle_times == output_times
+                    ), f"{oracle_times - output_times} for {cache_name}"
+                    times = output_times
+                    ratio_sizes = output_sizes / oracle_sizes
+                    ax.plot(
+                        times,
+                        (100 * ratio_sizes),
+                        c=c,
+                        label=cache_name,
+                    )
+                else:
+                    output_sizes, output_times = np.array(f(d)), np.array(t(d))
+                    ax.plot(
+                        output_times,
+                        output_sizes,
+                        c=c,
+                        label=cache_name,
+                    )
+    # ax.set_xlabel("Time [h]")
+    # ax.set_ylabel(
+    #     "Memory Usage [% Psyche]" if use_relative_size else "Memory Usage [GiB]"
+    # )
     ax.legend()
 
 
 def plot_all_periodic_ttl_memory_usage():
     """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
-    version = 2
-    INPUTS = lambda c: [
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-Memcached-cluster{c}-v{version}-s0.001.out"
-        ),
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-Redis-cluster{c}-v{version}-s0.001.out"
-        ),
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-CacheLib-cluster{c}-v{version}-s0.001.out"
-        ),
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-TTL-cluster{c}-v{version}-s0.001.out"
-        ),
-    ]
+    version = 20250915
+    rd_version = 20250916
+    INPUT = lambda p, c: Path(
+        f"/home/david/projects/online_mrc/myresults/accurate-v{version}/result-{p}-cluster{c}-v{version}-s0.001.out"
+        if p not in {"Redis", "Memcached"}
+        # else f"/home/david/projects/online_mrc/myresults/accurate-v20250916-s1/result-Redis-cluster{c}-v20250915-s1.out"
+        else f"/home/david/projects/online_mrc/myresults/accurate-20250920-v0-s1/result-{p}-cluster{c}.out"
+    )
+    INPUT_NAMES = ["Memcached", "Redis", "CacheLib", "TTL"]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
+    # INPUT_NAMES = ["Memcached", "CacheLib", "TTL"]
+    # NAMES = ["Memcached", "CacheLib", "Psyche"]
     OUTPUT = MASC_DIR / Path("all-periodic-ttl-memory-usage.pdf")
+    OUTPUT_PNG = MASC_DIR / Path("all-periodic-ttl-memory-usage.png")
 
     # Plot LRU MRCs
     rows, cols = 4, 3
     fig, axes = plt.subplots(rows, cols, squeeze=False)
-    fig.set_size_inches(5 * cols, 5 * rows)
+    fig.set_size_inches(3 * cols, 3 * rows)
     fig.subplots_adjust(wspace=0.3, hspace=0.3)
     clusters = iter(OK_CLUSTERS)
     COLOURS = dict(
-        Optimal="black",
         CacheLib="#f47629",
         Memcached="#288d82",
         Redis="#ff4438",
@@ -490,22 +617,28 @@ def plot_all_periodic_ttl_memory_usage():
     for r in range(rows):
         for c in range(cols):
             cluster = next(clusters)
+            if any(not INPUT(p, cluster).exists() for p in INPUT_NAMES):
+                print(f"Skipping cluster {cluster}...")
+                continue
             # We group by capacity simply to create a key. We don't actually need a key.
             all_data = [
                 parse_data(
-                    x,
+                    INPUT(policy, cluster),
                     key_funcs=(
                         lambda _d: 0.0,
                         lambda _d: 1.0,
                         lambda _d: "EvictionTime",
                     ),
                 )
-                for x in INPUTS(cluster)
+                for policy in INPUT_NAMES
             ]
             ax = axes[r, c]
-            plot_memory_usage(ax, all_data, COLOURS, NAMES)
-            ax.set_title(f"Cluster #{cluster}")
+            plot_memory_usage(ax, all_data, COLOURS, NAMES, use_relative_size=False)
+            ax.set_title(f"Cluster #{cluster}", fontsize="large")
+    axes[-1, 1].set_xlabel("Time [h]", fontsize="x-large")
+    axes[2, 0].set_ylabel(" " * 40 + "Memory Usage [% Psyche]\n", fontsize="x-large")
     fig.savefig(OUTPUT, bbox_inches="tight")
+    fig.savefig(OUTPUT_PNG, bbox_inches="tight")
 
 
 def plot_compare_memory_usage(plot_absolute: bool = True):
@@ -572,6 +705,8 @@ def plot_compare_memory_usage(plot_absolute: bool = True):
                         ax.plot(times, diff, color=colour, label=csize)
                 ax.axhline(0, color="black", linestyle="dashed")
                 ax.legend()
+                if policy == "lru" and cluster == 52:
+                    ax.legend(loc="lower right")
                 ax.set_xlabel("Time [h]")
                 if plot_absolute:
                     ax.set_ylabel("Memory [GiB]")
@@ -584,8 +719,14 @@ def plot_compare_memory_usage(plot_absolute: bool = True):
     plot_me("lfu", INPUT, LFU_OUTPUT)
 
 
-def plot_all_total_memory_usage_comparison():
-    """Plot metadata for Proactive-TTL and Psyche"""
+def plot_all_total_memory_savings(large: bool = True):
+    """Plot memory savings for Proactive-TTL and Psyche"""
+    if large:
+        size = 3
+        fontsize = dict(fontsize="x-large")
+    else:
+        size = 5
+        fontsize = dict(fontsize="x-large")
     v = 0
     INPUT = lambda policy, c: (
         f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v{v}-s0.001/result-cluster{c}.out"
@@ -597,7 +738,7 @@ def plot_all_total_memory_usage_comparison():
         rows, cols = 4, 3
         fig, axes = plt.subplots(rows, cols, squeeze=False)
         fig.subplots_adjust(wspace=0.3, hspace=0.3)
-        fig.set_size_inches(5 * cols, 5 * rows)
+        fig.set_size_inches(size * cols, size * rows)
         clusters = iter(OK_CLUSTERS)
         for r in range(rows):
             for c in range(cols):
@@ -642,10 +783,15 @@ def plot_all_total_memory_usage_comparison():
                     diff = metadata_diff + size_diff
                     ax.plot(times, diff / (1 << 20), color=colour, label=csize)
                     ax.axhline(0, color="black", linestyle="dashed")
-                ax.legend()
-                ax.set_xlabel("Time [h]")
-                ax.set_ylabel("Memory Savings [MiB]")
+                if cluster == 52 and policy == "lru":
+                    ax.legend(loc="center right", bbox_to_anchor=(1.0, 0.7))
+                else:
+                    ax.legend()
+                # ax.set_xlabel("Time [h]")
+                # ax.set_ylabel("Memory Savings [MiB]")
                 ax.set_title(f"Cluster #{cluster}")
+        axes[-1, cols // 2].set_xlabel("Time [h]", **fontsize)
+        axes[rows // 2, 0].set_ylabel(" " * 40 + "Memory Savings [MiB]", **fontsize)
         fig.savefig(output_path, bbox_inches="tight")
 
     plot_me("lru", INPUT, LRU_OUTPUT)
@@ -729,20 +875,41 @@ def plot_cpu_usage(
     colours: dict[str, str],
     cache_names: list[str],
     cluster: int,
+    large: bool,
+    *,
+    bar_sections: int = 2,
+    report_seach_rather_than_discard=True,
+    redis_sampling_start_period_s=100,
 ):
+    """
+    @param bar_sections: int - number of bar sections.
+        1 = searched
+        2 = searched/discarded
+        3 = searched/lazy-discard/discard.
+    """
+    if large:
+        fontsize = dict(fontsize="large")
+        fontrotate = dict(padding=-50, rotation="vertical")
+    else:
+        fontsize = dict()
+        fontrotate = dict(padding=-12, rotation="horizontal")
+
     def f(d, cache_name):
         if cache_name == "Redis":
             shards = get_stat(d, ["Extras", "SHARDS", ".scale"])
             nr_search = get_stat(d, ["Expiration Work [#]"])
             nr_discard = get_stat(d, ["Expirations [#]"])
             nr_sec = get_stat(d, ["Statistics", "Uptime [ms]"]) / 1000
-            return (nr_search - 20 * nr_sec) * shards + 10 * 20 * nr_sec
-        if cache_name == "Psyche":
-            shards = get_stat(d, ["Extras", "SHARDS", ".scale"])
-            nr_search = get_stat(d, ["Expiration Work [#]"])
-            nr_discard = get_stat(d, ["Expirations [#]"])
-            nr_sec = get_stat(d, ["Statistics", "Uptime [ms]"]) * 1000
-            return (nr_discard * shards) + (nr_search - nr_discard)
+            if redis_sampling_start_period_s == 0.1:
+                return (nr_search - 10 * 20 * nr_sec) * shards + 10 * 20 * nr_sec
+            elif redis_sampling_start_period_s == 1:
+                return (nr_search - 20 * nr_sec) * shards + 10 * 20 * nr_sec
+            elif redis_sampling_start_period_s == 100:
+                return nr_search * shards
+            else:
+                raise ValueError(
+                    f"unexpected sampling start period {redis_sampling_start_period_s}"
+                )
         return get_scaled_fixed_data(
             lambda d: get_stat(d, ["Expiration Work [#]"]), *COUNT_SHARDS_ARGS
         )(d)
@@ -750,66 +917,158 @@ def plot_cpu_usage(
     g = get_scaled_fixed_data(
         lambda d: get_stat(d, ["Expirations [#]"]), *COUNT_SHARDS_ARGS
     )
-    xs, exp_array, searched_array, cs = [], [], [], []
+    h = get_scaled_fixed_data(
+        lambda d: (
+            get_stat(d, ["Lazy Expirations [#]"]) if "Lazy Expirations [#]" in d else 0
+        ),
+        *COUNT_SHARDS_ARGS,
+    )
+    xs, active_exps, lazy_exps, searches, cs = [], [], [], [], []
     for i, (data, cache_name) in enumerate(zip(all_data, cache_names)):
         for d_list in data.values():
             for d in d_list:
-                c, nr_searched, nr_exp = colours[cache_name], f(d, cache_name), g(d)
+                c, nr_searched = colours[cache_name], f(d, cache_name)
+                nr_exp, nr_lazy_exp = g(d), h(d)
                 xs.append(cache_name)
-                exp_array.append(nr_exp)
-                searched_array.append(nr_searched)
+                searches.append(nr_searched)
+                active_exps.append(nr_exp)
+                lazy_exps.append(nr_lazy_exp)
                 cs.append(c)
-    botbar = ax.bar(xs, exp_array, color=cs, log=True)
-    ax.bar_label(
-        botbar,
-        labels=[prettify_number(y) for y in exp_array],
-        label_type="center",
-        # padding=200,
+
+    active_exps, lazy_exps, searches = (
+        np.array(active_exps),
+        np.array(lazy_exps),
+        np.array(searches),
     )
-    topbar = ax.bar(
+    if bar_sections == 1:
+        active_exps[:] = 0
+        lazy_exps[:] = 0
+    elif bar_sections == 2:
+        xs = list(range(len(xs)))
+        # The lazy expires make up the next layer.
+        bar_1 = ax.bar(
+            xs,
+            lazy_exps + active_exps,
+            color=cs,
+            log=True,
+            tick_label=[""] * len(cache_names),
+        )
+        ax.bar_label(
+            bar_1,
+            labels=[
+                (
+                    prettify_number(y).rjust(7)
+                    if len(prettify_number(y)) < 6 and large
+                    else prettify_number(y)
+                )
+                for y in active_exps + lazy_exps
+            ],
+            label_type="edge",
+            fontweight="bold",
+            **fontsize,
+            **fontrotate,
+        )
+    elif bar_sections == 3:
+        # The active expires make up the base layer.
+        bar_0 = ax.bar(xs, active_exps, color=cs, log=True)
+        ax.bar_label(
+            bar_0,
+            labels=[
+                ("(" + prettify_number(y) + ")") if y + lz >= 3 * y else ""
+                for y, lz in zip(active_exps, lazy_exps)
+            ],
+            label_type="edge",
+            **fontsize,
+            **fontrotate,
+        )
+        # The lazy expires make up the next layer.
+        bar_1 = ax.bar(
+            xs,
+            lazy_exps,
+            color=[f"{c}C0" for c in cs],
+            log=True,
+            bottom=active_exps,
+        )
+        ax.bar_label(
+            bar_1,
+            labels=[prettify_number(y) for y in active_exps + lazy_exps],
+            label_type="edge",
+            padding=-12,
+            fontweight="bold",
+            **fontsize,
+        )
+    else:
+        raise ValueError(f"bad value {bar_sections}")
+    # The number of searched objects makes up the top layer.
+    bar_2 = ax.bar(
         xs,
         # The height is the difference between the height we want and
         # the bottom.
-        np.array(searched_array) - np.array(exp_array),
+        searches + lazy_exps - active_exps,
         # We make these 50% transparent.
-        color=[f"{c}80" for c in cs],
+        color=[f"{c}30" if bar_sections != 1 else c for c in cs],
         log=True,
-        bottom=exp_array,
+        bottom=active_exps + lazy_exps,
     )
     ax.bar_label(
-        topbar,
-        labels=[prettify_number(y) for y in searched_array],
+        bar_2,
+        labels=[prettify_number(y) for y in searches + lazy_exps],
         label_type="edge",
+        fontstyle="italic",
+        **fontsize,
     )
-    ax.set_xlabel("Expiration Policy")
-    ax.set_ylabel("Searched Objects")
+    if not large:
+        ax.set_xlabel("Expiry Policy")
+        ax.set_ylabel("Expiry-Related Probing Accesses")
+
+    if report_seach_rather_than_discard:
+        # Searches
+        x = {name: cnt for name, cnt in zip(cache_names, searches)}
+        x = {k: v / x["Psyche"] for k, v in x.items()}
+    else:
+        # Discards
+        x = {name: cnt for name, cnt in zip(cache_names, active_exps + lazy_exps)}
+        x = {k: v / x["Psyche"] for k, v in x.items()}
+    return x
 
 
-def plot_all_periodic_ttl_compute_usage():
+def plot_all_periodic_ttl_compute_usage(large: bool = True):
     """Plot compute usage bar graphs for Proactive-TTL (max cache size), Memcached, Redis, and CacheLib."""
-    # version = 2
-    version = 20250913
-    INPUTS = lambda c: [
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-Memcached-cluster{c}-v{version}-s0.001.out"
-        ),
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-Redis-cluster{c}-v{version}-s0.001.out"
-        ),
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-CacheLib-cluster{c}-v{version}-s0.001.out"
-        ),
-        Path(
-            f"/home/david/projects/online_mrc/myresults/accurate/result-TTL-cluster{c}-v{version}-s0.001.out"
-        ),
-    ]
+    if large:
+        size = 3
+        altfontsize = dict(fontsize="large")
+        fontsize = dict(fontsize="x-large")
+    else:
+        size = 5
+        altfontsize = dict()
+        fontsize = dict()
+    version = 20250915
+    rd_version = 20250916
+    INPUT = lambda p, c: Path(
+        f"/home/david/projects/online_mrc/myresults/accurate-v{version}/result-{p}-cluster{c}-v{version}-s0.001.out"
+        if p not in {"Redis", "Memcached"}
+        else f"/home/david/projects/online_mrc/myresults/accurate-20250920-v0-s1/result-{p}-cluster{c}.out"
+        # else f"/home/david/projects/online_mrc/myresults/accurate-v{rd_version}-s1/result-{p}-cluster{c}-v{version}-s1.out"
+    )
+    INPUT_NAMES = ["Memcached", "Redis", "CacheLib", "TTL"]
     NAMES = ["Memcached", "Redis", "CacheLib", "Psyche"]
-    OUTPUT = MASC_DIR / Path("all-periodic-ttl-compute-usage.pdf")
+    # INPUT_NAMES = ["Memcached", "CacheLib", "TTL"]
+    # NAMES = ["Memcached", "CacheLib", "Psyche"]
+    OUTPUT_PDF = MASC_DIR / Path("all-periodic-ttl-compute-usage.pdf")
+    OUTPUT_PNG = MASC_DIR / Path("all-periodic-ttl-probing-accesses.png")
+
+    def collect_stats(
+        data: list[dict[str, float]], key: str
+    ) -> dict[str, dict[str, float]]:
+        x = [d[key] for d in data]
+        return {
+            key: dict(median=median(x), geometric_mean=geometric_mean(x), max=max(x))
+        }
 
     # Plot LRU MRCs
     rows, cols = 4, 3
     fig, axes = plt.subplots(rows, cols, sharey=True, squeeze=False)
-    fig.set_size_inches(5 * cols, 5 * rows)
+    fig.set_size_inches(size * cols, size * rows)
     fig.subplots_adjust(wspace=0.3, hspace=0.3)
     clusters = iter(OK_CLUSTERS)
     COLOURS = dict(
@@ -818,29 +1077,50 @@ def plot_all_periodic_ttl_compute_usage():
         Redis="#ff4438",
         Psyche="#808080",
     )
+    search_ratios = []
     for r in range(rows):
         for c in range(cols):
             cluster = next(clusters)
-            if any(not x.exists() for x in INPUTS(cluster)):
+            if any(not INPUT(p, cluster).exists() for p in INPUT_NAMES):
+                print(f"Skipping cluster {cluster}...")
                 continue
             # We group by capacity simply to create a key. We don't actually need a key.
             all_data = [
                 parse_data(
-                    x,
+                    INPUT(p, cluster),
                     key_funcs=(
                         lambda _d: 0.0,
                         lambda _d: 1.0,
                         lambda _d: "EvictionTime",
                     ),
                 )
-                for x in INPUTS(cluster)
+                for p in INPUT_NAMES
             ]
             ax = axes[r, c]
-            plot_cpu_usage(ax, all_data, COLOURS, NAMES, cluster)
+            search_ratios.append(
+                plot_cpu_usage(ax, all_data, COLOURS, NAMES, cluster, large=large)
+            )
             ax.set_title(f"Cluster #{cluster}")
-            ax.set_ylim(bottom=1e6, top=20e12)
+            if large:
+                ax.set_ylim(bottom=1e2, top=1e14)
+            else:
+                ax.set_ylim(bottom=1e2, top=20e12)
             ax.set_yticks([1e3, 1e6, 1e9, 1e12])
-    fig.savefig(OUTPUT, bbox_inches="tight")
+    if large:
+        axes[-1, cols // 2].set_xlabel("Expiry Policy", **fontsize)
+        axes[rows // 2, 0].set_ylabel(" " * 40 + "Probe Accesses", **fontsize)
+        for c in range(cols):
+            axes[-1, c].set_xticks(
+                range(len(NAMES)), NAMES, rotation=45, ha="right", **altfontsize
+            )
+
+    print(collect_stats(search_ratios, "Memcached"))
+    # print(collect_stats(search_ratios, "Redis"))
+    print(collect_stats(search_ratios, "CacheLib"))
+    print(collect_stats(search_ratios, "Psyche"))
+
+    fig.savefig(OUTPUT_PDF, bbox_inches="tight")
+    fig.savefig(OUTPUT_PNG, bbox_inches="tight")
 
 
 ################################################################################
@@ -848,7 +1128,15 @@ def plot_all_periodic_ttl_compute_usage():
 ################################################################################
 
 
-def plot_lfu_ttl_frequency_analysis():
+def plot_lfu_ttl_frequency_analysis(large: bool = True):
+    if large:
+        size = 3
+        fontsize = dict(fontsize="x-large")
+        markersize = dict(markersize=3)
+    else:
+        size = 5
+        fontsize = dict()
+        markersize = dict()
     INPUT = lambda f: Path(
         f"/home/david/projects/online_mrc/myresults/lfu_ttl_frequency_study/result-lfu-cluster52-v{f}-s0.001.out"
     )
@@ -880,7 +1168,7 @@ def plot_lfu_ttl_frequency_analysis():
         *GiB_SHARDS_ARGS,
     )
 
-    fig.set_size_inches(6, 6)
+    fig.set_size_inches(size, size)
     done_once = False
     for f, colour in FREQ.items():
         data = parse_data(Path(INPUT(f)))
@@ -903,11 +1191,12 @@ def plot_lfu_ttl_frequency_analysis():
             "-o",
             color=colour,
             label=expiration_policy(f)[(0.5, 0.5)],
+            **markersize,
         )
     ax.set_ylim(0.0, 1.0)
     ax.legend()
-    ax.set_xlabel("Cache Size [GiB]")
-    ax.set_ylabel("Miss Ratio")
+    ax.set_xlabel("Cache Size [GiB]", **fontsize)
+    ax.set_ylabel("Miss Ratio", **fontsize)
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
@@ -1047,10 +1336,19 @@ def plot_cluster52_lfu_ttl_frequency_vs_shards(use_cdf: bool = False):
 # - LRU vs TTL queue sizes over time
 
 
-def plot_cluster19_statistics_vs_time():
-    v = 20250910
+def plot_cluster19_statistics_vs_time(large: bool = True):
+    if large:
+        size = 3
+        markersize = dict(markersize=3)
+        fontsize = dict(fontsize="x-large")
+        altfontsize = dict(fontsize="large")
+    else:
+        size = 5
+        markersize = dict()
+        fontsize = dict()
+        altfontsize = dict()
     INPUT = Path(
-        f"/home/david/projects/online_mrc/myresults/lru-ttl-v{v}-s0.001/result-cluster19.out"
+        "/home/david/projects/online_mrc/myresults/ratio-lru-ttl-v0-s0.001/result-cluster19.out"
     )
     OUTPUT = MASC_DIR / Path("cluster19_statistics_vs_time.pdf")
     # Oracle or Psyche.
@@ -1066,10 +1364,17 @@ def plot_cluster19_statistics_vs_time():
 
     nrows, ncols = 1, 2
     fig, axes = plt.subplots(nrows, ncols, squeeze=False, sharex=True, sharey=True)
-    fig.set_size_inches(5 * ncols, 5 * nrows)
+    fig.set_size_inches(size * ncols, size * nrows)
     fig.subplots_adjust(wspace=0.3, hspace=0.3)
 
-    def plot_me(ax, dlist, cap, line):
+    def plot_me(
+        ax,
+        dlist,
+        cap,
+        line,
+        names: list[str],
+        colours: list[str],
+    ):
         d, *_ = [
             d
             for d in dlist
@@ -1080,77 +1385,66 @@ def plot_cluster19_statistics_vs_time():
         ]
         d_stats = d["Lifetime Thresholds"]
         d_t = SCALE_MS_TO_HOUR(np.array(d_stats["Temporal Times [ms]"]))
-        d_min = SCALE_MS_TO_HOUR(
-            np.array(d_stats[f"Temporal {ch}Min Eviction Times [ms]"])
-        )
-        d_max = SCALE_MS_TO_HOUR(
-            np.array(d_stats[f"Temporal {ch}Max Eviction Times [ms]"])
-        )
-        d_25p = SCALE_MS_TO_HOUR(
-            np.array(d_stats[f"Temporal {ch}25th-percentile Eviction Times [ms]"])
-        )
-        d_75p = SCALE_MS_TO_HOUR(
-            np.array(d_stats[f"Temporal {ch}75th-percentile Eviction Times [ms]"])
-        )
-        d_med = SCALE_MS_TO_HOUR(
-            np.array(d_stats[f"Temporal {ch}Median Eviction Times [ms]"])
-        )
-        d_mean = SCALE_MS_TO_HOUR(
-            np.array(d_stats[f"Temporal {ch}Mean Eviction Times [ms]"])
-        )
-        ax.plot(d_t, d_max, line, color="red", label="Max")
-        ax.plot(d_t, d_75p, line, color="orange", label="75th-Percentile")
-        ax.plot(d_t, d_mean, line, color="black", label="Mean")
-        ax.plot(d_t, d_med, line, color="green", label="Median")
-        ax.plot(d_t, d_25p, line, color="purple", label="25th-Percentile")
-        ax.plot(d_t, d_min, line, color="darkblue", label="Min")
-        ax.legend(loc="best")
-        ax.set_title(f"Cache Size: {cap}")
-        ax.set_xlabel("Time [h]")
-        ax.set_ylabel("Eviction Time [h]")
+        for name, colour in zip(names, colours):
+            key = f"Temporal {ch}{name} Eviction Times [ms]"
+            if key not in d_stats:
+                print(d_stats.keys())
+            d = SCALE_MS_TO_HOUR(np.array(d_stats[key]))
+            ax.plot(d_t, d, line, color=colour, label=name, **markersize)
+        ax.set_title(f"Cache Size: {cap}", **altfontsize)
+        if not large:
+            ax.set_xlabel("Time [h]", **fontsize)
+            ax.set_ylabel("Eviction Time [h]", **fontsize)
+            ax.legend()
         ax.set_xlim(0.0)
         ax.set_ylim(0.0)
 
+    names = ["Max", "75th-percentile", "Mean", "Median", "25th-percentile", "Min"]
+    colours = ["red", "orange", "black", "green", "purple", "darkblue"]
     # We order them like this so that the plots take the scale of the 4.0 GiB cache.
-    plot_me(axes[0, 1], oracle_dlist, "4.0 GiB", ".--")
-    plot_me(axes[0, 0], oracle_dlist, "1.0 GiB", "-")
+    plot_me(axes[0, 1], oracle_dlist, "4.0 GiB", ".--", names, colours)
+    plot_me(axes[0, 0], oracle_dlist, "1.0 GiB", "-", names, colours)
+
     # plot_me(axes[0, 1], dlist_0p, "1.0 GiB")
     # plot_me(axes[0, 2], dlist_25p, "1.0 GiB")
     # plot_me(axes[0, 3], dlist_50p, "1.0 GiB")
     # plot_me(axes[0, 4], dlist_75p, "1.0 GiB")
     # plot_me(axes[0, 5], dlist_100p, "1.0 GiB")
+
+    if large:
+        axes[0, 0].set_xlabel(" " * 40 + "Time [h]", **fontsize)
+        axes[0, 0].set_ylabel("Eviction Time [h]", **fontsize)
+        axes[0, 1].legend()
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
-def plot_cluster19_statistics():
-    v = 20250910
-    # v = 0
+def plot_cluster19_statistics(large: bool = True):
+    v = 0
+    if large:
+        size = 3
+        markersize = dict(markersize=3)
+        fontsize = dict(fontsize="x-large")
+        altfontsize = dict(fontsize="large")
+    else:
+        size = 5
+        markersize = dict()
+        fontsize = dict(fontsize="large")
+        altfontsize = dict()
     INPUT = Path(
-        f"/home/david/projects/online_mrc/myresults/lru-ttl-v{v}-s0.001/result-cluster19.out"
+        f"/home/david/projects/online_mrc/myresults/ratio-lru-ttl-v{v}-s0.001/result-cluster19.out"
     )
-    ALT_INPUT = Path(
-        f"/home/david/projects/online_mrc/myresults/lru-ttl-v42-s0.001/result-cluster19.out"
-    )
-    OUTPUT = MASC_DIR / Path("cluster19_statistics.pdf")
+    OUTPUT_PDF = MASC_DIR / Path("cluster19_statistics.pdf")
+    OUTPUT_PNG = MASC_DIR / Path("cluster19_statistics.png")
     cap = "4.0 GiB"
-    # Oracle or Psyche.
-    oracle_dlist = parse_data(INPUT)[(0.0, 1.0, "EvictionTime")]
-    dlist_0p = parse_data(INPUT)[(0.0, 0.0, "EvictionTime")]
-    dlist_25p = parse_data(INPUT)[(0.25, 0.25, "EvictionTime")]
-    dlist_mean = parse_data(ALT_INPUT)[(0.42, 0.42, "EvictionTime")]
-    dlist_50p = parse_data(INPUT)[(0.5, 0.5, "EvictionTime")]
-    dlist_75p = parse_data(INPUT)[(0.75, 0.75, "EvictionTime")]
-    dlist_100p = parse_data(INPUT)[(1.0, 1.0, "EvictionTime")]
-    # Current histogram or overall histogram.
-    ch = "Current Histogram "
-    # ch = ""
 
     nrows, ncols = 1, 2
     fig, axes = plt.subplots(nrows, ncols, squeeze=False)
-    fig.set_size_inches(5 * ncols, 5 * nrows)
-    fig.subplots_adjust(wspace=0.3)
+    fig.set_size_inches(size * ncols, size * nrows)
+    fig.subplots_adjust(wspace=0.3 if not large else 0.55)
 
-    def plot_me(oracle_dlist, dlist, colour, label):
+    def plot_me(ratios: tuple[float, float], colour, label):
+        oracle_dlist = parse_data(INPUT)[(0.0, 1.0, "EvictionTime")]
+        dlist = parse_data(INPUT)[(*ratios, "EvictionTime")]
         # Plot MRC on axes[0, 0].
         # Plot oracle.
         get_mr = get_scaled_fixed_data(
@@ -1163,7 +1457,9 @@ def plot_cluster19_statistics():
             *GiB_SHARDS_ARGS,
         )
         mrc = {get_c(d): get_mr(d) for d in dlist if get_c(d) < 30}
-        axes[0, 0].plot(mrc.keys(), mrc.values(), "o-", color=colour, label=label)
+        axes[0, 0].plot(
+            mrc.keys(), mrc.values(), "o-", color=colour, label=label, **markersize
+        )
 
         # Plot memory savings for cache size 4.0 GiB.
         acc_d, *_ = [
@@ -1193,31 +1489,45 @@ def plot_cluster19_statistics():
         metadata_diff = (acc_cnt * 32 - psyche_cnt * 16) * shards_scale
         size_diff = (acc_size - psyche_size) * shards_scale
         diff = metadata_diff + size_diff
-        axes[0, 1].plot(times, diff / (1 << 20), color=colour, label=label)
+        axes[0, 1].plot(
+            times, diff / (1 << 20), color=colour, label=label, **markersize
+        )
         axes[0, 1].axhline(0, color="black", linestyle="dashed")
-        axes[0, 1].set_title(f"Cache Size: {csize}")
+        axes[0, 1].set_title(f"Cache Size: {csize}", **altfontsize)
 
-    axes[0, 0].set_xlabel("Cache Size [GiB]", fontsize="large")
-    axes[0, 0].set_ylabel("Miss Ratio", fontsize="large")
+    axes[0, 0].set_xlabel("Cache Size [GiB]", **fontsize)
+    axes[0, 0].set_ylabel("Miss Ratio", **fontsize)
     axes[0, 0].set_ylim(0.0, 1.0)
-    axes[0, 1].set_xlabel("Time [h]", fontsize="large")
-    axes[0, 1].set_ylabel("Memory Savings [MiB]", fontsize="large")
+    axes[0, 1].set_xlabel("Time [h]", **fontsize)
+    axes[0, 1].set_ylabel("Memory Savings [MiB]", **fontsize)
 
-    # plot_me(oracle_dlist, dlist_0p, "black", "0")
-    plot_me(oracle_dlist, dlist_75p, "orange", "75th-percentile")
-    plot_me(oracle_dlist, dlist_mean, "black", "Mean")
-    plot_me(oracle_dlist, dlist_50p, "green", "Median")
-    plot_me(oracle_dlist, dlist_25p, "purple", "25th-percentile")
-    # plot_me(oracle_dlist, dlist_100p, "green", "100")
-    # plot_me(oracle_dlist, oracle_dlist, "pink", "oracle")
+    # plot_me((1.0, 1.0), "grey", "TTL-only")
+    # plot_me((0.99, 0.99), "red", "99th-percentile")
+    # plot_me((0.95, 0.95), "yellow", "95th-percentile")
+    # plot_me((0.90, 0.90), "orange", "90th-percentile")
+    # plot_me((0.85, 0.85), "green", "85th-percentile")
+    # plot_me((0.80, 0.80), "blue", "80th-percentile")
+    plot_me((0.75, 0.75), "orange", "75th-percentile")
+    plot_me((0.42, 0.42), "black", "Mean")
+    plot_me((0.5, 0.5), "green", "Median")
+    plot_me((0.25, 0.25), "purple", "25th-percentile")
 
     axes[0, 0].legend()
-    axes[0, 1].legend()
-    fig.savefig(OUTPUT, bbox_inches="tight")
+    # axes[0, 1].legend()
+    fig.savefig(OUTPUT_PDF, bbox_inches="tight")
+    fig.savefig(OUTPUT_PNG, bbox_inches="tight")
 
 
-def plot_cluster19_decay():
+def plot_cluster19_decay(large: bool = True):
     v = 20250911
+    if large:
+        size = 4
+        fontsize = dict(fontsize="xx-large")
+        markersize = dict(markersize=3)
+    else:
+        size = 5
+        fontsize = dict()
+        markersize = dict()
     INPUT_HOUR_NO_DECAY = Path(
         f"/home/david/projects/online_mrc/myresults/decay-lru-ttl-v{v}-s0.001/result-cluster19-hour-no-decay.out"
     )
@@ -1237,7 +1547,7 @@ def plot_cluster19_decay():
 
     ncols = 1
     fig, axes = plt.subplots(1, ncols, sharex=True, sharey=True, squeeze=False)
-    fig.set_size_inches(6 * ncols, 6)
+    fig.set_size_inches(size * ncols, size)
 
     def get_run_with_capacity(dlist, cap):
         """@param cap: capacity, formatted like '4.0 GiB'."""
@@ -1267,15 +1577,15 @@ def plot_cluster19_decay():
         psyche_stats = psyche_d["Statistics"]
         psyche_cnt = np.array(psyche_stats["Temporal Resident Objects [#]"])
         acc_cnt = np.array(acc_stats["Temporal Resident Objects [#]"])
-        psyche_size = np.array(psyche_stats["Temporal Sizes [B]"])
-        acc_size = np.array(acc_stats["Temporal Sizes [B]"])
+        psyche_size = np.array(psyche_stats["Temporal Interval Max Sizes [B]"])
+        acc_size = np.array(acc_stats["Temporal Interval Max Sizes [B]"])
         metadata_diff = (acc_cnt * 32 - psyche_cnt * 16) * shards_scale
         size_diff = (acc_size - psyche_size) * shards_scale
         diff = metadata_diff + size_diff
-        ax.plot(times, diff / (1 << 20), color=colour, label=title)
+        ax.plot(times, diff / (1 << 20), color=colour, label=title, **markersize)
         ax.axhline(0, color="black", linestyle="dashed")
-        ax.set_xlabel("Time [h]")
-        ax.set_ylabel("Memory Savings [MiB]")
+        ax.set_xlabel("Time [h]", **fontsize)
+        ax.set_ylabel("Memory Savings [MiB]", **fontsize)
         ax.legend()
 
     plot_me(axes[0, 0], "No Decay (1 Hour)", INPUT_HOUR_NO_DECAY, "black")
@@ -1288,6 +1598,189 @@ def plot_cluster19_decay():
     fig.savefig(OUTPUT, bbox_inches="tight")
 
 
+################################################################################
+### Presentation
+################################################################################
+
+
+def plot_mrc(ax, policy, data):
+    expiration_policy = lambda policy: {
+        (0.0, 0.0): (
+            f"{policy.upper()}/Lazy-TTL" if policy == "lru" else "LFU-1/Lazy-TTL"
+        ),
+        (0.0, 1.0): (
+            f"{policy.upper()}/Proactive-TTL"
+            if policy == "lru"
+            else "LFU-1/Proactive-TTL"
+        ),
+        (1.0, 1.0): "TTL-only",
+        (0.5, 0.5): ("LRU/Psyche" if policy == "lru" else "LFU-1/Psyche"),
+    }
+    # Remove lazy-TTL policy.
+    del data[(0.0, 0.0, "EvictionTime")]
+    if policy == "lfu":
+        # Remove ttl-only policies.
+        del data[(1.0, 1.0, "EvictionTime")]
+        # Plot oracle.
+        oracle_dlist = data[(0.0, 1.0, "EvictionTime")]
+        mrc = {}
+        get_mr = get_scaled_fixed_data(
+            lambda d: get_stat(d, ["Oracle", "Miss Ratio"]),
+            IDENTITY_X,
+            shards_adj,
+        )
+        get_c = get_scaled_fixed_data(
+            lambda d: get_stat(d, ["Oracle", "Capacity [B]"]),
+            *GiB_SHARDS_ARGS,
+        )
+        for d in oracle_dlist:
+            mrc[get_c(d)] = get_mr(d)
+        ax.plot(mrc.keys(), mrc.values(), "g-x", label="LFU/Proactive-TTL")
+    # Remove ttl-only policies.
+    del data[(1.0, 1.0, "EvictionTime")]
+    plot(
+        ax,
+        policy,
+        data,
+        *CAPACITY_GIB_ARGS,
+        "Miss Ratio",
+        lambda d: get_stat(d, ["CacheStatistics", "Miss Ratio"]),
+        scale_y_func=IDENTITY_X,
+        fix_y_func=shards_adj,
+        set_ylim_to_one=True,
+        label_func=lambda p, l, u, e: expiration_policy(p)[(l, u)],
+        kwfmt=dict(markersize=3),
+    )
+    if False and policy == "lru":
+        # Rearrange to place TTL-only last.
+        handles, labels = ax.get_legend_handles_labels()
+        ordered_handles = [handles[x] for x in (1, 2, 0)]
+        ordered_labels = [labels[x] for x in (1, 2, 0)]
+        ax.legend(ordered_handles, ordered_labels)
+    ax.set_title("")
+    ax.set_xticks([0.0, 2.0, 4.0, 6.0, 8.0])
+
+
+def plot_memory_savings(ax, policy, cluster, data):
+    psyche_dlist = data[(0.5, 0.5, "EvictionTime")]
+    accurate_dlist = data[(0.0, 1.0, "EvictionTime")]
+    # Only plot these cache sizes.
+    colours = {
+        "1.0 GiB": "red",
+        "4.0 GiB": "orange",
+        "8.0 GiB": "green",
+    }
+    for psyche_d, acc_d in zip(psyche_dlist, accurate_dlist):
+        psyche_stats = (
+            psyche_d["Statistics"]
+            if "Statistics" in psyche_d
+            else psyche_d["CacheStatistics"]
+        )
+        acc_stats = (
+            acc_d["Oracle"]["Statistics"]
+            if "Statistics" in acc_d["Oracle"]
+            else acc_d["Oracle"]["CacheStatistics"]
+        )
+        times = SCALE_MS_TO_HOUR(np.array(psyche_stats["Temporal Times [ms]"]))
+        shards_scale = acc_d["Extras"]["SHARDS"][".scale"]
+        sz = get_stat(acc_d, ["Capacity [B]"]) * shards_scale / (1 << 30)
+        csize = f"{sz:.3} GiB"
+        if csize in colours:
+            colour = colours[csize]
+        else:
+            continue
+        psyche_cnt = np.array(psyche_stats["Temporal Resident Objects [#]"])
+        acc_cnt = np.array(acc_stats["Temporal Resident Objects [#]"])
+        psyche_size = np.array(psyche_stats["Temporal Sizes [B]"])
+        acc_size = np.array(acc_stats["Temporal Sizes [B]"])
+        metadata_diff = (acc_cnt * 32 - psyche_cnt * 16) * shards_scale
+        size_diff = (acc_size - psyche_size) * shards_scale
+        diff = metadata_diff + size_diff
+        ratio = (acc_size + acc_cnt * 32) / (psyche_size + psyche_cnt * 16) * 100
+        ax.plot(times, ratio, color=colour, label=csize)
+        ax.axhline(0, color="black", linestyle="dashed")
+    if cluster == 52 and policy == "lru":
+        ax.legend(
+            loc="center right",
+            bbox_to_anchor=(1.0, 0.28),
+        )
+    else:
+        ax.legend()
+    ax.set_ylim(100, 110)
+    ax.set_xlabel("Time [h]")
+    ax.set_ylabel("Memory Usage [% Psyche]")
+
+
+def plot_cluster52_mrc_and_memory():
+    v = 0
+    INPUT = lambda policy, c: (
+        f"/home/david/projects/online_mrc/myresults/{policy}-ttl-v{v}-s0.001/result-cluster{c}.out"
+    )
+    OUTPUT = MASC_DIR / Path("cluster52_mrc_and_memory.pdf")
+
+    fig, (ax0, ax1) = plt.subplots(1, 2)
+    fig.set_size_inches(2 * 3, 3)
+    fig.subplots_adjust(wspace=0.5)
+
+    # Plot LRU MRCs
+    policy = "lru"
+    cluster = 52
+
+    data = parse_data(Path(INPUT(policy, cluster)))
+    plot_mrc(ax0, policy, data)
+    plot_memory_savings(ax1, policy, cluster, data)
+    fig.savefig(OUTPUT, bbox_inches="tight")
+
+
+def plot_cluster29_memory_and_compute():
+    version = 20250915
+    INPUT = lambda p, c: Path(
+        f"/home/david/projects/online_mrc/myresults/accurate-v{version}/result-{p}-cluster{c}-v{version}-s0.001.out"
+    )
+    INPUT_NAMES = ["Memcached", "CacheLib", "TTL"]
+    NAMES = ["Memcached", "CacheLib", "Psyche"]
+    OUTPUT = MASC_DIR / Path("cluster29_periodic_memory_and_compute.pdf")
+    OUTPUT_PNG = MASC_DIR / Path("cluster29_periodic_memory_and_compute.png")
+
+    COLOURS = dict(
+        CacheLib="#f47629",
+        Memcached="#288d82",
+        Redis="#ff4438",
+        Psyche="#808080",
+    )
+
+    # Plot LRU MRCs
+    rows, cols = 1, 2
+    fig, (ax0, ax1) = plt.subplots(rows, cols)
+    fig.set_size_inches(3 * cols, 3 * rows)
+    fig.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    cluster = 29
+    # We group by capacity simply to create a key. We don't actually need a key.
+    all_data = [
+        parse_data(
+            INPUT(policy, cluster),
+            key_funcs=(
+                lambda _d: 0.0,
+                lambda _d: 1.0,
+                lambda _d: "EvictionTime",
+            ),
+        )
+        for policy in INPUT_NAMES
+    ]
+    plot_memory_usage(ax0, all_data, COLOURS, NAMES)
+    ax0.set_xlabel("Time [h]", fontsize="large")
+    ax0.set_ylabel("Memory Usage [% Psyche]", fontsize="large")
+    plot_cpu_usage(ax1, all_data, COLOURS, NAMES, 29, True, bar_sections=1)
+    ax1.set_xlabel("Policy", fontsize="large")
+    ax1.set_ylabel("Probing Accesses", fontsize="large")
+    ax1.set_xticks(range(len(NAMES)), NAMES, rotation=10, fontsize="small")
+    ax1.set_ylim(bottom=1e2, top=21e12)
+    ax1.set_yticks([1e3, 1e6, 1e9, 1e12])
+    fig.savefig(OUTPUT, bbox_inches="tight")
+    fig.savefig(OUTPUT_PNG, bbox_inches="tight")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input")
@@ -1295,28 +1788,30 @@ def main():
 
     MASC_DIR.mkdir(exist_ok=True)
 
-    ## Introduction
-    plot_ttl_vs_lru()
-    plot_accurate_vs_lazy_ttl_memory_usage()
-    plot_accurate_vs_lazy_ttl_mrc()
-    plot_ttl_vs_lru_changes()
-
-    ## Evaluation
-    plot_all_mrc()
-    if True:
-        plot_all_metadata_usage()
-        plot_compare_memory_usage()
-    plot_all_total_memory_usage_comparison()
-    plot_all_periodic_ttl_memory_usage()
-    plot_all_periodic_ttl_compute_usage()
-    ## LFU Frequency Study
-    plot_lfu_ttl_frequency_analysis()
-    plot_lfu_ttl_frequency_vs_shards()
-    plot_cluster52_lfu_ttl_frequency_vs_shards()
-    ## Ablation
-    plot_cluster19_statistics_vs_time()
-    plot_cluster19_decay()
-    plot_cluster19_statistics()
+    # ## Introduction
+    plot_cluster19_ttl_vs_lru()
+    # plot_accurate_vs_lazy_ttl_memory_usage()
+    # plot_accurate_vs_lazy_ttl_mrc()
+    # plot_ttl_vs_lru_changes()
+    # ## Evaluation
+    # plot_all_mrc()
+    # if True:
+    #     plot_all_metadata_usage()
+    #     plot_compare_memory_usage()
+    # plot_all_total_memory_savings()
+    # plot_all_periodic_ttl_memory_usage()
+    # plot_all_periodic_ttl_compute_usage()
+    # ## LFU Frequency Study
+    # plot_lfu_ttl_frequency_analysis()
+    # plot_lfu_ttl_frequency_vs_shards()
+    # plot_cluster52_lfu_ttl_frequency_vs_shards()
+    # ## Ablation
+    # plot_cluster19_statistics_vs_time()
+    # plot_cluster19_decay()
+    # plot_cluster19_statistics()
+    ## Presentation
+    # plot_cluster52_mrc_and_memory()
+    # plot_cluster29_memory_and_compute()
 
 
 if __name__ == "__main__":
