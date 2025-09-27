@@ -466,16 +466,14 @@ public:
         for (auto [id, x] : enumerate(slab_classes_)) {
             cls_stats.emplace_back(val2str(id), x.stats());
         }
-        return map2str(std::vector<std::pair<std::string, std::string>>{
-            {"Capacity [B]", val2str(format_memory_size(capacity_bytes_))},
-            {"Statistics", statistics_.json()},
-            {"Extras", map2str(extras)},
-            {"Expiration Work [#]", std::to_string(expiration_work_)},
-            {"Expirations [#]", std::to_string(nr_expirations_)},
-            {"Lazy Expirations [#]", std::to_string(nr_lazy_expirations_)},
-            // {"Memcached Expiry Statistics", vec2str(stats_, x)},
-            {"Memcached Class Statistics", map2str(cls_stats)},
-        });
+
+        auto r = p_json_vector(extras);
+        // This uses a lot of storage.
+        if (false) {
+            r.emplace_back("Memcached Expiry Statistics", vec2str(stats_, x));
+        }
+        r.emplace_back("Memcached Class Statistics", map2str(cls_stats));
+        return map2str(r);
     }
 
 private:
